@@ -1,13 +1,9 @@
-import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { Switch } from '@/components/ui/switch';
-import { Label } from '@/components/ui/label';
 import type { ConnectionMode } from '@/hooks/useGameRoom';
 
 const Index = () => {
   const navigate = useNavigate();
-  const [mode, setMode] = useState<ConnectionMode>('webrtc');
 
   return (
     <div className="flex flex-col items-center justify-center min-h-screen p-6 gap-10">
@@ -22,7 +18,7 @@ const Index = () => {
 
       <div className="flex flex-col gap-4 w-full max-w-xs">
         <Button
-          onClick={() => navigate(`/host?mode=${mode}`)}
+          onClick={() => navigate('/host')}
           className="h-14 text-sm font-pixel bg-primary hover:bg-primary/80 text-primary-foreground glow-green"
         >
           HOST GAME
@@ -35,20 +31,6 @@ const Index = () => {
           JOIN GAME
         </Button>
 
-        {/* Mode Switch */}
-        <div className="flex items-center justify-between px-3 py-3 rounded border border-border bg-card mt-2">
-          <Label className="text-xs font-mono text-muted-foreground cursor-pointer">
-            {mode === 'webrtc' ? (
-              <span><span className="text-primary">WebRTC</span> — Same network, low latency</span>
-            ) : (
-              <span><span className="text-secondary">Supabase</span> — Remote play, any network</span>
-            )}
-          </Label>
-          <Switch
-            checked={mode === 'supabase'}
-            onCheckedChange={(checked) => setMode(checked ? 'supabase' : 'webrtc')}
-          />
-        </div>
       </div>
 
       <div className="text-xs text-muted-foreground font-mono text-center space-y-1 mt-8">
