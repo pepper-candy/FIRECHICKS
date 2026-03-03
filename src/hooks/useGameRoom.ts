@@ -1,10 +1,11 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { supabase } from '@/integrations/supabase/client';
-import type { RealtimeChannel } from '@supabase/supabase-js';
+import Peer, { DataConnection } from 'peerjs';
 
 function generateRoomCode(): string {
   return Math.random().toString(36).substring(2, 8).toUpperCase();
 }
+
+const PEER_PREFIX = 'evsc-';
 
 export interface JoystickData {
   x: number; // -1 to 1
@@ -15,33 +16,30 @@ export function useHostRoom() {
   const [roomCode, setRoomCode] = useState<string>('');
   const [clientConnected, setClientConnected] = useState(false);
   const [joystick, setJoystick] = useState<JoystickData>({ x: 0, y: 0 });
-  const channelRef = useRef<RealtimeChannel | null>(null);
+  const peerRef = useRef<Peer | null>(null);
+  const connRef = useRef<DataConnection | null>(null);
 
   useEffect(() => {
     const code = generateRoomCode();
     setRoomCode(code);
 
-    const channel = supabase.channel(`game-room-${code}`, {
-      config: { broadcast: { self: false } },
-    });
+    const peer = new Peer(`${PEER_PREFIX}${code}`);
+    peerRef.current = peer;
 
-    channel
-      .on('broadcast', { event: 'joystick' }, (payload) => {
-        setJoystick(payload.payload as JoystickData);
-      })
-      .on('broadcast', { event: 'client-join' }, () => {
-        setClientConnected(true);
-      })
-      .on('broadcast', { event: 'client-leave' }, () => {
+    peer.on('connection', (conn) => {
+      connRef.current = conn;
+      conn.on('open', () => setClientConnected(true));
+      conn.on('data', (data) => setJoystick(data as JoystickData));
+      conn.on('close', () => {
         setClientConnected(false);
         setJoystick({ x: 0, y: 0 });
-      })
-      .subscribe();
-
-    channelRef.current = channel;
+        connRef.current = null;
+      });
+    });
 
     return () => {
-      channel.unsubscribe();
+      connRef.current?.close();
+      peer.destroy();
     };
   }, []);
 
@@ -50,43 +48,40 @@ export function useHostRoom() {
 
 export function useClientRoom(roomCode: string) {
   const [connected, setConnected] = useState(false);
-  const channelRef = useRef<RealtimeChannel | null>(null);
+  const peerRef = useRef<Peer | null>(null);
+  const connRef = useRef<DataConnection | null>(null);
 
   const connect = useCallback(() => {
     if (!roomCode) return;
     const code = roomCode.toUpperCase();
-    const channel = supabase.channel(`game-room-${code}`, {
-      config: { broadcast: { self: false } },
-    });
 
-    channel.subscribe((status) => {
-      if (status === 'SUBSCRIBED') {
-        setConnected(true);
-        channel.send({ type: 'broadcast', event: 'client-join', payload: {} });
-      }
-    });
+    const peer = new Peer();
+    peerRef.current = peer;
 
-    channelRef.current = channel;
+    peer.on('open', () => {
+      const conn = peer.connect(`${PEER_PREFIX}${code}`, { reliable: false });
+      connRef.current = conn;
+      conn.on('open', () => setConnected(true));
+      conn.on('close', () => setConnected(false));
+    });
   }, [roomCode]);
 
   const sendJoystick = useCallback((data: JoystickData) => {
-    channelRef.current?.send({
-      type: 'broadcast',
-      event: 'joystick',
-      payload: data,
-    });
+    connRef.current?.send(data);
   }, []);
 
   const disconnect = useCallback(() => {
-    channelRef.current?.send({ type: 'broadcast', event: 'client-leave', payload: {} });
-    channelRef.current?.unsubscribe();
-    channelRef.current = null;
+    connRef.current?.close();
+    connRef.current = null;
+    peerRef.current?.destroy();
+    peerRef.current = null;
     setConnected(false);
   }, []);
 
   useEffect(() => {
     return () => {
-      channelRef.current?.unsubscribe();
+      connRef.current?.close();
+      peerRef.current?.destroy();
     };
   }, []);
 
