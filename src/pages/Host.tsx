@@ -1,8 +1,13 @@
-import { useHostRoom } from '@/hooks/useGameRoom';
+import { useSearchParams } from 'react-router-dom';
+import { useHostRoom, useAdvertiseRoom, type ConnectionMode } from '@/hooks/useGameRoom';
 import GameArena from '@/components/GameArena';
 
 export default function Host() {
-  const { roomCode, clientConnected, joystick } = useHostRoom();
+  const [searchParams] = useSearchParams();
+  const mode = (searchParams.get('mode') as ConnectionMode) || 'webrtc';
+  const { roomCode, clientConnected, joystick } = useHostRoom(mode);
+
+  useAdvertiseRoom(roomCode, mode);
 
   return (
     <div className="flex flex-col h-screen p-4 gap-4">
@@ -12,6 +17,13 @@ export default function Host() {
           ARENA
         </h1>
         <div className="flex items-center gap-4 font-mono text-xs">
+          <div className="px-2 py-1 rounded border border-border bg-card text-xs">
+            {mode === 'webrtc' ? (
+              <span className="text-primary">WebRTC</span>
+            ) : (
+              <span className="text-secondary">Supabase</span>
+            )}
+          </div>
           <div className="px-3 py-1.5 rounded border border-border bg-card">
             ROOM: <span className="text-accent font-bold tracking-widest">{roomCode}</span>
           </div>
