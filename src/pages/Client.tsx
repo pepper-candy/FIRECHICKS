@@ -1,0 +1,74 @@
+import { useState, useCallback } from 'react';
+import { useClientRoom } from '@/hooks/useGameRoom';
+import Thumbstick from '@/components/Thumbstick';
+import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
+
+export default function Client() {
+  const [code, setCode] = useState('');
+  const { connected, connect, sendJoystick, disconnect } = useClientRoom(code);
+
+  const handleJoin = () => {
+    if (code.length >= 4) connect();
+  };
+
+  const handleMove = useCallback(
+    (x: number, y: number) => {
+      sendJoystick({ x, y });
+    },
+    [sendJoystick]
+  );
+
+  if (!connected) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-screen p-6 gap-8">
+        <h1 className="text-lg text-secondary text-glow-purple tracking-wider text-center">
+          JOIN GAME
+        </h1>
+        <div className="flex flex-col gap-4 w-full max-w-xs">
+          <Input
+            value={code}
+            onChange={(e) => setCode(e.target.value.toUpperCase())}
+            placeholder="ROOM CODE"
+            maxLength={6}
+            className="text-center text-2xl tracking-[0.5em] font-pixel bg-card border-border h-14 uppercase"
+          />
+          <Button
+            onClick={handleJoin}
+            disabled={code.length < 4}
+            className="h-12 text-sm font-pixel bg-secondary hover:bg-secondary/80 text-secondary-foreground"
+          >
+            CONNECT
+          </Button>
+        </div>
+        <p className="text-xs text-muted-foreground text-center font-mono">
+          Enter the room code shown on the host screen
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex flex-col items-center justify-center min-h-screen p-6 gap-6 select-none">
+      <div className="flex items-center gap-2 text-xs font-mono text-muted-foreground">
+        <div className="w-2 h-2 rounded-full bg-primary glow-green" />
+        CONNECTED
+      </div>
+
+      <Thumbstick onMove={handleMove} size={220} />
+
+      <p className="text-xs text-muted-foreground font-mono mt-4">
+        Drag to move your character
+      </p>
+
+      <Button
+        variant="outline"
+        size="sm"
+        onClick={disconnect}
+        className="mt-4 text-xs font-mono text-destructive border-destructive/30"
+      >
+        DISCONNECT
+      </Button>
+    </div>
+  );
+}
