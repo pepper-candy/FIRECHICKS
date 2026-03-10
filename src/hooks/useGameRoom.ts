@@ -431,9 +431,9 @@ export function useClientRoom(roomCode: string, mode: ConnectionMode = 'webrtc')
 // ─── Room discovery (for WebRTC mode) ───────────────────────
 const LOBBY_CHANNEL = 'game-lobby';
 
-export function useAdvertiseRoom(roomCode: string, mode: ConnectionMode) {
+export function useAdvertiseRoom(roomCode: string, _mode: ConnectionMode) {
   useEffect(() => {
-    if (mode !== 'webrtc' || !roomCode) return;
+    if (!roomCode) return;
 
     const channel = supabase.channel(LOBBY_CHANNEL);
     channel.subscribe(async (status) => {
@@ -446,18 +446,13 @@ export function useAdvertiseRoom(roomCode: string, mode: ConnectionMode) {
       channel.untrack();
       channel.unsubscribe();
     };
-  }, [roomCode, mode]);
+  }, [roomCode]);
 }
 
-export function useDiscoverRooms(mode: ConnectionMode) {
+export function useDiscoverRooms(_mode: ConnectionMode) {
   const [rooms, setRooms] = useState<string[]>([]);
 
   useEffect(() => {
-    if (mode !== 'webrtc') {
-      setRooms([]);
-      return;
-    }
-
     const channel = supabase.channel(LOBBY_CHANNEL);
 
     channel.on('presence', { event: 'sync' }, () => {
@@ -474,7 +469,7 @@ export function useDiscoverRooms(mode: ConnectionMode) {
     return () => {
       channel.unsubscribe();
     };
-  }, [mode]);
+  }, []);
 
   return rooms;
 }
