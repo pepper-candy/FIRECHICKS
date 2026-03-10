@@ -21,6 +21,7 @@ export interface JoystickData {
 export interface PlayerState {
   joystick: JoystickData;
   colorIndex: number;
+  ping: number;
 }
 
 // ─── Binary encoding for joystick data ──────────────────────
@@ -116,7 +117,7 @@ function useHostWebRTC() {
         conn.send(JSON.stringify({ type: 'assign-color', colorIndex }));
         setPlayers((prev) => {
           const next = new Map(prev);
-          next.set(connId, { joystick: { x: 0, y: 0 }, colorIndex });
+          next.set(connId, { joystick: { x: 0, y: 0 }, colorIndex, ping: 0 });
           return next;
         });
       });
@@ -132,6 +133,23 @@ function useHostWebRTC() {
             }
             return next;
           });
+        } else {
+          // Handle string messages (pong)
+          let msg: any = null;
+          if (typeof data === 'string') {
+            try { msg = JSON.parse(data); } catch {}
+          }
+          if (msg?.type === 'pong') {
+            const rtt = Date.now() - msg.ts;
+            setPlayers((prev) => {
+              const next = new Map(prev);
+              const existing = next.get(connId);
+              if (existing) {
+                next.set(connId, { ...existing, ping: rtt });
+              }
+              return next;
+            });
+          }
         }
       });
 
@@ -139,7 +157,16 @@ function useHostWebRTC() {
       conn.on('error', () => removePlayer(connId));
     });
 
+    // Ping interval
+    const pingInterval = window.setInterval(() => {
+      const ts = Date.now();
+      connsRef.current.forEach((conn) => {
+        try { conn.send(JSON.stringify({ type: 'ping', ts })); } catch {}
+      });
+    }, 2000);
+
     return () => {
+      clearInterval(pingInterval);
       connsRef.current.forEach((c) => c.close());
       connsRef.current.clear();
       peer.destroy();
@@ -206,7 +233,7 @@ function useHostSupabase() {
         clientColorMapRef.current.set(clientId, colorIndex);
         setPlayers((prev) => {
           const next = new Map(prev);
-          next.set(clientId, { joystick: { x: 0, y: 0 }, colorIndex });
+          next.set(clientId, { joystick: { x: 0, y: 0 }, colorIndex, ping: 0 });
           return next;
         });
         channel.send({ type: 'broadcast', event: 'assign-color', payload: { clientId, colorIndex } });
@@ -215,11 +242,29 @@ function useHostSupabase() {
         const { clientId } = payload.payload as { clientId: string };
         removePlayer(clientId);
       })
+      .on('broadcast', { event: 'pong' }, (payload) => {
+        const { clientId, ts } = payload.payload as { clientId: string; ts: number };
+        const rtt = Date.now() - ts;
+        setPlayers((prev) => {
+          const next = new Map(prev);
+          const existing = next.get(clientId);
+          if (existing) {
+            next.set(clientId, { ...existing, ping: rtt });
+          }
+          return next;
+        });
+      })
       .subscribe();
 
     channelRef.current = channel;
 
+    // Ping interval
+    const pingInterval = window.setInterval(() => {
+      channel.send({ type: 'broadcast', event: 'ping', payload: { ts: Date.now() } });
+    }, 2000);
+
     return () => {
+      clearInterval(pingInterval);
       channel.unsubscribe();
     };
   }, [removePlayer]);
@@ -292,6 +337,8 @@ function useClientWebRTC(roomCode: string) {
           } else if (msg.type === 'kicked') {
             setKicked(true);
             doDisconnect();
+          } else if (msg.type === 'ping') {
+            try { conn.send(JSON.stringify({ type: 'pong', ts: msg.ts })); } catch {}
           }
         }
       });
@@ -393,6 +440,10 @@ function useClientSupabase(roomCode: string) {
           channelRef.current?.unsubscribe();
           channelRef.current = null;
         }
+      })
+      .on('broadcast', { event: 'ping' }, (payload) => {
+        const { ts } = payload.payload as { ts: number };
+        channel.send({ type: 'broadcast', event: 'pong', payload: { clientId: clientIdRef.current, ts } });
       })
       .subscribe((status) => {
         if (status === 'SUBSCRIBED') {

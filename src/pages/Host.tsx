@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useHostRoom, useAdvertiseRoom, type ConnectionMode } from '@/hooks/useGameRoom';
 import GameArena from '@/components/GameArena';
+import NetworkPerformancePanel from '@/components/NetworkPerformancePanel';
 import { PLAYER_COLORS, MAX_PLAYERS } from '@/lib/playerColors';
 import { X } from 'lucide-react';
 import {
@@ -107,6 +108,9 @@ export default function Host() {
           <span className="text-accent">{roomCode}</span>
         </p>
       )}
+
+      {/* Network Performance Panel */}
+      <NetworkPerformancePanel players={players} />
     </div>
   );
 }
