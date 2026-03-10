@@ -13,6 +13,7 @@ export default function Client() {
   const { connected, connect, sendJoystick, disconnect, colorIndex, roomFull, kicked } = useClientRoom(code, mode);
   const discoveredRooms = useDiscoverRooms(mode);
   const [wasKicked, setWasKicked] = useState(false);
+  const [roomFullDismissed, setRoomFullDismissed] = useState(false);
 
   const playerColor = colorIndex >= 0 ? PLAYER_COLORS[colorIndex] : null;
 
