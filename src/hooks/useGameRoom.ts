@@ -244,6 +244,7 @@ function useClientWebRTC(roomCode: string) {
     if (!targetCode) return;
     const code = targetCode.toUpperCase();
     setKicked(false);
+    setRoomFull(false);
 
     const peer = new Peer(undefined, {
       config: {
