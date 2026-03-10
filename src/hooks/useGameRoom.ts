@@ -266,13 +266,7 @@ function useClientWebRTC(roomCode: string) {
       conn.on('open', () => {
         setConnected(true);
         // Configure the underlying data channel for UDP-like performance
-        const dc = (conn as any)._dc as RTCDataChannel | undefined;
-        if (dc) {
-          try {
-            dc.ordered = false;
-            // maxRetransmits is read-only after creation, but we set it via peerOptions
-          } catch {}
-        }
+        // DataChannel options (ordered/maxRetransmits) are set at creation via PeerJS options above
         intervalRef.current = window.setInterval(() => {
           if (colorIndexRef.current >= 0) {
             const buf = encodeJoystick(colorIndexRef.current, joystickRef.current.x, joystickRef.current.y);
