@@ -449,15 +449,10 @@ export function useAdvertiseRoom(roomCode: string, _mode: ConnectionMode) {
   }, [roomCode, mode]);
 }
 
-export function useDiscoverRooms(mode: ConnectionMode) {
+export function useDiscoverRooms(_mode: ConnectionMode) {
   const [rooms, setRooms] = useState<string[]>([]);
 
   useEffect(() => {
-    if (mode !== 'webrtc') {
-      setRooms([]);
-      return;
-    }
-
     const channel = supabase.channel(LOBBY_CHANNEL);
 
     channel.on('presence', { event: 'sync' }, () => {

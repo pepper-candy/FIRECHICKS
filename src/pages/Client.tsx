@@ -91,8 +91,8 @@ export default function Client() {
             />
           </div>
 
-          {/* Discovered rooms in WebRTC mode */}
-          {mode === "webrtc" && discoveredRooms.length > 0 && (
+          {/* Discovered rooms */}
+          {discoveredRooms.length > 0 && (
             <div className="flex flex-col gap-2 mt-2">
               <p className="text-xs text-muted-foreground font-mono text-center">ACTIVE ROOMS</p>
               <div className="flex flex-wrap gap-2 justify-center">
