@@ -8,6 +8,7 @@ interface Props {
 
 const THROTTLE_MS = 33; // ~30Hz for network
 const DEAD_ZONE = 0.01; // ignore jitter below this threshold
+const IDLE_TIMEOUT_MS = 1000; // stop sending after 1s at (0,0)
 
 export default function Thumbstick({ onMove, size = 200, color }: Props) {
   const baseRef = useRef<HTMLDivElement>(null);
