@@ -40,6 +40,7 @@ export default function NetworkPerformancePanel({ players }: Props) {
             ) : (
               Array.from(players.entries()).map(([connId, p]) => {
                 const color = PLAYER_COLORS[p.colorIndex] ?? PLAYER_COLORS[0];
+                const isIdle = now - p.lastPongAt > IDLE_THRESHOLD_MS;
                 const pingHigh = p.ping > 120;
                 return (
                   <div key={connId} className="flex items-center justify-between py-1.5 gap-4">
@@ -47,14 +48,14 @@ export default function NetworkPerformancePanel({ players }: Props) {
                       <div
                         className="w-3 h-3 rounded-full shrink-0"
                         style={{
-                          backgroundColor: `hsl(${color.hsl})`,
-                          boxShadow: `0 0 6px hsl(${color.hsl} / 0.4)`,
+                          backgroundColor: isIdle ? 'hsl(var(--muted-foreground))' : `hsl(${color.hsl})`,
+                          boxShadow: isIdle ? 'none' : `0 0 6px hsl(${color.hsl} / 0.4)`,
                         }}
                       />
-                      <span className="text-sm text-foreground">{color.name}</span>
+                      <span className={`text-sm ${isIdle ? "text-muted-foreground" : "text-foreground"}`}>{color.name}</span>
                     </div>
-                    <span className={`text-sm font-bold ${pingHigh ? "text-destructive" : "text-primary"}`}>
-                      {p.ping}ms
+                    <span className={`text-sm font-bold ${isIdle ? "text-muted-foreground" : pingHigh ? "text-destructive" : "text-primary"}`}>
+                      {isIdle ? "idle" : `${p.ping}ms`}
                     </span>
                   </div>
                 );
