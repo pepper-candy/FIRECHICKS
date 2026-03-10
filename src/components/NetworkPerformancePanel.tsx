@@ -1,8 +1,10 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { ChevronUp, ChevronDown, Activity } from "lucide-react";
 import { PLAYER_COLORS } from "@/lib/playerColors";
 import type { PlayerState } from "@/hooks/useGameRoom";
 import { ScrollArea } from "@/components/ui/scroll-area";
+
+const IDLE_THRESHOLD_MS = 4000; // consider idle if no pong for 4s
 
 interface Props {
   players: Map<string, PlayerState>;
@@ -10,6 +12,14 @@ interface Props {
 
 export default function NetworkPerformancePanel({ players }: Props) {
   const [open, setOpen] = useState(false);
+  const [now, setNow] = useState(Date.now());
+
+  // Tick every 2s to detect stale pings
+  useEffect(() => {
+    if (!open) return;
+    const id = setInterval(() => setNow(Date.now()), 2000);
+    return () => clearInterval(id);
+  }, [open]);
 
   return (
     <div className="fixed bottom-4 right-4 z-50 font-mono">
@@ -30,6 +40,7 @@ export default function NetworkPerformancePanel({ players }: Props) {
             ) : (
               Array.from(players.entries()).map(([connId, p]) => {
                 const color = PLAYER_COLORS[p.colorIndex] ?? PLAYER_COLORS[0];
+                const isIdle = now - p.lastPongAt > IDLE_THRESHOLD_MS;
                 const pingHigh = p.ping > 120;
                 return (
                   <div key={connId} className="flex items-center justify-between py-1.5 gap-4">
@@ -37,14 +48,14 @@ export default function NetworkPerformancePanel({ players }: Props) {
                       <div
                         className="w-3 h-3 rounded-full shrink-0"
                         style={{
-                          backgroundColor: `hsl(${color.hsl})`,
-                          boxShadow: `0 0 6px hsl(${color.hsl} / 0.4)`,
+                          backgroundColor: isIdle ? 'hsl(var(--muted-foreground))' : `hsl(${color.hsl})`,
+                          boxShadow: isIdle ? 'none' : `0 0 6px hsl(${color.hsl} / 0.4)`,
                         }}
                       />
-                      <span className="text-sm text-foreground">{color.name}</span>
+                      <span className={`text-sm ${isIdle ? "text-muted-foreground" : "text-foreground"}`}>{color.name}</span>
                     </div>
-                    <span className={`text-sm font-bold ${pingHigh ? "text-destructive" : "text-primary"}`}>
-                      {p.ping}ms
+                    <span className={`text-sm font-bold ${isIdle ? "text-muted-foreground" : pingHigh ? "text-destructive" : "text-primary"}`}>
+                      {isIdle ? "idle" : `${p.ping}ms`}
                     </span>
                   </div>
                 );

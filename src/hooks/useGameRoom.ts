@@ -22,6 +22,7 @@ export interface PlayerState {
   joystick: JoystickData;
   colorIndex: number;
   ping: number;
+  lastPongAt: number;
 }
 
 // ─── Binary encoding for joystick data ──────────────────────
@@ -117,7 +118,7 @@ function useHostWebRTC() {
         conn.send(JSON.stringify({ type: 'assign-color', colorIndex }));
         setPlayers((prev) => {
           const next = new Map(prev);
-          next.set(connId, { joystick: { x: 0, y: 0 }, colorIndex, ping: 0 });
+          next.set(connId, { joystick: { x: 0, y: 0 }, colorIndex, ping: 0, lastPongAt: Date.now() });
           return next;
         });
       });
@@ -145,7 +146,7 @@ function useHostWebRTC() {
               const next = new Map(prev);
               const existing = next.get(connId);
               if (existing) {
-                next.set(connId, { ...existing, ping: rtt });
+                next.set(connId, { ...existing, ping: rtt, lastPongAt: Date.now() });
               }
               return next;
             });
@@ -233,7 +234,7 @@ function useHostSupabase() {
         clientColorMapRef.current.set(clientId, colorIndex);
         setPlayers((prev) => {
           const next = new Map(prev);
-          next.set(clientId, { joystick: { x: 0, y: 0 }, colorIndex, ping: 0 });
+          next.set(clientId, { joystick: { x: 0, y: 0 }, colorIndex, ping: 0, lastPongAt: Date.now() });
           return next;
         });
         channel.send({ type: 'broadcast', event: 'assign-color', payload: { clientId, colorIndex } });
@@ -249,7 +250,7 @@ function useHostSupabase() {
           const next = new Map(prev);
           const existing = next.get(clientId);
           if (existing) {
-            next.set(clientId, { ...existing, ping: rtt });
+            next.set(clientId, { ...existing, ping: rtt, lastPongAt: Date.now() });
           }
           return next;
         });
