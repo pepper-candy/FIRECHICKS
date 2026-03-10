@@ -48,6 +48,7 @@ export default function Thumbstick({ onMove, onIdleChange, size = 200, color }: 
         if (!idleTimerRef.current) {
           idleTimerRef.current = setTimeout(() => {
             idleRef.current = true;
+            onIdleChange?.(true);
           }, IDLE_TIMEOUT_MS);
         }
       } else {
