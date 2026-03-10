@@ -1,32 +1,36 @@
 
 
-## Two Issues to Fix
+## WebRTC via PeerJS for Realtime Joystick Data
 
-### 1. Detect Client Tab Close
+### Why PeerJS works well here
 
-**WebRTC**: Already handled — PeerJS fires a `close` event when the underlying RTCDataChannel/RTCPeerConnection detects the remote peer is gone. When a browser tab closes, the connection drops and the host's `conn.on('close')` fires, removing the player. However, detection can be slow (up to ~30s via ICE timeout). We can add a **heartbeat** system: if the host doesn't receive any data from a client for N seconds, it force-removes them.
+PeerJS wraps WebRTC DataChannels with a simple API. For this use case (high-frequency joystick updates), it offers lower latency than Supabase Broadcast since data goes peer-to-peer after the initial connection. PeerJS uses a free signaling server by default, so no backend is needed.
 
-**Supabase**: The `client-leave` event only fires if the client explicitly calls `disconnect()`. Tab close won't trigger it. Fix: use the `beforeunload` event on the client to send the leave message, plus add a heartbeat/timeout on the host side as a fallback.
+### Trade-offs
 
-### 2. Smart Color Recycling
+- **Pro**: Lower latency (direct P2P), no Supabase dependency for realtime, free
+- **Con**: NAT traversal can fail on some networks (rare), requires both devices to have internet for initial signaling
 
-Currently `nextColorRef` increments forever (`0, 1, 2, 3...`), so after player 0 (Green) disconnects and a new player joins, they get color index 7 (which wraps or is undefined). Fix: instead of a monotonic counter, track **which color indices are in use** and assign the **first available** color index from the pool.
+### Plan
 
----
+1. **Add `peerjs` dependency** to the project.
 
-### Implementation Plan
+2. **Rewrite `src/hooks/useGameRoom.ts`** to use PeerJS instead of Supabase channels:
+   - `useHostRoom`: Creates a `Peer` with an ID derived from the room code (e.g., `eagle-chick-{CODE}`). Listens for incoming data connections. Receives joystick data via `conn.on('data')`.
+   - `useClientRoom`: Creates a `Peer`, connects to the host's peer ID. Sends joystick data via `conn.send()`.
+   - Room code flow stays the same (host generates code, client enters it).
 
-**`src/hooks/useGameRoom.ts`**:
+3. **Remove Supabase Realtime usage** from the game room logic. The Supabase client stays for any future DB/auth needs but is no longer used for broadcast.
 
-1. **Color allocation helper** — Replace `nextColorRef` with a `usedColorsRef: Set<number>`. New function `allocateColor()` finds the lowest unused index (0–6). On disconnect, remove the index from the set.
+4. **No changes needed** to `GameArena.tsx`, `Thumbstick.tsx`, `Host.tsx`, `Client.tsx`, or routing -- they all consume the same hook interface (`joystick`, `sendJoystick`, `connected`, etc.).
 
-2. **WebRTC host heartbeat** — Track `lastSeenRef: Map<string, number>`. Update timestamp on every `data` event. Run a 5-second interval that removes any player not seen for 10 seconds.
+### Technical detail
 
-3. **Supabase host heartbeat** — Same `lastSeenRef` pattern. Update on `joystick` events. Run same 5s cleanup interval.
+The hook API remains identical:
+```text
+useHostRoom()  → { roomCode, clientConnected, joystick }
+useClientRoom(code) → { connected, connect, sendJoystick, disconnect }
+```
 
-4. **Supabase client `beforeunload`** — In `useClientSupabase`, add a `beforeunload` listener that sends the `client-leave` broadcast before the tab closes.
-
-5. **WebRTC host `conn.on('error')`** — Also listen for connection errors to trigger cleanup, not just `close`.
-
-All changes are in a single file. No new dependencies needed.
+PeerJS peer IDs will be namespaced (e.g., `evsc-{ROOM_CODE}`) to avoid collisions on the public PeerJS signaling server.
 
