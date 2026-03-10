@@ -146,7 +146,7 @@ function useHostWebRTC() {
               const next = new Map(prev);
               const existing = next.get(connId);
               if (existing) {
-                next.set(connId, { ...existing, ping: rtt });
+                next.set(connId, { ...existing, ping: rtt, lastPongAt: Date.now() });
               }
               return next;
             });
