@@ -27,6 +27,7 @@ export default function Client() {
     if (targetCode.length >= 4) {
       if (roomCode) setCode(roomCode);
       setWasKicked(false);
+      setRoomFullDismissed(false);
       connect(roomCode);
     }
   };

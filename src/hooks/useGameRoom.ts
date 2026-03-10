@@ -244,6 +244,7 @@ function useClientWebRTC(roomCode: string) {
     if (!targetCode) return;
     const code = targetCode.toUpperCase();
     setKicked(false);
+    setRoomFull(false);
 
     const peer = new Peer(undefined, {
       config: {
@@ -352,6 +353,7 @@ function useClientSupabase(roomCode: string) {
     if (!targetCode) return;
     const code = targetCode.toUpperCase();
     setKicked(false);
+    setRoomFull(false);
     const channel = supabase.channel(`game-room-${code}`, {
       config: { broadcast: { self: false } },
     });
