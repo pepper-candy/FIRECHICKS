@@ -283,7 +283,7 @@ function useClientWebRTC(roomCode: string) {
   const connRef = useRef<DataConnection | null>(null);
   const joystickRef = useRef<JoystickData>({ x: 0, y: 0 });
   const intervalRef = useRef<number | null>(null);
-  const idleRef = useRef(false);
+  const idleRef = useRef(true); // Start idle until user touches joystick
   const colorIndexRef = useRef(-1);
 
   const connect = useCallback((overrideCode?: string) => {
@@ -402,7 +402,7 @@ function useClientSupabase(roomCode: string) {
   const [kicked, setKicked] = useState(false);
   const channelRef = useRef<RealtimeChannel | null>(null);
   const clientIdRef = useRef(Math.random().toString(36).substring(2, 10));
-  const idleRef = useRef(false);
+  const idleRef = useRef(true); // Start idle until user touches joystick
 
   const connect = useCallback((overrideCode?: string) => {
     const targetCode = overrideCode || roomCode;
