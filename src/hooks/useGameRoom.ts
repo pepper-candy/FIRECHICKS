@@ -371,11 +371,15 @@ function useClientWebRTC(roomCode: string) {
 
   const sendJoystick = useCallback((data: JoystickData) => {
     joystickRef.current = data;
-    if (connRef.current && colorIndexRef.current >= 0) {
+    if (!idleRef.current && connRef.current && colorIndexRef.current >= 0) {
       try {
         connRef.current.send(encodeJoystick(colorIndexRef.current, data.x, data.y));
       } catch {}
     }
+  }, []);
+
+  const setIdle = useCallback((idle: boolean) => {
+    idleRef.current = idle;
   }, []);
 
   useEffect(() => {
