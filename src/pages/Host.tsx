@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useHostRoom, useAdvertiseRoom, type ConnectionMode } from '@/hooks/useGameRoom';
 import GameArena from '@/components/GameArena';
 import { PLAYER_COLORS, MAX_PLAYERS } from '@/lib/playerColors';
+import { X } from 'lucide-react';
 import {
   Select,
   SelectContent,
@@ -9,10 +10,16 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 
 export default function Host() {
   const [mode, setMode] = useState<ConnectionMode>('webrtc');
-  const { roomCode, players } = useHostRoom(mode);
+  const { roomCode, players, kickPlayer } = useHostRoom(mode);
 
   useAdvertiseRoom(roomCode, mode);
 
@@ -56,20 +63,34 @@ export default function Host() {
             </span>
           </div>
 
-          {/* Connected player color dots */}
+          {/* Connected player color dots - clickable to kick */}
           {playerCount > 0 && (
-            <div className="flex items-center gap-1">
-              {Array.from(players.values()).map((p, i) => (
-                <div
-                  key={i}
-                  className="w-3 h-3 rounded-full"
-                  style={{
-                    backgroundColor: `hsl(${PLAYER_COLORS[p.colorIndex]?.hsl ?? PLAYER_COLORS[0].hsl})`,
-                    boxShadow: `0 0 8px hsl(${PLAYER_COLORS[p.colorIndex]?.hsl ?? PLAYER_COLORS[0].hsl} / 0.5)`,
-                  }}
-                />
-              ))}
-            </div>
+            <TooltipProvider delayDuration={200}>
+              <div className="flex items-center gap-1">
+                {Array.from(players.entries()).map(([connId, p]) => {
+                  const color = PLAYER_COLORS[p.colorIndex] ?? PLAYER_COLORS[0];
+                  return (
+                    <Tooltip key={connId}>
+                      <TooltipTrigger asChild>
+                        <button
+                          onClick={() => kickPlayer(connId)}
+                          className="group relative w-5 h-5 rounded-full flex items-center justify-center cursor-pointer transition-transform hover:scale-125"
+                          style={{
+                            backgroundColor: `hsl(${color.hsl})`,
+                            boxShadow: `0 0 8px hsl(${color.hsl} / 0.5)`,
+                          }}
+                        >
+                          <X className="w-3 h-3 text-black/70 opacity-0 group-hover:opacity-100 transition-opacity" strokeWidth={3} />
+                        </button>
+                      </TooltipTrigger>
+                      <TooltipContent side="bottom" className="text-xs font-mono">
+                        Kick {color.name}
+                      </TooltipContent>
+                    </Tooltip>
+                  );
+                })}
+              </div>
+            </TooltipProvider>
           )}
         </div>
       </div>
