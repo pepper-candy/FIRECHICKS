@@ -118,7 +118,7 @@ function useHostWebRTC() {
         conn.send(JSON.stringify({ type: 'assign-color', colorIndex }));
         setPlayers((prev) => {
           const next = new Map(prev);
-          next.set(connId, { joystick: { x: 0, y: 0 }, colorIndex, ping: 0 });
+          next.set(connId, { joystick: { x: 0, y: 0 }, colorIndex, ping: 0, lastPongAt: Date.now() });
           return next;
         });
       });
