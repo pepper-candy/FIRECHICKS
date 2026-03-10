@@ -364,7 +364,7 @@ function useClientSupabase(roomCode: string) {
     // Generate a fresh client ID so the host treats this as a new join
     clientIdRef.current = Math.random().toString(36).substring(2, 10);
 
-    const channel = supabase.channel(`game-room-${code}-${clientIdRef.current}`, {
+    const channel = supabase.channel(`game-room-${code}`, {
       config: { broadcast: { self: false } },
     });
 
