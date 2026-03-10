@@ -154,7 +154,10 @@ function useHostSupabase() {
       })
       .on('broadcast', { event: 'client-join' }, (payload) => {
         const { clientId } = payload.payload as { clientId: string };
-        if (colorMapRef.current.size >= MAX_PLAYERS) return;
+        if (colorMapRef.current.size >= MAX_PLAYERS) {
+          channel.send({ type: 'broadcast', event: 'room-full', payload: { clientId } });
+          return;
+        }
         const colorIndex = nextColorRef.current % MAX_PLAYERS;
         nextColorRef.current++;
         colorMapRef.current.set(clientId, colorIndex);
