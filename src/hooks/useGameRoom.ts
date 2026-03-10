@@ -465,11 +465,16 @@ function useClientSupabase(roomCode: string) {
   }, [roomCode]);
 
   const sendJoystick = useCallback((data: JoystickData) => {
+    if (idleRef.current) return;
     channelRef.current?.send({
       type: 'broadcast',
       event: 'joystick',
       payload: { clientId: clientIdRef.current, ...data },
     });
+  }, []);
+
+  const setIdle = useCallback((idle: boolean) => {
+    idleRef.current = idle;
   }, []);
 
   const disconnect = useCallback(() => {
