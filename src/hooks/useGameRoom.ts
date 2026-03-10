@@ -337,6 +337,8 @@ function useClientWebRTC(roomCode: string) {
           } else if (msg.type === 'kicked') {
             setKicked(true);
             doDisconnect();
+          } else if (msg.type === 'ping') {
+            try { conn.send(JSON.stringify({ type: 'pong', ts: msg.ts })); } catch {}
           }
         }
       });
