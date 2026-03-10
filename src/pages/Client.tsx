@@ -39,6 +39,13 @@ export default function Client() {
     [sendJoystick],
   );
 
+  const handleIdleChange = useCallback(
+    (idle: boolean) => {
+      setIdle(idle);
+    },
+    [setIdle],
+  );
+
   if (!connected) {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen p-6 gap-8">
