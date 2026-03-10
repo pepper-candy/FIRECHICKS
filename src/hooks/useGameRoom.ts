@@ -282,6 +282,7 @@ function useClientWebRTC(roomCode: string) {
   const connRef = useRef<DataConnection | null>(null);
   const joystickRef = useRef<JoystickData>({ x: 0, y: 0 });
   const intervalRef = useRef<number | null>(null);
+  const idleRef = useRef(false);
   const colorIndexRef = useRef(-1);
 
   const connect = useCallback((overrideCode?: string) => {
@@ -314,7 +315,7 @@ function useClientWebRTC(roomCode: string) {
         // Configure the underlying data channel for UDP-like performance
         // DataChannel options (ordered/maxRetransmits) are set at creation via PeerJS options above
         intervalRef.current = window.setInterval(() => {
-          if (colorIndexRef.current >= 0) {
+          if (colorIndexRef.current >= 0 && !idleRef.current) {
             const buf = encodeJoystick(colorIndexRef.current, joystickRef.current.x, joystickRef.current.y);
             try { conn.send(buf); } catch {}
           }
@@ -338,7 +339,9 @@ function useClientWebRTC(roomCode: string) {
             setKicked(true);
             doDisconnect();
           } else if (msg.type === 'ping') {
-            try { conn.send(JSON.stringify({ type: 'pong', ts: msg.ts })); } catch {}
+            if (!idleRef.current) {
+              try { conn.send(JSON.stringify({ type: 'pong', ts: msg.ts })); } catch {}
+            }
           }
         }
       });
@@ -368,11 +371,15 @@ function useClientWebRTC(roomCode: string) {
 
   const sendJoystick = useCallback((data: JoystickData) => {
     joystickRef.current = data;
-    if (connRef.current && colorIndexRef.current >= 0) {
+    if (!idleRef.current && connRef.current && colorIndexRef.current >= 0) {
       try {
         connRef.current.send(encodeJoystick(colorIndexRef.current, data.x, data.y));
       } catch {}
     }
+  }, []);
+
+  const setIdle = useCallback((idle: boolean) => {
+    idleRef.current = idle;
   }, []);
 
   useEffect(() => {
@@ -383,7 +390,7 @@ function useClientWebRTC(roomCode: string) {
     };
   }, []);
 
-  return { connected, connect, sendJoystick, disconnect, colorIndex, roomFull, kicked };
+  return { connected, connect, sendJoystick, disconnect, colorIndex, roomFull, kicked, setIdle };
 }
 
 // ─── CLIENT: Supabase ───────────────────────────────────────
@@ -394,6 +401,7 @@ function useClientSupabase(roomCode: string) {
   const [kicked, setKicked] = useState(false);
   const channelRef = useRef<RealtimeChannel | null>(null);
   const clientIdRef = useRef(Math.random().toString(36).substring(2, 10));
+  const idleRef = useRef(false);
 
   const connect = useCallback((overrideCode?: string) => {
     const targetCode = overrideCode || roomCode;
@@ -442,6 +450,7 @@ function useClientSupabase(roomCode: string) {
         }
       })
       .on('broadcast', { event: 'ping' }, (payload) => {
+        if (idleRef.current) return;
         const { ts } = payload.payload as { ts: number };
         channel.send({ type: 'broadcast', event: 'pong', payload: { clientId: clientIdRef.current, ts } });
       })
@@ -456,11 +465,16 @@ function useClientSupabase(roomCode: string) {
   }, [roomCode]);
 
   const sendJoystick = useCallback((data: JoystickData) => {
+    if (idleRef.current) return;
     channelRef.current?.send({
       type: 'broadcast',
       event: 'joystick',
       payload: { clientId: clientIdRef.current, ...data },
     });
+  }, []);
+
+  const setIdle = useCallback((idle: boolean) => {
+    idleRef.current = idle;
   }, []);
 
   const disconnect = useCallback(() => {
@@ -477,7 +491,7 @@ function useClientSupabase(roomCode: string) {
     };
   }, []);
 
-  return { connected, connect, sendJoystick, disconnect, colorIndex, roomFull, kicked };
+  return { connected, connect, sendJoystick, disconnect, colorIndex, roomFull, kicked, setIdle };
 }
 
 // ─── Public hooks ───────────────────────────────────────────

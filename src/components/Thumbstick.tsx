@@ -2,6 +2,7 @@ import { useRef, useCallback, useEffect, useState } from 'react';
 
 interface Props {
   onMove: (x: number, y: number) => void;
+  onIdleChange?: (idle: boolean) => void;
   size?: number;
   color?: string;
 }
@@ -10,7 +11,7 @@ const THROTTLE_MS = 33; // ~30Hz for network
 const DEAD_ZONE = 0.01; // ignore jitter below this threshold
 const IDLE_TIMEOUT_MS = 1000; // stop sending after 1s at (0,0)
 
-export default function Thumbstick({ onMove, size = 200, color }: Props) {
+export default function Thumbstick({ onMove, onIdleChange, size = 200, color }: Props) {
   const baseRef = useRef<HTMLDivElement>(null);
   const [stick, setStick] = useState({ x: 0, y: 0 });
   const activeRef = useRef(false);
@@ -47,6 +48,7 @@ export default function Thumbstick({ onMove, size = 200, color }: Props) {
         if (!idleTimerRef.current) {
           idleTimerRef.current = setTimeout(() => {
             idleRef.current = true;
+            onIdleChange?.(true);
           }, IDLE_TIMEOUT_MS);
         }
       } else {
@@ -97,12 +99,15 @@ export default function Thumbstick({ onMove, size = 200, color }: Props) {
   }, [onMove]);
 
   const wakeFromIdle = useCallback(() => {
+    if (idleRef.current) {
+      onIdleChange?.(false);
+    }
     idleRef.current = false;
     if (idleTimerRef.current) {
       clearTimeout(idleTimerRef.current);
       idleTimerRef.current = null;
     }
-  }, []);
+  }, [onIdleChange]);
 
   const onTouchStart = useCallback(
     (e: React.TouchEvent) => {

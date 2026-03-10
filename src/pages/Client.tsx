@@ -10,7 +10,7 @@ import { Label } from "@/components/ui/label";
 export default function Client() {
   const [code, setCode] = useState("");
   const [mode, setMode] = useState<ConnectionMode>("webrtc");
-  const { connected, connect, sendJoystick, disconnect, colorIndex, roomFull, kicked } = useClientRoom(code, mode);
+  const { connected, connect, sendJoystick, disconnect, colorIndex, roomFull, kicked, setIdle } = useClientRoom(code, mode);
   const discoveredRooms = useDiscoverRooms(mode);
   const [wasKicked, setWasKicked] = useState(false);
   const [roomFullDismissed, setRoomFullDismissed] = useState(false);
@@ -37,6 +37,13 @@ export default function Client() {
       sendJoystick({ x, y });
     },
     [sendJoystick],
+  );
+
+  const handleIdleChange = useCallback(
+    (idle: boolean) => {
+      setIdle(idle);
+    },
+    [setIdle],
   );
 
   if (!connected) {
@@ -154,6 +161,7 @@ export default function Client() {
       {/* Color-coded thumbstick */}
       <Thumbstick
         onMove={handleMove}
+        onIdleChange={handleIdleChange}
         size={220}
         color={playerColor ? `hsl(${playerColor.hsl})` : undefined}
       />
