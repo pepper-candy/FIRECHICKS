@@ -1,5 +1,6 @@
 import { useState, useCallback } from "react";
 import { useClientRoom, useDiscoverRooms, type ConnectionMode } from "@/hooks/useGameRoom";
+import { PLAYER_COLORS } from "@/lib/playerColors";
 import Thumbstick from "@/components/Thumbstick";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -9,8 +10,10 @@ import { Label } from "@/components/ui/label";
 export default function Client() {
   const [code, setCode] = useState("");
   const [mode, setMode] = useState<ConnectionMode>("webrtc");
-  const { connected, connect, sendJoystick, disconnect } = useClientRoom(code, mode);
+  const { connected, connect, sendJoystick, disconnect, colorIndex } = useClientRoom(code, mode);
   const discoveredRooms = useDiscoverRooms(mode);
+
+  const playerColor = colorIndex >= 0 ? PLAYER_COLORS[colorIndex] : null;
 
   const handleJoin = (roomCode?: string) => {
     const targetCode = roomCode || code;
@@ -100,15 +103,38 @@ export default function Client() {
 
   return (
     <div className="flex flex-col items-center justify-center min-h-screen p-6 gap-6 select-none">
-      <div className="flex items-center gap-2 text-xs font-mono text-muted-foreground">
-        <div className="w-2 h-2 rounded-full bg-primary glow-green" />
-        CONNECTED
+      <div className="flex items-center gap-3 text-xs font-mono text-muted-foreground">
+        {/* Player color indicator */}
+        {playerColor && (
+          <div
+            className="w-4 h-4 rounded-full"
+            style={{
+              backgroundColor: `hsl(${playerColor.hsl})`,
+              boxShadow: `0 0 12px hsl(${playerColor.hsl} / 0.5)`,
+            }}
+          />
+        )}
+        <div className="flex items-center gap-2">
+          <div className="w-2 h-2 rounded-full bg-primary glow-green" />
+          CONNECTED
+        </div>
         <span className="text-muted-foreground/50">({mode === "webrtc" ? "WebRTC" : "Supabase"})</span>
       </div>
 
-      <Thumbstick onMove={handleMove} size={220} />
+      {/* Color-coded thumbstick */}
+      <Thumbstick
+        onMove={handleMove}
+        size={220}
+        color={playerColor ? `hsl(${playerColor.hsl})` : undefined}
+      />
 
-      <p className="text-xs text-muted-foreground font-mono mt-4">Drag to move your character</p>
+      {playerColor && (
+        <p className="text-xs font-mono" style={{ color: `hsl(${playerColor.hsl})` }}>
+          You are {playerColor.name}
+        </p>
+      )}
+
+      <p className="text-xs text-muted-foreground font-mono mt-2">Drag to move your character</p>
 
       <Button
         variant="outline"
