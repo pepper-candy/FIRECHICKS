@@ -25,6 +25,9 @@ export default function Thumbstick({ onMove, size = 200, color }: Props) {
 
   const throttledOnMove = useCallback(
     (normX: number, normY: number) => {
+      // If idle mode is active, don't send
+      if (idleRef.current) return;
+
       const now = performance.now();
       const dx = Math.abs(normX - lastSentRef.current.x);
       const dy = Math.abs(normY - lastSentRef.current.y);
@@ -38,6 +41,20 @@ export default function Thumbstick({ onMove, size = 200, color }: Props) {
       lastSentRef.current = { x: normX, y: normY };
       lastSendTimeRef.current = now;
       onMove(normX, normY);
+
+      // If at zero, start idle timer; otherwise clear it
+      if (normX === 0 && normY === 0) {
+        if (!idleTimerRef.current) {
+          idleTimerRef.current = setTimeout(() => {
+            idleRef.current = true;
+          }, IDLE_TIMEOUT_MS);
+        }
+      } else {
+        if (idleTimerRef.current) {
+          clearTimeout(idleTimerRef.current);
+          idleTimerRef.current = null;
+        }
+      }
     },
     [onMove]
   );
