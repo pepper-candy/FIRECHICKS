@@ -450,6 +450,7 @@ function useClientSupabase(roomCode: string) {
         }
       })
       .on('broadcast', { event: 'ping' }, (payload) => {
+        if (idleRef.current) return;
         const { ts } = payload.payload as { ts: number };
         channel.send({ type: 'broadcast', event: 'pong', payload: { clientId: clientIdRef.current, ts } });
       })
