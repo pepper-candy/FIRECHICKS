@@ -117,7 +117,7 @@ function useHostWebRTC() {
         conn.send(JSON.stringify({ type: 'assign-color', colorIndex }));
         setPlayers((prev) => {
           const next = new Map(prev);
-          next.set(connId, { joystick: { x: 0, y: 0 }, colorIndex });
+          next.set(connId, { joystick: { x: 0, y: 0 }, colorIndex, ping: 0 });
           return next;
         });
       });
@@ -133,6 +133,23 @@ function useHostWebRTC() {
             }
             return next;
           });
+        } else {
+          // Handle string messages (pong)
+          let msg: any = null;
+          if (typeof data === 'string') {
+            try { msg = JSON.parse(data); } catch {}
+          }
+          if (msg?.type === 'pong') {
+            const rtt = Date.now() - msg.ts;
+            setPlayers((prev) => {
+              const next = new Map(prev);
+              const existing = next.get(connId);
+              if (existing) {
+                next.set(connId, { ...existing, ping: rtt });
+              }
+              return next;
+            });
+          }
         }
       });
 
@@ -140,7 +157,16 @@ function useHostWebRTC() {
       conn.on('error', () => removePlayer(connId));
     });
 
+    // Ping interval
+    const pingInterval = window.setInterval(() => {
+      const ts = Date.now();
+      connsRef.current.forEach((conn) => {
+        try { conn.send(JSON.stringify({ type: 'ping', ts })); } catch {}
+      });
+    }, 2000);
+
     return () => {
+      clearInterval(pingInterval);
       connsRef.current.forEach((c) => c.close());
       connsRef.current.clear();
       peer.destroy();
