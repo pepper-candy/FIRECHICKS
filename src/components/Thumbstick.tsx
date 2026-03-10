@@ -17,6 +17,8 @@ export default function Thumbstick({ onMove, size = 200, color }: Props) {
   const stickIdRef = useRef<number | null>(null);
   const lastSentRef = useRef({ x: 0, y: 0 });
   const lastSendTimeRef = useRef(0);
+  const idleRef = useRef(false);
+  const idleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const maxDist = size / 2 - 30;
   const knobColor = color ?? 'hsl(var(--primary))';
