@@ -12,6 +12,14 @@ interface Props {
 
 export default function NetworkPerformancePanel({ players }: Props) {
   const [open, setOpen] = useState(false);
+  const [now, setNow] = useState(Date.now());
+
+  // Tick every 2s to detect stale pings
+  useEffect(() => {
+    if (!open) return;
+    const id = setInterval(() => setNow(Date.now()), 2000);
+    return () => clearInterval(id);
+  }, [open]);
 
   return (
     <div className="fixed bottom-4 right-4 z-50 font-mono">
