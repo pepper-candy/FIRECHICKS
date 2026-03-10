@@ -22,6 +22,7 @@ export interface PlayerState {
   joystick: JoystickData;
   colorIndex: number;
   ping: number;
+  lastPongAt: number;
 }
 
 // ─── Binary encoding for joystick data ──────────────────────
