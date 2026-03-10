@@ -286,7 +286,7 @@ function useClientWebRTC(roomCode: string) {
     };
   }, []);
 
-  return { connected, connect, sendJoystick, disconnect, colorIndex };
+  return { connected, connect, sendJoystick, disconnect, colorIndex, roomFull };
 }
 
 // ─── CLIENT: Supabase ───────────────────────────────────────
