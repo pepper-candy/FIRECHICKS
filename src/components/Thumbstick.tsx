@@ -3,15 +3,17 @@ import { useRef, useCallback, useEffect, useState } from 'react';
 interface Props {
   onMove: (x: number, y: number) => void;
   size?: number;
+  color?: string; // CSS color string, e.g. "hsl(145 80% 50%)"
 }
 
-export default function Thumbstick({ onMove, size = 200 }: Props) {
+export default function Thumbstick({ onMove, size = 200, color }: Props) {
   const baseRef = useRef<HTMLDivElement>(null);
   const [stick, setStick] = useState({ x: 0, y: 0 });
   const activeRef = useRef(false);
   const stickIdRef = useRef<number | null>(null);
 
   const maxDist = size / 2 - 30;
+  const knobColor = color ?? 'hsl(var(--primary))';
 
   const handleMove = useCallback(
     (clientX: number, clientY: number) => {
@@ -108,8 +110,12 @@ export default function Thumbstick({ onMove, size = 200 }: Props) {
   return (
     <div
       ref={baseRef}
-      className="relative rounded-full border-2 border-primary/40 bg-muted/50 select-none touch-none"
-      style={{ width: size, height: size }}
+      className="relative rounded-full border-2 bg-muted/50 select-none touch-none"
+      style={{
+        width: size,
+        height: size,
+        borderColor: color ? `${color.replace(')', ' / 0.4)')}` : 'hsl(var(--primary) / 0.4)',
+      }}
       onTouchStart={onTouchStart}
       onMouseDown={onMouseDown}
     >
@@ -122,13 +128,15 @@ export default function Thumbstick({ onMove, size = 200 }: Props) {
       </div>
       {/* Stick knob */}
       <div
-        className="absolute rounded-full bg-primary glow-green pointer-events-none"
+        className="absolute rounded-full pointer-events-none"
         style={{
           width: 56,
           height: 56,
           left: `calc(50% - 28px + ${stick.x}px)`,
           top: `calc(50% - 28px + ${stick.y}px)`,
           transition: stick.x === 0 && stick.y === 0 ? 'all 0.15s ease-out' : 'none',
+          backgroundColor: knobColor,
+          boxShadow: `0 0 20px ${color ? color.replace(')', ' / 0.4)') : 'hsl(var(--glow-primary) / 0.4)'}, 0 0 60px ${color ? color.replace(')', ' / 0.15)') : 'hsl(var(--glow-primary) / 0.15)'}`,
         }}
       />
     </div>

@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import Peer, { DataConnection } from 'peerjs';
 import { supabase } from '@/integrations/supabase/client';
 import type { RealtimeChannel } from '@supabase/supabase-js';
+import { MAX_PLAYERS } from '@/lib/playerColors';
 
 export type ConnectionMode = 'webrtc' | 'supabase';
 
@@ -10,54 +11,123 @@ function generateRoomCode(): string {
 }
 
 const PEER_PREFIX = 'evsc-';
-const JOYSTICK_SEND_INTERVAL = 33; // ~30Hz continuous send for WebRTC
+const JOYSTICK_SEND_INTERVAL = 33; // ~30Hz
 
 export interface JoystickData {
   x: number; // -1 to 1
   y: number; // -1 to 1
 }
 
-// ─── HOST: WebRTC ───────────────────────────────────────────
+export interface PlayerState {
+  joystick: JoystickData;
+  colorIndex: number;
+}
+
+// ─── Binary encoding for joystick data ──────────────────────
+// 5 bytes: [0] = colorIndex, [1-2] = x as Int16, [3-4] = y as Int16
+function encodeJoystick(colorIndex: number, x: number, y: number): ArrayBuffer {
+  const buf = new ArrayBuffer(5);
+  const view = new DataView(buf);
+  view.setUint8(0, colorIndex);
+  view.setInt16(1, Math.round(x * 32767), true);
+  view.setInt16(3, Math.round(y * 32767), true);
+  return buf;
+}
+
+function decodeJoystick(buf: ArrayBuffer): { colorIndex: number; x: number; y: number } {
+  const view = new DataView(buf);
+  return {
+    colorIndex: view.getUint8(0),
+    x: view.getInt16(1, true) / 32767,
+    y: view.getInt16(3, true) / 32767,
+  };
+}
+
+// ─── HOST: WebRTC (multi-player) ────────────────────────────
 function useHostWebRTC() {
   const [roomCode, setRoomCode] = useState('');
-  const [clientConnected, setClientConnected] = useState(false);
-  const [joystick, setJoystick] = useState<JoystickData>({ x: 0, y: 0 });
+  const [players, setPlayers] = useState<Map<string, PlayerState>>(new Map());
   const peerRef = useRef<Peer | null>(null);
-  const connRef = useRef<DataConnection | null>(null);
+  const connsRef = useRef<Map<string, DataConnection>>(new Map());
+  const nextColorRef = useRef(0);
 
   useEffect(() => {
     const code = generateRoomCode();
     setRoomCode(code);
 
-    const peer = new Peer(`${PEER_PREFIX}${code}`);
+    const peer = new Peer(`${PEER_PREFIX}${code}`, {
+      config: {
+        iceServers: [
+          { urls: 'stun:stun.l.google.com:19302' },
+          { urls: 'stun:stun1.l.google.com:19302' },
+        ],
+        iceCandidatePoolSize: 4,
+      },
+    });
     peerRef.current = peer;
 
     peer.on('connection', (conn) => {
-      connRef.current = conn;
-      conn.on('open', () => setClientConnected(true));
-      conn.on('data', (data) => setJoystick(data as JoystickData));
+      const connId = conn.peer;
+      if (connsRef.current.size >= MAX_PLAYERS) {
+        conn.close();
+        return;
+      }
+
+      const colorIndex = nextColorRef.current % MAX_PLAYERS;
+      nextColorRef.current++;
+
+      conn.on('open', () => {
+        connsRef.current.set(connId, conn);
+        // Send assigned color index to client
+        conn.send(JSON.stringify({ type: 'assign-color', colorIndex }));
+        setPlayers((prev) => {
+          const next = new Map(prev);
+          next.set(connId, { joystick: { x: 0, y: 0 }, colorIndex });
+          return next;
+        });
+      });
+
+      conn.on('data', (data) => {
+        if (data instanceof ArrayBuffer) {
+          const decoded = decodeJoystick(data);
+          setPlayers((prev) => {
+            const next = new Map(prev);
+            const existing = next.get(connId);
+            if (existing) {
+              next.set(connId, { ...existing, joystick: { x: decoded.x, y: decoded.y } });
+            }
+            return next;
+          });
+        }
+      });
+
       conn.on('close', () => {
-        setClientConnected(false);
-        setJoystick({ x: 0, y: 0 });
-        connRef.current = null;
+        connsRef.current.delete(connId);
+        setPlayers((prev) => {
+          const next = new Map(prev);
+          next.delete(connId);
+          return next;
+        });
       });
     });
 
     return () => {
-      connRef.current?.close();
+      connsRef.current.forEach((c) => c.close());
+      connsRef.current.clear();
       peer.destroy();
     };
   }, []);
 
-  return { roomCode, clientConnected, joystick };
+  return { roomCode, players };
 }
 
-// ─── HOST: Supabase ─────────────────────────────────────────
+// ─── HOST: Supabase (multi-player) ─────────────────────────
 function useHostSupabase() {
   const [roomCode, setRoomCode] = useState('');
-  const [clientConnected, setClientConnected] = useState(false);
-  const [joystick, setJoystick] = useState<JoystickData>({ x: 0, y: 0 });
+  const [players, setPlayers] = useState<Map<string, PlayerState>>(new Map());
   const channelRef = useRef<RealtimeChannel | null>(null);
+  const colorMapRef = useRef<Map<string, number>>(new Map());
+  const nextColorRef = useRef(0);
 
   useEffect(() => {
     const code = generateRoomCode();
@@ -69,14 +139,38 @@ function useHostSupabase() {
 
     channel
       .on('broadcast', { event: 'joystick' }, (payload) => {
-        setJoystick(payload.payload as JoystickData);
+        const { clientId, x, y } = payload.payload as { clientId: string; x: number; y: number };
+        setPlayers((prev) => {
+          const next = new Map(prev);
+          const existing = next.get(clientId);
+          if (existing) {
+            next.set(clientId, { ...existing, joystick: { x, y } });
+          }
+          return next;
+        });
       })
-      .on('broadcast', { event: 'client-join' }, () => {
-        setClientConnected(true);
+      .on('broadcast', { event: 'client-join' }, (payload) => {
+        const { clientId } = payload.payload as { clientId: string };
+        if (colorMapRef.current.size >= MAX_PLAYERS) return;
+        const colorIndex = nextColorRef.current % MAX_PLAYERS;
+        nextColorRef.current++;
+        colorMapRef.current.set(clientId, colorIndex);
+        setPlayers((prev) => {
+          const next = new Map(prev);
+          next.set(clientId, { joystick: { x: 0, y: 0 }, colorIndex });
+          return next;
+        });
+        // Send assigned color back
+        channel.send({ type: 'broadcast', event: 'assign-color', payload: { clientId, colorIndex } });
       })
-      .on('broadcast', { event: 'client-leave' }, () => {
-        setClientConnected(false);
-        setJoystick({ x: 0, y: 0 });
+      .on('broadcast', { event: 'client-leave' }, (payload) => {
+        const { clientId } = payload.payload as { clientId: string };
+        colorMapRef.current.delete(clientId);
+        setPlayers((prev) => {
+          const next = new Map(prev);
+          next.delete(clientId);
+          return next;
+        });
       })
       .subscribe();
 
@@ -87,35 +181,77 @@ function useHostSupabase() {
     };
   }, []);
 
-  return { roomCode, clientConnected, joystick };
+  return { roomCode, players };
 }
 
-// ─── CLIENT: WebRTC ─────────────────────────────────────────
+// ─── CLIENT: WebRTC (optimized) ─────────────────────────────
 function useClientWebRTC(roomCode: string) {
   const [connected, setConnected] = useState(false);
+  const [colorIndex, setColorIndex] = useState<number>(-1);
   const peerRef = useRef<Peer | null>(null);
   const connRef = useRef<DataConnection | null>(null);
   const joystickRef = useRef<JoystickData>({ x: 0, y: 0 });
   const intervalRef = useRef<number | null>(null);
+  const colorIndexRef = useRef(-1);
 
   const connect = useCallback((overrideCode?: string) => {
     const targetCode = overrideCode || roomCode;
     if (!targetCode) return;
     const code = targetCode.toUpperCase();
 
-    const peer = new Peer();
+    const peer = new Peer(undefined, {
+      config: {
+        iceServers: [
+          { urls: 'stun:stun.l.google.com:19302' },
+          { urls: 'stun:stun1.l.google.com:19302' },
+        ],
+        iceCandidatePoolSize: 4,
+      },
+    });
     peerRef.current = peer;
 
     peer.on('open', () => {
-      const conn = peer.connect(`${PEER_PREFIX}${code}`, { reliable: false });
+      const conn = peer.connect(`${PEER_PREFIX}${code}`, {
+        reliable: false,
+        serialization: 'none',
+        // PeerJS options for DataChannel
+      });
       connRef.current = conn;
+
+      // Override the DC config after PeerJS creates it
       conn.on('open', () => {
         setConnected(true);
-        // Start continuous send loop
+        // Start continuous binary send loop
         intervalRef.current = window.setInterval(() => {
-          conn.send(joystickRef.current);
+          if (colorIndexRef.current >= 0) {
+            const buf = encodeJoystick(colorIndexRef.current, joystickRef.current.x, joystickRef.current.y);
+            try { conn.send(buf); } catch {}
+          }
         }, JOYSTICK_SEND_INTERVAL);
       });
+
+      conn.on('data', (data) => {
+        // Handle color assignment from host (comes as string since host uses conn.send(JSON.stringify(...)))
+        if (typeof data === 'string') {
+          try {
+            const msg = JSON.parse(data);
+            if (msg.type === 'assign-color') {
+              colorIndexRef.current = msg.colorIndex;
+              setColorIndex(msg.colorIndex);
+            }
+          } catch {}
+        } else if (data instanceof ArrayBuffer) {
+          const decoder = new TextDecoder();
+          try {
+            const msg = JSON.parse(decoder.decode(data));
+            if (msg.type === 'assign-color') {
+              colorIndexRef.current = msg.colorIndex;
+              setColorIndex(msg.colorIndex);
+            }
+          } catch {}
+        }
+      });
+
       conn.on('close', () => {
         setConnected(false);
         if (intervalRef.current) clearInterval(intervalRef.current);
@@ -126,7 +262,11 @@ function useClientWebRTC(roomCode: string) {
   const sendJoystick = useCallback((data: JoystickData) => {
     joystickRef.current = data;
     // Also send immediately for responsiveness
-    connRef.current?.send(data);
+    if (connRef.current && colorIndexRef.current >= 0) {
+      try {
+        connRef.current.send(encodeJoystick(colorIndexRef.current, data.x, data.y));
+      } catch {}
+    }
   }, []);
 
   const disconnect = useCallback(() => {
@@ -137,6 +277,8 @@ function useClientWebRTC(roomCode: string) {
     peerRef.current?.destroy();
     peerRef.current = null;
     setConnected(false);
+    setColorIndex(-1);
+    colorIndexRef.current = -1;
   }, []);
 
   useEffect(() => {
@@ -147,13 +289,15 @@ function useClientWebRTC(roomCode: string) {
     };
   }, []);
 
-  return { connected, connect, sendJoystick, disconnect };
+  return { connected, connect, sendJoystick, disconnect, colorIndex };
 }
 
 // ─── CLIENT: Supabase ───────────────────────────────────────
 function useClientSupabase(roomCode: string) {
   const [connected, setConnected] = useState(false);
+  const [colorIndex, setColorIndex] = useState<number>(-1);
   const channelRef = useRef<RealtimeChannel | null>(null);
+  const clientIdRef = useRef(Math.random().toString(36).substring(2, 10));
 
   const connect = useCallback((overrideCode?: string) => {
     const targetCode = overrideCode || roomCode;
@@ -163,12 +307,19 @@ function useClientSupabase(roomCode: string) {
       config: { broadcast: { self: false } },
     });
 
-    channel.subscribe((status) => {
-      if (status === 'SUBSCRIBED') {
-        setConnected(true);
-        channel.send({ type: 'broadcast', event: 'client-join', payload: {} });
-      }
-    });
+    channel
+      .on('broadcast', { event: 'assign-color' }, (payload) => {
+        const { clientId, colorIndex: ci } = payload.payload as { clientId: string; colorIndex: number };
+        if (clientId === clientIdRef.current) {
+          setColorIndex(ci);
+        }
+      })
+      .subscribe((status) => {
+        if (status === 'SUBSCRIBED') {
+          setConnected(true);
+          channel.send({ type: 'broadcast', event: 'client-join', payload: { clientId: clientIdRef.current } });
+        }
+      });
 
     channelRef.current = channel;
   }, [roomCode]);
@@ -177,15 +328,16 @@ function useClientSupabase(roomCode: string) {
     channelRef.current?.send({
       type: 'broadcast',
       event: 'joystick',
-      payload: data,
+      payload: { clientId: clientIdRef.current, ...data },
     });
   }, []);
 
   const disconnect = useCallback(() => {
-    channelRef.current?.send({ type: 'broadcast', event: 'client-leave', payload: {} });
+    channelRef.current?.send({ type: 'broadcast', event: 'client-leave', payload: { clientId: clientIdRef.current } });
     channelRef.current?.unsubscribe();
     channelRef.current = null;
     setConnected(false);
+    setColorIndex(-1);
   }, []);
 
   useEffect(() => {
@@ -194,7 +346,7 @@ function useClientSupabase(roomCode: string) {
     };
   }, []);
 
-  return { connected, connect, sendJoystick, disconnect };
+  return { connected, connect, sendJoystick, disconnect, colorIndex };
 }
 
 // ─── Public hooks ───────────────────────────────────────────
@@ -211,7 +363,6 @@ export function useClientRoom(roomCode: string, mode: ConnectionMode = 'webrtc')
 }
 
 // ─── Room discovery (for WebRTC mode) ───────────────────────
-// Uses Supabase presence to advertise active WebRTC rooms
 const LOBBY_CHANNEL = 'game-lobby';
 
 export function useAdvertiseRoom(roomCode: string, mode: ConnectionMode) {

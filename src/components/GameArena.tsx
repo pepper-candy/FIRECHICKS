@@ -1,39 +1,73 @@
 import { useRef, useEffect, useState } from 'react';
-import type { JoystickData } from '@/hooks/useGameRoom';
+import type { PlayerState } from '@/hooks/useGameRoom';
+import { PLAYER_COLORS } from '@/lib/playerColors';
 
 interface Props {
-  joystick: JoystickData;
+  players: Map<string, PlayerState>;
 }
 
 const SPEED = 4;
 const PLAYER_SIZE = 24;
 
-export default function GameArena({ joystick }: Props) {
+interface PlayerPos {
+  x: number;
+  y: number;
+}
+
+export default function GameArena({ players }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
-  const [pos, setPos] = useState({ x: 50, y: 50 }); // percentage
+  const [positions, setPositions] = useState<Map<string, PlayerPos>>(new Map());
 
+  // Keep positions in sync with active players
   useEffect(() => {
-    if (joystick.x === 0 && joystick.y === 0) return;
+    setPositions((prev) => {
+      const next = new Map(prev);
+      // Remove disconnected players
+      for (const key of next.keys()) {
+        if (!players.has(key)) next.delete(key);
+      }
+      // Add new players at center
+      for (const key of players.keys()) {
+        if (!next.has(key)) next.set(key, { x: 50, y: 50 });
+      }
+      return next;
+    });
+  }, [players]);
 
+  // Animation loop
+  useEffect(() => {
     const id = setInterval(() => {
-      setPos((prev) => {
+      setPositions((prev) => {
         const container = containerRef.current;
         if (!container) return prev;
 
         const w = container.clientWidth;
         const h = container.clientHeight;
-        const pxX = (prev.x / 100) * w + joystick.x * SPEED;
-        const pxY = (prev.y / 100) * h + joystick.y * SPEED;
+        let changed = false;
+        const next = new Map(prev);
 
-        return {
-          x: Math.max(0, Math.min(100, (pxX / w) * 100)),
-          y: Math.max(0, Math.min(100, (pxY / h) * 100)),
-        };
+        for (const [key, pos] of next) {
+          const player = players.get(key);
+          if (!player) continue;
+          const { joystick } = player;
+          if (joystick.x === 0 && joystick.y === 0) continue;
+
+          changed = true;
+          const pxX = (pos.x / 100) * w + joystick.x * SPEED;
+          const pxY = (pos.y / 100) * h + joystick.y * SPEED;
+
+          next.set(key, {
+            x: Math.max(0, Math.min(100, (pxX / w) * 100)),
+            y: Math.max(0, Math.min(100, (pxY / h) * 100)),
+          });
+        }
+
+        return changed ? next : prev;
       });
     }, 16);
 
     return () => clearInterval(id);
-  }, [joystick]);
+  }, [players]);
 
   return (
     <div
@@ -45,26 +79,48 @@ export default function GameArena({ joystick }: Props) {
         backgroundSize: '40px 40px',
       }}
     >
-      {/* Player */}
-      <div
-        className="absolute rounded-full bg-player glow-green transition-none"
-        style={{
-          width: PLAYER_SIZE,
-          height: PLAYER_SIZE,
-          left: `calc(${pos.x}% - ${PLAYER_SIZE / 2}px)`,
-          top: `calc(${pos.y}% - ${PLAYER_SIZE / 2}px)`,
-        }}
-      />
-      {/* Trail effect */}
-      <div
-        className="absolute rounded-full bg-player/20 blur-md"
-        style={{
-          width: PLAYER_SIZE * 2,
-          height: PLAYER_SIZE * 2,
-          left: `calc(${pos.x}% - ${PLAYER_SIZE}px)`,
-          top: `calc(${pos.y}% - ${PLAYER_SIZE}px)`,
-        }}
-      />
+      {Array.from(positions.entries()).map(([id, pos]) => {
+        const player = players.get(id);
+        if (!player) return null;
+        const color = PLAYER_COLORS[player.colorIndex] ?? PLAYER_COLORS[0];
+
+        return (
+          <div key={id}>
+            {/* Trail/glow */}
+            <div
+              className="absolute rounded-full blur-md"
+              style={{
+                width: PLAYER_SIZE * 2,
+                height: PLAYER_SIZE * 2,
+                left: `calc(${pos.x}% - ${PLAYER_SIZE}px)`,
+                top: `calc(${pos.y}% - ${PLAYER_SIZE}px)`,
+                backgroundColor: `hsl(${color.hsl} / 0.2)`,
+              }}
+            />
+            {/* Player dot */}
+            <div
+              className="absolute rounded-full transition-none"
+              style={{
+                width: PLAYER_SIZE,
+                height: PLAYER_SIZE,
+                left: `calc(${pos.x}% - ${PLAYER_SIZE / 2}px)`,
+                top: `calc(${pos.y}% - ${PLAYER_SIZE / 2}px)`,
+                backgroundColor: `hsl(${color.hsl})`,
+                boxShadow: `0 0 20px hsl(${color.hsl} / 0.4), 0 0 60px hsl(${color.hsl} / 0.15)`,
+              }}
+            />
+          </div>
+        );
+      })}
+
+      {/* Empty state */}
+      {positions.size === 0 && (
+        <div className="absolute inset-0 flex items-center justify-center">
+          <p className="text-xs text-muted-foreground font-mono animate-pulse">
+            WAITING FOR PLAYERS...
+          </p>
+        </div>
+      )}
     </div>
   );
 }
