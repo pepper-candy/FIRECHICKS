@@ -293,6 +293,7 @@ function useClientWebRTC(roomCode: string) {
 function useClientSupabase(roomCode: string) {
   const [connected, setConnected] = useState(false);
   const [colorIndex, setColorIndex] = useState<number>(-1);
+  const [roomFull, setRoomFull] = useState(false);
   const channelRef = useRef<RealtimeChannel | null>(null);
   const clientIdRef = useRef(Math.random().toString(36).substring(2, 10));
 
