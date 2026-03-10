@@ -469,7 +469,7 @@ export function useDiscoverRooms(_mode: ConnectionMode) {
     return () => {
       channel.unsubscribe();
     };
-  }, [mode]);
+  }, []);
 
   return rooms;
 }
