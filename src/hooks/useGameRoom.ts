@@ -282,6 +282,7 @@ function useClientWebRTC(roomCode: string) {
   const connRef = useRef<DataConnection | null>(null);
   const joystickRef = useRef<JoystickData>({ x: 0, y: 0 });
   const intervalRef = useRef<number | null>(null);
+  const idleRef = useRef(false);
   const colorIndexRef = useRef(-1);
 
   const connect = useCallback((overrideCode?: string) => {

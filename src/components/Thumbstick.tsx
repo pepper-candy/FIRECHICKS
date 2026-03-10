@@ -2,6 +2,7 @@ import { useRef, useCallback, useEffect, useState } from 'react';
 
 interface Props {
   onMove: (x: number, y: number) => void;
+  onIdleChange?: (idle: boolean) => void;
   size?: number;
   color?: string;
 }
