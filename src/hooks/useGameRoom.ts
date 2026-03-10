@@ -12,8 +12,6 @@ function generateRoomCode(): string {
 
 const PEER_PREFIX = 'evsc-';
 const JOYSTICK_SEND_INTERVAL = 33; // ~30Hz
-const HEARTBEAT_CHECK_INTERVAL = 5000; // 5s
-const HEARTBEAT_TIMEOUT = 10000; // 10s
 
 export interface JoystickData {
   x: number;
@@ -59,7 +57,6 @@ function useHostWebRTC() {
   const peerRef = useRef<Peer | null>(null);
   const connsRef = useRef<Map<string, DataConnection>>(new Map());
   const usedColorsRef = useRef<Set<number>>(new Set());
-  const lastSeenRef = useRef<Map<string, number>>(new Map());
   const connColorMapRef = useRef<Map<string, number>>(new Map());
 
   const removePlayer = useCallback((connId: string) => {
@@ -70,13 +67,21 @@ function useHostWebRTC() {
     }
     connsRef.current.get(connId)?.close();
     connsRef.current.delete(connId);
-    lastSeenRef.current.delete(connId);
     setPlayers((prev) => {
       const next = new Map(prev);
       next.delete(connId);
       return next;
     });
   }, []);
+
+  // Expose kickPlayer for host UI
+  const kickPlayer = useCallback((connId: string) => {
+    const conn = connsRef.current.get(connId);
+    if (conn) {
+      try { conn.send(JSON.stringify({ type: 'kicked' })); } catch {}
+    }
+    removePlayer(connId);
+  }, [removePlayer]);
 
   useEffect(() => {
     const code = generateRoomCode();
@@ -107,7 +112,6 @@ function useHostWebRTC() {
         usedColorsRef.current.add(colorIndex);
         connColorMapRef.current.set(connId, colorIndex);
         connsRef.current.set(connId, conn);
-        lastSeenRef.current.set(connId, Date.now());
 
         conn.send(JSON.stringify({ type: 'assign-color', colorIndex }));
         setPlayers((prev) => {
@@ -118,7 +122,6 @@ function useHostWebRTC() {
       });
 
       conn.on('data', (data) => {
-        lastSeenRef.current.set(connId, Date.now());
         if (data instanceof ArrayBuffer) {
           const decoded = decodeJoystick(data);
           setPlayers((prev) => {
@@ -136,25 +139,14 @@ function useHostWebRTC() {
       conn.on('error', () => removePlayer(connId));
     });
 
-    // Heartbeat: remove stale players
-    const heartbeatInterval = window.setInterval(() => {
-      const now = Date.now();
-      lastSeenRef.current.forEach((ts, connId) => {
-        if (now - ts > HEARTBEAT_TIMEOUT) {
-          removePlayer(connId);
-        }
-      });
-    }, HEARTBEAT_CHECK_INTERVAL);
-
     return () => {
-      clearInterval(heartbeatInterval);
       connsRef.current.forEach((c) => c.close());
       connsRef.current.clear();
       peer.destroy();
     };
   }, [removePlayer]);
 
-  return { roomCode, players };
+  return { roomCode, players, kickPlayer };
 }
 
 // ─── HOST: Supabase (multi-player) ─────────────────────────
@@ -164,7 +156,6 @@ function useHostSupabase() {
   const channelRef = useRef<RealtimeChannel | null>(null);
   const usedColorsRef = useRef<Set<number>>(new Set());
   const clientColorMapRef = useRef<Map<string, number>>(new Map());
-  const lastSeenRef = useRef<Map<string, number>>(new Map());
 
   const removePlayer = useCallback((clientId: string) => {
     const colorIdx = clientColorMapRef.current.get(clientId);
@@ -172,13 +163,17 @@ function useHostSupabase() {
       usedColorsRef.current.delete(colorIdx);
       clientColorMapRef.current.delete(clientId);
     }
-    lastSeenRef.current.delete(clientId);
     setPlayers((prev) => {
       const next = new Map(prev);
       next.delete(clientId);
       return next;
     });
   }, []);
+
+  const kickPlayer = useCallback((clientId: string) => {
+    channelRef.current?.send({ type: 'broadcast', event: 'kicked', payload: { clientId } });
+    removePlayer(clientId);
+  }, [removePlayer]);
 
   useEffect(() => {
     const code = generateRoomCode();
@@ -191,7 +186,6 @@ function useHostSupabase() {
     channel
       .on('broadcast', { event: 'joystick' }, (payload) => {
         const { clientId, x, y } = payload.payload as { clientId: string; x: number; y: number };
-        lastSeenRef.current.set(clientId, Date.now());
         setPlayers((prev) => {
           const next = new Map(prev);
           const existing = next.get(clientId);
@@ -210,7 +204,6 @@ function useHostSupabase() {
         }
         usedColorsRef.current.add(colorIndex);
         clientColorMapRef.current.set(clientId, colorIndex);
-        lastSeenRef.current.set(clientId, Date.now());
         setPlayers((prev) => {
           const next = new Map(prev);
           next.set(clientId, { joystick: { x: 0, y: 0 }, colorIndex });
@@ -226,23 +219,12 @@ function useHostSupabase() {
 
     channelRef.current = channel;
 
-    // Heartbeat: remove stale players
-    const heartbeatInterval = window.setInterval(() => {
-      const now = Date.now();
-      lastSeenRef.current.forEach((ts, clientId) => {
-        if (now - ts > HEARTBEAT_TIMEOUT) {
-          removePlayer(clientId);
-        }
-      });
-    }, HEARTBEAT_CHECK_INTERVAL);
-
     return () => {
-      clearInterval(heartbeatInterval);
       channel.unsubscribe();
     };
   }, [removePlayer]);
 
-  return { roomCode, players };
+  return { roomCode, players, kickPlayer };
 }
 
 // ─── CLIENT: WebRTC (optimized) ─────────────────────────────
@@ -250,6 +232,7 @@ function useClientWebRTC(roomCode: string) {
   const [connected, setConnected] = useState(false);
   const [colorIndex, setColorIndex] = useState<number>(-1);
   const [roomFull, setRoomFull] = useState(false);
+  const [kicked, setKicked] = useState(false);
   const peerRef = useRef<Peer | null>(null);
   const connRef = useRef<DataConnection | null>(null);
   const joystickRef = useRef<JoystickData>({ x: 0, y: 0 });
@@ -260,6 +243,7 @@ function useClientWebRTC(roomCode: string) {
     const targetCode = overrideCode || roomCode;
     if (!targetCode) return;
     const code = targetCode.toUpperCase();
+    setKicked(false);
 
     const peer = new Peer(undefined, {
       config: {
@@ -275,11 +259,20 @@ function useClientWebRTC(roomCode: string) {
     peer.on('open', () => {
       const conn = peer.connect(`${PEER_PREFIX}${code}`, {
         serialization: 'binary',
+        reliable: false,
       });
       connRef.current = conn;
 
       conn.on('open', () => {
         setConnected(true);
+        // Configure the underlying data channel for UDP-like performance
+        const dc = (conn as any)._dc as RTCDataChannel | undefined;
+        if (dc) {
+          try {
+            dc.ordered = false;
+            // maxRetransmits is read-only after creation, but we set it via peerOptions
+          } catch {}
+        }
         intervalRef.current = window.setInterval(() => {
           if (colorIndexRef.current >= 0) {
             const buf = encodeJoystick(colorIndexRef.current, joystickRef.current.x, joystickRef.current.y);
@@ -301,6 +294,9 @@ function useClientWebRTC(roomCode: string) {
             setColorIndex(msg.colorIndex);
           } else if (msg.type === 'room-full') {
             setRoomFull(true);
+          } else if (msg.type === 'kicked') {
+            setKicked(true);
+            doDisconnect();
           }
         }
       });
@@ -312,16 +308,7 @@ function useClientWebRTC(roomCode: string) {
     });
   }, [roomCode]);
 
-  const sendJoystick = useCallback((data: JoystickData) => {
-    joystickRef.current = data;
-    if (connRef.current && colorIndexRef.current >= 0) {
-      try {
-        connRef.current.send(encodeJoystick(colorIndexRef.current, data.x, data.y));
-      } catch {}
-    }
-  }, []);
-
-  const disconnect = useCallback(() => {
+  const doDisconnect = useCallback(() => {
     if (intervalRef.current) clearInterval(intervalRef.current);
     intervalRef.current = null;
     connRef.current?.close();
@@ -333,6 +320,19 @@ function useClientWebRTC(roomCode: string) {
     colorIndexRef.current = -1;
   }, []);
 
+  const disconnect = useCallback(() => {
+    doDisconnect();
+  }, [doDisconnect]);
+
+  const sendJoystick = useCallback((data: JoystickData) => {
+    joystickRef.current = data;
+    if (connRef.current && colorIndexRef.current >= 0) {
+      try {
+        connRef.current.send(encodeJoystick(colorIndexRef.current, data.x, data.y));
+      } catch {}
+    }
+  }, []);
+
   useEffect(() => {
     return () => {
       if (intervalRef.current) clearInterval(intervalRef.current);
@@ -341,7 +341,7 @@ function useClientWebRTC(roomCode: string) {
     };
   }, []);
 
-  return { connected, connect, sendJoystick, disconnect, colorIndex, roomFull };
+  return { connected, connect, sendJoystick, disconnect, colorIndex, roomFull, kicked };
 }
 
 // ─── CLIENT: Supabase ───────────────────────────────────────
@@ -349,6 +349,7 @@ function useClientSupabase(roomCode: string) {
   const [connected, setConnected] = useState(false);
   const [colorIndex, setColorIndex] = useState<number>(-1);
   const [roomFull, setRoomFull] = useState(false);
+  const [kicked, setKicked] = useState(false);
   const channelRef = useRef<RealtimeChannel | null>(null);
   const clientIdRef = useRef(Math.random().toString(36).substring(2, 10));
 
@@ -356,6 +357,7 @@ function useClientSupabase(roomCode: string) {
     const targetCode = overrideCode || roomCode;
     if (!targetCode) return;
     const code = targetCode.toUpperCase();
+    setKicked(false);
     const channel = supabase.channel(`game-room-${code}`, {
       config: { broadcast: { self: false } },
     });
@@ -372,6 +374,16 @@ function useClientSupabase(roomCode: string) {
         if (clientId === clientIdRef.current) {
           setRoomFull(true);
           setConnected(false);
+        }
+      })
+      .on('broadcast', { event: 'kicked' }, (payload) => {
+        const { clientId } = payload.payload as { clientId: string };
+        if (clientId === clientIdRef.current) {
+          setKicked(true);
+          setConnected(false);
+          setColorIndex(-1);
+          channelRef.current?.unsubscribe();
+          channelRef.current = null;
         }
       })
       .subscribe((status) => {
@@ -400,21 +412,13 @@ function useClientSupabase(roomCode: string) {
     setColorIndex(-1);
   }, []);
 
-  // beforeunload: send leave on tab close
   useEffect(() => {
-    const handleBeforeUnload = () => {
-      if (channelRef.current) {
-        channelRef.current.send({ type: 'broadcast', event: 'client-leave', payload: { clientId: clientIdRef.current } });
-      }
-    };
-    window.addEventListener('beforeunload', handleBeforeUnload);
     return () => {
-      window.removeEventListener('beforeunload', handleBeforeUnload);
       channelRef.current?.unsubscribe();
     };
   }, []);
 
-  return { connected, connect, sendJoystick, disconnect, colorIndex, roomFull };
+  return { connected, connect, sendJoystick, disconnect, colorIndex, roomFull, kicked };
 }
 
 // ─── Public hooks ───────────────────────────────────────────

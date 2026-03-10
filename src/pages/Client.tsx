@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { useClientRoom, useDiscoverRooms, type ConnectionMode } from "@/hooks/useGameRoom";
 import { PLAYER_COLORS } from "@/lib/playerColors";
 import Thumbstick from "@/components/Thumbstick";
@@ -10,15 +10,22 @@ import { Label } from "@/components/ui/label";
 export default function Client() {
   const [code, setCode] = useState("");
   const [mode, setMode] = useState<ConnectionMode>("webrtc");
-  const { connected, connect, sendJoystick, disconnect, colorIndex, roomFull } = useClientRoom(code, mode);
+  const { connected, connect, sendJoystick, disconnect, colorIndex, roomFull, kicked } = useClientRoom(code, mode);
   const discoveredRooms = useDiscoverRooms(mode);
+  const [wasKicked, setWasKicked] = useState(false);
 
   const playerColor = colorIndex >= 0 ? PLAYER_COLORS[colorIndex] : null;
+
+  // Track kicked state to show message on join screen
+  useEffect(() => {
+    if (kicked) setWasKicked(true);
+  }, [kicked]);
 
   const handleJoin = (roomCode?: string) => {
     const targetCode = roomCode || code;
     if (targetCode.length >= 4) {
       if (roomCode) setCode(roomCode);
+      setWasKicked(false);
       connect(roomCode);
     }
   };
@@ -34,6 +41,13 @@ export default function Client() {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen p-6 gap-8">
         <h1 className="text-lg text-secondary text-glow-purple tracking-wider text-center">JOIN GAME</h1>
+
+        {wasKicked && (
+          <div className="w-full max-w-xs px-4 py-3 rounded border border-destructive/50 bg-destructive/10 text-center">
+            <p className="text-sm font-mono text-destructive">DISCONNECTED BY HOST</p>
+            <p className="text-xs text-muted-foreground mt-1">You were removed from the room.</p>
+          </div>
+        )}
 
         {roomFull && (
           <div className="w-full max-w-xs px-4 py-3 rounded border border-destructive/50 bg-destructive/10 text-center">

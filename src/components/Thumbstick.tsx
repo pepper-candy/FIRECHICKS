@@ -3,17 +3,41 @@ import { useRef, useCallback, useEffect, useState } from 'react';
 interface Props {
   onMove: (x: number, y: number) => void;
   size?: number;
-  color?: string; // CSS color string, e.g. "hsl(145 80% 50%)"
+  color?: string;
 }
+
+const THROTTLE_MS = 33; // ~30Hz for network
+const DEAD_ZONE = 0.01; // ignore jitter below this threshold
 
 export default function Thumbstick({ onMove, size = 200, color }: Props) {
   const baseRef = useRef<HTMLDivElement>(null);
   const [stick, setStick] = useState({ x: 0, y: 0 });
   const activeRef = useRef(false);
   const stickIdRef = useRef<number | null>(null);
+  const lastSentRef = useRef({ x: 0, y: 0 });
+  const lastSendTimeRef = useRef(0);
 
   const maxDist = size / 2 - 30;
   const knobColor = color ?? 'hsl(var(--primary))';
+
+  const throttledOnMove = useCallback(
+    (normX: number, normY: number) => {
+      const now = performance.now();
+      const dx = Math.abs(normX - lastSentRef.current.x);
+      const dy = Math.abs(normY - lastSentRef.current.y);
+
+      // Skip if change is below dead zone threshold
+      if (dx < DEAD_ZONE && dy < DEAD_ZONE && now - lastSendTimeRef.current < THROTTLE_MS) return;
+
+      // Throttle to ~30Hz
+      if (now - lastSendTimeRef.current < THROTTLE_MS) return;
+
+      lastSentRef.current = { x: normX, y: normY };
+      lastSendTimeRef.current = now;
+      onMove(normX, normY);
+    },
+    [onMove]
+  );
 
   const handleMove = useCallback(
     (clientX: number, clientY: number) => {
@@ -35,16 +59,20 @@ export default function Thumbstick({ onMove, size = 200, color }: Props) {
       const normX = dx / maxDist;
       const normY = dy / maxDist;
 
+      // Update UI at 60fps
       setStick({ x: dx, y: dy });
-      onMove(normX, normY);
+      // Send network at throttled 30fps with precision filter
+      throttledOnMove(normX, normY);
     },
-    [maxDist, onMove]
+    [maxDist, throttledOnMove]
   );
 
   const handleEnd = useCallback(() => {
     activeRef.current = false;
     stickIdRef.current = null;
     setStick({ x: 0, y: 0 });
+    lastSentRef.current = { x: 0, y: 0 };
+    lastSendTimeRef.current = 0;
     onMove(0, 0);
   }, [onMove]);
 
