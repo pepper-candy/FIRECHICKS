@@ -233,7 +233,7 @@ function useHostSupabase() {
         clientColorMapRef.current.set(clientId, colorIndex);
         setPlayers((prev) => {
           const next = new Map(prev);
-          next.set(clientId, { joystick: { x: 0, y: 0 }, colorIndex });
+          next.set(clientId, { joystick: { x: 0, y: 0 }, colorIndex, ping: 0 });
           return next;
         });
         channel.send({ type: 'broadcast', event: 'assign-color', payload: { clientId, colorIndex } });
@@ -242,11 +242,29 @@ function useHostSupabase() {
         const { clientId } = payload.payload as { clientId: string };
         removePlayer(clientId);
       })
+      .on('broadcast', { event: 'pong' }, (payload) => {
+        const { clientId, ts } = payload.payload as { clientId: string; ts: number };
+        const rtt = Date.now() - ts;
+        setPlayers((prev) => {
+          const next = new Map(prev);
+          const existing = next.get(clientId);
+          if (existing) {
+            next.set(clientId, { ...existing, ping: rtt });
+          }
+          return next;
+        });
+      })
       .subscribe();
 
     channelRef.current = channel;
 
+    // Ping interval
+    const pingInterval = window.setInterval(() => {
+      channel.send({ type: 'broadcast', event: 'ping', payload: { ts: Date.now() } });
+    }, 2000);
+
     return () => {
+      clearInterval(pingInterval);
       channel.unsubscribe();
     };
   }, [removePlayer]);
