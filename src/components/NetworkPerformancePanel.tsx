@@ -1,8 +1,10 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { ChevronUp, ChevronDown, Activity } from "lucide-react";
 import { PLAYER_COLORS } from "@/lib/playerColors";
 import type { PlayerState } from "@/hooks/useGameRoom";
 import { ScrollArea } from "@/components/ui/scroll-area";
+
+const IDLE_THRESHOLD_MS = 4000; // consider idle if no pong for 4s
 
 interface Props {
   players: Map<string, PlayerState>;
