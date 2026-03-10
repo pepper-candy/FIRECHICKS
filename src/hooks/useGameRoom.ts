@@ -446,7 +446,7 @@ export function useAdvertiseRoom(roomCode: string, _mode: ConnectionMode) {
       channel.untrack();
       channel.unsubscribe();
     };
-  }, [roomCode, mode]);
+  }, [roomCode]);
 }
 
 export function useDiscoverRooms(_mode: ConnectionMode) {
