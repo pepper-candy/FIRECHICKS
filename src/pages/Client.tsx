@@ -43,14 +43,20 @@ export default function Client() {
         <h1 className="text-lg text-secondary text-glow-purple tracking-wider text-center">JOIN GAME</h1>
 
         {wasKicked && (
-          <div className="w-full max-w-xs px-4 py-3 rounded border border-destructive/50 bg-destructive/10 text-center">
+          <div
+            onClick={() => setWasKicked(false)}
+            className="w-full max-w-xs px-4 py-3 rounded border border-destructive/50 bg-destructive/10 text-center cursor-pointer transition-opacity hover:opacity-70"
+          >
             <p className="text-sm font-mono text-destructive">DISCONNECTED BY HOST</p>
             <p className="text-xs text-muted-foreground mt-1">You were removed from the room.</p>
           </div>
         )}
 
-        {roomFull && (
-          <div className="w-full max-w-xs px-4 py-3 rounded border border-destructive/50 bg-destructive/10 text-center">
+        {roomFull && !roomFullDismissed && (
+          <div
+            onClick={() => setRoomFullDismissed(true)}
+            className="w-full max-w-xs px-4 py-3 rounded border border-destructive/50 bg-destructive/10 text-center cursor-pointer transition-opacity hover:opacity-70"
+          >
             <p className="text-sm font-mono text-destructive">ROOM IS FULL</p>
             <p className="text-xs text-muted-foreground mt-1">Maximum 7 players reached.</p>
           </div>
