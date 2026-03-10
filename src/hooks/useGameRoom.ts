@@ -191,6 +191,7 @@ function useHostSupabase() {
 function useClientWebRTC(roomCode: string) {
   const [connected, setConnected] = useState(false);
   const [colorIndex, setColorIndex] = useState<number>(-1);
+  const [roomFull, setRoomFull] = useState(false);
   const peerRef = useRef<Peer | null>(null);
   const connRef = useRef<DataConnection | null>(null);
   const joystickRef = useRef<JoystickData>({ x: 0, y: 0 });
