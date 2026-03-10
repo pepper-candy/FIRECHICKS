@@ -250,7 +250,7 @@ function useHostSupabase() {
           const next = new Map(prev);
           const existing = next.get(clientId);
           if (existing) {
-            next.set(clientId, { ...existing, ping: rtt });
+            next.set(clientId, { ...existing, ping: rtt, lastPongAt: Date.now() });
           }
           return next;
         });
