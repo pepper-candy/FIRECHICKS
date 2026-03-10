@@ -234,7 +234,7 @@ function useHostSupabase() {
         clientColorMapRef.current.set(clientId, colorIndex);
         setPlayers((prev) => {
           const next = new Map(prev);
-          next.set(clientId, { joystick: { x: 0, y: 0 }, colorIndex, ping: 0 });
+          next.set(clientId, { joystick: { x: 0, y: 0 }, colorIndex, ping: 0, lastPongAt: Date.now() });
           return next;
         });
         channel.send({ type: 'broadcast', event: 'assign-color', payload: { clientId, colorIndex } });
