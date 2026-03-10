@@ -52,7 +52,7 @@ export default function Client() {
         {roomFull && (
           <div className="w-full max-w-xs px-4 py-3 rounded border border-destructive/50 bg-destructive/10 text-center">
             <p className="text-sm font-mono text-destructive">ROOM IS FULL</p>
-            <p className="text-xs text-muted-foreground mt-1">Maximum 7 players reached. Try again later.</p>
+            <p className="text-xs text-muted-foreground mt-1">Maximum 7 players reached.</p>
           </div>
         )}
 
