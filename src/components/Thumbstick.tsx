@@ -8,6 +8,7 @@ interface Props {
 
 const THROTTLE_MS = 33; // ~30Hz for network
 const DEAD_ZONE = 0.01; // ignore jitter below this threshold
+const IDLE_TIMEOUT_MS = 1000; // stop sending after 1s at (0,0)
 
 export default function Thumbstick({ onMove, size = 200, color }: Props) {
   const baseRef = useRef<HTMLDivElement>(null);
@@ -16,12 +17,17 @@ export default function Thumbstick({ onMove, size = 200, color }: Props) {
   const stickIdRef = useRef<number | null>(null);
   const lastSentRef = useRef({ x: 0, y: 0 });
   const lastSendTimeRef = useRef(0);
+  const idleRef = useRef(false);
+  const idleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const maxDist = size / 2 - 30;
   const knobColor = color ?? 'hsl(var(--primary))';
 
   const throttledOnMove = useCallback(
     (normX: number, normY: number) => {
+      // If idle mode is active, don't send
+      if (idleRef.current) return;
+
       const now = performance.now();
       const dx = Math.abs(normX - lastSentRef.current.x);
       const dy = Math.abs(normY - lastSentRef.current.y);
@@ -35,6 +41,20 @@ export default function Thumbstick({ onMove, size = 200, color }: Props) {
       lastSentRef.current = { x: normX, y: normY };
       lastSendTimeRef.current = now;
       onMove(normX, normY);
+
+      // If at zero, start idle timer; otherwise clear it
+      if (normX === 0 && normY === 0) {
+        if (!idleTimerRef.current) {
+          idleTimerRef.current = setTimeout(() => {
+            idleRef.current = true;
+          }, IDLE_TIMEOUT_MS);
+        }
+      } else {
+        if (idleTimerRef.current) {
+          clearTimeout(idleTimerRef.current);
+          idleTimerRef.current = null;
+        }
+      }
     },
     [onMove]
   );
@@ -76,23 +96,33 @@ export default function Thumbstick({ onMove, size = 200, color }: Props) {
     onMove(0, 0);
   }, [onMove]);
 
+  const wakeFromIdle = useCallback(() => {
+    idleRef.current = false;
+    if (idleTimerRef.current) {
+      clearTimeout(idleTimerRef.current);
+      idleTimerRef.current = null;
+    }
+  }, []);
+
   const onTouchStart = useCallback(
     (e: React.TouchEvent) => {
       e.preventDefault();
+      wakeFromIdle();
       const touch = e.changedTouches[0];
       activeRef.current = true;
       stickIdRef.current = touch.identifier;
       handleMove(touch.clientX, touch.clientY);
     },
-    [handleMove]
+    [handleMove, wakeFromIdle]
   );
 
   const onMouseDown = useCallback(
     (e: React.MouseEvent) => {
+      wakeFromIdle();
       activeRef.current = true;
       handleMove(e.clientX, e.clientY);
     },
-    [handleMove]
+    [handleMove, wakeFromIdle]
   );
 
   useEffect(() => {
