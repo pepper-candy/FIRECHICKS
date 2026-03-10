@@ -52,7 +52,7 @@ export default function Host() {
           {/* Player count */}
           <div className="flex items-center gap-2">
             <span className="text-muted-foreground">
-              {playerCount}/{MAX_PLAYERS} PLAYERS
+            {playerCount}/{MAX_PLAYERS} PLAYERS
             </span>
           </div>
 
