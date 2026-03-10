@@ -10,7 +10,7 @@ import { Label } from "@/components/ui/label";
 export default function Client() {
   const [code, setCode] = useState("");
   const [mode, setMode] = useState<ConnectionMode>("webrtc");
-  const { connected, connect, sendJoystick, disconnect, colorIndex } = useClientRoom(code, mode);
+  const { connected, connect, sendJoystick, disconnect, colorIndex, roomFull } = useClientRoom(code, mode);
   const discoveredRooms = useDiscoverRooms(mode);
 
   const playerColor = colorIndex >= 0 ? PLAYER_COLORS[colorIndex] : null;
