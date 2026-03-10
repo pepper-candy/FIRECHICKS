@@ -315,6 +315,13 @@ function useClientSupabase(roomCode: string) {
           setColorIndex(ci);
         }
       })
+      .on('broadcast', { event: 'room-full' }, (payload) => {
+        const { clientId } = payload.payload as { clientId: string };
+        if (clientId === clientIdRef.current) {
+          setRoomFull(true);
+          setConnected(false);
+        }
+      })
       .subscribe((status) => {
         if (status === 'SUBSCRIBED') {
           setConnected(true);
