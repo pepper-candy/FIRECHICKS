@@ -69,7 +69,10 @@ function useHostWebRTC() {
     peer.on('connection', (conn) => {
       const connId = conn.peer;
       if (connsRef.current.size >= MAX_PLAYERS) {
-        conn.close();
+        conn.on('open', () => {
+          conn.send(JSON.stringify({ type: 'room-full' }));
+          setTimeout(() => conn.close(), 200);
+        });
         return;
       }
 
