@@ -491,7 +491,7 @@ function useClientSupabase(roomCode: string) {
     };
   }, []);
 
-  return { connected, connect, sendJoystick, disconnect, colorIndex, roomFull, kicked };
+  return { connected, connect, sendJoystick, disconnect, colorIndex, roomFull, kicked, setIdle };
 }
 
 // ─── Public hooks ───────────────────────────────────────────
