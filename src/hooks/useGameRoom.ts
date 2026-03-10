@@ -431,9 +431,9 @@ export function useClientRoom(roomCode: string, mode: ConnectionMode = 'webrtc')
 // ─── Room discovery (for WebRTC mode) ───────────────────────
 const LOBBY_CHANNEL = 'game-lobby';
 
-export function useAdvertiseRoom(roomCode: string, mode: ConnectionMode) {
+export function useAdvertiseRoom(roomCode: string, _mode: ConnectionMode) {
   useEffect(() => {
-    if (mode !== 'webrtc' || !roomCode) return;
+    if (!roomCode) return;
 
     const channel = supabase.channel(LOBBY_CHANNEL);
     channel.subscribe(async (status) => {
