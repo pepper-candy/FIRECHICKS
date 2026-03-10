@@ -315,7 +315,7 @@ function useClientWebRTC(roomCode: string) {
         // Configure the underlying data channel for UDP-like performance
         // DataChannel options (ordered/maxRetransmits) are set at creation via PeerJS options above
         intervalRef.current = window.setInterval(() => {
-          if (colorIndexRef.current >= 0) {
+          if (colorIndexRef.current >= 0 && !idleRef.current) {
             const buf = encodeJoystick(colorIndexRef.current, joystickRef.current.x, joystickRef.current.y);
             try { conn.send(buf); } catch {}
           }
