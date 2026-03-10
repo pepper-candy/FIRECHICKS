@@ -96,15 +96,24 @@ export default function Thumbstick({ onMove, size = 200, color }: Props) {
     onMove(0, 0);
   }, [onMove]);
 
+  const wakeFromIdle = useCallback(() => {
+    idleRef.current = false;
+    if (idleTimerRef.current) {
+      clearTimeout(idleTimerRef.current);
+      idleTimerRef.current = null;
+    }
+  }, []);
+
   const onTouchStart = useCallback(
     (e: React.TouchEvent) => {
       e.preventDefault();
+      wakeFromIdle();
       const touch = e.changedTouches[0];
       activeRef.current = true;
       stickIdRef.current = touch.identifier;
       handleMove(touch.clientX, touch.clientY);
     },
-    [handleMove]
+    [handleMove, wakeFromIdle]
   );
 
   const onMouseDown = useCallback(
