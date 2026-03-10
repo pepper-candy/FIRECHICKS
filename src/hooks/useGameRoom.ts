@@ -441,6 +441,10 @@ function useClientSupabase(roomCode: string) {
           channelRef.current = null;
         }
       })
+      .on('broadcast', { event: 'ping' }, (payload) => {
+        const { ts } = payload.payload as { ts: number };
+        channel.send({ type: 'broadcast', event: 'pong', payload: { clientId: clientIdRef.current, ts } });
+      })
       .subscribe((status) => {
         if (status === 'SUBSCRIBED') {
           setConnected(true);
