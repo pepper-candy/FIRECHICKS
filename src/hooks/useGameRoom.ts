@@ -401,6 +401,7 @@ function useClientSupabase(roomCode: string) {
   const [kicked, setKicked] = useState(false);
   const channelRef = useRef<RealtimeChannel | null>(null);
   const clientIdRef = useRef(Math.random().toString(36).substring(2, 10));
+  const idleRef = useRef(false);
 
   const connect = useCallback((overrideCode?: string) => {
     const targetCode = overrideCode || roomCode;
