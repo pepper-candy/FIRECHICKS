@@ -233,24 +233,19 @@ function useClientWebRTC(roomCode: string) {
       });
 
       conn.on('data', (data) => {
-        // Handle color assignment from host (comes as string since host uses conn.send(JSON.stringify(...)))
+        let msg: any = null;
         if (typeof data === 'string') {
-          try {
-            const msg = JSON.parse(data);
-            if (msg.type === 'assign-color') {
-              colorIndexRef.current = msg.colorIndex;
-              setColorIndex(msg.colorIndex);
-            }
-          } catch {}
+          try { msg = JSON.parse(data); } catch {}
         } else if (data instanceof ArrayBuffer) {
-          const decoder = new TextDecoder();
-          try {
-            const msg = JSON.parse(decoder.decode(data));
-            if (msg.type === 'assign-color') {
-              colorIndexRef.current = msg.colorIndex;
-              setColorIndex(msg.colorIndex);
-            }
-          } catch {}
+          try { msg = JSON.parse(new TextDecoder().decode(data)); } catch {}
+        }
+        if (msg) {
+          if (msg.type === 'assign-color') {
+            colorIndexRef.current = msg.colorIndex;
+            setColorIndex(msg.colorIndex);
+          } else if (msg.type === 'room-full') {
+            setRoomFull(true);
+          }
         }
       });
 
