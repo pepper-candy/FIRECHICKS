@@ -108,6 +108,9 @@ export default function Host() {
           <span className="text-accent">{roomCode}</span>
         </p>
       )}
+
+      {/* Network Performance Panel */}
+      <NetworkPerformancePanel players={players} />
     </div>
   );
 }
