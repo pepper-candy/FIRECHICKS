@@ -354,7 +354,17 @@ function useClientSupabase(roomCode: string) {
     const code = targetCode.toUpperCase();
     setKicked(false);
     setRoomFull(false);
-    const channel = supabase.channel(`game-room-${code}`, {
+
+    // Clean up any existing channel before reconnecting
+    if (channelRef.current) {
+      channelRef.current.unsubscribe();
+      channelRef.current = null;
+    }
+
+    // Generate a fresh client ID so the host treats this as a new join
+    clientIdRef.current = Math.random().toString(36).substring(2, 10);
+
+    const channel = supabase.channel(`game-room-${code}-${clientIdRef.current}`, {
       config: { broadcast: { self: false } },
     });
 
@@ -370,6 +380,8 @@ function useClientSupabase(roomCode: string) {
         if (clientId === clientIdRef.current) {
           setRoomFull(true);
           setConnected(false);
+          channelRef.current?.unsubscribe();
+          channelRef.current = null;
         }
       })
       .on('broadcast', { event: 'kicked' }, (payload) => {
