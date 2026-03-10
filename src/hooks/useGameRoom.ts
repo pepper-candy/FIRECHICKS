@@ -212,9 +212,7 @@ function useClientWebRTC(roomCode: string) {
 
     peer.on('open', () => {
       const conn = peer.connect(`${PEER_PREFIX}${code}`, {
-        reliable: false,
-        serialization: 'none',
-        // PeerJS options for DataChannel
+        serialization: 'binary',
       });
       connRef.current = conn;
 
