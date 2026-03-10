@@ -99,12 +99,15 @@ export default function Thumbstick({ onMove, onIdleChange, size = 200, color }: 
   }, [onMove]);
 
   const wakeFromIdle = useCallback(() => {
+    if (idleRef.current) {
+      onIdleChange?.(false);
+    }
     idleRef.current = false;
     if (idleTimerRef.current) {
       clearTimeout(idleTimerRef.current);
       idleTimerRef.current = null;
     }
-  }, []);
+  }, [onIdleChange]);
 
   const onTouchStart = useCallback(
     (e: React.TouchEvent) => {

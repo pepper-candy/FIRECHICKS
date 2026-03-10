@@ -161,6 +161,7 @@ export default function Client() {
       {/* Color-coded thumbstick */}
       <Thumbstick
         onMove={handleMove}
+        onIdleChange={handleIdleChange}
         size={220}
         color={playerColor ? `hsl(${playerColor.hsl})` : undefined}
       />
