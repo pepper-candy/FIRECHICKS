@@ -118,10 +118,11 @@ export default function Thumbstick({ onMove, size = 200, color }: Props) {
 
   const onMouseDown = useCallback(
     (e: React.MouseEvent) => {
+      wakeFromIdle();
       activeRef.current = true;
       handleMove(e.clientX, e.clientY);
     },
-    [handleMove]
+    [handleMove, wakeFromIdle]
   );
 
   useEffect(() => {
