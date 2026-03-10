@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useHostRoom, useAdvertiseRoom, type ConnectionMode } from '@/hooks/useGameRoom';
 import GameArena from '@/components/GameArena';
-import { PLAYER_COLORS } from '@/lib/playerColors';
+import { PLAYER_COLORS, MAX_PLAYERS } from '@/lib/playerColors';
 import {
   Select,
   SelectContent,
