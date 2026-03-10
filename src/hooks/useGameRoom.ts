@@ -69,7 +69,10 @@ function useHostWebRTC() {
     peer.on('connection', (conn) => {
       const connId = conn.peer;
       if (connsRef.current.size >= MAX_PLAYERS) {
-        conn.close();
+        conn.on('open', () => {
+          conn.send(JSON.stringify({ type: 'room-full' }));
+          setTimeout(() => conn.close(), 200);
+        });
         return;
       }
 
@@ -151,7 +154,10 @@ function useHostSupabase() {
       })
       .on('broadcast', { event: 'client-join' }, (payload) => {
         const { clientId } = payload.payload as { clientId: string };
-        if (colorMapRef.current.size >= MAX_PLAYERS) return;
+        if (colorMapRef.current.size >= MAX_PLAYERS) {
+          channel.send({ type: 'broadcast', event: 'room-full', payload: { clientId } });
+          return;
+        }
         const colorIndex = nextColorRef.current % MAX_PLAYERS;
         nextColorRef.current++;
         colorMapRef.current.set(clientId, colorIndex);
@@ -188,6 +194,7 @@ function useHostSupabase() {
 function useClientWebRTC(roomCode: string) {
   const [connected, setConnected] = useState(false);
   const [colorIndex, setColorIndex] = useState<number>(-1);
+  const [roomFull, setRoomFull] = useState(false);
   const peerRef = useRef<Peer | null>(null);
   const connRef = useRef<DataConnection | null>(null);
   const joystickRef = useRef<JoystickData>({ x: 0, y: 0 });
@@ -229,24 +236,19 @@ function useClientWebRTC(roomCode: string) {
       });
 
       conn.on('data', (data) => {
-        // Handle color assignment from host (comes as string since host uses conn.send(JSON.stringify(...)))
+        let msg: any = null;
         if (typeof data === 'string') {
-          try {
-            const msg = JSON.parse(data);
-            if (msg.type === 'assign-color') {
-              colorIndexRef.current = msg.colorIndex;
-              setColorIndex(msg.colorIndex);
-            }
-          } catch {}
+          try { msg = JSON.parse(data); } catch {}
         } else if (data instanceof ArrayBuffer) {
-          const decoder = new TextDecoder();
-          try {
-            const msg = JSON.parse(decoder.decode(data));
-            if (msg.type === 'assign-color') {
-              colorIndexRef.current = msg.colorIndex;
-              setColorIndex(msg.colorIndex);
-            }
-          } catch {}
+          try { msg = JSON.parse(new TextDecoder().decode(data)); } catch {}
+        }
+        if (msg) {
+          if (msg.type === 'assign-color') {
+            colorIndexRef.current = msg.colorIndex;
+            setColorIndex(msg.colorIndex);
+          } else if (msg.type === 'room-full') {
+            setRoomFull(true);
+          }
         }
       });
 
@@ -287,13 +289,14 @@ function useClientWebRTC(roomCode: string) {
     };
   }, []);
 
-  return { connected, connect, sendJoystick, disconnect, colorIndex };
+  return { connected, connect, sendJoystick, disconnect, colorIndex, roomFull };
 }
 
 // ─── CLIENT: Supabase ───────────────────────────────────────
 function useClientSupabase(roomCode: string) {
   const [connected, setConnected] = useState(false);
   const [colorIndex, setColorIndex] = useState<number>(-1);
+  const [roomFull, setRoomFull] = useState(false);
   const channelRef = useRef<RealtimeChannel | null>(null);
   const clientIdRef = useRef(Math.random().toString(36).substring(2, 10));
 
@@ -310,6 +313,13 @@ function useClientSupabase(roomCode: string) {
         const { clientId, colorIndex: ci } = payload.payload as { clientId: string; colorIndex: number };
         if (clientId === clientIdRef.current) {
           setColorIndex(ci);
+        }
+      })
+      .on('broadcast', { event: 'room-full' }, (payload) => {
+        const { clientId } = payload.payload as { clientId: string };
+        if (clientId === clientIdRef.current) {
+          setRoomFull(true);
+          setConnected(false);
         }
       })
       .subscribe((status) => {
@@ -344,7 +354,7 @@ function useClientSupabase(roomCode: string) {
     };
   }, []);
 
-  return { connected, connect, sendJoystick, disconnect, colorIndex };
+  return { connected, connect, sendJoystick, disconnect, colorIndex, roomFull };
 }
 
 // ─── Public hooks ───────────────────────────────────────────

@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useHostRoom, useAdvertiseRoom, type ConnectionMode } from '@/hooks/useGameRoom';
 import GameArena from '@/components/GameArena';
-import { PLAYER_COLORS } from '@/lib/playerColors';
+import { PLAYER_COLORS, MAX_PLAYERS } from '@/lib/playerColors';
 import {
   Select,
   SelectContent,
@@ -52,7 +52,7 @@ export default function Host() {
           {/* Player count */}
           <div className="flex items-center gap-2">
             <span className="text-muted-foreground">
-              {playerCount}/8 PLAYERS
+              {playerCount}/{MAX_PLAYERS} PLAYERS
             </span>
           </div>
 

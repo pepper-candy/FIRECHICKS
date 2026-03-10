@@ -10,7 +10,7 @@ import { Label } from "@/components/ui/label";
 export default function Client() {
   const [code, setCode] = useState("");
   const [mode, setMode] = useState<ConnectionMode>("webrtc");
-  const { connected, connect, sendJoystick, disconnect, colorIndex } = useClientRoom(code, mode);
+  const { connected, connect, sendJoystick, disconnect, colorIndex, roomFull } = useClientRoom(code, mode);
   const discoveredRooms = useDiscoverRooms(mode);
 
   const playerColor = colorIndex >= 0 ? PLAYER_COLORS[colorIndex] : null;
@@ -34,6 +34,14 @@ export default function Client() {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen p-6 gap-8">
         <h1 className="text-lg text-secondary text-glow-purple tracking-wider text-center">JOIN GAME</h1>
+
+        {roomFull && (
+          <div className="w-full max-w-xs px-4 py-3 rounded border border-destructive/50 bg-destructive/10 text-center">
+            <p className="text-sm font-mono text-destructive">ROOM IS FULL</p>
+            <p className="text-xs text-muted-foreground mt-1">Maximum 7 players reached. Try again later.</p>
+          </div>
+        )}
+
         <div className="flex flex-col gap-4 w-full max-w-xs">
           <Input
             value={code}
