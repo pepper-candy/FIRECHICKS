@@ -89,7 +89,7 @@ export default function Character() {
   }, []);
 
   // Attach global pan listeners
-  useState(() => {
+  useEffect(() => {
     const onMM = (e: MouseEvent) => handlePanMove(e.clientX, e.clientY);
     const onMU = () => handlePanEnd();
     const onTM = (e: TouchEvent) => {
@@ -106,7 +106,7 @@ export default function Character() {
       window.removeEventListener('touchmove', onTM);
       window.removeEventListener('touchend', onTE);
     };
-  });
+  }, [handlePanMove, handlePanEnd]);
 
   return (
     <div className="w-screen h-screen bg-background relative flex flex-col">
