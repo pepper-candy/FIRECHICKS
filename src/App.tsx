@@ -21,6 +21,7 @@ const App = () => (
           <Route path="/" element={<Index />} />
           <Route path="/host" element={<Host />} />
           <Route path="/client" element={<Client />} />
+          <Route path="/battlefield" element={<Battlefield />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>

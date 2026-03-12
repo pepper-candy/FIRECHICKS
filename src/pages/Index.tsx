@@ -30,7 +30,13 @@ const Index = () => {
         >
           JOIN GAME
         </Button>
-
+        <Button
+          onClick={() => navigate('/battlefield')}
+          variant="ghost"
+          className="h-14 text-sm font-pixel text-muted-foreground hover:text-foreground"
+        >
+          ⚔ BATTLEFIELD (TEST)
+        </Button>
       </div>
 
       <div className="text-xs text-muted-foreground font-mono text-center space-y-1 mt-8">
