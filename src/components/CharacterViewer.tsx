@@ -1,7 +1,8 @@
-import { useRef, useEffect, useMemo } from 'react';
+import { useRef, useEffect } from 'react';
 import { useFrame } from '@react-three/fiber';
 import { useGLTF, useAnimations } from '@react-three/drei';
 import * as THREE from 'three';
+import * as SkeletonUtils from 'three/examples/jsm/utils/SkeletonUtils.js';
 
 const COLORS = ['Black', 'Blue', 'Cyan', 'Gold', 'Green', 'Pink', 'Red', 'Yellow'] as const;
 export type ChickColor = typeof COLORS[number];
@@ -12,7 +13,7 @@ type AnimState = 'Idle' | 'Walking' | 'Running' | 'Victory' | 'Attack';
 interface Props {
   color: ChickColor;
   animState: AnimState;
-  facingAngle: number; // radians
+  facingAngle: number;
 }
 
 function getAnimPath(anim: AnimState, color: ChickColor) {
@@ -20,44 +21,38 @@ function getAnimPath(anim: AnimState, color: ChickColor) {
   return `/FireChick/FireChick_Animation/${folder}/${anim}_${color}.glb`;
 }
 
-export default function CharacterViewer({ color, animState, facingAngle }: Props) {
-  const groupRef = useRef<THREE.Group>(null);
-
-  // Determine effective anim — only Black/Gold can attack
-  const effectiveAnim: AnimState =
-    animState === 'Attack' && color !== 'Black' && color !== 'Gold'
-      ? 'Idle'
-      : animState;
-
-  const path = getAnimPath(effectiveAnim, color);
-
+// Inner component that remounts when path changes (via key)
+function CharacterModel({ path, facingAngle }: { path: string; facingAngle: number }) {
+  const groupRef = useRef<THREE.Group>(null!);
   const { scene, animations } = useGLTF(path);
-  const { actions } = useAnimations(animations, groupRef);
 
-  // Clone scene so multiple instances don't conflict
-  const clonedScene = useMemo(() => scene.clone(true), [scene]);
+  // Clone with skeleton so multiple instances work
+  const clone = useRef<THREE.Group | null>(null);
+  if (!clone.current) {
+    clone.current = SkeletonUtils.clone(scene) as THREE.Group;
+  }
 
-  // Play the first animation clip found
+  const { actions, mixer } = useAnimations(animations, groupRef);
+
+  // Play the first clip
   useEffect(() => {
-    const actionNames = Object.keys(actions);
-    if (actionNames.length > 0) {
-      const action = actions[actionNames[0]];
+    const names = Object.keys(actions);
+    if (names.length > 0) {
+      const action = actions[names[0]];
       if (action) {
-        action.reset().fadeIn(0.2).play();
-        return () => {
-          action.fadeOut(0.2);
-        };
+        action.reset().fadeIn(0.15).play();
+        return () => { action.fadeOut(0.15); };
       }
     }
   }, [actions]);
 
-  // Smoothly rotate to facing angle
-  useFrame(() => {
+  // Update mixer each frame
+  useFrame((_, delta) => {
+    mixer?.update(delta);
     if (groupRef.current) {
       const target = facingAngle;
       const current = groupRef.current.rotation.y;
       const diff = target - current;
-      // Shortest path rotation
       const wrapped = ((diff + Math.PI) % (Math.PI * 2)) - Math.PI;
       groupRef.current.rotation.y += wrapped * 0.15;
     }
@@ -65,7 +60,19 @@ export default function CharacterViewer({ color, animState, facingAngle }: Props
 
   return (
     <group ref={groupRef}>
-      <primitive object={clonedScene} scale={1.5} />
+      <primitive object={clone.current} scale={1.5} />
     </group>
   );
+}
+
+export default function CharacterViewer({ color, animState, facingAngle }: Props) {
+  const effectiveAnim: AnimState =
+    animState === 'Attack' && color !== 'Black' && color !== 'Gold'
+      ? 'Idle'
+      : animState;
+
+  const path = getAnimPath(effectiveAnim, color);
+
+  // Key forces remount when GLB path changes, ensuring fresh animations
+  return <CharacterModel key={path} path={path} facingAngle={facingAngle} />;
 }
