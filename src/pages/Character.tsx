@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef, Suspense } from 'react';
+import { useState, useCallback, useRef, useEffect, Suspense } from 'react';
 import { Canvas } from '@react-three/fiber';
 import { OrbitControls, Grid } from '@react-three/drei';
 import { Link } from 'react-router-dom';
