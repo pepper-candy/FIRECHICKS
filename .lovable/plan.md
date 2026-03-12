@@ -1,36 +1,55 @@
+# Plan: 3D Pac-Man Maze Test Page
 
+## Overview
 
-## WebRTC via PeerJS for Realtime Joystick Data
+Create a new `/battlefield` route with a 3D Pac-Man-style maze using React Three Fiber. This is a standalone test page — the existing arena is untouched.
 
-### Why PeerJS works well here
+## Dependencies to Install
 
-PeerJS wraps WebRTC DataChannels with a simple API. For this use case (high-frequency joystick updates), it offers lower latency than Supabase Broadcast since data goes peer-to-peer after the initial connection. PeerJS uses a free signaling server by default, so no backend is needed.
+- `three@>=0.133` 
+- `@react-three/fiber@^8.18` (must be v8 for React 18)
+- `@react-three/drei@^9.122.0`
 
-### Trade-offs
+## Files to Create/Edit
 
-- **Pro**: Lower latency (direct P2P), no Supabase dependency for realtime, free
-- **Con**: NAT traversal can fail on some networks (rare), requires both devices to have internet for initial signaling
+### 1. `src/lib/mazeData.ts`
 
-### Plan
+- Define a 2D grid array representing the maze layout (1 = wall, 0 = path)
+- Classic Pac-Man-style maze (~20x20 grid)
+- Export helper to get valid path cells and neighbor cells for AI walking
 
-1. **Add `peerjs` dependency** to the project.
+### 2. `src/components/MazeEnvironment.tsx`
 
-2. **Rewrite `src/hooks/useGameRoom.ts`** to use PeerJS instead of Supabase channels:
-   - `useHostRoom`: Creates a `Peer` with an ID derived from the room code (e.g., `eagle-chick-{CODE}`). Listens for incoming data connections. Receives joystick data via `conn.on('data')`.
-   - `useClientRoom`: Creates a `Peer`, connects to the host's peer ID. Sends joystick data via `conn.send()`.
-   - Room code flow stays the same (host generates code, client enters it).
+- **Floor**: Dark gray flat plane spanning the maze
+- **Walls**: Map over the grid, render a `<mesh>` box (extruded cube) for each wall cell with blue neon emissive material
+- **Lighting**: `<ambientLight intensity={0.3} />` + `<pointLight>` above the maze for depth/neon glow
 
-3. **Remove Supabase Realtime usage** from the game room logic. The Supabase client stays for any future DB/auth needs but is no longer used for broadcast.
+### 3. `src/components/PacManPlayer.tsx`
 
-4. **No changes needed** to `GameArena.tsx`, `Thumbstick.tsx`, `Host.tsx`, `Client.tsx`, or routing -- they all consume the same hook interface (`joystick`, `sendJoystick`, `connected`, etc.).
+- Yellow sphere (`<mesh><sphereGeometry /><meshStandardMaterial color="yellow" emissive="yellow" /></mesh>`)
+- `useFrame` hook to move along path cells at a constant speed
+- Simple AI: pick a random valid neighbor at each intersection, avoid reversing direction
+- Smooth interpolation between grid cells
 
-### Technical detail
+### 4. `src/pages/Battlefield.tsx`
 
-The hook API remains identical:
-```text
-useHostRoom()  → { roomCode, clientConnected, joystick }
-useClientRoom(code) → { connected, connect, sendJoystick, disconnect }
-```
+- Full-screen `<Canvas>` from R3F
+- `<OrthographicCamera>` positioned above, looking down (`makeDefault`, fixed zoom)
+- Render `<MazeEnvironment />` and `<PacManPlayer />`
+- Small "Back" link to `/`
 
-PeerJS peer IDs will be namespaced (e.g., `evsc-{ROOM_CODE}`) to avoid collisions on the public PeerJS signaling server.
+### 5. `src/App.tsx`
 
+- Add route: `<Route path="/battlefield" element={<Battlefield />} />`
+
+## Technical Details
+
+- Orthographic camera at `position={[0, 20, 0]}` looking at `[0,0,0]`, zoom ~20
+- Wall cubes: 1×1×1 unit, blue emissive material (`#0088ff`)
+- Player sphere: radius ~0.35, yellow emissive
+- AI movement: ~3 cells/second, lerp between positions in `useFrame`
+- Maze centered at origin by offsetting grid by half its dimensions
+
+It is not neccessary to use those color inside 3d pac-man.  
+Create a buttom in / to let me get into the battlefield directly  
+later on, we are going to implement a lobby(which should be replacing the arena now, will act as a wait room for the players to get roles assigned and get into the battle field), and the battlefield would be the real game that our clients are playing.
