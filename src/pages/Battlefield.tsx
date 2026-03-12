@@ -10,11 +10,11 @@ const Battlefield = () => {
       <Canvas>
         <OrthographicCamera
           makeDefault
-          position={[0, 20, 0]}
+          position={[0, 14, 14]}
           zoom={28}
           near={0.1}
           far={100}
-          rotation={[-Math.PI / 2, 0, 0]}
+          rotation={[-Math.PI / 4, 0, 0]}
         />
         <MazeEnvironment />
         <PacManPlayer />
