@@ -145,8 +145,8 @@ export default function Character() {
           ))}
         </div>
 
-        {/* Action buttons + Thumbstick row */}
-        <div className="flex items-center justify-center gap-6">
+        {/* Action buttons + Thumbstick + Pan row */}
+        <div className="flex items-center justify-center gap-4">
           {/* Action buttons */}
           <div className="flex flex-col gap-2">
             <Button
@@ -172,9 +172,32 @@ export default function Character() {
           <Thumbstick
             onMove={handleMove}
             onIdleChange={handleIdleChange}
-            size={160}
+            size={140}
             color={COLOR_HEX[color]}
           />
+
+          {/* Pan button */}
+          <div
+            className="flex flex-col items-center gap-1 select-none touch-none cursor-grab active:cursor-grabbing"
+            onMouseDown={(e) => {
+              setIsPanning(true);
+              panStartRef.current = { x: e.clientX, y: e.clientY, pos: [...charPos] };
+            }}
+            onTouchStart={(e) => {
+              e.preventDefault();
+              const t = e.touches[0];
+              setIsPanning(true);
+              panStartRef.current = { x: t.clientX, y: t.clientY, pos: [...charPos] };
+            }}
+          >
+            <div
+              className="w-14 h-14 rounded-full border-2 border-muted-foreground/40 bg-muted/60 flex items-center justify-center text-xl"
+              style={{ boxShadow: isPanning ? `0 0 12px ${COLOR_HEX[color]}44` : 'none' }}
+            >
+              🖐️
+            </div>
+            <span className="text-[10px] font-mono text-muted-foreground">Pan</span>
+          </div>
         </div>
       </div>
     </div>
