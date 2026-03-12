@@ -1,10 +1,11 @@
-import { useState, useCallback, Suspense } from 'react';
+import { useState, useCallback, useRef, Suspense } from 'react';
 import { Canvas } from '@react-three/fiber';
-import { OrbitControls } from '@react-three/drei';
+import { OrbitControls, Grid } from '@react-three/drei';
 import { Link } from 'react-router-dom';
 import CharacterViewer, { CHICK_COLORS, type ChickColor } from '@/components/CharacterViewer';
 import Thumbstick from '@/components/Thumbstick';
 import { Button } from '@/components/ui/button';
+import * as THREE from 'three';
 
 type AnimState = 'Idle' | 'Walking' | 'Running' | 'Victory' | 'Attack';
 
