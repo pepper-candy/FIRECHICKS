@@ -75,30 +75,41 @@ export default function Character() {
     <div className="w-screen h-screen bg-background relative flex flex-col">
       {/* 3D Canvas */}
       <div className="flex-1 relative">
-        <Canvas camera={{ position: [0, 2, 4], fov: 45 }}>
+        <Canvas camera={{ position: [0, 1.8, 3.5], fov: 45 }}>
           <ambientLight intensity={0.5} />
           <directionalLight position={[5, 8, 5]} intensity={1} />
           <directionalLight position={[-3, 4, -3]} intensity={0.3} />
 
-          {/* Ground plane */}
-          <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.01, 0]}>
-            <planeGeometry args={[20, 20]} />
-            <meshStandardMaterial color="hsl(240, 15%, 10%)" />
-          </mesh>
+          {/* Grid ground */}
+          <Grid
+            args={[40, 40]}
+            position={[0, -0.01, 0]}
+            cellSize={0.5}
+            cellThickness={0.6}
+            cellColor="#444444"
+            sectionSize={2}
+            sectionThickness={1}
+            sectionColor="#666666"
+            fadeDistance={20}
+            infiniteGrid
+          />
 
-          <Suspense fallback={null}>
-            <CharacterViewer
-              color={color}
-              animState={animState}
-              facingAngle={facingAngle}
-            />
-          </Suspense>
+          <group position={charPos}>
+            <Suspense fallback={null}>
+              <CharacterViewer
+                color={color}
+                animState={animState}
+                facingAngle={facingAngle}
+              />
+            </Suspense>
+          </group>
 
           <OrbitControls
             enablePan={false}
             maxPolarAngle={Math.PI / 2.1}
             minDistance={2}
             maxDistance={8}
+            target={new THREE.Vector3(charPos[0], 0.5, charPos[2])}
           />
         </Canvas>
 
