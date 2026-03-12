@@ -28,21 +28,19 @@ export default function Character() {
   const [stickActive, setStickActive] = useState(false);
 
   const handleMove = useCallback((x: number, y: number) => {
-    const magnitude = Math.sqrt(x * x + y * y);
+    // Invert Y so pushing stick up moves character forward
+    const iy = -y;
+    const magnitude = Math.sqrt(x * x + iy * iy);
     if (magnitude < 0.05) {
-      // Deadzone — go idle
       setStickActive(false);
       setAnimState('Idle');
       return;
     }
 
     setStickActive(true);
-    // Calculate facing angle from stick direction (x, y -> angle)
-    // y is inverted (up = negative in screen coords, but we want forward)
-    const angle = Math.atan2(-x, y);
+    const angle = Math.atan2(-x, iy);
     setFacingAngle(angle);
 
-    // Running if pushed far, walking if light
     if (magnitude > 0.6) {
       setAnimState('Running');
     } else {
