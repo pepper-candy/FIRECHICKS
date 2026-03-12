@@ -2,7 +2,7 @@ import { useRef, useEffect } from 'react';
 import { useFrame } from '@react-three/fiber';
 import { useGLTF, useAnimations } from '@react-three/drei';
 import * as THREE from 'three';
-import { SkeletonUtils } from 'three/examples/jsm/utils/SkeletonUtils.js';
+import * as SkeletonUtils from 'three/examples/jsm/utils/SkeletonUtils.js';
 
 const COLORS = ['Black', 'Blue', 'Cyan', 'Gold', 'Green', 'Pink', 'Red', 'Yellow'] as const;
 export type ChickColor = typeof COLORS[number];
