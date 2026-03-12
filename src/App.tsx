@@ -7,6 +7,7 @@ import Index from "./pages/Index";
 import Host from "./pages/Host";
 import Client from "./pages/Client";
 import NotFound from "./pages/NotFound";
+import Battlefield from "./pages/Battlefield";
 
 const queryClient = new QueryClient();
 
