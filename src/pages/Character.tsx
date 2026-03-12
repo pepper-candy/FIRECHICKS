@@ -71,6 +71,43 @@ export default function Character() {
     }
   };
 
+  // Global pan move/end handlers
+  const handlePanMove = useCallback((clientX: number, clientY: number) => {
+    if (!panStartRef.current) return;
+    const dx = (clientX - panStartRef.current.x) * 0.01;
+    const dy = (clientY - panStartRef.current.y) * 0.01;
+    setCharPos([
+      panStartRef.current.pos[0] + dx,
+      0,
+      panStartRef.current.pos[2] + dy,
+    ]);
+  }, []);
+
+  const handlePanEnd = useCallback(() => {
+    setIsPanning(false);
+    panStartRef.current = null;
+  }, []);
+
+  // Attach global pan listeners
+  useState(() => {
+    const onMM = (e: MouseEvent) => handlePanMove(e.clientX, e.clientY);
+    const onMU = () => handlePanEnd();
+    const onTM = (e: TouchEvent) => {
+      if (panStartRef.current) handlePanMove(e.touches[0].clientX, e.touches[0].clientY);
+    };
+    const onTE = () => handlePanEnd();
+    window.addEventListener('mousemove', onMM);
+    window.addEventListener('mouseup', onMU);
+    window.addEventListener('touchmove', onTM, { passive: false });
+    window.addEventListener('touchend', onTE);
+    return () => {
+      window.removeEventListener('mousemove', onMM);
+      window.removeEventListener('mouseup', onMU);
+      window.removeEventListener('touchmove', onTM);
+      window.removeEventListener('touchend', onTE);
+    };
+  });
+
   return (
     <div className="w-screen h-screen bg-background relative flex flex-col">
       {/* 3D Canvas */}
