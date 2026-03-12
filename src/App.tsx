@@ -8,6 +8,7 @@ import Host from "./pages/Host";
 import Client from "./pages/Client";
 import NotFound from "./pages/NotFound";
 import Battlefield from "./pages/Battlefield";
+import Character from "./pages/Character";
 
 const queryClient = new QueryClient();
 
@@ -22,6 +23,7 @@ const App = () => (
           <Route path="/host" element={<Host />} />
           <Route path="/client" element={<Client />} />
           <Route path="/battlefield" element={<Battlefield />} />
+          <Route path="/character" element={<Character />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>

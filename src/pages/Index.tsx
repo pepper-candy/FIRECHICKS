@@ -37,6 +37,13 @@ const Index = () => {
         >
           ⚔ BATTLEFIELD (TEST)
         </Button>
+        <Button
+          onClick={() => navigate('/character')}
+          variant="ghost"
+          className="h-14 text-sm font-pixel text-muted-foreground hover:text-foreground"
+        >
+          🐤 CHARACTER
+        </Button>
       </div>
 
       <div className="text-xs text-muted-foreground font-mono text-center space-y-1 mt-8">
