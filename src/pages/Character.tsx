@@ -27,6 +27,9 @@ export default function Character() {
   const [animState, setAnimState] = useState<AnimState>('Idle');
   const [facingAngle, setFacingAngle] = useState(0);
   const [stickActive, setStickActive] = useState(false);
+  const [charPos, setCharPos] = useState<[number, number, number]>([0, 0, 0]);
+  const [isPanning, setIsPanning] = useState(false);
+  const panStartRef = useRef<{ x: number; y: number; pos: [number, number, number] } | null>(null);
 
   const handleMove = useCallback((x: number, y: number) => {
     // Invert Y so pushing stick up moves character forward
