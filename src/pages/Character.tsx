@@ -1,10 +1,11 @@
-import { useState, useCallback, Suspense } from 'react';
+import { useState, useCallback, useRef, useEffect, Suspense } from 'react';
 import { Canvas } from '@react-three/fiber';
-import { OrbitControls } from '@react-three/drei';
+import { OrbitControls, Grid } from '@react-three/drei';
 import { Link } from 'react-router-dom';
 import CharacterViewer, { CHICK_COLORS, type ChickColor } from '@/components/CharacterViewer';
 import Thumbstick from '@/components/Thumbstick';
 import { Button } from '@/components/ui/button';
+import * as THREE from 'three';
 
 type AnimState = 'Idle' | 'Walking' | 'Running' | 'Victory' | 'Attack';
 
@@ -26,23 +27,24 @@ export default function Character() {
   const [animState, setAnimState] = useState<AnimState>('Idle');
   const [facingAngle, setFacingAngle] = useState(0);
   const [stickActive, setStickActive] = useState(false);
+  const [charPos, setCharPos] = useState<[number, number, number]>([0, 0, 0]);
+  const [isPanning, setIsPanning] = useState(false);
+  const panStartRef = useRef<{ x: number; y: number; pos: [number, number, number] } | null>(null);
 
   const handleMove = useCallback((x: number, y: number) => {
-    const magnitude = Math.sqrt(x * x + y * y);
+    // Invert Y so pushing stick up moves character forward
+    const iy = -y;
+    const magnitude = Math.sqrt(x * x + iy * iy);
     if (magnitude < 0.05) {
-      // Deadzone — go idle
       setStickActive(false);
       setAnimState('Idle');
       return;
     }
 
     setStickActive(true);
-    // Calculate facing angle from stick direction (x, y -> angle)
-    // y is inverted (up = negative in screen coords, but we want forward)
-    const angle = Math.atan2(-x, y);
+    const angle = Math.atan2(-x, iy);
     setFacingAngle(angle);
 
-    // Running if pushed far, walking if light
     if (magnitude > 0.6) {
       setAnimState('Running');
     } else {
@@ -69,34 +71,82 @@ export default function Character() {
     }
   };
 
+  // Global pan move/end handlers
+  const handlePanMove = useCallback((clientX: number, clientY: number) => {
+    if (!panStartRef.current) return;
+    const dx = (clientX - panStartRef.current.x) * 0.01;
+    const dy = (clientY - panStartRef.current.y) * 0.01;
+    setCharPos([
+      panStartRef.current.pos[0] + dx,
+      0,
+      panStartRef.current.pos[2] + dy,
+    ]);
+  }, []);
+
+  const handlePanEnd = useCallback(() => {
+    setIsPanning(false);
+    panStartRef.current = null;
+  }, []);
+
+  // Attach global pan listeners
+  useEffect(() => {
+    const onMM = (e: MouseEvent) => handlePanMove(e.clientX, e.clientY);
+    const onMU = () => handlePanEnd();
+    const onTM = (e: TouchEvent) => {
+      if (panStartRef.current) handlePanMove(e.touches[0].clientX, e.touches[0].clientY);
+    };
+    const onTE = () => handlePanEnd();
+    window.addEventListener('mousemove', onMM);
+    window.addEventListener('mouseup', onMU);
+    window.addEventListener('touchmove', onTM, { passive: false });
+    window.addEventListener('touchend', onTE);
+    return () => {
+      window.removeEventListener('mousemove', onMM);
+      window.removeEventListener('mouseup', onMU);
+      window.removeEventListener('touchmove', onTM);
+      window.removeEventListener('touchend', onTE);
+    };
+  }, [handlePanMove, handlePanEnd]);
+
   return (
     <div className="w-screen h-screen bg-background relative flex flex-col">
       {/* 3D Canvas */}
       <div className="flex-1 relative">
-        <Canvas camera={{ position: [0, 2, 4], fov: 45 }}>
+        <Canvas camera={{ position: [0, 1.8, 3.5], fov: 45 }}>
           <ambientLight intensity={0.5} />
           <directionalLight position={[5, 8, 5]} intensity={1} />
           <directionalLight position={[-3, 4, -3]} intensity={0.3} />
 
-          {/* Ground plane */}
-          <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.01, 0]}>
-            <planeGeometry args={[20, 20]} />
-            <meshStandardMaterial color="hsl(240, 15%, 10%)" />
-          </mesh>
+          {/* Grid ground */}
+          <Grid
+            args={[40, 40]}
+            position={[0, -0.01, 0]}
+            cellSize={0.5}
+            cellThickness={0.6}
+            cellColor="#444444"
+            sectionSize={2}
+            sectionThickness={1}
+            sectionColor="#666666"
+            fadeDistance={20}
+            infiniteGrid
+          />
 
-          <Suspense fallback={null}>
-            <CharacterViewer
-              color={color}
-              animState={animState}
-              facingAngle={facingAngle}
-            />
-          </Suspense>
+          <group position={charPos}>
+            <Suspense fallback={null}>
+              <CharacterViewer
+                color={color}
+                animState={animState}
+                facingAngle={facingAngle}
+              />
+            </Suspense>
+          </group>
 
           <OrbitControls
             enablePan={false}
             maxPolarAngle={Math.PI / 2.1}
             minDistance={2}
             maxDistance={8}
+            target={new THREE.Vector3(charPos[0], 0.5, charPos[2])}
           />
         </Canvas>
 
@@ -132,8 +182,8 @@ export default function Character() {
           ))}
         </div>
 
-        {/* Action buttons + Thumbstick row */}
-        <div className="flex items-center justify-center gap-6">
+        {/* Action buttons + Thumbstick + Pan row */}
+        <div className="flex items-center justify-center gap-4">
           {/* Action buttons */}
           <div className="flex flex-col gap-2">
             <Button
@@ -159,9 +209,32 @@ export default function Character() {
           <Thumbstick
             onMove={handleMove}
             onIdleChange={handleIdleChange}
-            size={160}
+            size={140}
             color={COLOR_HEX[color]}
           />
+
+          {/* Pan button */}
+          <div
+            className="flex flex-col items-center gap-1 select-none touch-none cursor-grab active:cursor-grabbing"
+            onMouseDown={(e) => {
+              setIsPanning(true);
+              panStartRef.current = { x: e.clientX, y: e.clientY, pos: [...charPos] };
+            }}
+            onTouchStart={(e) => {
+              e.preventDefault();
+              const t = e.touches[0];
+              setIsPanning(true);
+              panStartRef.current = { x: t.clientX, y: t.clientY, pos: [...charPos] };
+            }}
+          >
+            <div
+              className="w-14 h-14 rounded-full border-2 border-muted-foreground/40 bg-muted/60 flex items-center justify-center text-xl"
+              style={{ boxShadow: isPanning ? `0 0 12px ${COLOR_HEX[color]}44` : 'none' }}
+            >
+              🖐️
+            </div>
+            <span className="text-[10px] font-mono text-muted-foreground">Pan</span>
+          </div>
         </div>
       </div>
     </div>
