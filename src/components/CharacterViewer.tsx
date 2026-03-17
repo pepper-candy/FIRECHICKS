@@ -50,11 +50,11 @@ function CharacterModel({ path, facingAngle }: { path: string; facingAngle: numb
   useFrame((_, delta) => {
     mixer?.update(delta);
     if (groupRef.current) {
-      const target = facingAngle;
+      const target = facingAngle + Math.PI;
       const current = groupRef.current.rotation.y;
-      const diff = target - current;
-      const wrapped = ((diff + Math.PI) % (Math.PI * 2)) - Math.PI;
-      groupRef.current.rotation.y += wrapped * 0.15;
+      let diff = target - current;
+      diff = ((diff + Math.PI) % (Math.PI * 2) + Math.PI * 2) % (Math.PI * 2) - Math.PI;
+      groupRef.current.rotation.y += diff * 0.15;
     }
   });
 
