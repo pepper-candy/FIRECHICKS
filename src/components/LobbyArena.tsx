@@ -1,17 +1,17 @@
-import { useRef, useEffect, useState, Suspense } from 'react';
-import { Canvas, useFrame } from '@react-three/fiber';
-import { Grid } from '@react-three/drei';
-import type { PlayerState } from '@/hooks/useGameRoom';
-import { PLAYER_COLORS } from '@/lib/playerColors';
-import CharacterViewer from '@/components/CharacterViewer';
-import type { ChickColor } from '@/components/CharacterViewer';
-import * as THREE from 'three';
+import { useRef, useEffect, useState, Suspense } from "react";
+import { Canvas, useFrame } from "@react-three/fiber";
+import { Grid } from "@react-three/drei";
+import type { PlayerState } from "@/hooks/useGameRoom";
+import { PLAYER_COLORS } from "@/lib/playerColors";
+import CharacterViewer from "@/components/CharacterViewer";
+import type { ChickColor } from "@/components/CharacterViewer";
+import * as THREE from "three";
 
 interface Props {
   players: Map<string, PlayerState>;
 }
 
-const SPEED = 3.75;
+const SPEED = 5;
 
 interface PlayerPos {
   x: number;
@@ -19,34 +19,34 @@ interface PlayerPos {
   facingAngle: number;
 }
 
-type AnimState = 'Idle' | 'Walking' | 'Running';
+type AnimState = "Idle" | "Walking" | "Running";
 
 function getAnimFromJoystick(jx: number, jy: number): { anim: AnimState; angle: number; magnitude: number } {
   const iy = -jy; // invert Y
   const magnitude = Math.sqrt(jx * jx + iy * iy);
-  if (magnitude < 0.05) return { anim: 'Idle', angle: 0, magnitude: 0 };
+  if (magnitude < 0.05) return { anim: "Idle", angle: 0, magnitude: 0 };
   const angle = Math.atan2(-jx, iy);
-  const anim: AnimState = magnitude > 0.6 ? 'Running' : 'Walking';
+  const anim: AnimState = magnitude > 0.6 ? "Running" : "Walking";
   return { anim, angle, magnitude };
 }
 
 // Individual player character in the 3D scene
-function LobbyPlayer({ playerState, position, chickColor }: {
+function LobbyPlayer({
+  playerState,
+  position,
+  chickColor,
+}: {
   playerState: PlayerState;
   position: PlayerPos;
   chickColor: ChickColor;
 }) {
   const { anim, angle } = getAnimFromJoystick(playerState.joystick.x, playerState.joystick.y);
-  const effectiveAngle = anim === 'Idle' ? position.facingAngle : angle;
+  const effectiveAngle = anim === "Idle" ? position.facingAngle : angle;
 
   return (
     <group position={[position.x, 0, position.z]}>
       <Suspense fallback={null}>
-        <CharacterViewer
-          color={chickColor}
-          animState={anim}
-          facingAngle={effectiveAngle}
-        />
+        <CharacterViewer color={chickColor} animState={anim} facingAngle={effectiveAngle} />
       </Suspense>
     </group>
   );
@@ -93,10 +93,10 @@ function PositionUpdater({
 
 // Starting positions for up to 4 players
 const START_POSITIONS: [number, number][] = [
-  [0, -2],    // Eagle center-back
-  [-2, 2],    // Chick left-front
-  [0, 2],     // Chick center-front
-  [2, 2],     // Chick right-front
+  [0, -2], // Eagle center-back
+  [-2, 2], // Chick left-front
+  [0, 2], // Chick center-front
+  [2, 2], // Chick right-front
 ];
 
 export default function LobbyArena({ players }: Props) {
@@ -141,33 +141,20 @@ export default function LobbyArena({ players }: Props) {
           infiniteGrid
         />
 
-        <PositionUpdater
-          players={players}
-          positions={positions}
-          setPositions={setPositions}
-        />
+        <PositionUpdater players={players} positions={positions} setPositions={setPositions} />
 
         {Array.from(positions.entries()).map(([id, pos]) => {
           const player = players.get(id);
           if (!player) return null;
           const colorInfo = PLAYER_COLORS[player.colorIndex] ?? PLAYER_COLORS[0];
-          return (
-            <LobbyPlayer
-              key={id}
-              playerState={player}
-              position={pos}
-              chickColor={colorInfo.chickColor}
-            />
-          );
+          return <LobbyPlayer key={id} playerState={player} position={pos} chickColor={colorInfo.chickColor} />;
         })}
       </Canvas>
 
       {/* Empty state */}
       {players.size === 0 && (
         <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-          <p className="text-xs text-muted-foreground font-mono animate-pulse">
-            WAITING FOR PLAYERS...
-          </p>
+          <p className="text-xs text-muted-foreground font-mono animate-pulse">WAITING FOR PLAYERS...</p>
         </div>
       )}
     </div>
