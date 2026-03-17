@@ -18,36 +18,36 @@ const Index = () => {
           EAGLE VS CHICK
         </h1>
         <p className="text-sm text-muted-foreground font-mono max-w-md">
-          1 Eagle vs 3 Chicks — control characters across devices
+          1 V 3 — control characters across devices   
         </p>
       </div>
 
       <div className="flex flex-col gap-4 w-full max-w-xs">
         <Button
           onClick={() => navigate('/host')}
-          className="h-14 text-sm font-pixel bg-primary hover:bg-primary/80 text-primary-foreground glow-green"
-        >
+          className="h-14 text-sm font-pixel bg-primary hover:bg-primary/80 text-primary-foreground glow-green">
+          
           HOST GAME
         </Button>
         <Button
           onClick={() => navigate('/client')}
           variant="outline"
-          className="h-14 text-sm font-pixel border-secondary text-secondary hover:bg-secondary/10 glow-purple"
-        >
+          className="h-14 text-sm font-pixel border-secondary text-secondary hover:bg-secondary/10 glow-purple">
+          
           JOIN GAME
         </Button>
         <Button
           onClick={() => navigate('/character')}
           variant="outline"
-          className="h-14 text-sm font-pixel border-accent text-accent hover:bg-accent/10"
-        >
+          className="h-14 text-sm font-pixel border-accent text-accent hover:bg-accent/10">
+          
           🐤 CHARACTER VIEWER
         </Button>
         <Button
           onClick={() => navigate('/battlefield')}
           variant="ghost"
-          className="h-14 text-sm font-pixel text-muted-foreground hover:text-foreground"
-        >
+          className="h-14 text-sm font-pixel text-muted-foreground hover:text-foreground">
+          
           ⚔ BATTLEFIELD (TEST)
         </Button>
       </div>
@@ -57,8 +57,8 @@ const Index = () => {
         <p>2. Players join from phones with the room code</p>
         <p>3. 1 Eagle (Black) vs 3 Chicks (Yellow, Green, Cyan)</p>
       </div>
-    </div>
-  );
+    </div>);
+
 };
 
 export default Index;
