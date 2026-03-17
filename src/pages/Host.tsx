@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useHostRoom, useAdvertiseRoom, type ConnectionMode } from '@/hooks/useGameRoom';
-import GameArena from '@/components/GameArena';
+import LobbyArena from '@/components/LobbyArena';
 import NetworkPerformancePanel from '@/components/NetworkPerformancePanel';
 import { PLAYER_COLORS, MAX_PLAYERS } from '@/lib/playerColors';
 import { X } from 'lucide-react';
@@ -31,7 +31,7 @@ export default function Host() {
       {/* Header */}
       <div className="flex items-center justify-between flex-wrap gap-2">
         <h1 className="text-sm md:text-lg text-primary text-glow-green tracking-wider">
-          ARENA
+          LOBBY
         </h1>
         <div className="flex items-center gap-3 font-mono text-xs flex-wrap">
           {/* Mode dropdown */}
@@ -64,7 +64,7 @@ export default function Host() {
             </span>
           </div>
 
-          {/* Connected player color dots - clickable to kick */}
+          {/* Player role indicators */}
           {playerCount > 0 && (
             <TooltipProvider delayDuration={200}>
               <div className="flex items-center gap-1">
@@ -96,9 +96,9 @@ export default function Host() {
         </div>
       </div>
 
-      {/* Arena */}
-      <div className="flex-1 min-h-0">
-        <GameArena players={players} />
+      {/* 3D Lobby */}
+      <div className="flex-1 min-h-0 relative">
+        <LobbyArena players={players} />
       </div>
 
       {/* Footer hint */}

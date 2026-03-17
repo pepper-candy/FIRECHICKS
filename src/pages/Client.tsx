@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
+import { preloadAllAnimations } from "@/lib/preloadAssets";
 
 export default function Client() {
   const [code, setCode] = useState("");
@@ -17,7 +18,11 @@ export default function Client() {
 
   const playerColor = colorIndex >= 0 ? PLAYER_COLORS[colorIndex] : null;
 
-  // Track kicked state to show message on join screen
+  // Preload animations
+  useEffect(() => {
+    preloadAllAnimations();
+  }, []);
+
   useEffect(() => {
     if (kicked) setWasKicked(true);
   }, [kicked]);
@@ -67,7 +72,7 @@ export default function Client() {
             className="w-full max-w-xs px-4 py-3 rounded border border-destructive/50 bg-destructive/10 text-center cursor-pointer transition-opacity hover:opacity-70"
           >
             <p className="text-sm font-mono text-destructive">ROOM IS FULL</p>
-            <p className="text-xs text-muted-foreground mt-1">Maximum 7 players reached.</p>
+            <p className="text-xs text-muted-foreground mt-1">Maximum {PLAYER_COLORS.length} players (1 Eagle + 3 Chicks).</p>
           </div>
         )}
 
@@ -138,10 +143,11 @@ export default function Client() {
     );
   }
 
+  const isEagle = playerColor && playerColor.name === 'Eagle';
+
   return (
     <div className="flex flex-col items-center justify-center min-h-screen p-6 gap-6 select-none">
       <div className="flex items-center gap-3 text-xs font-mono text-muted-foreground">
-        {/* Player color indicator */}
         {playerColor && (
           <div
             className="w-4 h-4 rounded-full"
@@ -168,11 +174,14 @@ export default function Client() {
 
       {playerColor && (
         <p className="text-xs font-mono" style={{ color: `hsl(${playerColor.hsl})` }}>
-          You are {playerColor.name}
+          You are <span className="font-bold">{playerColor.name}</span>
+          {isEagle ? ' 🦅' : ' 🐤'}
         </p>
       )}
 
-      <p className="text-xs text-muted-foreground font-mono mt-2">Drag to move your character</p>
+      <p className="text-xs text-muted-foreground font-mono mt-2">
+        {isEagle ? 'You are the Eagle — catch the Chicks!' : 'Drag to move your Chick'}
+      </p>
 
       <Button
         variant="outline"

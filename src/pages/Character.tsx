@@ -6,6 +6,7 @@ import CharacterViewer, { CHICK_COLORS, type ChickColor } from '@/components/Cha
 import Thumbstick from '@/components/Thumbstick';
 import { Button } from '@/components/ui/button';
 import * as THREE from 'three';
+import { preloadAllAnimations } from '@/lib/preloadAssets';
 
 type AnimState = 'Idle' | 'Walking' | 'Running' | 'Victory' | 'Attack';
 
@@ -31,8 +32,11 @@ export default function Character() {
   const [isPanning, setIsPanning] = useState(false);
   const panStartRef = useRef<{ x: number; y: number; pos: [number, number, number] } | null>(null);
 
+  useEffect(() => {
+    preloadAllAnimations();
+  }, []);
+
   const handleMove = useCallback((x: number, y: number) => {
-    // Invert Y so pushing stick up moves character forward
     const iy = -y;
     const magnitude = Math.sqrt(x * x + iy * iy);
     if (magnitude < 0.05) {
@@ -71,11 +75,11 @@ export default function Character() {
     }
   };
 
-  // Global pan move/end handlers
+  // Pan move/end — moves character position (not camera)
   const handlePanMove = useCallback((clientX: number, clientY: number) => {
     if (!panStartRef.current) return;
-    const dx = (clientX - panStartRef.current.x) * 0.01;
-    const dy = (clientY - panStartRef.current.y) * 0.01;
+    const dx = (clientX - panStartRef.current.x) * 0.02;
+    const dy = (clientY - panStartRef.current.y) * 0.02;
     setCharPos([
       panStartRef.current.pos[0] + dx,
       0,
@@ -88,12 +92,14 @@ export default function Character() {
     panStartRef.current = null;
   }, []);
 
-  // Attach global pan listeners
   useEffect(() => {
     const onMM = (e: MouseEvent) => handlePanMove(e.clientX, e.clientY);
     const onMU = () => handlePanEnd();
     const onTM = (e: TouchEvent) => {
-      if (panStartRef.current) handlePanMove(e.touches[0].clientX, e.touches[0].clientY);
+      if (panStartRef.current) {
+        e.preventDefault();
+        handlePanMove(e.touches[0].clientX, e.touches[0].clientY);
+      }
     };
     const onTE = () => handlePanEnd();
     window.addEventListener('mousemove', onMM);
@@ -117,7 +123,7 @@ export default function Character() {
           <directionalLight position={[5, 8, 5]} intensity={1} />
           <directionalLight position={[-3, 4, -3]} intensity={0.3} />
 
-          {/* Grid ground */}
+          {/* Grid ground — fixed at world origin */}
           <Grid
             args={[40, 40]}
             position={[0, -0.01, 0]}
@@ -141,12 +147,13 @@ export default function Character() {
             </Suspense>
           </group>
 
+          {/* Camera does NOT follow character — so panning moves the character visually */}
           <OrbitControls
             enablePan={false}
             maxPolarAngle={Math.PI / 2.1}
             minDistance={2}
             maxDistance={8}
-            target={new THREE.Vector3(charPos[0], 0.5, charPos[2])}
+            target={new THREE.Vector3(0, 0.5, 0)}
           />
         </Canvas>
 
