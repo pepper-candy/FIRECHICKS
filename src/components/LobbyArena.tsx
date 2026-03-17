@@ -11,7 +11,7 @@ interface Props {
   players: Map<string, PlayerState>;
 }
 
-const SPEED = 3;
+const SPEED = 3.75;
 
 interface PlayerPos {
   x: number;
