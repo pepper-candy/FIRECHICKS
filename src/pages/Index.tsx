@@ -1,9 +1,15 @@
+import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import type { ConnectionMode } from '@/hooks/useGameRoom';
+import { preloadAllAnimations } from '@/lib/preloadAssets';
 
 const Index = () => {
   const navigate = useNavigate();
+
+  // Preload all FireChick animations on app launch
+  useEffect(() => {
+    preloadAllAnimations();
+  }, []);
 
   return (
     <div className="flex flex-col items-center justify-center min-h-screen p-6 gap-10">
@@ -12,7 +18,7 @@ const Index = () => {
           EAGLE VS CHICK
         </h1>
         <p className="text-sm text-muted-foreground font-mono max-w-md">
-          Control characters across devices using a virtual thumbstick
+          1 Eagle vs 3 Chicks — control characters across devices
         </p>
       </div>
 
@@ -31,25 +37,25 @@ const Index = () => {
           JOIN GAME
         </Button>
         <Button
+          onClick={() => navigate('/character')}
+          variant="outline"
+          className="h-14 text-sm font-pixel border-accent text-accent hover:bg-accent/10"
+        >
+          🐤 CHARACTER VIEWER
+        </Button>
+        <Button
           onClick={() => navigate('/battlefield')}
           variant="ghost"
           className="h-14 text-sm font-pixel text-muted-foreground hover:text-foreground"
         >
           ⚔ BATTLEFIELD (TEST)
         </Button>
-        <Button
-          onClick={() => navigate('/character')}
-          variant="ghost"
-          className="h-14 text-sm font-pixel text-muted-foreground hover:text-foreground"
-        >
-          🐤 CHARACTER
-        </Button>
       </div>
 
       <div className="text-xs text-muted-foreground font-mono text-center space-y-1 mt-8">
-        <p>1. Host opens the arena on a big screen</p>
-        <p>2. Client joins from a phone with the room code</p>
-        <p>3. Use the thumbstick to control movement</p>
+        <p>1. Host opens the lobby on a big screen</p>
+        <p>2. Players join from phones with the room code</p>
+        <p>3. 1 Eagle (Black) vs 3 Chicks (Yellow, Green, Cyan)</p>
       </div>
     </div>
   );
