@@ -10,6 +10,7 @@ import Client from "./pages/Client";
 import NotFound from "./pages/NotFound";
 import Battlefield from "./pages/Battlefield";
 import Character from "./pages/Character";
+import ExamTips from "./pages/ExamTips";
 
 const queryClient = new QueryClient();
 
@@ -26,6 +27,7 @@ const App = () => (
           <Route path="/client" element={<Client />} />
           <Route path="/battlefield" element={<Battlefield />} />
           <Route path="/character" element={<Character />} />
+          <Route path="/exam-tips" element={<ExamTips />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>

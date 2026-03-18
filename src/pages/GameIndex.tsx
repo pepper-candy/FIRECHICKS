@@ -50,6 +50,12 @@ const Index = () => {
           🔐 PW EXAM
         </Button>
         <Button
+          onClick={() => navigate('/exam-tips')}
+          variant="outline"
+          className="h-14 text-sm font-pixel border-border text-muted-foreground hover:text-foreground hover:bg-muted">
+          📚 EXAM TIPS
+        </Button>
+        <Button
           onClick={() => navigate('/battlefield')}
           variant="ghost"
           className="h-14 text-sm font-pixel text-muted-foreground hover:text-foreground">
