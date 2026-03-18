@@ -16,6 +16,7 @@ const ExamTips = () => {
   const [shareCode, setShareCode] = useState<string | null>(null);
   const [scanning, setScanning] = useState(false);
   const [scanned, setScanned] = useState(false);
+  const [codeUsed, setCodeUsed] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
   const scannerRef = useRef<QrScanner | null>(null);
 
