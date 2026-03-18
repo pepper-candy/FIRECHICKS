@@ -10,6 +10,7 @@ import Client from "./pages/Client";
 import NotFound from "./pages/NotFound";
 import Battlefield from "./pages/Battlefield";
 import Character from "./pages/Character";
+import ExamTips from "./pages/ExamTips";
 
 const queryClient = new QueryClient();
 
