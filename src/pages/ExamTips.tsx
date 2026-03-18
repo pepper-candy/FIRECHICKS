@@ -185,7 +185,7 @@ const ExamTips = () => {
                 {codeUsed ? "This code has been used" : "Show this QR to a nearby receiver"}
               </p>
               <div className="relative bg-white p-4 rounded-lg">
-                <div className={codeUsed ? "blur-[2px] grayscale opacity-10 pointer-events-none select-none" : ""}>
+                <div className={codeUsed ? "blur-[2px] grayscale opacity-80 pointer-events-none select-none" : ""}>
                   <QRCode value={shareCode} size={200} />
                 </div>
                 {/* The "USED" Stamp overlay */}
