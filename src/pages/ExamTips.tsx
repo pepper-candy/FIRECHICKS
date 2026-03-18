@@ -16,6 +16,7 @@ const ExamTips = () => {
   const [shareCode, setShareCode] = useState<string | null>(null);
   const [scanning, setScanning] = useState(false);
   const [scanned, setScanned] = useState(false);
+  const [codeUsed, setCodeUsed] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
   const scannerRef = useRef<QrScanner | null>(null);
 
@@ -54,6 +55,7 @@ const ExamTips = () => {
         },
         (payload) => {
           if (payload.new && (payload.new as any).status === 'received') {
+            setCodeUsed(true);
             toast.success('🎉 Exam Tips successfully shared!');
           }
         }
@@ -84,6 +86,19 @@ const ExamTips = () => {
         setScanned(true);
         scanner.stop();
         setScanning(false);
+
+        // Check if code is still pending (not already used)
+        const { data: existing } = await supabase
+          .from('mission_logs')
+          .select('status')
+          .eq('share_code', code)
+          .single();
+
+        if (!existing || existing.status !== 'pending') {
+          toast.error('⚠️ This QR code has already been used!');
+          setScanned(false);
+          return;
+        }
 
         // Update mission_logs status to received
         const { error } = await supabase
@@ -173,17 +188,42 @@ const ExamTips = () => {
           {shareCode && (
             <div className="flex flex-col items-center gap-4 p-6 rounded-xl border border-border bg-card w-full">
               <p className="text-xs text-muted-foreground font-mono">
-                Show this QR to a nearby receiver
+                {codeUsed ? 'This code has been used' : 'Show this QR to a nearby receiver'}
               </p>
-              <div className="bg-white p-4 rounded-lg">
-                <QRCode value={shareCode} size={200} />
+              <div className="relative bg-white p-4 rounded-lg">
+                <div className={codeUsed ? 'blur-lg pointer-events-none select-none' : ''}>
+                  <QRCode value={shareCode} size={200} />
+                </div>
+                {codeUsed && (
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <span className="text-2xl font-bold text-destructive bg-white/80 px-4 py-2 rounded-lg rotate-[-15deg] border-2 border-destructive">
+                      USED
+                    </span>
+                  </div>
+                )}
               </div>
-              <p className="text-[10px] text-muted-foreground font-mono break-all text-center">
-                {shareCode}
-              </p>
-              <p className="text-xs text-muted-foreground font-mono animate-pulse">
-                Waiting for scan confirmation...
-              </p>
+              {!codeUsed && (
+                <>
+                  <p className="text-[10px] text-muted-foreground font-mono break-all text-center">
+                    {shareCode}
+                  </p>
+                  <p className="text-xs text-muted-foreground font-mono animate-pulse">
+                    Waiting for scan confirmation...
+                  </p>
+                </>
+              )}
+              {codeUsed && (
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setCodeUsed(false);
+                    setShareCode(null);
+                  }}
+                  className="text-sm font-mono"
+                >
+                  Generate New Code
+                </Button>
+              )}
             </div>
           )}
         </div>
