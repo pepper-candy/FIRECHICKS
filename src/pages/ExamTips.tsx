@@ -188,11 +188,12 @@ const ExamTips = () => {
                 <div className={codeUsed ? "blur-[3px] grayscale opacity-30 pointer-events-none select-none" : ""}>
                   <QRCode value={shareCode} size={200} />
                 </div>
+                {/* The "USED" Stamp overlay */}
                 {codeUsed && (
                   <div className="absolute inset-0 flex items-center justify-center">
-                    <span className="text-2xl font-bold text-destructive bg-white/80 px-4 py-2 rounded-lg rotate-[-15deg] border-2 border-destructive">
-                      CLAIMED
-                    </span>
+                    <div className="transform rotate-[-12deg] border-4 border-destructive px-4 py-2 rounded-md bg-white/90 shadow-lg">
+                      <span className="text-3xl font-black text-destructive tracking-tighter uppercase">Claimed</span>
+                    </div>
                   </div>
                 )}
               </div>
