@@ -185,13 +185,13 @@ const ExamTips = () => {
                 {codeUsed ? "This code has been used" : "Show this QR to a nearby receiver"}
               </p>
               <div className="relative bg-white p-4 rounded-lg">
-                <div className={codeUsed ? "blur-[2px] pointer-events-none select-none" : ""}>
+                <div className={codeUsed ? "blur-[3px] grayscale opacity-30 pointer-events-none select-none" : ""}>
                   <QRCode value={shareCode} size={200} />
                 </div>
                 {codeUsed && (
                   <div className="absolute inset-0 flex items-center justify-center">
                     <span className="text-2xl font-bold text-destructive bg-white/80 px-4 py-2 rounded-lg rotate-[-15deg] border-2 border-destructive">
-                      USED
+                      CLAIMED
                     </span>
                   </div>
                 )}
