@@ -188,17 +188,42 @@ const ExamTips = () => {
           {shareCode && (
             <div className="flex flex-col items-center gap-4 p-6 rounded-xl border border-border bg-card w-full">
               <p className="text-xs text-muted-foreground font-mono">
-                Show this QR to a nearby receiver
+                {codeUsed ? 'This code has been used' : 'Show this QR to a nearby receiver'}
               </p>
-              <div className="bg-white p-4 rounded-lg">
-                <QRCode value={shareCode} size={200} />
+              <div className="relative bg-white p-4 rounded-lg">
+                <div className={codeUsed ? 'blur-lg pointer-events-none select-none' : ''}>
+                  <QRCode value={shareCode} size={200} />
+                </div>
+                {codeUsed && (
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <span className="text-2xl font-bold text-destructive bg-white/80 px-4 py-2 rounded-lg rotate-[-15deg] border-2 border-destructive">
+                      USED
+                    </span>
+                  </div>
+                )}
               </div>
-              <p className="text-[10px] text-muted-foreground font-mono break-all text-center">
-                {shareCode}
-              </p>
-              <p className="text-xs text-muted-foreground font-mono animate-pulse">
-                Waiting for scan confirmation...
-              </p>
+              {!codeUsed && (
+                <>
+                  <p className="text-[10px] text-muted-foreground font-mono break-all text-center">
+                    {shareCode}
+                  </p>
+                  <p className="text-xs text-muted-foreground font-mono animate-pulse">
+                    Waiting for scan confirmation...
+                  </p>
+                </>
+              )}
+              {codeUsed && (
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setCodeUsed(false);
+                    setShareCode(null);
+                  }}
+                  className="text-sm font-mono"
+                >
+                  Generate New Code
+                </Button>
+              )}
             </div>
           )}
         </div>
