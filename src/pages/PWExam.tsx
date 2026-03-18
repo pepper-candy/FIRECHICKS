@@ -1,58 +1,52 @@
-import { useState, useRef, useEffect, useCallback } from 'react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Slider } from '@/components/ui/slider';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
-import { toast } from 'sonner';
-import { CheckCircle2, ArrowLeft, Camera } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { useState, useRef, useEffect, useCallback } from "react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Slider } from "@/components/ui/slider";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { toast } from "sonner";
+import { CheckCircle2, ArrowLeft, Camera } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
 const ANSWER_KEY: Record<string, Record<number, string>> = {
-  Final: { 1: 'A+', 2: '4.3', 3: 'FIRE', 4: 'RED' },
-  Mock: { 1: 'UST', 2: '11M', 3: 'BIRD', 4: 'HALL' },
+  Final: { 1: "A+", 2: "4.3", 3: "FIRE", 4: "RED" },
+  Mock: { 1: "UST", 2: "11M", 3: "BIRD", 4: "HALL" },
 };
 
 const ASPECT_W = 873;
 const ASPECT_H = 457;
 
-type ExamCategory = 'Mock' | 'Final' | null;
-type Phase = 'menu' | 'questions' | 'camera';
+type ExamCategory = "Mock" | "Final" | null;
+type Phase = "menu" | "questions" | "camera";
 
 const PWExam = () => {
   const navigate = useNavigate();
   const [category, setCategory] = useState<ExamCategory>(null);
-  const [phase, setPhase] = useState<Phase>('menu');
+  const [phase, setPhase] = useState<Phase>("menu");
   const [questionNum, setQuestionNum] = useState<number>(1);
-  const [layer, setLayer] = useState<string>('layer-1');
+  const [layer, setLayer] = useState<string>("layer-1");
   const [zoom, setZoom] = useState(1);
   const [opacity, setOpacity] = useState(0.5);
-  const [answer, setAnswer] = useState('');
+  const [answer, setAnswer] = useState("");
   const [showSuccess, setShowSuccess] = useState(false);
 
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
 
-  const prefix = category === 'Final' ? 'PW_Final' : 'PW_Mock';
+  const prefix = category === "Final" ? "PW_Final" : "PW_Mock";
   const overlayUrl = `/PW/${prefix}_${questionNum}_${layer}.png`;
 
   const startCamera = useCallback(async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: { ideal: 'environment' } },
+        video: { facingMode: { ideal: "environment" } },
       });
       streamRef.current = stream;
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
       }
     } catch (err) {
-      console.error('Camera error:', err);
-      toast.error('Could not access camera');
+      console.error("Camera error:", err);
+      toast.error("Could not access camera");
     }
   }, []);
 
@@ -62,7 +56,7 @@ const PWExam = () => {
   }, []);
 
   useEffect(() => {
-    if (phase === 'camera') {
+    if (phase === "camera") {
       startCamera();
     }
     return () => stopCamera();
@@ -70,25 +64,25 @@ const PWExam = () => {
 
   const selectCategory = (cat: ExamCategory) => {
     setCategory(cat);
-    setPhase('questions');
+    setPhase("questions");
   };
 
   const selectQuestion = (num: number) => {
     setQuestionNum(num);
-    setLayer('layer-1');
+    setLayer("layer-1");
     setZoom(1);
     setOpacity(0.5);
-    setAnswer('');
+    setAnswer("");
     setShowSuccess(false);
-    setPhase('camera');
+    setPhase("camera");
   };
 
   const goBack = () => {
-    if (phase === 'camera') {
+    if (phase === "camera") {
       stopCamera();
-      setPhase('questions');
-    } else if (phase === 'questions') {
-      setPhase('menu');
+      setPhase("questions");
+    } else if (phase === "questions") {
+      setPhase("menu");
       setCategory(null);
     }
   };
@@ -100,29 +94,27 @@ const PWExam = () => {
       setShowSuccess(true);
       setTimeout(() => setShowSuccess(false), 3000);
     } else {
-      toast.error('Incorrect answer. Try again!');
+      toast.error("Incorrect answer. Try again!");
     }
   };
 
   // ─── Menu ─────────────────────────────────────────
-  if (phase === 'menu') {
+  if (phase === "menu") {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen p-6 gap-8">
-        <h1 className="text-lg md:text-2xl text-primary text-glow-green tracking-wider">
-          PW EXAM
-        </h1>
+        <h1 className="text-lg md:text-2xl text-primary text-glow-green tracking-wider">PW EXAM</h1>
         <p className="text-xs text-muted-foreground font-mono max-w-xs text-center">
           Visual Cryptography — overlay two layers to reveal the answer
         </p>
         <div className="flex flex-col gap-4 w-full max-w-xs">
           <Button
-            onClick={() => selectCategory('Mock')}
+            onClick={() => selectCategory("Mock")}
             className="h-14 text-sm font-pixel bg-primary hover:bg-primary/80 text-primary-foreground glow-green"
           >
             MOCK EXAM
           </Button>
           <Button
-            onClick={() => selectCategory('Final')}
+            onClick={() => selectCategory("Final")}
             variant="outline"
             className="h-14 text-sm font-pixel border-secondary text-secondary hover:bg-secondary/10 glow-purple"
           >
@@ -130,7 +122,7 @@ const PWExam = () => {
           </Button>
         </div>
         <Button
-          onClick={() => navigate('/')}
+          onClick={() => navigate("/")}
           variant="ghost"
           className="text-xs text-muted-foreground hover:text-foreground font-mono mt-4"
         >
@@ -141,15 +133,13 @@ const PWExam = () => {
   }
 
   // ─── Question Select ──────────────────────────────
-  if (phase === 'questions') {
+  if (phase === "questions") {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen p-6 gap-8">
         <button onClick={goBack} className="absolute top-4 left-4 text-muted-foreground hover:text-foreground">
           <ArrowLeft className="w-6 h-6" />
         </button>
-        <h1 className="text-lg md:text-2xl text-primary text-glow-green tracking-wider">
-          {category} EXAM
-        </h1>
+        <h1 className="text-lg md:text-2xl text-primary text-glow-green tracking-wider">{category} EXAM</h1>
         <p className="text-xs text-muted-foreground font-mono">Select a question number</p>
         <div className="grid grid-cols-2 gap-4 w-full max-w-xs">
           {[1, 2, 3, 4].map((n) => (
@@ -204,15 +194,9 @@ const PWExam = () => {
       {/* Camera container – locked aspect ratio */}
       <div
         className="relative w-full overflow-hidden bg-black"
-        style={{ aspectRatio: `${ASPECT_W} / ${ASPECT_H}`, maxWidth: '100vw' }}
+        style={{ aspectRatio: `${ASPECT_W} / ${ASPECT_H}`, maxWidth: "100vw" }}
       >
-        <video
-          ref={videoRef}
-          autoPlay
-          playsInline
-          muted
-          className="absolute inset-0 w-full h-full object-cover"
-        />
+        <video ref={videoRef} autoPlay playsInline muted className="absolute inset-0 w-full h-full object-cover" />
         {/* Overlay image */}
         <img
           src={overlayUrl}
@@ -221,7 +205,7 @@ const PWExam = () => {
           style={{
             opacity,
             transform: `scale(${zoom})`,
-            transformOrigin: 'center center',
+            transformOrigin: "center center",
           }}
         />
       </div>
@@ -234,8 +218,8 @@ const PWExam = () => {
           <Slider
             value={[zoom]}
             onValueChange={([v]) => setZoom(v)}
-            min={0.5}
-            max={3}
+            min={0.25}
+            max={1.5}
             step={0.05}
             className="flex-1"
           />
@@ -252,9 +236,7 @@ const PWExam = () => {
             step={0.05}
             className="flex-1"
           />
-          <span className="text-xs text-muted-foreground w-10 text-right">
-            {Math.round(opacity * 100)}%
-          </span>
+          <span className="text-xs text-muted-foreground w-10 text-right">{Math.round(opacity * 100)}%</span>
         </div>
 
         {/* Answer input */}
@@ -264,7 +246,7 @@ const PWExam = () => {
             value={answer}
             onChange={(e) => setAnswer(e.target.value.toUpperCase())}
             className="flex-1 uppercase"
-            onKeyDown={(e) => e.key === 'Enter' && handleSubmit()}
+            onKeyDown={(e) => e.key === "Enter" && handleSubmit()}
           />
           <Button onClick={handleSubmit} className="font-pixel text-xs">
             SUBMIT
