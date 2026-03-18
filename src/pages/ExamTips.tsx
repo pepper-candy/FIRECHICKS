@@ -1,18 +1,18 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Button } from '@/components/ui/button';
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { Label } from '@/components/ui/label';
-import { toast } from 'sonner';
-import { supabase } from '@/integrations/supabase/client';
-import QRCode from 'react-qr-code';
-import QrScanner from 'qr-scanner';
+import { useState, useEffect, useRef, useCallback } from "react";
+import { useNavigate } from "react-router-dom";
+import { Button } from "@/components/ui/button";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Label } from "@/components/ui/label";
+import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
+import QRCode from "react-qr-code";
+import QrScanner from "qr-scanner";
 
-type Role = 'holder' | 'receiver';
+type Role = "holder" | "receiver";
 
 const ExamTips = () => {
   const navigate = useNavigate();
-  const [role, setRole] = useState<Role>('holder');
+  const [role, setRole] = useState<Role>("holder");
   const [shareCode, setShareCode] = useState<string | null>(null);
   const [scanning, setScanning] = useState(false);
   const [scanned, setScanned] = useState(false);
@@ -26,39 +26,37 @@ const ExamTips = () => {
     setShareCode(code);
 
     // Insert into mission_logs as pending
-    const { error } = await supabase
-      .from('mission_logs')
-      .insert({ share_code: code, status: 'pending' });
+    const { error } = await supabase.from("mission_logs").insert({ share_code: code, status: "pending" });
 
     if (error) {
-      toast.error('Failed to create share code');
+      toast.error("Failed to create share code");
       console.error(error);
       return;
     }
 
-    toast.success('Share code generated! Show the QR to a receiver.');
+    toast.success("Share code generated! Show the QR to a receiver.");
   }, []);
 
   // Holder: listen for realtime updates on their share code
   useEffect(() => {
-    if (role !== 'holder' || !shareCode) return;
+    if (role !== "holder" || !shareCode) return;
 
     const channel = supabase
       .channel(`mission-${shareCode}`)
       .on(
-        'postgres_changes',
+        "postgres_changes",
         {
-          event: 'UPDATE',
-          schema: 'public',
-          table: 'mission_logs',
+          event: "UPDATE",
+          schema: "public",
+          table: "mission_logs",
           filter: `share_code=eq.${shareCode}`,
         },
         (payload) => {
-          if (payload.new && (payload.new as any).status === 'received') {
+          if (payload.new && (payload.new as any).status === "received") {
             setCodeUsed(true);
-            toast.success('🎉 Exam Tips successfully shared!');
+            toast.success("🎉 Exam Tips successfully shared!");
           }
-        }
+        },
       )
       .subscribe();
 
@@ -88,44 +86,40 @@ const ExamTips = () => {
         setScanning(false);
 
         // Check if code is still pending (not already used)
-        const { data: existing } = await supabase
-          .from('mission_logs')
-          .select('status')
-          .eq('share_code', code)
-          .single();
+        const { data: existing } = await supabase.from("mission_logs").select("status").eq("share_code", code).single();
 
-        if (!existing || existing.status !== 'pending') {
-          toast.error('⚠️ This QR code has already been used!');
+        if (!existing || existing.status !== "pending") {
+          toast.error("⚠️ This QR code has already been used!");
           setScanned(false);
           return;
         }
 
         // Update mission_logs status to received
         const { error } = await supabase
-          .from('mission_logs')
-          .update({ status: 'received' })
-          .eq('share_code', code)
-          .eq('status', 'pending');
+          .from("mission_logs")
+          .update({ status: "received" })
+          .eq("share_code", code)
+          .eq("status", "pending");
 
         if (error) {
-          toast.error('Failed to confirm receipt');
+          toast.error("Failed to confirm receipt");
           console.error(error);
           return;
         }
 
-        toast.success('📚 Exam Tips received!');
+        toast.success("📚 Exam Tips received!");
       },
       {
-        preferredCamera: 'environment',
+        preferredCamera: "environment",
         highlightScanRegion: true,
         highlightCodeOutline: true,
-      }
+      },
     );
 
     scannerRef.current = scanner;
     scanner.start().catch((err) => {
-      console.error('Camera error:', err);
-      toast.error('Could not access camera');
+      console.error("Camera error:", err);
+      toast.error("Could not access camera");
       setScanning(false);
     });
 
@@ -144,7 +138,7 @@ const ExamTips = () => {
   return (
     <div className="flex flex-col items-center min-h-screen p-6 gap-6">
       <div className="flex items-center justify-between w-full max-w-md">
-        <Button variant="ghost" onClick={() => navigate('/')} className="text-sm font-mono">
+        <Button variant="ghost" onClick={() => navigate("/")} className="text-sm font-mono">
           ← Back
         </Button>
         <h1 className="text-lg font-bold text-primary tracking-wide">📚 Exam Tips</h1>
@@ -179,7 +173,7 @@ const ExamTips = () => {
       </div>
 
       {/* Holder view */}
-      {role === 'holder' && (
+      {role === "holder" && (
         <div className="flex flex-col items-center gap-6 w-full max-w-md">
           <Button onClick={generateCode} className="w-full h-14 text-sm font-mono">
             Generate Share Code
@@ -188,10 +182,10 @@ const ExamTips = () => {
           {shareCode && (
             <div className="flex flex-col items-center gap-4 p-6 rounded-xl border border-border bg-card w-full">
               <p className="text-xs text-muted-foreground font-mono">
-                {codeUsed ? 'This code has been used' : 'Show this QR to a nearby receiver'}
+                {codeUsed ? "This code has been used" : "Show this QR to a nearby receiver"}
               </p>
               <div className="relative bg-white p-4 rounded-lg">
-                <div className={codeUsed ? 'blur-lg pointer-events-none select-none' : ''}>
+                <div className={codeUsed ? "blur-[2px] pointer-events-none select-none" : ""}>
                   <QRCode value={shareCode} size={200} />
                 </div>
                 {codeUsed && (
@@ -204,9 +198,7 @@ const ExamTips = () => {
               </div>
               {!codeUsed && (
                 <>
-                  <p className="text-[10px] text-muted-foreground font-mono break-all text-center">
-                    {shareCode}
-                  </p>
+                  <p className="text-[10px] text-muted-foreground font-mono break-all text-center">{shareCode}</p>
                   <p className="text-xs text-muted-foreground font-mono animate-pulse">
                     Waiting for scan confirmation...
                   </p>
@@ -230,7 +222,7 @@ const ExamTips = () => {
       )}
 
       {/* Receiver view */}
-      {role === 'receiver' && (
+      {role === "receiver" && (
         <div className="flex flex-col items-center gap-6 w-full max-w-md">
           {!scanning && !scanned && (
             <Button onClick={startScan} className="w-full h-14 text-sm font-mono">
