@@ -87,6 +87,19 @@ const ExamTips = () => {
         scanner.stop();
         setScanning(false);
 
+        // Check if code is still pending (not already used)
+        const { data: existing } = await supabase
+          .from('mission_logs')
+          .select('status')
+          .eq('share_code', code)
+          .single();
+
+        if (!existing || existing.status !== 'pending') {
+          toast.error('⚠️ This QR code has already been used!');
+          setScanned(false);
+          return;
+        }
+
         // Update mission_logs status to received
         const { error } = await supabase
           .from('mission_logs')
