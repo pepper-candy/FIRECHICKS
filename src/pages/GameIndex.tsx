@@ -44,10 +44,15 @@ const Index = () => {
           🐤 CHARACTER VIEWER
         </Button>
         <Button
+          onClick={() => navigate('/pw')}
+          variant="outline"
+          className="h-14 text-sm font-pixel border-border text-muted-foreground hover:text-foreground hover:bg-muted">
+          🔐 PW EXAM
+        </Button>
+        <Button
           onClick={() => navigate('/battlefield')}
           variant="ghost"
           className="h-14 text-sm font-pixel text-muted-foreground hover:text-foreground">
-          
           ⚔ BATTLEFIELD (TEST)
         </Button>
       </div>

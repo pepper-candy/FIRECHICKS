@@ -130,11 +130,11 @@ const PWExam = () => {
           </Button>
         </div>
         <Button
-          onClick={() => navigate('/game')}
+          onClick={() => navigate('/')}
           variant="ghost"
           className="text-xs text-muted-foreground hover:text-foreground font-mono mt-4"
         >
-          🎮 Go to Game
+          🎮 Back to Game
         </Button>
       </div>
     );
