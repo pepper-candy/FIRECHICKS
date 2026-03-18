@@ -20,8 +20,8 @@ const App = () => (
       <Sonner />
       <BrowserRouter>
         <Routes>
-          <Route path="/" element={<PWExam />} />
-          <Route path="/game" element={<GameIndex />} />
+          <Route path="/" element={<GameIndex />} />
+          <Route path="/pw" element={<PWExam />} />
           <Route path="/host" element={<Host />} />
           <Route path="/client" element={<Client />} />
           <Route path="/battlefield" element={<Battlefield />} />
