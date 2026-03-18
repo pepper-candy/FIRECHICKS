@@ -41,24 +41,24 @@ const ExamTips = () => {
   useEffect(() => {
     if (role !== "holder" || !shareCode) return;
 
-    const channel = supabase
-      .channel(`mission-${shareCode}`)
-      .on(
-        "postgres_changes",
-        {
-          event: "UPDATE",
-          schema: "public",
-          table: "mission_logs",
-          filter: `share_code=eq.${shareCode}`,
-        },
-        (payload) => {
-          if (payload.new && (payload.new as any).status === "received") {
-            setCodeUsed(true);
-            toast.success("🎉 Exam Tips successfully shared!");
-          }
-        },
-      )
-      .subscribe();
+    const channel = supabase.
+    channel(`mission-${shareCode}`).
+    on(
+      "postgres_changes",
+      {
+        event: "UPDATE",
+        schema: "public",
+        table: "mission_logs",
+        filter: `share_code=eq.${shareCode}`
+      },
+      (payload) => {
+        if (payload.new && (payload.new as any).status === "received") {
+          setCodeUsed(true);
+          toast.success("🎉 Exam Tips successfully shared!");
+        }
+      }
+    ).
+    subscribe();
 
     return () => {
       supabase.removeChannel(channel);
@@ -95,11 +95,11 @@ const ExamTips = () => {
         }
 
         // Update mission_logs status to received
-        const { error } = await supabase
-          .from("mission_logs")
-          .update({ status: "received" })
-          .eq("share_code", code)
-          .eq("status", "pending");
+        const { error } = await supabase.
+        from("mission_logs").
+        update({ status: "received" }).
+        eq("share_code", code).
+        eq("status", "pending");
 
         if (error) {
           toast.error("Failed to confirm receipt");
@@ -112,8 +112,8 @@ const ExamTips = () => {
       {
         preferredCamera: "environment",
         highlightScanRegion: true,
-        highlightCodeOutline: true,
-      },
+        highlightCodeOutline: true
+      }
     );
 
     scannerRef.current = scanner;
@@ -141,7 +141,7 @@ const ExamTips = () => {
         <Button variant="ghost" onClick={() => navigate("/")} className="text-sm font-mono">
           ← Back
         </Button>
-        <h1 className="text-lg font-bold text-primary tracking-wide">📚 Exam Tips</h1>
+        <h1 className="text-lg font-bold text-primary tracking-wide">Exam Tips</h1>
         <div className="w-16" />
       </div>
 
@@ -155,8 +155,8 @@ const ExamTips = () => {
             setScanning(false);
             setScanned(false);
           }}
-          className="flex gap-4"
-        >
+          className="flex gap-4">
+          
           <div className="flex items-center gap-2">
             <RadioGroupItem value="holder" id="holder" />
             <Label htmlFor="holder" className="text-sm font-mono cursor-pointer">
@@ -173,14 +173,14 @@ const ExamTips = () => {
       </div>
 
       {/* Holder view */}
-      {role === "holder" && (
-        <div className="flex flex-col items-center gap-6 w-full max-w-md">
+      {role === "holder" &&
+      <div className="flex flex-col items-center gap-6 w-full max-w-md">
           <Button onClick={generateCode} className="w-full h-14 text-sm font-mono">
             Generate Share Code
           </Button>
 
-          {shareCode && (
-            <div className="flex flex-col items-center gap-4 p-6 rounded-xl border border-border bg-card w-full">
+          {shareCode &&
+        <div className="flex flex-col items-center gap-4 p-6 rounded-xl border border-border bg-card w-full">
               <p className="text-xs text-muted-foreground font-mono">
                 {codeUsed ? "This code has been used" : "Show this QR to a nearby receiver"}
               </p>
@@ -189,50 +189,50 @@ const ExamTips = () => {
                   <QRCode value={shareCode} size={200} />
                 </div>
                 {/* The "USED" Stamp overlay */}
-                {codeUsed && (
-                  <div className="absolute inset-0 flex items-center justify-center">
+                {codeUsed &&
+            <div className="absolute inset-0 flex items-center justify-center">
                     <div className="transform rotate-[-12deg] border-4 border-destructive px-4 py-2 rounded-md bg-white/90 shadow-lg">
                       <span className="text-3xl font-black text-destructive tracking-tighter uppercase">Claimed</span>
                     </div>
                   </div>
-                )}
+            }
               </div>
-              {!codeUsed && (
-                <>
+              {!codeUsed &&
+          <>
                   <p className="text-[10px] text-muted-foreground font-mono break-all text-center">{shareCode}</p>
                   <p className="text-xs text-muted-foreground font-mono animate-pulse">
                     Waiting for scan confirmation...
                   </p>
                 </>
-              )}
-              {codeUsed && (
-                <Button
-                  variant="outline"
-                  onClick={() => {
-                    setCodeUsed(false);
-                    setShareCode(null);
-                  }}
-                  className="text-sm font-mono"
-                >
+          }
+              {codeUsed &&
+          <Button
+            variant="outline"
+            onClick={() => {
+              setCodeUsed(false);
+              setShareCode(null);
+            }}
+            className="text-sm font-mono">
+            
                   Generate New Code
                 </Button>
-              )}
+          }
             </div>
-          )}
+        }
         </div>
-      )}
+      }
 
       {/* Receiver view */}
-      {role === "receiver" && (
-        <div className="flex flex-col items-center gap-6 w-full max-w-md">
-          {!scanning && !scanned && (
-            <Button onClick={startScan} className="w-full h-14 text-sm font-mono">
+      {role === "receiver" &&
+      <div className="flex flex-col items-center gap-6 w-full max-w-md">
+          {!scanning && !scanned &&
+        <Button onClick={startScan} className="w-full h-14 text-sm font-mono">
               Scan for Tips
             </Button>
-          )}
+        }
 
-          {scanning && (
-            <div className="flex flex-col items-center gap-4 w-full">
+          {scanning &&
+        <div className="flex flex-col items-center gap-4 w-full">
               <div className="relative w-full aspect-square rounded-xl overflow-hidden border border-border">
                 <video ref={videoRef} className="w-full h-full object-cover" />
               </div>
@@ -240,27 +240,27 @@ const ExamTips = () => {
                 Stop Scanning
               </Button>
             </div>
-          )}
+        }
 
-          {scanned && (
-            <div className="flex flex-col items-center gap-4 p-6 rounded-xl border border-border bg-card w-full">
+          {scanned &&
+        <div className="flex flex-col items-center gap-4 p-6 rounded-xl border border-border bg-card w-full">
               <p className="text-2xl">✅</p>
               <p className="text-sm font-mono text-primary">Tips received successfully!</p>
               <Button
-                variant="outline"
-                onClick={() => {
-                  setScanned(false);
-                }}
-                className="text-sm font-mono"
-              >
+            variant="outline"
+            onClick={() => {
+              setScanned(false);
+            }}
+            className="text-sm font-mono">
+            
                 Scan Another
               </Button>
             </div>
-          )}
+        }
         </div>
-      )}
-    </div>
-  );
+      }
+    </div>);
+
 };
 
 export default ExamTips;
