@@ -11,7 +11,7 @@ function generateRoomCode(): string {
 }
 
 const PEER_PREFIX = 'evsc-';
-const JOYSTICK_SEND_INTERVAL = 33; // ~30Hz
+const JOYSTICK_SEND_INTERVAL = 33;
 
 export interface JoystickData {
   x: number;
@@ -25,7 +25,7 @@ export interface PlayerState {
   lastPongAt: number;
 }
 
-// ─── Binary encoding for joystick data ──────────────────────
+// Binary encoding for joystick data
 function encodeJoystick(colorIndex: number, x: number, y: number): ArrayBuffer {
   const buf = new ArrayBuffer(5);
   const view = new DataView(buf);
@@ -44,15 +44,17 @@ function decodeJoystick(buf: ArrayBuffer): { colorIndex: number; x: number; y: n
   };
 }
 
-// ─── Color allocation helper ────────────────────────────────
 function allocateColor(usedColors: Set<number>): number | null {
+  // Randomly assign from available colors
+  const available: number[] = [];
   for (let i = 0; i < MAX_PLAYERS; i++) {
-    if (!usedColors.has(i)) return i;
+    if (!usedColors.has(i)) available.push(i);
   }
-  return null;
+  if (available.length === 0) return null;
+  return available[Math.floor(Math.random() * available.length)];
 }
 
-// ─── HOST: WebRTC (multi-player) ────────────────────────────
+// ─── HOST: WebRTC ───────────────────────────────────────────
 function useHostWebRTC() {
   const [roomCode, setRoomCode] = useState('');
   const [players, setPlayers] = useState<Map<string, PlayerState>>(new Map());
@@ -60,6 +62,7 @@ function useHostWebRTC() {
   const connsRef = useRef<Map<string, DataConnection>>(new Map());
   const usedColorsRef = useRef<Set<number>>(new Set());
   const connColorMapRef = useRef<Map<string, number>>(new Map());
+  const clientMsgCallbackRef = useRef<((connId: string, msg: any) => void) | null>(null);
 
   const removePlayer = useCallback((connId: string) => {
     const colorIdx = connColorMapRef.current.get(connId);
@@ -76,7 +79,6 @@ function useHostWebRTC() {
     });
   }, []);
 
-  // Expose kickPlayer for host UI
   const kickPlayer = useCallback((connId: string) => {
     const conn = connsRef.current.get(connId);
     if (conn) {
@@ -84,6 +86,45 @@ function useHostWebRTC() {
     }
     removePlayer(connId);
   }, [removePlayer]);
+
+  const broadcast = useCallback((msg: any) => {
+    const data = JSON.stringify(msg);
+    connsRef.current.forEach((conn) => {
+      try { conn.send(data); } catch {}
+    });
+  }, []);
+
+  const onClientMessage = useCallback((cb: (connId: string, msg: any) => void) => {
+    clientMsgCallbackRef.current = cb;
+  }, []);
+
+  // Handle color swap
+  const handleColorSwap = useCallback((connId: string, requestedColor: number) => {
+    if (usedColorsRef.current.has(requestedColor)) return; // already taken
+    const currentColor = connColorMapRef.current.get(connId);
+    if (currentColor !== undefined) {
+      usedColorsRef.current.delete(currentColor);
+    }
+    usedColorsRef.current.add(requestedColor);
+    connColorMapRef.current.set(connId, requestedColor);
+
+    setPlayers((prev) => {
+      const next = new Map(prev);
+      const existing = next.get(connId);
+      if (existing) {
+        next.set(connId, { ...existing, colorIndex: requestedColor });
+      }
+      return next;
+    });
+
+    // Tell all clients about the swap
+    const conn = connsRef.current.get(connId);
+    if (conn) {
+      try { conn.send(JSON.stringify({ type: 'color-update', colorIndex: requestedColor })); } catch {}
+    }
+    // Broadcast used colors to all
+    broadcast({ type: 'used-colors', colors: Array.from(usedColorsRef.current) });
+  }, [broadcast]);
 
   useEffect(() => {
     const code = generateRoomCode();
@@ -116,6 +157,7 @@ function useHostWebRTC() {
         connsRef.current.set(connId, conn);
 
         conn.send(JSON.stringify({ type: 'assign-color', colorIndex }));
+        conn.send(JSON.stringify({ type: 'used-colors', colors: Array.from(usedColorsRef.current) }));
         setPlayers((prev) => {
           const next = new Map(prev);
           next.set(connId, { joystick: { x: 0, y: 0 }, colorIndex, ping: 0, lastPongAt: Date.now() });
@@ -135,21 +177,27 @@ function useHostWebRTC() {
             return next;
           });
         } else {
-          // Handle string messages (pong)
           let msg: any = null;
           if (typeof data === 'string') {
             try { msg = JSON.parse(data); } catch {}
           }
-          if (msg?.type === 'pong') {
-            const rtt = Date.now() - msg.ts;
-            setPlayers((prev) => {
-              const next = new Map(prev);
-              const existing = next.get(connId);
-              if (existing) {
-                next.set(connId, { ...existing, ping: rtt, lastPongAt: Date.now() });
-              }
-              return next;
-            });
+          if (msg) {
+            if (msg.type === 'pong') {
+              const rtt = Date.now() - msg.ts;
+              setPlayers((prev) => {
+                const next = new Map(prev);
+                const existing = next.get(connId);
+                if (existing) {
+                  next.set(connId, { ...existing, ping: rtt, lastPongAt: Date.now() });
+                }
+                return next;
+              });
+            } else if (msg.type === 'color-swap') {
+              handleColorSwap(connId, msg.requestedColor);
+            } else {
+              // Forward to game logic
+              clientMsgCallbackRef.current?.(connId, msg);
+            }
           }
         }
       });
@@ -158,7 +206,6 @@ function useHostWebRTC() {
       conn.on('error', () => removePlayer(connId));
     });
 
-    // Ping interval
     const pingInterval = window.setInterval(() => {
       const ts = Date.now();
       connsRef.current.forEach((conn) => {
@@ -172,18 +219,19 @@ function useHostWebRTC() {
       connsRef.current.clear();
       peer.destroy();
     };
-  }, [removePlayer]);
+  }, [removePlayer, handleColorSwap]);
 
-  return { roomCode, players, kickPlayer };
+  return { roomCode, players, kickPlayer, broadcast, onClientMessage, usedColors: usedColorsRef };
 }
 
-// ─── HOST: Supabase (multi-player) ─────────────────────────
+// ─── HOST: Supabase ─────────────────────────────────────────
 function useHostSupabase() {
   const [roomCode, setRoomCode] = useState('');
   const [players, setPlayers] = useState<Map<string, PlayerState>>(new Map());
   const channelRef = useRef<RealtimeChannel | null>(null);
   const usedColorsRef = useRef<Set<number>>(new Set());
   const clientColorMapRef = useRef<Map<string, number>>(new Map());
+  const clientMsgCallbackRef = useRef<((connId: string, msg: any) => void) | null>(null);
 
   const removePlayer = useCallback((clientId: string) => {
     const colorIdx = clientColorMapRef.current.get(clientId);
@@ -203,6 +251,38 @@ function useHostSupabase() {
     removePlayer(clientId);
   }, [removePlayer]);
 
+  const broadcast = useCallback((msg: any) => {
+    channelRef.current?.send({ type: 'broadcast', event: 'host-message', payload: msg });
+  }, []);
+
+  const onClientMessage = useCallback((cb: (connId: string, msg: any) => void) => {
+    clientMsgCallbackRef.current = cb;
+  }, []);
+
+  const handleColorSwap = useCallback((clientId: string, requestedColor: number) => {
+    if (usedColorsRef.current.has(requestedColor)) return;
+    const currentColor = clientColorMapRef.current.get(clientId);
+    if (currentColor !== undefined) usedColorsRef.current.delete(currentColor);
+    usedColorsRef.current.add(requestedColor);
+    clientColorMapRef.current.set(clientId, requestedColor);
+
+    setPlayers((prev) => {
+      const next = new Map(prev);
+      const existing = next.get(clientId);
+      if (existing) next.set(clientId, { ...existing, colorIndex: requestedColor });
+      return next;
+    });
+
+    channelRef.current?.send({
+      type: 'broadcast', event: 'assign-color',
+      payload: { clientId, colorIndex: requestedColor },
+    });
+    channelRef.current?.send({
+      type: 'broadcast', event: 'used-colors',
+      payload: { colors: Array.from(usedColorsRef.current) },
+    });
+  }, []);
+
   useEffect(() => {
     const code = generateRoomCode();
     setRoomCode(code);
@@ -217,9 +297,7 @@ function useHostSupabase() {
         setPlayers((prev) => {
           const next = new Map(prev);
           const existing = next.get(clientId);
-          if (existing) {
-            next.set(clientId, { ...existing, joystick: { x, y } });
-          }
+          if (existing) next.set(clientId, { ...existing, joystick: { x, y } });
           return next;
         });
       })
@@ -238,10 +316,19 @@ function useHostSupabase() {
           return next;
         });
         channel.send({ type: 'broadcast', event: 'assign-color', payload: { clientId, colorIndex } });
+        channel.send({ type: 'broadcast', event: 'used-colors', payload: { colors: Array.from(usedColorsRef.current) } });
       })
       .on('broadcast', { event: 'client-leave' }, (payload) => {
         const { clientId } = payload.payload as { clientId: string };
         removePlayer(clientId);
+      })
+      .on('broadcast', { event: 'color-swap' }, (payload) => {
+        const { clientId, requestedColor } = payload.payload as { clientId: string; requestedColor: number };
+        handleColorSwap(clientId, requestedColor);
+      })
+      .on('broadcast', { event: 'client-action' }, (payload) => {
+        const { clientId, ...msg } = payload.payload as { clientId: string; [key: string]: any };
+        clientMsgCallbackRef.current?.(clientId, msg);
       })
       .on('broadcast', { event: 'pong' }, (payload) => {
         const { clientId, ts } = payload.payload as { clientId: string; ts: number };
@@ -249,9 +336,7 @@ function useHostSupabase() {
         setPlayers((prev) => {
           const next = new Map(prev);
           const existing = next.get(clientId);
-          if (existing) {
-            next.set(clientId, { ...existing, ping: rtt, lastPongAt: Date.now() });
-          }
+          if (existing) next.set(clientId, { ...existing, ping: rtt, lastPongAt: Date.now() });
           return next;
         });
       })
@@ -259,7 +344,6 @@ function useHostSupabase() {
 
     channelRef.current = channel;
 
-    // Ping interval
     const pingInterval = window.setInterval(() => {
       channel.send({ type: 'broadcast', event: 'ping', payload: { ts: Date.now() } });
     }, 2000);
@@ -268,23 +352,25 @@ function useHostSupabase() {
       clearInterval(pingInterval);
       channel.unsubscribe();
     };
-  }, [removePlayer]);
+  }, [removePlayer, handleColorSwap]);
 
-  return { roomCode, players, kickPlayer };
+  return { roomCode, players, kickPlayer, broadcast, onClientMessage, usedColors: usedColorsRef };
 }
 
-// ─── CLIENT: WebRTC (optimized) ─────────────────────────────
+// ─── CLIENT: WebRTC ─────────────────────────────────────────
 function useClientWebRTC(roomCode: string) {
   const [connected, setConnected] = useState(false);
   const [colorIndex, setColorIndex] = useState<number>(-1);
   const [roomFull, setRoomFull] = useState(false);
   const [kicked, setKicked] = useState(false);
+  const [usedColors, setUsedColors] = useState<Set<number>>(new Set());
   const peerRef = useRef<Peer | null>(null);
   const connRef = useRef<DataConnection | null>(null);
   const joystickRef = useRef<JoystickData>({ x: 0, y: 0 });
   const intervalRef = useRef<number | null>(null);
-  const idleRef = useRef(true); // Start idle until user touches joystick
+  const idleRef = useRef(true);
   const colorIndexRef = useRef(-1);
+  const hostMsgCallbackRef = useRef<((msg: any) => void) | null>(null);
 
   const connect = useCallback((overrideCode?: string) => {
     const targetCode = overrideCode || roomCode;
@@ -293,7 +379,7 @@ function useClientWebRTC(roomCode: string) {
     setKicked(false);
     setRoomFull(false);
 
-    const peer = new Peer(undefined, {
+    const peer = new Peer(undefined as any, {
       config: {
         iceServers: [
           { urls: 'stun:stun.l.google.com:19302' },
@@ -313,8 +399,6 @@ function useClientWebRTC(roomCode: string) {
 
       conn.on('open', () => {
         setConnected(true);
-        // Configure the underlying data channel for UDP-like performance
-        // DataChannel options (ordered/maxRetransmits) are set at creation via PeerJS options above
         intervalRef.current = window.setInterval(() => {
           if (colorIndexRef.current >= 0 && !idleRef.current) {
             const buf = encodeJoystick(colorIndexRef.current, joystickRef.current.x, joystickRef.current.y);
@@ -334,6 +418,11 @@ function useClientWebRTC(roomCode: string) {
           if (msg.type === 'assign-color') {
             colorIndexRef.current = msg.colorIndex;
             setColorIndex(msg.colorIndex);
+          } else if (msg.type === 'color-update') {
+            colorIndexRef.current = msg.colorIndex;
+            setColorIndex(msg.colorIndex);
+          } else if (msg.type === 'used-colors') {
+            setUsedColors(new Set(msg.colors));
           } else if (msg.type === 'room-full') {
             setRoomFull(true);
           } else if (msg.type === 'kicked') {
@@ -343,6 +432,9 @@ function useClientWebRTC(roomCode: string) {
             if (!idleRef.current) {
               try { conn.send(JSON.stringify({ type: 'pong', ts: msg.ts })); } catch {}
             }
+          } else {
+            // Forward to game logic
+            hostMsgCallbackRef.current?.(msg);
           }
         }
       });
@@ -366,22 +458,30 @@ function useClientWebRTC(roomCode: string) {
     colorIndexRef.current = -1;
   }, []);
 
-  const disconnect = useCallback(() => {
-    doDisconnect();
-  }, [doDisconnect]);
+  const disconnect = useCallback(() => { doDisconnect(); }, [doDisconnect]);
 
   const sendJoystick = useCallback((data: JoystickData) => {
     joystickRef.current = data;
     if (!idleRef.current && connRef.current && colorIndexRef.current >= 0) {
-      try {
-        connRef.current.send(encodeJoystick(colorIndexRef.current, data.x, data.y));
-      } catch {}
+      try { connRef.current.send(encodeJoystick(colorIndexRef.current, data.x, data.y)); } catch {}
     }
   }, []);
 
-  const setIdle = useCallback((idle: boolean) => {
-    idleRef.current = idle;
+  const setIdle = useCallback((idle: boolean) => { idleRef.current = idle; }, []);
+
+  const sendToHost = useCallback((msg: any) => {
+    if (connRef.current) {
+      try { connRef.current.send(JSON.stringify(msg)); } catch {}
+    }
   }, []);
+
+  const onHostMessage = useCallback((cb: (msg: any) => void) => {
+    hostMsgCallbackRef.current = cb;
+  }, []);
+
+  const requestColorSwap = useCallback((requestedColor: number) => {
+    sendToHost({ type: 'color-swap', requestedColor });
+  }, [sendToHost]);
 
   useEffect(() => {
     return () => {
@@ -391,7 +491,7 @@ function useClientWebRTC(roomCode: string) {
     };
   }, []);
 
-  return { connected, connect, sendJoystick, disconnect, colorIndex, roomFull, kicked, setIdle };
+  return { connected, connect, sendJoystick, disconnect, colorIndex, roomFull, kicked, setIdle, sendToHost, onHostMessage, requestColorSwap, usedColors };
 }
 
 // ─── CLIENT: Supabase ───────────────────────────────────────
@@ -400,9 +500,11 @@ function useClientSupabase(roomCode: string) {
   const [colorIndex, setColorIndex] = useState<number>(-1);
   const [roomFull, setRoomFull] = useState(false);
   const [kicked, setKicked] = useState(false);
+  const [usedColors, setUsedColors] = useState<Set<number>>(new Set());
   const channelRef = useRef<RealtimeChannel | null>(null);
   const clientIdRef = useRef(Math.random().toString(36).substring(2, 10));
-  const idleRef = useRef(true); // Start idle until user touches joystick
+  const idleRef = useRef(true);
+  const hostMsgCallbackRef = useRef<((msg: any) => void) | null>(null);
 
   const connect = useCallback((overrideCode?: string) => {
     const targetCode = overrideCode || roomCode;
@@ -411,13 +513,11 @@ function useClientSupabase(roomCode: string) {
     setKicked(false);
     setRoomFull(false);
 
-    // Clean up any existing channel before reconnecting
     if (channelRef.current) {
       channelRef.current.unsubscribe();
       channelRef.current = null;
     }
 
-    // Generate a fresh client ID so the host treats this as a new join
     clientIdRef.current = Math.random().toString(36).substring(2, 10);
 
     const channel = supabase.channel(`game-room-${code}`, {
@@ -427,9 +527,11 @@ function useClientSupabase(roomCode: string) {
     channel
       .on('broadcast', { event: 'assign-color' }, (payload) => {
         const { clientId, colorIndex: ci } = payload.payload as { clientId: string; colorIndex: number };
-        if (clientId === clientIdRef.current) {
-          setColorIndex(ci);
-        }
+        if (clientId === clientIdRef.current) setColorIndex(ci);
+      })
+      .on('broadcast', { event: 'used-colors' }, (payload) => {
+        const { colors } = payload.payload as { colors: number[] };
+        setUsedColors(new Set(colors));
       })
       .on('broadcast', { event: 'room-full' }, (payload) => {
         const { clientId } = payload.payload as { clientId: string };
@@ -450,6 +552,9 @@ function useClientSupabase(roomCode: string) {
           channelRef.current = null;
         }
       })
+      .on('broadcast', { event: 'host-message' }, (payload) => {
+        hostMsgCallbackRef.current?.(payload.payload);
+      })
       .on('broadcast', { event: 'ping' }, (payload) => {
         if (idleRef.current) return;
         const { ts } = payload.payload as { ts: number };
@@ -468,14 +573,29 @@ function useClientSupabase(roomCode: string) {
   const sendJoystick = useCallback((data: JoystickData) => {
     if (idleRef.current) return;
     channelRef.current?.send({
-      type: 'broadcast',
-      event: 'joystick',
+      type: 'broadcast', event: 'joystick',
       payload: { clientId: clientIdRef.current, ...data },
     });
   }, []);
 
-  const setIdle = useCallback((idle: boolean) => {
-    idleRef.current = idle;
+  const setIdle = useCallback((idle: boolean) => { idleRef.current = idle; }, []);
+
+  const sendToHost = useCallback((msg: any) => {
+    channelRef.current?.send({
+      type: 'broadcast', event: 'client-action',
+      payload: { clientId: clientIdRef.current, ...msg },
+    });
+  }, []);
+
+  const onHostMessage = useCallback((cb: (msg: any) => void) => {
+    hostMsgCallbackRef.current = cb;
+  }, []);
+
+  const requestColorSwap = useCallback((requestedColor: number) => {
+    channelRef.current?.send({
+      type: 'broadcast', event: 'color-swap',
+      payload: { clientId: clientIdRef.current, requestedColor },
+    });
   }, []);
 
   const disconnect = useCallback(() => {
@@ -487,12 +607,10 @@ function useClientSupabase(roomCode: string) {
   }, []);
 
   useEffect(() => {
-    return () => {
-      channelRef.current?.unsubscribe();
-    };
+    return () => { channelRef.current?.unsubscribe(); };
   }, []);
 
-  return { connected, connect, sendJoystick, disconnect, colorIndex, roomFull, kicked, setIdle };
+  return { connected, connect, sendJoystick, disconnect, colorIndex, roomFull, kicked, setIdle, sendToHost, onHostMessage, requestColorSwap, usedColors };
 }
 
 // ─── Public hooks ───────────────────────────────────────────
@@ -508,20 +626,18 @@ export function useClientRoom(roomCode: string, mode: ConnectionMode = 'webrtc')
   return mode === 'webrtc' ? webrtc : supa;
 }
 
-// ─── Room discovery (for WebRTC mode) ───────────────────────
+// ─── Room discovery ─────────────────────────────────────────
 const LOBBY_CHANNEL = 'game-lobby';
 
 export function useAdvertiseRoom(roomCode: string, _mode: ConnectionMode) {
   useEffect(() => {
     if (!roomCode) return;
-
     const channel = supabase.channel(LOBBY_CHANNEL);
     channel.subscribe(async (status) => {
       if (status === 'SUBSCRIBED') {
         await channel.track({ roomCode, ts: Date.now() });
       }
     });
-
     return () => {
       channel.untrack();
       channel.unsubscribe();
@@ -531,10 +647,8 @@ export function useAdvertiseRoom(roomCode: string, _mode: ConnectionMode) {
 
 export function useDiscoverRooms(_mode: ConnectionMode) {
   const [rooms, setRooms] = useState<string[]>([]);
-
   useEffect(() => {
     const channel = supabase.channel(LOBBY_CHANNEL);
-
     channel.on('presence', { event: 'sync' }, () => {
       const state = channel.presenceState();
       const codes = Object.values(state)
@@ -543,13 +657,8 @@ export function useDiscoverRooms(_mode: ConnectionMode) {
         .filter(Boolean);
       setRooms([...new Set(codes)]);
     });
-
     channel.subscribe();
-
-    return () => {
-      channel.unsubscribe();
-    };
+    return () => { channel.unsubscribe(); };
   }, []);
-
   return rooms;
 }
