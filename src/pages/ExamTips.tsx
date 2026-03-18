@@ -55,6 +55,7 @@ const ExamTips = () => {
         },
         (payload) => {
           if (payload.new && (payload.new as any).status === 'received') {
+            setCodeUsed(true);
             toast.success('🎉 Exam Tips successfully shared!');
           }
         }
