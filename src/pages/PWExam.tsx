@@ -218,8 +218,8 @@ const PWExam = () => {
           <Slider
             value={[zoom]}
             onValueChange={([v]) => setZoom(v)}
-            min={0.25}
-            max={1.5}
+            min={0.5}
+            max={1.25}
             step={0.05}
             className="flex-1"
           />
