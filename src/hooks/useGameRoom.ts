@@ -44,11 +44,10 @@ function decodeJoystick(buf: ArrayBuffer): { colorIndex: number; x: number; y: n
   };
 }
 
-function allocateColor(usedColors: Set<number>): number | null {
-  // Randomly assign from available colors
+function allocateColor(usedColors: Set<number>, excludeIndices: number[] = []): number | null {
   const available: number[] = [];
   for (let i = 0; i < MAX_PLAYERS; i++) {
-    if (!usedColors.has(i)) available.push(i);
+    if (!usedColors.has(i) && !excludeIndices.includes(i)) available.push(i);
   }
   if (available.length === 0) return null;
   return available[Math.floor(Math.random() * available.length)];
