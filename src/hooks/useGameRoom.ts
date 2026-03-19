@@ -321,7 +321,7 @@ function useHostSupabase() {
       })
       .on('broadcast', { event: 'client-join' }, (payload) => {
         const { clientId } = payload.payload as { clientId: string };
-        const colorIndex = allocateColor(usedColorsRef.current);
+        const colorIndex = allocateColor(usedColorsRef.current, EAGLE_COLOR_INDICES as unknown as number[]);
         if (colorIndex === null) {
           channel.send({ type: 'broadcast', event: 'room-full', payload: { clientId } });
           return;
