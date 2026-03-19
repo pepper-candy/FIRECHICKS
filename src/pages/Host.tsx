@@ -114,7 +114,6 @@ function DancingChar({ chickColor, isWinner, delay }: {chickColor: string;isWinn
 export default function Host() {
   const [mode, setMode] = useState<ConnectionMode>('webrtc');
   const [gameMode, setGameMode] = useState<GameMode>('1v3');
-  const [lobbyPropClaims, setLobbyPropClaims] = useState<Map<string, Set<'speed' | 'heal'>>>(new Map());
   const [startClickAt, setStartClickAt] = useState<number | null>(null);
   const [zoomLevel, setZoomLevel] = useState(1);
   const [revealNow, setRevealNow] = useState(Date.now());
