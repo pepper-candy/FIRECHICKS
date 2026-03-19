@@ -302,7 +302,7 @@ function GameCharacter({
                 const rect = gl.domElement.getBoundingClientRect();
                 const ndcX = ((ev.clientX - rect.left) / rect.width) * 2 - 1;
                 const ndcY = -(((ev.clientY - rect.top) / rect.height) * 2 - 1);
-                raycaster.setFromCamera({ x: ndcX, y: ndcY }, camera);
+                raycaster.setFromCamera(new THREE.Vector2(ndcX, ndcY), camera);
                 const pt = new THREE.Vector3();
                 const plane = planeRef.current();
                 const hit = raycaster.ray.intersectPlane(plane, pt);
