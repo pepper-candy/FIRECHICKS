@@ -718,18 +718,22 @@ export function useGameLogic({ players, broadcast, gameMode }: UseGameLogicProps
     // ── Win condition check ──
     const aliveChicks = Array.from<PlayerGameState>(gs.playerStates.values()).filter((p) => !p.isEagle && p.alive);
     const totalChicks = Array.from<PlayerGameState>(gs.playerStates.values()).filter((p) => !p.isEagle).length;
-    const eliminated = totalChicks - aliveChicks.length;
 
     if (!gs.winner) {
       if (currentMode === '1v3') {
-        if (eliminated >= 3) endGame(gs, 'eagle', currentBroadcast);
-        else if (eliminated >= 2 && aliveChicks.length === 1 && gs.stage < 1) {
-          // Only 1 chick left and not even in exam tips stage yet — eagle wins
-          // (We still let game continue but will end if last chick eliminated)
-        }
+        // 1v3: 3 chicks vs 1 eagle
+        // 2+ chicks alive = chicks win (only checked at exam completion)
+        // 1 chick left = draw
+        // 0 chicks left = eagle wins
+        if (aliveChicks.length === 0) endGame(gs, 'eagle', currentBroadcast);
+        else if (aliveChicks.length === 1) endGame(gs, 'draw', currentBroadcast);
       } else {
-        if (eliminated > 4) endGame(gs, 'eagle', currentBroadcast);
-        else if (eliminated === 4) { /* draw — only if exam not running */ }
+        // 2v6: 6 chicks vs 2 eagles
+        // 4+ chicks alive = chicks win (only at exam)
+        // 2-3 chicks = draw
+        // 0-1 chicks = eagle wins
+        if (aliveChicks.length <= 1) endGame(gs, 'eagle', currentBroadcast);
+        else if (aliveChicks.length <= 3) endGame(gs, 'draw', currentBroadcast);
       }
     }
 
