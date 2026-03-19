@@ -229,6 +229,9 @@ export default function Client() {
   // Event state
   const [eventAnswer, setEventAnswer] = useState("");
 
+  // Fullscreen splash — false = not yet dismissed by user
+  const [fsSplashDone, setFsSplashDone] = useState(false);
+
   // Lobby prop claims
   const [claimedLobbyProps, setClaimedLobbyProps] = useState<Set<string>>(new Set());
 
@@ -446,11 +449,10 @@ export default function Client() {
         setWasKicked(false);
         setRoomFullDismissed(false);
         setColorChosen(false);
-        enterFullscreen(); // request fullscreen on first intentional interaction
         connect(roomCode);
       }
     },
-    [code, connect, enterFullscreen],
+    [code, connect],
   );
 
   // ── Eagle-in-zone detection (for hitbox visual cue)
@@ -468,21 +470,49 @@ export default function Client() {
         )
       : false;
 
+  // ─── FULLSCREEN SPLASH — shown before join if FS is supported and not yet entered ──
+  if (fsSupported && !isFullscreen && !fsSplashDone) {
+    return (
+      <div
+        className="flex flex-col items-center justify-center h-dvh overflow-hidden gap-8 bg-background"
+        style={{ touchAction: 'manipulation' }}
+      >
+        {/* App title */}
+        <div className="flex flex-col items-center gap-2">
+          <h1 className="text-xl font-pixel text-primary text-glow-green tracking-widest">FIRECHICK</h1>
+          <p className="text-xs font-mono text-muted-foreground">Eagle vs Chick</p>
+        </div>
+
+        {/* Big fullscreen tap target */}
+        <button
+          onClick={async () => { await enterFullscreen(); setFsSplashDone(true); }}
+          className="relative flex flex-col items-center gap-4 px-10 py-8 rounded-2xl
+            border-2 border-primary bg-primary/10 text-primary
+            shadow-[0_0_40px_hsl(var(--primary)/0.4),inset_0_0_30px_hsl(var(--primary)/0.05)]
+            hover:bg-primary/20 active:scale-95 transition-all duration-150
+            before:absolute before:inset-0 before:rounded-2xl before:border before:border-primary/30 before:animate-pulse"
+        >
+          <span className="text-5xl" style={{ lineHeight: 1 }}>⛶</span>
+          <span className="text-base font-pixel tracking-widest">TAP TO FULLSCREEN</span>
+          <span className="text-[10px] font-mono text-primary/60">hides browser address bar</span>
+        </button>
+
+        {/* Skip link */}
+        <button
+          onClick={() => setFsSplashDone(true)}
+          className="text-[11px] font-mono text-muted-foreground underline underline-offset-2 hover:text-foreground transition-colors"
+        >
+          Skip — continue without fullscreen
+        </button>
+      </div>
+    );
+  }
+
   // ─── JOIN SCREEN ─────────────────────────────────────────────────────────────
   if (!connected) {
     return (
       <div className="flex flex-col items-center justify-center h-dvh overflow-hidden p-5 gap-6">
         <h1 className="text-lg text-secondary text-glow-purple tracking-wider text-center font-pixel">JOIN GAME</h1>
-
-        {/* Fullscreen prompt — appears only when API is available and not yet fullscreen */}
-        {fsSupported && !isFullscreen && (
-          <button
-            onClick={enterFullscreen}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-primary/40 bg-primary/10 text-primary text-[11px] font-mono tracking-wide hover:bg-primary/20 transition-all animate-pulse"
-          >
-            ⛶ Tap for fullscreen
-          </button>
-        )}
 
         {wasKicked && (
           <div

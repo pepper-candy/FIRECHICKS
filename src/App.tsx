@@ -8,7 +8,6 @@ import GameIndex from "./pages/GameIndex";
 import Host from "./pages/Host";
 import Client from "./pages/Client";
 import NotFound from "./pages/NotFound";
-import Battlefield from "./pages/Battlefield";
 import Character from "./pages/Character";
 import ExamTips from "./pages/ExamTips";
 
@@ -25,7 +24,6 @@ const App = () => (
           <Route path="/pw" element={<PWExam />} />
           <Route path="/host" element={<Host />} />
           <Route path="/client" element={<Client />} />
-          <Route path="/battlefield" element={<Battlefield />} />
           <Route path="/character" element={<Character />} />
           <Route path="/exam-tips" element={<ExamTips />} />
           <Route path="*" element={<NotFound />} />

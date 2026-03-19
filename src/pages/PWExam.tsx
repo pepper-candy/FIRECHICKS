@@ -122,9 +122,16 @@ const PWExam = () => {
           </Button>
         </div>
         <Button
+          onClick={() => navigate("/exam-tips")}
+          variant="outline"
+          className="h-14 text-sm font-pixel border-border text-muted-foreground hover:text-foreground hover:bg-muted w-full max-w-xs"
+        >
+          📚 EXAM TIPS
+        </Button>
+        <Button
           onClick={() => navigate("/")}
           variant="ghost"
-          className="text-xs text-muted-foreground hover:text-foreground font-mono mt-4"
+          className="text-xs text-muted-foreground hover:text-foreground font-mono"
         >
           🎮 Back to Game
         </Button>
