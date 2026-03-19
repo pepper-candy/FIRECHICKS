@@ -373,7 +373,7 @@ function useHostSupabase() {
     };
   }, [removePlayer, handleColorSwap]);
 
-  return { roomCode, players, kickPlayer, broadcast, onClientMessage, usedColors: usedColorsRef };
+  return { roomCode, players, kickPlayer, kickAllPlayers, broadcast, onClientMessage, usedColors: usedColorsRef };
 }
 
 // ─── CLIENT: WebRTC ─────────────────────────────────────────
