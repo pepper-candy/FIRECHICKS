@@ -311,11 +311,28 @@ export default function Client() {
         if (msg.connId === connIdRef.current) setIsDead(true);
       } else if (msg.type === "tip-qr") {
         if (msg.forConnId === connIdRef.current) {
+          const code = msg.code as string;
+          const tipIdx = msg.tipIndex as 0 | 1;
           setTipQrCodes((prev) => {
             const next: [string | null, string | null] = [...prev] as [string | null, string | null];
-            next[msg.tipIndex as 0 | 1] = msg.code;
+            next[tipIdx] = code;
             return next;
           });
+          // Show QR in scanner area with 5s expiry
+          setActiveScannerQr(code);
+          const expireAt = Date.now() + 5000;
+          setScannerQrExpireAt(expireAt);
+          // Auto-expire
+          setTimeout(() => {
+            setScannerQrExpireAt((cur) => {
+              if (cur === expireAt) {
+                setActiveScannerQr(null);
+                setTipQrCodes([null, null]);
+                return 0;
+              }
+              return cur;
+            });
+          }, 5000);
         }
       } else if (msg.type === "exam-start") {
         const myExam = msg.assignments?.[connIdRef.current];
