@@ -34,9 +34,9 @@ const PROP_ICONS: Record<PropType, React.ReactNode> = {
   invincible: <Shield className="w-6 h-6" />,
 };
 
-function PropsBtn({ items, onUse }: { items: PropItem[]; onUse: (t: PropType) => void }) {
+function PropsBtn({ items, onUse, isEagle }: { items: PropItem[]; onUse: (t: PropType) => void; isEagle?: boolean }) {
   const [selIdx, setSelIdx] = useState(0);
-  const available = items.filter((i) => i.count > 0);
+  const available = items.filter((i) => i.count > 0 || (isEagle && i.type === 'fly'));
   const current = available[selIdx % Math.max(1, available.length)];
   const hasMultiple = available.length > 1;
 
@@ -47,6 +47,8 @@ function PropsBtn({ items, onUse }: { items: PropItem[]; onUse: (t: PropType) =>
       </div>
     );
   }
+
+  const showBadge = !(isEagle && current.type === 'fly');
 
   return (
     <div className="relative flex flex-col items-center">
@@ -65,12 +67,14 @@ function PropsBtn({ items, onUse }: { items: PropItem[]; onUse: (t: PropType) =>
         }}
       >
         {PROP_ICONS[current.type]}
-        <span
-          className="absolute -top-1 -right-1 w-5 h-5 rounded-full text-[10px] font-bold flex items-center justify-center bg-card border"
-          style={{ borderColor: PROP_COLORS[current.type], color: PROP_COLORS[current.type] }}
-        >
-          {current.count}
-        </span>
+        {showBadge && (
+          <span
+            className="absolute -top-1 -right-1 w-5 h-5 rounded-full text-[10px] font-bold flex items-center justify-center bg-card border"
+            style={{ borderColor: PROP_COLORS[current.type], color: PROP_COLORS[current.type] }}
+          >
+            {current.count}
+          </span>
+        )}
       </button>
     </div>
   );
