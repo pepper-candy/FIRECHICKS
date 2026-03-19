@@ -1167,7 +1167,7 @@ export default function Client() {
 
               {/* Props button */}
               <div className="flex-shrink-0">
-                <PropsBtn items={myState.props ?? []} onUse={handlePropUse} />
+                <PropsBtn items={myState.props ?? []} onUse={handlePropUse} isEagle={false} />
               </div>
             </div>
           )}
