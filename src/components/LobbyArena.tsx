@@ -5,7 +5,7 @@ import type { PlayerState } from "@/hooks/useGameRoom";
 import { PLAYER_COLORS } from "@/lib/playerColors";
 import CharacterViewer from "@/components/CharacterViewer";
 import type { ChickColor } from "@/components/CharacterViewer";
-import QRCode from "react-qr-code";
+import * as THREE from "three";
 import * as THREE from "three";
 
 interface Props {
