@@ -42,6 +42,8 @@ export default function CharacterReveal({ colorIndex, isEagle }: Props) {
     return () => clearTimeout(t);
   }, [countdown]);
 
+  if (!color) return null;
+
   return (
     <div className="flex flex-col items-center justify-center h-full w-full gap-4">
       {/* 3D character at 75% of screen height, scaled 0.8 */}
