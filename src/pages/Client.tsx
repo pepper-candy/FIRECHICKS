@@ -223,9 +223,12 @@ export default function Client() {
   // Lobby prop claims
   const [claimedLobbyProps, setClaimedLobbyProps] = useState<Set<string>>(new Set());
 
-  // Tips state
+  // Tips state — QR now displays in scanner box, not tip box
   const [tipQrCodes, setTipQrCodes] = useState<[string | null, string | null]>([null, null]);
   const [loadingTip, setLoadingTip] = useState<[boolean, boolean]>([false, false]);
+  // Active QR display in scanner area
+  const [activeScannerQr, setActiveScannerQr] = useState<string | null>(null);
+  const [scannerQrExpireAt, setScannerQrExpireAt] = useState(0);
 
   // Exam state
   const [examLayer, setExamLayer] = useState<"1" | "2" | null>(null);
