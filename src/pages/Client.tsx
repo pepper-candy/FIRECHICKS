@@ -431,8 +431,10 @@ export default function Client() {
   );
   const handleTipTap = useCallback(
     (tipIndex: 0 | 1) => {
-      // If already showing QR, close it (keeps cooldown running at host side)
-      if (tipQrCodes[tipIndex]) {
+      // If QR is already showing in scanner, dismiss it
+      if (activeScannerQr && tipQrCodes[tipIndex]) {
+        setActiveScannerQr(null);
+        setScannerQrExpireAt(0);
         setTipQrCodes((prev) => {
           const n: [string | null, string | null] = [...prev] as [string | null, string | null];
           n[tipIndex] = null;
@@ -442,8 +444,13 @@ export default function Client() {
       }
       sendToHost({ type: "tip-request", tipIndex });
     },
-    [sendToHost, tipQrCodes],
+    [sendToHost, tipQrCodes, activeScannerQr],
   );
+  const handleDismissScannerQr = useCallback(() => {
+    setActiveScannerQr(null);
+    setScannerQrExpireAt(0);
+    setTipQrCodes([null, null]);
+  }, []);
   const handleExamSubmit = useCallback(() => {
     if (examAnswer.trim()) {
       sendToHost({ type: "answer-submit", answer: examAnswer.trim() });
