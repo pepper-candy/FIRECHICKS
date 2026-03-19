@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import Peer, { DataConnection } from 'peerjs';
 import { supabase } from '@/integrations/supabase/client';
 import type { RealtimeChannel } from '@supabase/supabase-js';
-import { MAX_PLAYERS } from '@/lib/playerColors';
+import { MAX_PLAYERS, EAGLE_COLOR_INDICES } from '@/lib/playerColors';
 
 export type ConnectionMode = 'webrtc' | 'supabase';
 
