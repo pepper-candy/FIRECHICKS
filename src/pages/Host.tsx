@@ -20,7 +20,7 @@ import {
 export default function Host() {
   const [mode, setMode] = useState<ConnectionMode>('webrtc');
   const [gameMode, setGameMode] = useState<GameMode>('1v3');
-  const { roomCode, players, kickPlayer, broadcast, onClientMessage } = useHostRoom(mode);
+  const { roomCode, players, kickPlayer, kickAllPlayers, broadcast, onClientMessage } = useHostRoom(mode);
 
   useAdvertiseRoom(roomCode, mode);
 
@@ -43,9 +43,21 @@ export default function Host() {
     broadcast({ type: 'game-mode', gameMode });
   }, [gameMode, broadcast]);
 
+  // Kick all players when game mode or connection type changes
+  const handleGameModeToggle = useCallback(() => {
+    const newMode: GameMode = gameMode === '1v3' ? '2v6' : '1v3';
+    kickAllPlayers();
+    setGameMode(newMode);
+  }, [gameMode, kickAllPlayers]);
+
+  const handleConnectionModeChange = useCallback((v: string) => {
+    kickAllPlayers();
+    setMode(v as ConnectionMode);
+  }, [kickAllPlayers]);
+
   const playerCount = players.size;
   const maxPlayers = gameMode === '1v3' ? MAX_PLAYERS_1V3 : MAX_PLAYERS_2V6;
-  const canStart = playerCount >= 2; // min 2 for testing
+  const isFull = playerCount === maxPlayers;
 
   // ─── LOBBY PHASE ─────────────────────────────────
   if (phase === 'lobby') {
@@ -56,21 +68,8 @@ export default function Host() {
           <h1 className="text-sm md:text-lg text-primary text-glow-green tracking-wider">LOBBY</h1>
 
           <div className="flex items-center gap-3 font-mono text-xs flex-wrap">
-            {/* Game mode torch */}
-            <button
-              onClick={() => setGameMode((prev) => (prev === '1v3' ? '2v6' : '1v3'))}
-              className={`relative flex items-center gap-2 px-4 py-2 rounded border-2 font-pixel text-sm tracking-wider transition-all ${
-                gameMode === '2v6'
-                  ? 'border-accent bg-accent/10 text-accent hover:bg-accent/20 shadow-[0_0_20px_hsl(var(--accent)/0.3)]'
-                  : 'border-primary bg-primary/10 text-primary hover:bg-primary/20 shadow-[0_0_20px_hsl(var(--primary)/0.3)]'
-              }`}
-            >
-              <Flame className={`w-4 h-4 ${gameMode === '2v6' ? 'animate-pulse' : ''}`} />
-              {gameMode}
-            </button>
-
-            {/* Start button */}
-            {canStart && (
+            {/* Game mode torch OR Start button */}
+            {isFull ? (
               <button
                 onClick={startGame}
                 className="relative px-6 py-2 rounded border-2 border-primary bg-primary/10 text-primary font-pixel text-sm tracking-widest
@@ -80,10 +79,22 @@ export default function Host() {
                 <Zap className="inline w-4 h-4 mr-1 -mt-0.5" />
                 START GAME
               </button>
+            ) : (
+              <button
+                onClick={handleGameModeToggle}
+                className={`relative flex items-center gap-2 px-4 py-2 rounded border-2 font-pixel text-sm tracking-wider transition-all ${
+                  gameMode === '2v6'
+                    ? 'border-accent bg-accent/10 text-accent hover:bg-accent/20 shadow-[0_0_20px_hsl(var(--accent)/0.3)]'
+                    : 'border-primary bg-primary/10 text-primary hover:bg-primary/20 shadow-[0_0_20px_hsl(var(--primary)/0.3)]'
+                }`}
+              >
+                <Flame className={`w-4 h-4 ${gameMode === '2v6' ? 'animate-pulse' : ''}`} />
+                {gameMode}
+              </button>
             )}
 
             {/* Mode dropdown */}
-            <Select value={mode} onValueChange={(v) => setMode(v as ConnectionMode)}>
+            <Select value={mode} onValueChange={handleConnectionModeChange}>
               <SelectTrigger className="h-8 w-[130px] text-xs font-mono bg-card border-border">
                 <SelectValue />
               </SelectTrigger>
@@ -153,12 +164,7 @@ export default function Host() {
   }
 
   // ─── REVEAL / COUNTDOWN PHASE ─────────────────────
-  // Host shows an 8-second countdown (5s reveal + 3s countdown) without revealing who is which color
   if (phase === 'reveal' || phase === 'countdown') {
-    const totalSeconds = phase === 'reveal'
-      ? (snapshot ? Math.ceil(snapshot.countdownTime) + 3 : 8)  // during reveal, show ~8 going down
-      : (snapshot ? Math.ceil(snapshot.countdownTime) : 3);
-
     return (
       <div className="flex flex-col items-center justify-center h-screen gap-6 p-4">
         <h1 className="text-xl font-pixel text-primary text-glow-green">

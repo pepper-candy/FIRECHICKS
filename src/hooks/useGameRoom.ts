@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import Peer, { DataConnection } from 'peerjs';
 import { supabase } from '@/integrations/supabase/client';
 import type { RealtimeChannel } from '@supabase/supabase-js';
-import { MAX_PLAYERS } from '@/lib/playerColors';
+import { MAX_PLAYERS, EAGLE_COLOR_INDICES } from '@/lib/playerColors';
 
 export type ConnectionMode = 'webrtc' | 'supabase';
 
@@ -44,11 +44,10 @@ function decodeJoystick(buf: ArrayBuffer): { colorIndex: number; x: number; y: n
   };
 }
 
-function allocateColor(usedColors: Set<number>): number | null {
-  // Randomly assign from available colors
+function allocateColor(usedColors: Set<number>, excludeIndices: number[] = []): number | null {
   const available: number[] = [];
   for (let i = 0; i < MAX_PLAYERS; i++) {
-    if (!usedColors.has(i)) available.push(i);
+    if (!usedColors.has(i) && !excludeIndices.includes(i)) available.push(i);
   }
   if (available.length === 0) return null;
   return available[Math.floor(Math.random() * available.length)];
@@ -86,6 +85,16 @@ function useHostWebRTC() {
     }
     removePlayer(connId);
   }, [removePlayer]);
+
+  const kickAllPlayers = useCallback(() => {
+    for (const [connId, conn] of connsRef.current.entries()) {
+      try { conn.send(JSON.stringify({ type: 'kicked' })); } catch {}
+    }
+    connsRef.current.clear();
+    usedColorsRef.current.clear();
+    connColorMapRef.current.clear();
+    setPlayers(new Map());
+  }, []);
 
   const broadcast = useCallback((msg: any) => {
     const data = JSON.stringify(msg);
@@ -145,7 +154,7 @@ function useHostWebRTC() {
       const connId = conn.peer;
 
       conn.on('open', () => {
-        const colorIndex = allocateColor(usedColorsRef.current);
+        const colorIndex = allocateColor(usedColorsRef.current, EAGLE_COLOR_INDICES as unknown as number[]);
         if (colorIndex === null) {
           conn.send(JSON.stringify({ type: 'room-full' }));
           setTimeout(() => conn.close(), 200);
@@ -221,7 +230,7 @@ function useHostWebRTC() {
     };
   }, [removePlayer, handleColorSwap]);
 
-  return { roomCode, players, kickPlayer, broadcast, onClientMessage, usedColors: usedColorsRef };
+  return { roomCode, players, kickPlayer, kickAllPlayers, broadcast, onClientMessage, usedColors: usedColorsRef };
 }
 
 // ─── HOST: Supabase ─────────────────────────────────────────
@@ -250,6 +259,15 @@ function useHostSupabase() {
     channelRef.current?.send({ type: 'broadcast', event: 'kicked', payload: { clientId } });
     removePlayer(clientId);
   }, [removePlayer]);
+
+  const kickAllPlayers = useCallback(() => {
+    for (const clientId of clientColorMapRef.current.keys()) {
+      channelRef.current?.send({ type: 'broadcast', event: 'kicked', payload: { clientId } });
+    }
+    usedColorsRef.current.clear();
+    clientColorMapRef.current.clear();
+    setPlayers(new Map());
+  }, []);
 
   const broadcast = useCallback((msg: any) => {
     channelRef.current?.send({ type: 'broadcast', event: 'host-message', payload: msg });
@@ -303,7 +321,7 @@ function useHostSupabase() {
       })
       .on('broadcast', { event: 'client-join' }, (payload) => {
         const { clientId } = payload.payload as { clientId: string };
-        const colorIndex = allocateColor(usedColorsRef.current);
+        const colorIndex = allocateColor(usedColorsRef.current, EAGLE_COLOR_INDICES as unknown as number[]);
         if (colorIndex === null) {
           channel.send({ type: 'broadcast', event: 'room-full', payload: { clientId } });
           return;
@@ -354,7 +372,7 @@ function useHostSupabase() {
     };
   }, [removePlayer, handleColorSwap]);
 
-  return { roomCode, players, kickPlayer, broadcast, onClientMessage, usedColors: usedColorsRef };
+  return { roomCode, players, kickPlayer, kickAllPlayers, broadcast, onClientMessage, usedColors: usedColorsRef };
 }
 
 // ─── CLIENT: WebRTC ─────────────────────────────────────────

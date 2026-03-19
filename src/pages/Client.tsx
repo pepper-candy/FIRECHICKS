@@ -33,6 +33,7 @@ export default function Client() {
   const [myAssignment, setMyAssignment] = useState<{ colorIndex: number; isEagle: boolean; chickColor: ChickColor } | null>(null);
   const [gameState, setGameState] = useState<GameStateSnapshot | null>(null);
   const [isDead, setIsDead] = useState(false);
+  const [colorChosen, setColorChosen] = useState(false); // for 2v6 pre-lobby color pick
   const connIdRef = useRef<string>('');
 
   const playerColor = colorIndex >= 0 ? PLAYER_COLORS[colorIndex] : null;
@@ -43,14 +44,25 @@ export default function Client() {
     if (kicked) setWasKicked(true);
   }, [kicked]);
 
+  // In 2v6 mode, if you're the 8th player (last slot), auto-mark as chosen
+  useEffect(() => {
+    if (gameMode === '2v6' && connected && colorIndex >= 0) {
+      // Count how many colors are used (including mine)
+      const totalUsed = usedColors.size;
+      if (totalUsed >= 8) {
+        setColorChosen(true);
+      }
+    }
+  }, [gameMode, connected, colorIndex, usedColors]);
+
   // Listen for host messages
   useEffect(() => {
     onHostMessage((msg: any) => {
       if (msg.type === 'game-mode') {
         setGameMode(msg.gameMode);
+        setColorChosen(false); // reset on mode change
       } else if (msg.type === 'game-start') {
         const assigns = msg.assignments as Record<string, { colorIndex: number; isEagle: boolean; chickColor: ChickColor }>;
-        // Find our assignment by matching our current colorIndex
         for (const [connId, assign] of Object.entries(assigns)) {
           if (assign.colorIndex === colorIndex) {
             connIdRef.current = connId;
@@ -97,6 +109,7 @@ export default function Client() {
       if (roomCode) setCode(roomCode);
       setWasKicked(false);
       setRoomFullDismissed(false);
+      setColorChosen(false);
       connect(roomCode);
     }
   };
@@ -160,6 +173,51 @@ export default function Client() {
             </div>
           )}
         </div>
+      </div>
+    );
+  }
+
+  // ─── 2v6 COLOR SELECTION SCREEN (before lobby) ────
+  if (gameMode === '2v6' && !colorChosen && gamePhase === 'lobby') {
+    const displayColor = colorIndex >= 0 ? PLAYER_COLORS[colorIndex] : null;
+    return (
+      <div className="flex flex-col items-center justify-center min-h-screen p-6 gap-8">
+        <h1 className="text-lg text-accent tracking-wider text-center font-pixel">CHOOSE YOUR COLOR</h1>
+        <p className="text-xs text-muted-foreground font-mono text-center">Pick your character — eagle colors included!</p>
+
+        <ColorPicker
+          currentColorIndex={colorIndex}
+          usedColorIndices={usedColors}
+          onColorSelect={handleColorSwap}
+          gameMode={gameMode}
+        />
+
+        {displayColor && (
+          <div
+            className="px-4 py-2 rounded-md"
+            style={{
+              backgroundColor: `hsl(${displayColor.hsl} / 0.15)`,
+              border: `1px solid hsl(${displayColor.hsl} / 0.3)`,
+            }}
+          >
+            <p className="text-sm font-mono text-foreground">
+              You are <span className="font-bold" style={{ color: `hsl(${displayColor.hsl})` }}>{displayColor.name}</span>
+              {EAGLE_COLOR_INDICES.includes(colorIndex) ? ' 🦅' : ' 🐤'}
+            </p>
+          </div>
+        )}
+
+        <Button
+          onClick={() => setColorChosen(true)}
+          disabled={colorIndex < 0}
+          className="h-12 px-8 text-sm font-pixel bg-primary hover:bg-primary/80 text-primary-foreground"
+        >
+          CONFIRM & ENTER LOBBY
+        </Button>
+
+        <Button variant="outline" size="sm" onClick={disconnect} className="text-xs font-mono text-destructive border-destructive/30">
+          DISCONNECT
+        </Button>
       </div>
     );
   }
@@ -284,12 +342,13 @@ export default function Client() {
 
       {/* Bottom section */}
       <div className="w-full max-w-xs flex flex-col items-center gap-3">
-        {/* Color picker (lobby only) */}
+        {/* Color picker (lobby only, 1v3 mode — 2v6 already chose before lobby) */}
         {gamePhase === 'lobby' && (
           <ColorPicker
             currentColorIndex={colorIndex}
             usedColorIndices={usedColors}
             onColorSelect={handleColorSwap}
+            gameMode={gameMode}
           />
         )}
 
@@ -298,7 +357,6 @@ export default function Client() {
           <div className="flex items-center justify-center gap-4 w-full">
             {!isEagle ? (
               <>
-                {/* Social circle / Tips boxes */}
                 <div className="flex gap-2 flex-1">
                   {myState && [0, 1].map((i) => {
                     const met = myState.socialCircleMet ?? [];
@@ -322,12 +380,10 @@ export default function Client() {
                     );
                   })}
                 </div>
-                {/* Props button */}
                 <PropsButton items={myState?.props ?? []} onUse={handlePropUse} />
               </>
             ) : (
               <>
-                {/* Eagle: Attack button + Props */}
                 <AttackButton
                   onAttack={handleAttack}
                   cooldownUntil={myState?.attackCooldownUntil ?? 0}
