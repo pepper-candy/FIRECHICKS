@@ -105,8 +105,8 @@ function TipsBox({
   socialMet,
   hasTip,
   isLoadingTip,
-  qrCode,
   tipShareCooldownUntil,
+  tipCopyingCountdown,
   onTap,
 }: {
   tipIndex: 0 | 1;
@@ -114,8 +114,8 @@ function TipsBox({
   socialMet: number;
   hasTip: boolean;
   isLoadingTip: boolean;
-  qrCode: string | null;
   tipShareCooldownUntil: number;
+  tipCopyingCountdown?: number;
   onTap: () => void;
 }) {
   const [now, setNow] = useState(Date.now());
@@ -142,21 +142,6 @@ function TipsBox({
   const onCooldown = now < tipShareCooldownUntil;
   const cooldownSec = Math.ceil(Math.max(0, tipShareCooldownUntil - now) / 1000);
 
-  if (hasTip && qrCode) {
-    return (
-      <button
-        onClick={onTap}
-        className="flex-1 h-auto rounded border-2 border-accent bg-accent/10 flex flex-col items-center justify-center p-1 gap-0.5 active:scale-95"
-      >
-        <span className="text-[9px] font-mono text-accent">💡 Tips {tipIndex + 1}</span>
-        <div className="bg-white p-1 rounded">
-          <QRCode value={qrCode} size={52} />
-        </div>
-        <span className="text-[8px] text-muted-foreground">Others scan this!</span>
-      </button>
-    );
-  }
-
   if (hasTip) {
     return (
       <button
@@ -176,7 +161,9 @@ function TipsBox({
   if (isLoadingTip) {
     return (
       <div className="flex-1 h-14 rounded border border-secondary bg-secondary/10 flex items-center justify-center text-xs font-mono text-secondary animate-pulse">
-        📋 Copying...
+        {tipCopyingCountdown !== undefined && tipCopyingCountdown > 0
+          ? `📋 Copying... ${tipCopyingCountdown}s`
+          : '📋 Copying...'}
       </div>
     );
   }
