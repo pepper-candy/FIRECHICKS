@@ -5,7 +5,6 @@ import type { PlayerState } from "@/hooks/useGameRoom";
 import { PLAYER_COLORS } from "@/lib/playerColors";
 import CharacterViewer from "@/components/CharacterViewer";
 import type { ChickColor } from "@/components/CharacterViewer";
-import QRCode from "react-qr-code";
 import * as THREE from "three";
 
 interface Props {
@@ -125,57 +124,23 @@ function CrystalBall({ ball, propType }: { ball: BallState; propType: 'speed' | 
         />
       </mesh>
 
-      {/* Price tag + QR barcode HTML overlay */}
-      <Html position={[0, -0.35, 0]} center occlude={false}>
+      {/* Label tag only — no QR code */}
+      <Html position={[0, BALL_RADIUS * 2.2, 0]} center occlude={false}>
         <div style={{ pointerEvents: 'none', textAlign: 'center', userSelect: 'none' }}>
-          {/* Prize tag */}
           <div style={{
             background: 'linear-gradient(135deg, #fff 60%, #f0f0f0)',
             border: `2.5px solid ${color}`,
             borderRadius: 5,
-            padding: '3px 12px',
-            marginBottom: 5,
+            padding: '3px 10px',
             whiteSpace: 'nowrap',
-            fontSize: 12,
+            fontSize: 11,
             fontFamily: '"Press Start 2P", monospace',
             fontWeight: 'bold',
             color: '#111',
             boxShadow: `0 3px 10px ${color}88, 0 1px 3px rgba(0,0,0,0.3)`,
             letterSpacing: 1,
-            position: 'relative',
           }}>
             {icon} {label}
-            {/* Tag hole */}
-            <div style={{
-              position: 'absolute',
-              top: -7,
-              left: '50%',
-              transform: 'translateX(-50%)',
-              width: 8,
-              height: 8,
-              borderRadius: '50%',
-              border: `2px solid ${color}`,
-              background: '#fff',
-            }} />
-          </div>
-          {/* QR code */}
-          <div style={{
-            background: '#fff',
-            padding: 4,
-            borderRadius: 4,
-            display: 'inline-block',
-            boxShadow: '0 2px 8px rgba(0,0,0,0.4)',
-          }}>
-            <QRCode value={ball.id} size={62} />
-          </div>
-          <div style={{
-            fontSize: 8,
-            fontFamily: 'monospace',
-            color: 'rgba(255,255,255,0.6)',
-            marginTop: 3,
-            letterSpacing: 2,
-          }}>
-            SCAN TO CLAIM
           </div>
         </div>
       </Html>

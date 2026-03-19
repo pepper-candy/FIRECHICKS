@@ -24,7 +24,7 @@ const EAGLE_SPEED = 5;
 const ATTACK_COOLDOWN = 5000;
 const FREEZE_DURATION = 5000;
 const EAGLE_AWAKE_DELAY = 5000;
-const SPEED_BOOST_DURATION = 500;
+const SPEED_BOOST_DURATION = 5000;
 const SPEED_BOOST_MULTIPLIER = 2;
 const FLY_SPEED_MULTIPLIER = 3;
 const FLY_DURATION = 500;
@@ -136,7 +136,7 @@ export function useGameLogic({ players, broadcast, gameMode }: UseGameLogicProps
   >(new Map());
 
   // ─── Start Game ──────────────────────────────────────────────────────────────
-  const startGame = useCallback((lobbyPropClaims?: Map<string, Set<string>>) => {
+  const startGame = useCallback(() => {
     const currentPlayers = playersRef.current as Map<string, PlayerState>;
     const playerIds: string[] = Array.from(currentPlayers.keys());
     if (playerIds.length === 0) return;
@@ -215,13 +215,7 @@ export function useGameLogic({ players, broadcast, gameMode }: UseGameLogicProps
         tips: [false, false],
         props: assign.isEagle
           ? [{ type: 'fly', count: 3 }]
-          : (() => {
-              const claims = lobbyPropClaims?.get(id);
-              const p: { type: PropType; count: number }[] = [];
-              if (claims?.has('speed')) p.push({ type: 'speed', count: 1 });
-              if (claims?.has('heal')) p.push({ type: 'heal', count: 1 });
-              return p;
-            })(),
+          : [],
         position: { ...spawn },
         facingAngle: 0,
         frozen: assign.isEagle,
@@ -718,18 +712,22 @@ export function useGameLogic({ players, broadcast, gameMode }: UseGameLogicProps
     // ── Win condition check ──
     const aliveChicks = Array.from<PlayerGameState>(gs.playerStates.values()).filter((p) => !p.isEagle && p.alive);
     const totalChicks = Array.from<PlayerGameState>(gs.playerStates.values()).filter((p) => !p.isEagle).length;
-    const eliminated = totalChicks - aliveChicks.length;
 
     if (!gs.winner) {
       if (currentMode === '1v3') {
-        if (eliminated >= 3) endGame(gs, 'eagle', currentBroadcast);
-        else if (eliminated >= 2 && aliveChicks.length === 1 && gs.stage < 1) {
-          // Only 1 chick left and not even in exam tips stage yet — eagle wins
-          // (We still let game continue but will end if last chick eliminated)
-        }
+        // 1v3: 3 chicks vs 1 eagle
+        // 2+ chicks alive = chicks win (only checked at exam completion)
+        // 1 chick left = draw
+        // 0 chicks left = eagle wins
+        if (aliveChicks.length === 0) endGame(gs, 'eagle', currentBroadcast);
+        else if (aliveChicks.length === 1) endGame(gs, 'draw', currentBroadcast);
       } else {
-        if (eliminated > 4) endGame(gs, 'eagle', currentBroadcast);
-        else if (eliminated === 4) { /* draw — only if exam not running */ }
+        // 2v6: 6 chicks vs 2 eagles
+        // 4+ chicks alive = chicks win (only at exam)
+        // 2-3 chicks = draw
+        // 0-1 chicks = eagle wins
+        if (aliveChicks.length <= 1) endGame(gs, 'eagle', currentBroadcast);
+        else if (aliveChicks.length <= 3) endGame(gs, 'draw', currentBroadcast);
       }
     }
 

@@ -224,8 +224,8 @@ export default function Client() {
   // Fullscreen splash — false = not yet dismissed by user
   const [fsSplashDone, setFsSplashDone] = useState(false);
 
-  // Lobby prop claims
-  const [claimedLobbyProps, setClaimedLobbyProps] = useState<Set<string>>(new Set());
+
+
 
   // Tips state — QR now displays in scanner box, not tip box
   const [tipQrCodes, setTipQrCodes] = useState<[string | null, string | null]>([null, null]);
@@ -346,15 +346,6 @@ export default function Client() {
           setExamAnswer("");
         }
         setGamePhase("exam");
-      } else if (msg.type === "lobby-prop-granted") {
-        // Match by colorIndex since we don't have connId yet during lobby
-        if (msg.colorIndex === colorIndex) {
-          setClaimedLobbyProps((prev) => {
-            const next = new Set(prev);
-            next.add(msg.propType as string);
-            return next;
-          });
-        }
       }
     });
   }, [onHostMessage, colorIndex, clientId]);
@@ -1085,17 +1076,19 @@ export default function Client() {
       {/* ── CHICK LAYOUT ── */}
       {!isEagle && (
         <>
-          {/* Top: Scanner — also shows tip QR codes */}
-          <div className="w-full">
-            <ScannerBox
-              onScan={handleScan}
-              label="SCANNER — scan props & tips"
-              aspectRatio="873/457"
-              displayQr={activeScannerQr}
-              displayQrCountdown={scannerQrExpireAt > 0 ? Math.max(0, Math.ceil((scannerQrExpireAt - clockNow) / 1000)) : undefined}
-              onDismissQr={handleDismissScannerQr}
-            />
-          </div>
+          {/* Top: Scanner — only during gameplay, not lobby */}
+          {gamePhase !== "lobby" && (
+            <div className="w-full">
+              <ScannerBox
+                onScan={handleScan}
+                label="SCANNER — scan props & tips"
+                aspectRatio="873/457"
+                displayQr={activeScannerQr}
+                displayQrCountdown={scannerQrExpireAt > 0 ? Math.max(0, Math.ceil((scannerQrExpireAt - clockNow) / 1000)) : undefined}
+                onDismissQr={handleDismissScannerQr}
+              />
+            </div>
+          )}
 
           {/* Middle: Thumbstick */}
           <div className="flex-1 flex items-center justify-center">
@@ -1107,7 +1100,7 @@ export default function Client() {
             />
           </div>
 
-          {/* Bottom: Color picker + lobby prop claims in lobby */}
+          {/* Bottom: Color picker in lobby (no scanner/prop claims) */}
           {gamePhase === "lobby" && (
             <div className="flex flex-col items-center gap-3">
               <ColorPicker
@@ -1116,28 +1109,6 @@ export default function Client() {
                 onColorSelect={requestColorSwap}
                 gameMode={gameMode}
               />
-              {/* Lobby prop claimed indicators */}
-              {(claimedLobbyProps.size > 0 || true) && (
-                <div className="flex gap-3 items-center">
-                  {(['speed', 'heal'] as const).map((pt) => {
-                    const claimed = claimedLobbyProps.has(pt);
-                    return (
-                      <div
-                        key={pt}
-                        className={`flex items-center gap-1 px-2 py-1 rounded border text-[10px] font-mono transition-all ${
-                          claimed
-                            ? 'border-primary bg-primary/15 text-primary'
-                            : 'border-border bg-card/40 text-muted-foreground opacity-50'
-                        }`}
-                      >
-                        {pt === 'speed' ? '⚡' : '💚'} {pt.toUpperCase()}
-                        {claimed ? ' ✓' : ' —'}
-                      </div>
-                    );
-                  })}
-                  <span className="text-[9px] text-muted-foreground font-mono">scan lobby balls</span>
-                </div>
-              )}
             </div>
           )}
 

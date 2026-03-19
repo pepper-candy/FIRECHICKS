@@ -114,7 +114,6 @@ function DancingChar({ chickColor, isWinner, delay }: {chickColor: string;isWinn
 export default function Host() {
   const [mode, setMode] = useState<ConnectionMode>('webrtc');
   const [gameMode, setGameMode] = useState<GameMode>('1v3');
-  const [lobbyPropClaims, setLobbyPropClaims] = useState<Map<string, Set<'speed' | 'heal'>>>(new Map());
   const [startClickAt, setStartClickAt] = useState<number | null>(null);
   const [zoomLevel, setZoomLevel] = useState(1);
   const [revealNow, setRevealNow] = useState(Date.now());
@@ -135,31 +134,12 @@ export default function Host() {
     hostDragEnd,
   } = useGameLogic({ players, broadcast, gameMode });
 
-  // Register client message handler — intercept lobby prop scans before game logic
+  // Register client message handler
   useEffect(() => {
     onClientMessage((connId, msg) => {
-      if ((msg as any).type === 'scan-result') {
-        const data = (msg as any).data as string;
-        if (data === 'LOBBY-SPEED' || data === 'LOBBY-HEAL') {
-          const propType: 'speed' | 'heal' = data === 'LOBBY-SPEED' ? 'speed' : 'heal';
-          setLobbyPropClaims((prev) => {
-            const next = new Map(prev);
-            const existing = new Set(next.get(connId) ?? []);
-            if (!existing.has(propType)) {
-              existing.add(propType);
-              next.set(connId, existing);
-              // Use colorIndex so client can identify themselves before game-start
-              const playerColorIndex = players.get(connId)?.colorIndex ?? -1;
-              broadcast({ type: 'lobby-prop-granted', colorIndex: playerColorIndex, propType });
-            }
-            return next;
-          });
-          return; // don't pass lobby prop scans to game logic
-        }
-      }
       handleClientMessage(connId, msg);
     });
-  }, [onClientMessage, handleClientMessage, broadcast]);
+  }, [onClientMessage, handleClientMessage]);
 
   useEffect(() => {preloadVideos();}, []);
 
@@ -197,7 +177,7 @@ export default function Host() {
             <button
             onClick={() => {
               setStartClickAt(Date.now());
-              startGame(lobbyPropClaims);
+              startGame();
             }}
             className="relative px-10 py-3 font-pixel text-base tracking-[0.3em] uppercase
                 text-primary border-2 border-primary bg-primary/10
