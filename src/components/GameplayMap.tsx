@@ -241,12 +241,13 @@ function GameCharacter({
   onHostDragUpdate?: (connId: string, x: number, z: number) => void;
   onHostDragEnd?: (connId: string, valid: boolean) => void;
 }) {
+  const { camera, gl, raycaster } = useThree();
+  const planeRef = useRef(() => new THREE.Plane(new THREE.Vector3(0, 1, 0), 0));
+
   if (!player.alive) return null;
   const color = PLAYER_COLORS[player.colorIndex];
   if (!color) return null;
 
-  const { camera, gl, raycaster } = useThree();
-  const planeRef = useRef(() => new THREE.Plane(new THREE.Vector3(0, 1, 0), 0));
   const draggable = !!enableHostDrag;
 
   const isFlying = player.isEagle && player.speedMultiplier >= (FLY_SPEED_MULTIPLIER ?? 3);
