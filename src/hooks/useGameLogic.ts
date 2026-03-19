@@ -8,7 +8,7 @@ import { serializePlayerState } from '@/lib/gameTypes';
 import { PLAYER_COLORS, EAGLE_COLOR_INDICES } from '@/lib/playerColors';
 import { STARTING_HEALTH, applyDamage, applyHeal, isDead, addSubGrades } from '@/lib/gradeSystem';
 import {
-  BUILDINGS, SPAWN_POINTS, EAGLE_SPAWN, DIAGONAL_PAIRS,
+  BUILDINGS, SPAWN_POINTS, EAGLE_SPAWN_CANDIDATES, DIAGONAL_PAIRS,
   resolvePosition, pushOutOfWall, checkOverlap,
   isInProtectedZone, getAdjacentBuilding,
   checkCollision,
@@ -43,7 +43,7 @@ const EVENT_HITBOX_DURATION = 10000;   // 10s hitbox challenge
 const EVENT_MOCK_DURATION = 30000;     // 30s mock exam
 const STAR_STUDENT_GRADE_BONUS = 5;
 const REVEAL_DURATION = 5000;
-const COUNTDOWN_DURATION = 10;
+const COUNTDOWN_DURATION = 3;
 
 // Answer keys
 const FINAL_ANSWER_KEY: Record<number, string> = {
@@ -168,9 +168,10 @@ export function useGameLogic({ players, broadcast, gameMode }: UseGameLogicProps
     const totalRevealAndCountdown = REVEAL_DURATION + COUNTDOWN_DURATION * 1000;
     const playerStates = new Map<string, PlayerGameState>();
     let spawnIdx = 0;
+    const eagleSpawn = EAGLE_SPAWN_CANDIDATES[Math.floor(Math.random() * EAGLE_SPAWN_CANDIDATES.length)];
 
     for (const [id, assign] of Object.entries(assigns)) {
-      const spawn = assign.isEagle ? EAGLE_SPAWN : SPAWN_POINTS[spawnIdx++ % SPAWN_POINTS.length];
+      const spawn = assign.isEagle ? eagleSpawn : SPAWN_POINTS[spawnIdx++ % SPAWN_POINTS.length];
       playerStates.set(id, {
         connId: id,
         colorIndex: assign.colorIndex,
@@ -786,9 +787,18 @@ export function useGameLogic({ players, broadcast, gameMode }: UseGameLogicProps
     gs: GameStateRef,
     bcast: (msg: any) => void,
   ) => {
+    const now = Date.now();
     const playersObj: Record<string, PlayerGameStateSerializable> = {};
     for (const [id, p] of gs.playerStates) {
       playersObj[id] = serializePlayerState(p);
+    }
+    const tipObtainTimers: Record<string, { buildingId: number; remainingMs: number }> = {};
+    for (const [timerKey, t] of gs.buildingTimers.entries()) {
+      const connId = timerKey.replace('-building', '');
+      tipObtainTimers[connId] = {
+        buildingId: t.buildingId,
+        remainingMs: Math.max(0, TIP_OBTAIN_DURATION - (now - t.startTime)),
+      };
     }
 
     const snap: GameStateSnapshot = {
@@ -808,6 +818,7 @@ export function useGameLogic({ players, broadcast, gameMode }: UseGameLogicProps
       examState: gs.examState,
       mysteryBoxes: gs.mysteryBoxes,
       activeEvent: gs.activeEvent,
+      tipObtainTimers,
     };
 
     setSnapshot(snap);

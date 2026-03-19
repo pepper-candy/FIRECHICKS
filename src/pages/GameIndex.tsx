@@ -2,16 +2,26 @@ import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { preloadAllAnimations } from '@/lib/preloadAssets';
+import { useFullscreen } from '@/hooks/useFullscreen';
 
 const Index = () => {
   const navigate = useNavigate();
+  const { isFullscreen, isSupported: fsSupported, enter } = useFullscreen();
 
   useEffect(() => {
     preloadAllAnimations();
   }, []);
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen p-6 gap-10">
+    <div className="flex flex-col items-center justify-center min-h-screen p-6 gap-10 relative">
+      {fsSupported && !isFullscreen && (
+        <button
+          onClick={enter}
+          className="absolute top-4 right-4 px-3 py-1 rounded border border-primary/40 text-primary text-xs font-mono hover:bg-primary/10"
+        >
+          ⛶ Fullscreen
+        </button>
+      )}
       <div className="text-center space-y-4">
         <h1 className="text-xl md:text-3xl text-primary text-glow-green tracking-wider leading-relaxed">
           EAGLE VS CHICK

@@ -8,10 +8,9 @@ interface Props {
 }
 
 export default function HealthDisplay({ players }: Props) {
-  const sorted = Object.values(players).sort((a, b) => {
-    if (a.isEagle !== b.isEagle) return a.isEagle ? -1 : 1;
-    return b.health - a.health;
-  });
+  const sorted = Object.values(players)
+    .filter((p) => !p.isEagle)
+    .sort((a, b) => b.health - a.health);
 
   return (
     <div className="absolute top-2 right-2 z-10 flex flex-col gap-1 font-mono">

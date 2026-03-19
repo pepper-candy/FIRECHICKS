@@ -115,6 +115,9 @@ export default function Host() {
   const [mode, setMode] = useState<ConnectionMode>('webrtc');
   const [gameMode, setGameMode] = useState<GameMode>('1v3');
   const [lobbyPropClaims, setLobbyPropClaims] = useState<Map<string, Set<'speed' | 'heal'>>>(new Map());
+  const [startClickAt, setStartClickAt] = useState<number | null>(null);
+  const [zoomLevel, setZoomLevel] = useState(1);
+  const [revealNow, setRevealNow] = useState(Date.now());
   const { roomCode, players, kickPlayer, kickAllPlayers, broadcast, onClientMessage } = useHostRoom(mode);
 
   useAdvertiseRoom(roomCode, mode);
@@ -154,6 +157,11 @@ export default function Host() {
   useEffect(() => {
     broadcast({ type: 'game-mode', gameMode });
   }, [gameMode, broadcast]);
+  useEffect(() => {
+    if (phase !== 'reveal') return;
+    const id = setInterval(() => setRevealNow(Date.now()), 100);
+    return () => clearInterval(id);
+  }, [phase]);
 
   const handleGameModeToggle = useCallback(() => {
     const newMode: GameMode = gameMode === '1v3' ? '2v6' : '1v3';
@@ -178,7 +186,10 @@ export default function Host() {
         {isFull &&
         <div className="absolute top-4 left-1/2 -translate-x-1/2 z-20">
             <button
-            onClick={() => startGame(lobbyPropClaims)}
+            onClick={() => {
+              setStartClickAt(Date.now());
+              startGame(lobbyPropClaims);
+            }}
             className="relative px-10 py-3 font-pixel text-base tracking-[0.3em] uppercase
                 text-primary border-2 border-primary bg-primary/10
                 hover:bg-primary/25 transition-all duration-200
@@ -294,6 +305,7 @@ export default function Host() {
 
   // ─── REVEAL ──────────────────────────────────────────────────────────────────
   if (phase === 'reveal') {
+    const revealCountdown = startClickAt ? Math.max(0, 8 - (revealNow - startClickAt) / 1000) : 8;
     return (
       <div className="flex flex-col items-center justify-center h-screen gap-6 p-4 bg-background">
         <h1 className="text-2xl font-pixel text-primary text-glow-green tracking-widest animate-pulse">
@@ -301,6 +313,7 @@ export default function Host() {
         </h1>
         <div className="flex flex-col items-center gap-3">
           <p className="text-sm font-mono text-muted-foreground">Roles are being revealed on each phone...</p>
+          <div className="text-6xl font-pixel text-accent animate-pulse">{Math.ceil(revealCountdown)}</div>
           <div className="flex gap-1.5 mt-2">
             {[...Array(3)].map((_, i) =>
             <div
@@ -345,7 +358,8 @@ export default function Host() {
           eagleAwake={snapshot.eagleAwake}
           propSpawns={snapshot.propSpawns}
           mysteryBoxes={snapshot.mysteryBoxes}
-          examState={snapshot.examState} />
+          examState={snapshot.examState}
+          zoomLevel={zoomLevel} />
         
 
         {/* Health display top-right */}
@@ -357,6 +371,21 @@ export default function Host() {
         {/* Game time */}
         <div className="absolute top-2 left-2 z-10 px-3 py-1 rounded bg-card/80 border border-border font-mono text-xs text-muted-foreground">
           ⏱ {Math.floor(snapshot.gameTime)}s
+        </div>
+        <div className="absolute top-12 left-2 z-10 px-2 py-2 rounded bg-card/85 border border-border w-44">
+          <div className="flex items-center justify-between text-[10px] font-mono text-muted-foreground mb-1">
+            <span>Zoom</span>
+            <span>{zoomLevel.toFixed(2)}x</span>
+          </div>
+          <input
+            type="range"
+            min={0.65}
+            max={1.5}
+            step={0.05}
+            value={zoomLevel}
+            onChange={(e) => setZoomLevel(Number(e.target.value))}
+            className="w-full"
+          />
         </div>
 
         {/* Eagle awake countdown */}
@@ -510,4 +539,4 @@ export default function Host() {
 
 }
 
-const COUNTDOWN_DURATION_DISPLAY = 10;
+const COUNTDOWN_DURATION_DISPLAY = 3;

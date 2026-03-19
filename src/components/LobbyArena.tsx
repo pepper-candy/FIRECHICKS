@@ -5,7 +5,7 @@ import type { PlayerState } from "@/hooks/useGameRoom";
 import { PLAYER_COLORS } from "@/lib/playerColors";
 import CharacterViewer from "@/components/CharacterViewer";
 import type { ChickColor } from "@/components/CharacterViewer";
-import QRCode from "react-qr-code";
+import BarcodeDisplay from "@/components/BarcodeDisplay";
 import * as THREE from "three";
 
 interface Props {
@@ -158,7 +158,7 @@ function CrystalBall({ ball, propType }: { ball: BallState; propType: 'speed' | 
               background: '#fff',
             }} />
           </div>
-          {/* QR barcode */}
+          {/* Barcode */}
           <div style={{
             background: '#fff',
             padding: 4,
@@ -166,7 +166,7 @@ function CrystalBall({ ball, propType }: { ball: BallState; propType: 'speed' | 
             display: 'inline-block',
             boxShadow: '0 2px 8px rgba(0,0,0,0.4)',
           }}>
-            <QRCode value={ball.id} size={62} />
+            <BarcodeDisplay value={ball.id} height={28} className="w-[92px] h-[30px]" />
           </div>
           <div style={{
             fontSize: 8,

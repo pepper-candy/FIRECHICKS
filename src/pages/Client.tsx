@@ -16,8 +16,9 @@ import { Slider } from "@/components/ui/slider";
 import { preloadAllAnimations } from "@/lib/preloadAssets";
 import type { GamePhase, GameStateSnapshot, PropType, GameMode, PropItem } from "@/lib/gameTypes";
 import type { ChickColor } from "@/components/CharacterViewer";
-import QRCode from "react-qr-code";
+import BarcodeDisplay from "@/components/BarcodeDisplay";
 import { Zap, Heart, Wind, Shield, ChevronUp } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
 // ─── Props Button (inline for compact layout) ──────────────────────────────────
 const PROP_COLORS: Record<PropType, string> = {
@@ -102,20 +103,18 @@ function TipsBox({
   tipIndex,
   stage,
   socialMet,
-  totalNeeded,
   hasTip,
   isLoadingTip,
-  qrCode,
+  shareCode,
   tipShareCooldownUntil,
   onTap,
 }: {
   tipIndex: 0 | 1;
   stage: number;
   socialMet: number;
-  totalNeeded: number;
   hasTip: boolean;
   isLoadingTip: boolean;
-  qrCode: string | null;
+  shareCode: string | null;
   tipShareCooldownUntil: number;
   onTap: () => void;
 }) {
@@ -143,18 +142,15 @@ function TipsBox({
   const onCooldown = now < tipShareCooldownUntil;
   const cooldownSec = Math.ceil(Math.max(0, tipShareCooldownUntil - now) / 1000);
 
-  if (hasTip && qrCode) {
-    // Showing QR code
+  if (hasTip && shareCode) {
+    // Share is active; barcode is shown in scanner area
     return (
       <button
         onClick={onTap}
         className="flex-1 h-auto rounded border-2 border-accent bg-accent/10 flex flex-col items-center justify-center p-1 gap-0.5 active:scale-95"
       >
         <span className="text-[9px] font-mono text-accent">💡 Tips {tipIndex + 1}</span>
-        <div className="bg-white p-1 rounded">
-          <QRCode value={qrCode} size={52} />
-        </div>
-        <span className="text-[8px] text-muted-foreground">Others scan this!</span>
+        <span className="text-[8px] text-muted-foreground">Sharing in scanner area</span>
       </button>
     );
   }
@@ -192,6 +188,7 @@ function TipsBox({
 
 // ─── Main Client Component ────────────────────────────────────────────────────
 export default function Client() {
+  const navigate = useNavigate();
   const [code, setCode] = useState("");
   const [mode, setMode] = useState<ConnectionMode>("webrtc");
   const {
@@ -228,6 +225,7 @@ export default function Client() {
 
   // Event state
   const [eventAnswer, setEventAnswer] = useState("");
+  const [clockNow, setClockNow] = useState(Date.now());
 
   // Fullscreen splash — false = not yet dismissed by user
   const [fsSplashDone, setFsSplashDone] = useState(false);
@@ -236,7 +234,8 @@ export default function Client() {
   const [claimedLobbyProps, setClaimedLobbyProps] = useState<Set<string>>(new Set());
 
   // Tips state
-  const [tipQrCodes, setTipQrCodes] = useState<[string | null, string | null]>([null, null]);
+  const [tipShareCodes, setTipShareCodes] = useState<[string | null, string | null]>([null, null]);
+  const [activeShareTip, setActiveShareTip] = useState<0 | 1 | null>(null);
   const [loadingTip, setLoadingTip] = useState<[boolean, boolean]>([false, false]);
 
   // Exam state
@@ -266,6 +265,10 @@ export default function Client() {
 
   useEffect(() => {
     preloadAllAnimations();
+  }, []);
+  useEffect(() => {
+    const id = setInterval(() => setClockNow(Date.now()), 250);
+    return () => clearInterval(id);
   }, []);
   useEffect(() => {
     if (kicked) setWasKicked(true);
@@ -309,11 +312,12 @@ export default function Client() {
         if (msg.connId === connIdRef.current) setIsDead(true);
       } else if (msg.type === "tip-qr") {
         if (msg.forConnId === connIdRef.current) {
-          setTipQrCodes((prev) => {
+          setTipShareCodes((prev) => {
             const next: [string | null, string | null] = [...prev] as [string | null, string | null];
             next[msg.tipIndex as 0 | 1] = msg.code;
             return next;
           });
+          setActiveShareTip(msg.tipIndex as 0 | 1);
         }
       } else if (msg.type === "exam-start") {
         const myExam = msg.assignments?.[connIdRef.current];
@@ -389,6 +393,14 @@ export default function Client() {
   const currentColorIndex = myAssignment?.colorIndex ?? colorIndex;
   const displayColor = PLAYER_COLORS[currentColorIndex] ?? playerColor;
   const currentChickColor = myAssignment?.chickColor ?? playerColor?.chickColor ?? "Red";
+  const nowTs = clockNow;
+  const activeShareCode = activeShareTip !== null ? tipShareCodes[activeShareTip] : null;
+  const tipObtainRemainingSec =
+    connIdRef.current && gameState?.tipObtainTimers?.[connIdRef.current]
+      ? Math.ceil(gameState.tipObtainTimers[connIdRef.current].remainingMs / 1000)
+      : 0;
+  const speedRemainingSec = myState?.speedMultiplierUntil ? Math.ceil(Math.max(0, myState.speedMultiplierUntil - nowTs) / 1000) : 0;
+  const invincibleRemainingSec = myState?.invincibleUntil ? Math.ceil(Math.max(0, myState.invincibleUntil - nowTs) / 1000) : 0;
 
   const handleMove = useCallback(
     (x: number, y: number) => {
@@ -422,18 +434,19 @@ export default function Client() {
   );
   const handleTipTap = useCallback(
     (tipIndex: 0 | 1) => {
-      // If already showing QR, close it
-      if (tipQrCodes[tipIndex]) {
-        setTipQrCodes((prev) => {
+      // If already sharing this tip, close barcode area and keep cooldown running
+      if (activeShareTip === tipIndex && tipShareCodes[tipIndex]) {
+        setTipShareCodes((prev) => {
           const n: [string | null, string | null] = [...prev] as [string | null, string | null];
           n[tipIndex] = null;
           return n;
         });
+        setActiveShareTip(null);
         return;
       }
       sendToHost({ type: "tip-request", tipIndex });
     },
-    [sendToHost, tipQrCodes],
+    [sendToHost, tipShareCodes, activeShareTip],
   );
   const handleExamSubmit = useCallback(() => {
     if (examAnswer.trim()) {
@@ -512,6 +525,14 @@ export default function Client() {
   if (!connected) {
     return (
       <div className="flex flex-col items-center justify-center h-dvh overflow-hidden p-5 gap-6">
+        <div className="w-full max-w-[320px] sm:max-w-xs">
+          <button
+            onClick={() => navigate("/")}
+            className="text-xs font-mono text-muted-foreground hover:text-foreground"
+          >
+            &lt; Back
+          </button>
+        </div>
         <h1 className="text-lg text-secondary text-glow-purple tracking-wider text-center font-pixel">JOIN GAME</h1>
 
         {wasKicked && (
@@ -1042,7 +1063,29 @@ export default function Client() {
         <>
           {/* Top: Scanner */}
           <div className="w-full">
-            <ScannerBox onScan={handleScan} label="SCANNER — scan props & tips" aspectRatio="873/457" />
+            {activeShareCode ? (
+              <button
+                onClick={() => {
+                  if (activeShareTip !== null) {
+                    setTipShareCodes((prev) => {
+                      const next: [string | null, string | null] = [...prev] as [string | null, string | null];
+                      next[activeShareTip] = null;
+                      return next;
+                    });
+                  }
+                  setActiveShareTip(null);
+                }}
+                className="w-full rounded border-2 border-accent bg-white/95 p-3"
+                style={{ aspectRatio: "873/457" }}
+              >
+                <div className="h-full w-full flex flex-col items-center justify-center gap-2">
+                  <BarcodeDisplay value={activeShareCode} height={70} className="w-full max-w-[300px]" />
+                  <span className="text-[10px] font-mono text-accent">Tap to close barcode and return to scanner</span>
+                </div>
+              </button>
+            ) : (
+              <ScannerBox onScan={handleScan} label="SCANNER — scan props & tips" aspectRatio="873/457" />
+            )}
           </div>
 
           {/* Middle: Thumbstick */}
@@ -1096,10 +1139,9 @@ export default function Client() {
                 tipIndex={0}
                 stage={stage}
                 socialMet={socialMet}
-                totalNeeded={2}
                 hasTip={myState.tips[0]}
                 isLoadingTip={loadingTip[0]}
-                qrCode={tipQrCodes[0]}
+                shareCode={tipShareCodes[0]}
                 tipShareCooldownUntil={myState.tipShareCooldownUntil}
                 onTap={() => handleTipTap(0)}
               />
@@ -1109,10 +1151,9 @@ export default function Client() {
                 tipIndex={1}
                 stage={stage}
                 socialMet={socialMet}
-                totalNeeded={2}
                 hasTip={myState.tips[1]}
                 isLoadingTip={loadingTip[1]}
-                qrCode={tipQrCodes[1]}
+                shareCode={tipShareCodes[1]}
                 tipShareCooldownUntil={myState.tipShareCooldownUntil}
                 onTap={() => handleTipTap(1)}
               />
@@ -1129,7 +1170,7 @@ export default function Client() {
       {/* Role indicator */}
       {displayColor && (
         <div
-          className="px-3 py-1 rounded text-center inline-block w-fit mx-auto mt-[4px] my-0"
+          className="px-3 py-1 rounded text-center inline-block w-fit mx-auto mt-[4px] my-0 flex flex-col items-center"
           style={{ background: `hsl(${displayColor.hsl} / 0.1)`, border: `1px solid hsl(${displayColor.hsl} / 0.25)` }}
         >
           <p className="text-xs font-mono inline">
@@ -1137,6 +1178,11 @@ export default function Client() {
             {isEagle ? " 🦅 Eagle" : " 🐤 Chick"}
             {myState?.isStarStudent ? " ⭐ Star Student" : ""}
           </p>
+          <div className="text-[10px] font-mono text-muted-foreground">
+            {tipObtainRemainingSec > 0 && <span>Obtaining tips... {tipObtainRemainingSec}s </span>}
+            {invincibleRemainingSec > 0 && <span>Invincible {invincibleRemainingSec}s </span>}
+            {speedRemainingSec > 0 && <span>Speed {speedRemainingSec}s</span>}
+          </div>
         </div>
       )}
     </div>

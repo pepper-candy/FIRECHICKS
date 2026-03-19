@@ -64,19 +64,20 @@ export const OBSTACLES: ObstacleDef[] = [
   { position: { x:  18, z:   6 }, size: { w: 0.5, h: 2, d: 4 }, rotation: 0 },
 ];
 
-// Spawn points for players (spread around center)
+// Chick spawns near each building inner edge (toward map center)
 export const SPAWN_POINTS: { x: number; z: number }[] = [
-  { x: -5, z: -5 },
-  { x:  5, z: -5 },
-  { x: -5, z:  5 },
-  { x:  5, z:  5 },
-  { x: -10, z:  0 },
-  { x:  10, z:  0 },
-  { x:   0, z: -10 },
-  { x:   0, z:  10 },
+  { x: -18, z: -18 },
+  { x: 18, z: -18 },
+  { x: -18, z: 18 },
+  { x: 18, z: 18 },
 ];
 
-export const EAGLE_SPAWN = { x: 0, z: 0 };
+export const EAGLE_SPAWN_CANDIDATES: { x: number; z: number }[] = [
+  { x: -18, z: -18 },
+  { x: 18, z: -18 },
+  { x: -18, z: 18 },
+  { x: 18, z: 18 },
+];
 
 // Protected zone radius (around buildings)
 export const ZONE_RADIUS = 4.0;

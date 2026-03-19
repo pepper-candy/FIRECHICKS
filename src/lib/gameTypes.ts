@@ -148,6 +148,7 @@ export interface GameStateSnapshot {
   examState: ExamState | null;
   mysteryBoxes: MysteryBox[];
   activeEvent: GameEvent | null;
+  tipObtainTimers?: Record<string, { buildingId: number; remainingMs: number }>;
 }
 
 // Messages host → client

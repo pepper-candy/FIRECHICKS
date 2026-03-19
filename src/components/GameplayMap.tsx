@@ -2,7 +2,6 @@ import { Suspense, useRef, useEffect } from 'react';
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import { Grid, Html } from '@react-three/drei';
 import * as THREE from 'three';
-import QRCode from 'react-qr-code';
 import CharacterViewer from '@/components/CharacterViewer';
 import { BUILDINGS, OBSTACLES, MAP_SIZE, ZONE_RADIUS } from '@/lib/gameplayMapData';
 import { PLAYER_COLORS } from '@/lib/playerColors';
@@ -10,15 +9,16 @@ import type { PlayerGameStateSerializable, BuildingState, PropSpawn, MysteryBox,
 
 const FLY_SPEED_MULTIPLIER = 3;
 
-// Tilts camera forward so the far edge of the 64x64 map sits near the top of the screen
-function MapCamera() {
+// Camera stays centered; zoomLevel lets host tune framing
+function MapCamera({ zoomLevel = 1 }: { zoomLevel?: number }) {
   const { camera } = useThree();
   useEffect(() => {
-    camera.position.set(0, 56, 42);
-    (camera as any).fov = 58;
+    const clamped = Math.max(0.65, Math.min(1.5, zoomLevel));
+    camera.position.set(0, 56 / clamped, 42 / clamped);
+    (camera as any).fov = 58 / Math.max(0.75, clamped);
     (camera as any).updateProjectionMatrix?.();
-    camera.lookAt(0, 0, -14);
-  }, [camera]);
+    camera.lookAt(0, 0, 0);
+  }, [camera, zoomLevel]);
   return null;
 }
 
@@ -30,6 +30,7 @@ interface Props {
   propSpawns?: PropSpawn[];
   mysteryBoxes?: MysteryBox[];
   examState?: ExamState | null;
+  zoomLevel?: number;
 }
 
 // ─── Building ──────────────────────────────────────────────────────────────────
@@ -269,7 +270,7 @@ function GameCharacter({ player }: { player: PlayerGameStateSerializable }) {
 }
 
 // ─── Main Map Component ────────────────────────────────────────────────────────
-export default function GameplayMap({ players, buildings, eagleAwake, propSpawns, mysteryBoxes, examState }: Props) {
+export default function GameplayMap({ players, buildings, eagleAwake, propSpawns, mysteryBoxes, examState, zoomLevel = 1 }: Props) {
   const playerList = Object.values(players);
 
   return (
@@ -278,7 +279,7 @@ export default function GameplayMap({ players, buildings, eagleAwake, propSpawns
         camera={{ position: [0, 56, 42], fov: 58 }}
         shadows
       >
-        <MapCamera />
+        <MapCamera zoomLevel={zoomLevel} />
         <ambientLight intensity={0.5} />
         <directionalLight position={[15, 30, 15]} intensity={1.2} castShadow shadow-mapSize={[2048, 2048]} />
         <directionalLight position={[-10, 20, -10]} intensity={0.3} />

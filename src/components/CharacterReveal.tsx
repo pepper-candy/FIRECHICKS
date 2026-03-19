@@ -1,23 +1,18 @@
-import { Suspense, useState, useEffect, useRef } from 'react';
-import { Canvas, useFrame, useThree } from '@react-three/fiber';
-import CharacterViewer from '@/components/CharacterViewer';
+import { Suspense, useState, useEffect, useMemo } from 'react';
+import { Canvas, useThree } from '@react-three/fiber';
+import { useGLTF } from '@react-three/drei';
 import { PLAYER_COLORS } from '@/lib/playerColors';
-import type { ChickColor } from '@/components/CharacterViewer';
 
 interface Props {
   colorIndex: number;
   isEagle: boolean;
 }
 
-function RotatingCharacter({ chickColor }: { chickColor: ChickColor }) {
-  const angleRef = useRef(0);
-  useFrame((_, delta) => {
-    angleRef.current += delta * 1.2;
-  });
+function RotatingStaticCharacter({ modelPath, angle }: { modelPath: string; angle: number }) {
+  const gltf = useGLTF(modelPath);
+  const scene = useMemo(() => gltf.scene.clone(true), [gltf.scene]);
   return (
-    <Suspense fallback={null}>
-      <CharacterViewer color={chickColor} animState="Idle" facingAngle={angleRef.current} />
-    </Suspense>
+    <primitive object={scene} scale={[0.85, 0.85, 0.85]} rotation={[0, angle, 0]} />
   );
 }
 
@@ -50,6 +45,9 @@ export default function CharacterReveal({ colorIndex, isEagle }: Props) {
 
   const progress = Math.min(1, elapsed / 5);
   const remaining = Math.max(0, Math.ceil(5 - elapsed));
+  const totalRotation = Math.PI * 2 * 1.25;
+  const modelPath = `/FireChick/FireChick_Models/FireChick_${color.name}.glb`;
+  const angle = -Math.min(totalRotation, (elapsed / 5) * totalRotation);
 
   return (
     <div className="flex flex-col items-center justify-start h-dvh overflow-hidden w-full">
@@ -60,9 +58,9 @@ export default function CharacterReveal({ colorIndex, isEagle }: Props) {
           <ambientLight intensity={0.8} />
           <directionalLight position={[3, 6, 3]} intensity={1.2} />
           <directionalLight position={[-2, 4, -2]} intensity={0.4} />
-          <group scale={[0.85, 0.85, 0.85]}>
-            <RotatingCharacter chickColor={color.chickColor} />
-          </group>
+          <Suspense fallback={null}>
+            <RotatingStaticCharacter modelPath={modelPath} angle={angle} />
+          </Suspense>
         </Canvas>
       </div>
 
@@ -115,3 +113,12 @@ export default function CharacterReveal({ colorIndex, isEagle }: Props) {
     </div>
   );
 }
+
+useGLTF.preload('/FireChick/FireChick_Models/FireChick_Black.glb');
+useGLTF.preload('/FireChick/FireChick_Models/FireChick_Gold.glb');
+useGLTF.preload('/FireChick/FireChick_Models/FireChick_Red.glb');
+useGLTF.preload('/FireChick/FireChick_Models/FireChick_Yellow.glb');
+useGLTF.preload('/FireChick/FireChick_Models/FireChick_Blue.glb');
+useGLTF.preload('/FireChick/FireChick_Models/FireChick_Green.glb');
+useGLTF.preload('/FireChick/FireChick_Models/FireChick_Cyan.glb');
+useGLTF.preload('/FireChick/FireChick_Models/FireChick_Pink.glb');
