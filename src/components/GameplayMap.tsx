@@ -247,7 +247,7 @@ function GameCharacter({
 
   const { camera, gl, raycaster } = useThree();
   const planeRef = useRef(() => new THREE.Plane(new THREE.Vector3(0, 1, 0), 0));
-  const draggable = !!enableHostDrag && !player.isEagle;
+  const draggable = !!enableHostDrag;
 
   const isFlying = player.isEagle && player.speedMultiplier >= (FLY_SPEED_MULTIPLIER ?? 3);
   const anim =
