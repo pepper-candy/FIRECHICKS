@@ -104,7 +104,7 @@ const PWExam = () => {
       <div className="flex flex-col items-center justify-center min-h-screen p-6 gap-8">
         <h1 className="text-lg md:text-2xl text-primary text-glow-green tracking-wider">PW EXAM</h1>
         <p className="text-xs text-muted-foreground font-mono max-w-xs text-center">
-          Visual Cryptography — overlay two layers to reveal the answer
+          Visual Cryptography — overlay layers to reveal the answer
         </p>
         <div className="flex flex-col gap-4 w-full max-w-xs">
           <Button
@@ -126,7 +126,7 @@ const PWExam = () => {
           variant="outline"
           className="h-14 text-sm font-pixel border-border text-muted-foreground hover:text-foreground hover:bg-muted w-full max-w-xs"
         >
-          📚 EXAM TIPS
+          EXAM TIPS
         </Button>
         <Button
           onClick={() => navigate("/")}
