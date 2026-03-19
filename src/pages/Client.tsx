@@ -1081,9 +1081,16 @@ export default function Client() {
       {/* ── CHICK LAYOUT ── */}
       {!isEagle && (
         <>
-          {/* Top: Scanner */}
+          {/* Top: Scanner — also shows tip QR codes */}
           <div className="w-full">
-            <ScannerBox onScan={handleScan} label="SCANNER — scan props & tips" aspectRatio="873/457" />
+            <ScannerBox
+              onScan={handleScan}
+              label="SCANNER — scan props & tips"
+              aspectRatio="873/457"
+              displayQr={activeScannerQr}
+              displayQrCountdown={scannerQrExpireAt > 0 ? Math.max(0, Math.ceil((scannerQrExpireAt - clockNow) / 1000)) : undefined}
+              onDismissQr={handleDismissScannerQr}
+            />
           </div>
 
           {/* Middle: Thumbstick */}
