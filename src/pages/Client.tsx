@@ -346,15 +346,6 @@ export default function Client() {
           setExamAnswer("");
         }
         setGamePhase("exam");
-      } else if (msg.type === "lobby-prop-granted") {
-        // Match by colorIndex since we don't have connId yet during lobby
-        if (msg.colorIndex === colorIndex) {
-          setClaimedLobbyProps((prev) => {
-            const next = new Set(prev);
-            next.add(msg.propType as string);
-            return next;
-          });
-        }
       }
     });
   }, [onHostMessage, colorIndex, clientId]);
