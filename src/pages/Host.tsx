@@ -374,7 +374,20 @@ export default function Host() {
           onHostDragUpdate={hostDragUpdate}
           onHostDragEnd={hostDragEnd}
         />
-        
+
+        {/* Tip obtain countdowns on map */}
+        {snapshot.tipObtainTimers && Object.entries(snapshot.tipObtainTimers).map(([connId, timer]) => {
+          const player = snapshot.players[connId];
+          if (!player) return null;
+          const color = PLAYER_COLORS[player.colorIndex];
+          const sec = Math.ceil(timer.remainingMs / 1000);
+          if (sec <= 0) return null;
+          return (
+            <div key={connId} className="absolute top-2 left-1/2 -translate-x-1/2 z-10 px-3 py-1 rounded bg-accent/20 border border-accent font-mono text-xs text-accent">
+              📖 {color?.name ?? '?'} obtaining tips... {sec}s
+            </div>
+          );
+        })}
 
         {/* Health display top-right */}
         <HealthDisplay players={snapshot.players} />
