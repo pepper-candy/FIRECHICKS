@@ -459,8 +459,8 @@ export function useGameLogic({ players, broadcast, gameMode }: UseGameLogicProps
               gs.buildingTimers.set(timerKey, { buildingId: inZoneBuilding, startTime: now });
             } else {
               const elapsed = now - timer.startTime;
-              if (elapsed >= TIP_OBTAIN_DURATION && !chick.tips[building.tipIndex]) {
-                const building = gs.buildings[inZoneBuilding];
+              const building = gs.buildings[inZoneBuilding];
+              if (elapsed >= TIP_OBTAIN_DURATION && building && !chick.tips[building.tipIndex]) {
                 const neededCount = mode === '2v6' ? 2 : 1;
                 if (building && building.tipObtainedCount < neededCount) {
                   // Become Star Student
