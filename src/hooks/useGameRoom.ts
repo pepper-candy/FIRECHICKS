@@ -87,6 +87,16 @@ function useHostWebRTC() {
     removePlayer(connId);
   }, [removePlayer]);
 
+  const kickAllPlayers = useCallback(() => {
+    for (const [connId, conn] of connsRef.current.entries()) {
+      try { conn.send(JSON.stringify({ type: 'kicked' })); } catch {}
+    }
+    connsRef.current.clear();
+    usedColorsRef.current.clear();
+    connColorMapRef.current.clear();
+    setPlayers(new Map());
+  }, []);
+
   const broadcast = useCallback((msg: any) => {
     const data = JSON.stringify(msg);
     connsRef.current.forEach((conn) => {
