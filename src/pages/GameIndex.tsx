@@ -48,12 +48,12 @@ const Index = () => {
       </div>
 
       <div className="text-xs text-muted-foreground font-mono text-center space-y-1 mt-8">
-        <p>1. Host opens the lobby on a big screen</p>
-        <p>2. Players join from phones with the room code</p>
-        <p>3. 1 Eagle (Black) vs 3 Chicks (Yellow, Green, Cyan)</p>
+        <p>Host opens the lobby on a big screen</p>
+        <p>Players join from phones with the room code</p>
+        
       </div>
-    </div>
-  );
+    </div>);
+
 };
 
 export default Index;
