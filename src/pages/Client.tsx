@@ -224,8 +224,8 @@ export default function Client() {
   // Fullscreen splash — false = not yet dismissed by user
   const [fsSplashDone, setFsSplashDone] = useState(false);
 
-  // Lobby prop claims
-  const [claimedLobbyProps, setClaimedLobbyProps] = useState<Set<string>>(new Set());
+
+
 
   // Tips state — QR now displays in scanner box, not tip box
   const [tipQrCodes, setTipQrCodes] = useState<[string | null, string | null]>([null, null]);
