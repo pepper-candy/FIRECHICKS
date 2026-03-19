@@ -261,6 +261,15 @@ function useHostSupabase() {
     removePlayer(clientId);
   }, [removePlayer]);
 
+  const kickAllPlayers = useCallback(() => {
+    for (const clientId of clientColorMapRef.current.keys()) {
+      channelRef.current?.send({ type: 'broadcast', event: 'kicked', payload: { clientId } });
+    }
+    usedColorsRef.current.clear();
+    clientColorMapRef.current.clear();
+    setPlayers(new Map());
+  }, []);
+
   const broadcast = useCallback((msg: any) => {
     channelRef.current?.send({ type: 'broadcast', event: 'host-message', payload: msg });
   }, []);
