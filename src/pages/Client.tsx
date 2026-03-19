@@ -1122,7 +1122,6 @@ export default function Client() {
                 socialMet={socialMet}
                 hasTip={myState.tips[0]}
                 isLoadingTip={loadingTip[0]}
-                qrCode={tipQrCodes[0]}
                 tipShareCooldownUntil={myState.tipShareCooldownUntil}
                 onTap={() => handleTipTap(0)}
               />
@@ -1134,7 +1133,6 @@ export default function Client() {
                 socialMet={socialMet}
                 hasTip={myState.tips[1]}
                 isLoadingTip={loadingTip[1]}
-                qrCode={tipQrCodes[1]}
                 tipShareCooldownUntil={myState.tipShareCooldownUntil}
                 onTap={() => handleTipTap(1)}
               />
