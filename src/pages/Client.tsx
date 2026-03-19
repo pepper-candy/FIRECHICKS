@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect, useRef } from "react";
 import { useClientRoom, useDiscoverRooms, type ConnectionMode } from "@/hooks/useGameRoom";
-import { PLAYER_COLORS } from "@/lib/playerColors";
+import { PLAYER_COLORS, EAGLE_COLOR_INDICES } from "@/lib/playerColors";
 import { gradeToLetter, getGradeColor } from "@/lib/gradeSystem";
 import Thumbstick from "@/components/Thumbstick";
 import ColorPicker from "@/components/ColorPicker";
@@ -13,7 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { preloadAllAnimations } from "@/lib/preloadAssets";
-import type { GamePhase, GameStateSnapshot, PropType } from "@/lib/gameTypes";
+import type { GamePhase, GameStateSnapshot, PropType, GameMode } from "@/lib/gameTypes";
 import type { ChickColor } from "@/components/CharacterViewer";
 
 export default function Client() {
@@ -29,9 +29,11 @@ export default function Client() {
 
   // Game state received from host
   const [gamePhase, setGamePhase] = useState<GamePhase>('lobby');
+  const [gameMode, setGameMode] = useState<GameMode>('1v3');
   const [myAssignment, setMyAssignment] = useState<{ colorIndex: number; isEagle: boolean; chickColor: ChickColor } | null>(null);
   const [gameState, setGameState] = useState<GameStateSnapshot | null>(null);
   const [isDead, setIsDead] = useState(false);
+  const connIdRef = useRef<string>('');
 
   const playerColor = colorIndex >= 0 ? PLAYER_COLORS[colorIndex] : null;
 
@@ -44,56 +46,41 @@ export default function Client() {
   // Listen for host messages
   useEffect(() => {
     onHostMessage((msg: any) => {
-      if (msg.type === 'game-start') {
-        // Find our assignment - we need to check all connection IDs
-        // For simplicity, check by colorIndex match or use the first eagle/chick
+      if (msg.type === 'game-mode') {
+        setGameMode(msg.gameMode);
+      } else if (msg.type === 'game-start') {
         const assigns = msg.assignments as Record<string, { colorIndex: number; isEagle: boolean; chickColor: ChickColor }>;
-        // We don't know our connId on client side easily, so the host sends us our specific assignment
-        // Actually we get it from the assignments map - let's find ours by iterating
-        // For WebRTC, our peer ID is in the map. For Supabase, our clientId.
-        // The host message goes to all clients, each needs to find their own assignment.
-        // We'll match by colorIndex since we know our current color.
-        for (const [, assign] of Object.entries(assigns)) {
-          // In WebRTC mode, the connId matches our peer ID
-          // For now, find by original color or first eagle match
+        // Find our assignment by matching our current colorIndex
+        for (const [connId, assign] of Object.entries(assigns)) {
+          if (assign.colorIndex === colorIndex) {
+            connIdRef.current = connId;
+            setMyAssignment({
+              colorIndex: assign.colorIndex,
+              isEagle: assign.isEagle,
+              chickColor: assign.chickColor,
+            });
+            break;
+          }
         }
-        // Actually the game-start assigns may change our color (eagle assignment)
-        // Let's just take whatever the host assigns. We'll rely on color-update messages too.
         setGamePhase('reveal');
       } else if (msg.type === 'phase-change') {
         setGamePhase(msg.phase);
       } else if (msg.type === 'game-state') {
         setGameState(msg.state);
-        // Extract our state from the snapshot
         if (msg.state?.phase) setGamePhase(msg.state.phase);
       } else if (msg.type === 'game-over') {
         setGamePhase('gameover');
       } else if (msg.type === 'you-died') {
         setIsDead(true);
       } else if (msg.type === 'color-update') {
-        // Our color was updated (e.g., became eagle)
         setMyAssignment({
           colorIndex: msg.colorIndex,
           isEagle: msg.isEagle ?? false,
           chickColor: PLAYER_COLORS[msg.colorIndex]?.chickColor ?? 'Red',
         });
       }
-
-      // Handle game-start assignment extraction
-      if (msg.type === 'game-start') {
-        const assigns = msg.assignments;
-        // We need to find ourselves. For now, match by our current colorIndex
-        for (const [, assign] of Object.entries(assigns) as [string, any][]) {
-          if (assign.colorIndex === colorIndex || (!myAssignment && assign.colorIndex !== undefined)) {
-            // Not perfect but workable
-          }
-        }
-        // Set our assignment from the broadcast - the host also sends individual color-update
-        // For now just mark that game started
-        setGamePhase('reveal');
-      }
     });
-  }, [onHostMessage, colorIndex, myAssignment]);
+  }, [onHostMessage, colorIndex]);
 
   // Find our player state from game snapshot
   const myState = gameState ? Object.values(gameState.players).find(
@@ -180,7 +167,7 @@ export default function Client() {
   // ─── REVEAL PHASE ─────────────────────────────────
   if (gamePhase === 'reveal') {
     return (
-      <div className="flex items-center justify-center min-h-screen p-6 bg-background">
+      <div className="flex items-center justify-center min-h-screen p-4 bg-background">
         <CharacterReveal colorIndex={currentColorIndex} isEagle={isEagle} />
       </div>
     );
@@ -237,16 +224,18 @@ export default function Client() {
   }
 
   // ─── GAMEPLAY CONTROLLER (LOBBY or PLAYING) ───────
+  const displayColor = PLAYER_COLORS[currentColorIndex] ?? playerColor;
+
   return (
     <div className="flex flex-col items-center justify-between min-h-screen p-4 select-none">
       {/* Top section */}
       <div className="w-full flex flex-col items-center gap-2">
         {/* Status bar */}
         <div className="flex items-center gap-3 text-xs font-mono text-muted-foreground">
-          {playerColor && (
+          {displayColor && (
             <div className="w-4 h-4 rounded-full" style={{
-              backgroundColor: `hsl(${playerColor.hsl})`,
-              boxShadow: `0 0 12px hsl(${playerColor.hsl} / 0.5)`,
+              backgroundColor: `hsl(${displayColor.hsl})`,
+              boxShadow: `0 0 12px hsl(${displayColor.hsl} / 0.5)`,
             }} />
           )}
           <div className="flex items-center gap-2">
@@ -289,7 +278,7 @@ export default function Client() {
           onMove={handleMove}
           onIdleChange={handleIdleChange}
           size={200}
-          color={playerColor ? `hsl(${playerColor.hsl})` : undefined}
+          color={displayColor ? `hsl(${displayColor.hsl})` : undefined}
         />
       </div>
 
@@ -350,12 +339,20 @@ export default function Client() {
           </div>
         )}
 
-        {/* Role indicator */}
-        {playerColor && (
-          <p className="text-xs font-mono" style={{ color: `hsl(${playerColor.hsl})` }}>
-            You are <span className="font-bold">{playerColor.name}</span>
-            {isEagle ? ' 🦅' : ' 🐤'}
-          </p>
+        {/* Role indicator with background */}
+        {displayColor && (
+          <div
+            className="px-3 py-1.5 rounded-md"
+            style={{
+              backgroundColor: `hsl(${displayColor.hsl} / 0.15)`,
+              border: `1px solid hsl(${displayColor.hsl} / 0.3)`,
+            }}
+          >
+            <p className="text-xs font-mono text-foreground">
+              You are <span className="font-bold" style={{ color: `hsl(${displayColor.hsl})` }}>{displayColor.name}</span>
+              {isEagle ? ' 🦅' : ' 🐤'}
+            </p>
+          </div>
         )}
 
         <Button variant="outline" size="sm" onClick={disconnect} className="text-xs font-mono text-destructive border-destructive/30">
