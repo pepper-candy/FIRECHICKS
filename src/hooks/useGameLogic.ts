@@ -898,7 +898,7 @@ export function useGameLogic({ players, broadcast, gameMode }: UseGameLogicProps
     const gs = gameStateRef.current as GameStateRef | null;
     if (!gs) return;
     const p = gs.playerStates.get(connId);
-    if (!p || !p.alive || p.isEagle) return;
+    if (!p || !p.alive) return;
 
     const resolved = resolvePosition(x, z, p.position.x, p.position.z, 0.5, false);
     p.position.x = resolved.x;
