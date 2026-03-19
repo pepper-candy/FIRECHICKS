@@ -241,13 +241,14 @@ function GameCharacter({
   onHostDragUpdate?: (connId: string, x: number, z: number) => void;
   onHostDragEnd?: (connId: string, valid: boolean) => void;
 }) {
+  const { camera, gl, raycaster } = useThree();
+  const planeRef = useRef(() => new THREE.Plane(new THREE.Vector3(0, 1, 0), 0));
+
   if (!player.alive) return null;
   const color = PLAYER_COLORS[player.colorIndex];
   if (!color) return null;
 
-  const { camera, gl, raycaster } = useThree();
-  const planeRef = useRef(() => new THREE.Plane(new THREE.Vector3(0, 1, 0), 0));
-  const draggable = !!enableHostDrag && !player.isEagle;
+  const draggable = !!enableHostDrag;
 
   const isFlying = player.isEagle && player.speedMultiplier >= (FLY_SPEED_MULTIPLIER ?? 3);
   const anim =
@@ -302,7 +303,7 @@ function GameCharacter({
                 const rect = gl.domElement.getBoundingClientRect();
                 const ndcX = ((ev.clientX - rect.left) / rect.width) * 2 - 1;
                 const ndcY = -(((ev.clientY - rect.top) / rect.height) * 2 - 1);
-                raycaster.setFromCamera({ x: ndcX, y: ndcY }, camera);
+                raycaster.setFromCamera(new THREE.Vector2(ndcX, ndcY), camera);
                 const pt = new THREE.Vector3();
                 const plane = planeRef.current();
                 const hit = raycaster.ray.intersectPlane(plane, pt);

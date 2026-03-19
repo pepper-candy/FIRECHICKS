@@ -1,13 +1,27 @@
 import { useRef, useEffect, useState, useCallback } from 'react';
 import QrScanner from 'qr-scanner';
+import QRCode from 'react-qr-code';
 
 interface Props {
   onScan: (data: string) => void;
   label?: string;
   aspectRatio?: string;
+  /** When set, shows a QR code in the scanner area instead of the camera */
+  displayQr?: string | null;
+  /** Countdown seconds for QR expiry */
+  displayQrCountdown?: number;
+  /** Called when user taps the QR display to dismiss */
+  onDismissQr?: () => void;
 }
 
-export default function ScannerBox({ onScan, label = 'TAP TO SCAN', aspectRatio = '2/1' }: Props) {
+export default function ScannerBox({
+  onScan,
+  label = 'TAP TO SCAN',
+  aspectRatio = '2/1',
+  displayQr,
+  displayQrCountdown,
+  onDismissQr,
+}: Props) {
   const [active, setActive] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
   const scannerRef = useRef<QrScanner | null>(null);
@@ -16,7 +30,21 @@ export default function ScannerBox({ onScan, label = 'TAP TO SCAN', aspectRatio 
   const lineDir = useRef(1);
   const linePos = useRef(20);
 
-  const toggle = useCallback(() => setActive((a) => !a), []);
+  const toggle = useCallback(() => {
+    if (displayQr) {
+      // Dismiss QR and go back to inactive
+      onDismissQr?.();
+      return;
+    }
+    setActive((a) => !a);
+  }, [displayQr, onDismissQr]);
+
+  // If displayQr appears, turn off camera
+  useEffect(() => {
+    if (displayQr && active) {
+      setActive(false);
+    }
+  }, [displayQr]);
 
   // Laser line animation
   useEffect(() => {
@@ -44,6 +72,7 @@ export default function ScannerBox({ onScan, label = 'TAP TO SCAN', aspectRatio 
         preferredCamera: 'environment',
         highlightScanRegion: false,
         highlightCodeOutline: false,
+        returnDetailedScanResult: true,
       },
     );
     scannerRef.current = scanner;
@@ -55,6 +84,29 @@ export default function ScannerBox({ onScan, label = 'TAP TO SCAN', aspectRatio 
       scannerRef.current = null;
     };
   }, [active, onScan]);
+
+  // ── Display QR code mode ──
+  if (displayQr) {
+    return (
+      <button
+        onClick={toggle}
+        className="relative w-full overflow-hidden rounded border-2 border-accent bg-card/90 transition-all select-none"
+        style={{ aspectRatio }}
+      >
+        <div className="flex flex-col items-center justify-center h-full gap-1 p-2">
+          <div className="bg-white p-2 rounded">
+            <QRCode value={displayQr} size={120} />
+          </div>
+          <span className="text-[10px] font-mono text-accent">
+            {displayQrCountdown !== undefined && displayQrCountdown > 0
+              ? `Expires in ${displayQrCountdown}s`
+              : 'Tap to dismiss'}
+          </span>
+          <span className="text-[8px] font-mono text-muted-foreground">Others scan this!</span>
+        </div>
+      </button>
+    );
+  }
 
   return (
     <button

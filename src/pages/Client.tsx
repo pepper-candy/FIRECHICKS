@@ -34,9 +34,9 @@ const PROP_ICONS: Record<PropType, React.ReactNode> = {
   invincible: <Shield className="w-6 h-6" />,
 };
 
-function PropsBtn({ items, onUse }: { items: PropItem[]; onUse: (t: PropType) => void }) {
+function PropsBtn({ items, onUse, isEagle }: { items: PropItem[]; onUse: (t: PropType) => void; isEagle?: boolean }) {
   const [selIdx, setSelIdx] = useState(0);
-  const available = items.filter((i) => i.count > 0);
+  const available = items.filter((i) => i.count > 0 || (isEagle && i.type === 'fly'));
   const current = available[selIdx % Math.max(1, available.length)];
   const hasMultiple = available.length > 1;
 
@@ -47,6 +47,8 @@ function PropsBtn({ items, onUse }: { items: PropItem[]; onUse: (t: PropType) =>
       </div>
     );
   }
+
+  const showBadge = !(isEagle && current.type === 'fly');
 
   return (
     <div className="relative flex flex-col items-center">
@@ -65,12 +67,14 @@ function PropsBtn({ items, onUse }: { items: PropItem[]; onUse: (t: PropType) =>
         }}
       >
         {PROP_ICONS[current.type]}
-        <span
-          className="absolute -top-1 -right-1 w-5 h-5 rounded-full text-[10px] font-bold flex items-center justify-center bg-card border"
-          style={{ borderColor: PROP_COLORS[current.type], color: PROP_COLORS[current.type] }}
-        >
-          {current.count}
-        </span>
+        {showBadge && (
+          <span
+            className="absolute -top-1 -right-1 w-5 h-5 rounded-full text-[10px] font-bold flex items-center justify-center bg-card border"
+            style={{ borderColor: PROP_COLORS[current.type], color: PROP_COLORS[current.type] }}
+          >
+            {current.count}
+          </span>
+        )}
       </button>
     </div>
   );
@@ -105,8 +109,8 @@ function TipsBox({
   socialMet,
   hasTip,
   isLoadingTip,
-  qrCode,
   tipShareCooldownUntil,
+  tipCopyingCountdown,
   onTap,
 }: {
   tipIndex: 0 | 1;
@@ -114,8 +118,8 @@ function TipsBox({
   socialMet: number;
   hasTip: boolean;
   isLoadingTip: boolean;
-  qrCode: string | null;
   tipShareCooldownUntil: number;
+  tipCopyingCountdown?: number;
   onTap: () => void;
 }) {
   const [now, setNow] = useState(Date.now());
@@ -142,21 +146,6 @@ function TipsBox({
   const onCooldown = now < tipShareCooldownUntil;
   const cooldownSec = Math.ceil(Math.max(0, tipShareCooldownUntil - now) / 1000);
 
-  if (hasTip && qrCode) {
-    return (
-      <button
-        onClick={onTap}
-        className="flex-1 h-auto rounded border-2 border-accent bg-accent/10 flex flex-col items-center justify-center p-1 gap-0.5 active:scale-95"
-      >
-        <span className="text-[9px] font-mono text-accent">💡 Tips {tipIndex + 1}</span>
-        <div className="bg-white p-1 rounded">
-          <QRCode value={qrCode} size={52} />
-        </div>
-        <span className="text-[8px] text-muted-foreground">Others scan this!</span>
-      </button>
-    );
-  }
-
   if (hasTip) {
     return (
       <button
@@ -176,7 +165,9 @@ function TipsBox({
   if (isLoadingTip) {
     return (
       <div className="flex-1 h-14 rounded border border-secondary bg-secondary/10 flex items-center justify-center text-xs font-mono text-secondary animate-pulse">
-        📋 Copying...
+        {tipCopyingCountdown !== undefined && tipCopyingCountdown > 0
+          ? `📋 Copying... ${tipCopyingCountdown}s`
+          : '📋 Copying...'}
       </div>
     );
   }
@@ -236,9 +227,12 @@ export default function Client() {
   // Lobby prop claims
   const [claimedLobbyProps, setClaimedLobbyProps] = useState<Set<string>>(new Set());
 
-  // Tips state
+  // Tips state — QR now displays in scanner box, not tip box
   const [tipQrCodes, setTipQrCodes] = useState<[string | null, string | null]>([null, null]);
   const [loadingTip, setLoadingTip] = useState<[boolean, boolean]>([false, false]);
+  // Active QR display in scanner area
+  const [activeScannerQr, setActiveScannerQr] = useState<string | null>(null);
+  const [scannerQrExpireAt, setScannerQrExpireAt] = useState(0);
 
   // Exam state
   const [examLayer, setExamLayer] = useState<"1" | "2" | null>(null);
@@ -321,11 +315,28 @@ export default function Client() {
         if (msg.connId === connIdRef.current) setIsDead(true);
       } else if (msg.type === "tip-qr") {
         if (msg.forConnId === connIdRef.current) {
+          const code = msg.code as string;
+          const tipIdx = msg.tipIndex as 0 | 1;
           setTipQrCodes((prev) => {
             const next: [string | null, string | null] = [...prev] as [string | null, string | null];
-            next[msg.tipIndex as 0 | 1] = msg.code;
+            next[tipIdx] = code;
             return next;
           });
+          // Show QR in scanner area with 5s expiry
+          setActiveScannerQr(code);
+          const expireAt = Date.now() + 5000;
+          setScannerQrExpireAt(expireAt);
+          // Auto-expire
+          setTimeout(() => {
+            setScannerQrExpireAt((cur) => {
+              if (cur === expireAt) {
+                setActiveScannerQr(null);
+                setTipQrCodes([null, null]);
+                return 0;
+              }
+              return cur;
+            });
+          }, 5000);
         }
       } else if (msg.type === "exam-start") {
         const myExam = msg.assignments?.[connIdRef.current];
@@ -441,8 +452,10 @@ export default function Client() {
   );
   const handleTipTap = useCallback(
     (tipIndex: 0 | 1) => {
-      // If already showing QR, close it (keeps cooldown running at host side)
-      if (tipQrCodes[tipIndex]) {
+      // If QR is already showing in scanner, dismiss it
+      if (activeScannerQr && tipQrCodes[tipIndex]) {
+        setActiveScannerQr(null);
+        setScannerQrExpireAt(0);
         setTipQrCodes((prev) => {
           const n: [string | null, string | null] = [...prev] as [string | null, string | null];
           n[tipIndex] = null;
@@ -452,8 +465,13 @@ export default function Client() {
       }
       sendToHost({ type: "tip-request", tipIndex });
     },
-    [sendToHost, tipQrCodes],
+    [sendToHost, tipQrCodes, activeScannerQr],
   );
+  const handleDismissScannerQr = useCallback(() => {
+    setActiveScannerQr(null);
+    setScannerQrExpireAt(0);
+    setTipQrCodes([null, null]);
+  }, []);
   const handleExamSubmit = useCallback(() => {
     if (examAnswer.trim()) {
       sendToHost({ type: "answer-submit", answer: examAnswer.trim() });
@@ -1057,7 +1075,7 @@ export default function Client() {
                   disabled={myState.frozen}
                 />
 
-                <PropsBtn items={myState.props ?? []} onUse={handlePropUse} />
+                <PropsBtn items={myState.props ?? []} onUse={handlePropUse} isEagle={true} />
               </>
             )}
           </div>
@@ -1067,9 +1085,16 @@ export default function Client() {
       {/* ── CHICK LAYOUT ── */}
       {!isEagle && (
         <>
-          {/* Top: Scanner */}
+          {/* Top: Scanner — also shows tip QR codes */}
           <div className="w-full">
-            <ScannerBox onScan={handleScan} label="SCANNER — scan props & tips" aspectRatio="873/457" />
+            <ScannerBox
+              onScan={handleScan}
+              label="SCANNER — scan props & tips"
+              aspectRatio="873/457"
+              displayQr={activeScannerQr}
+              displayQrCountdown={scannerQrExpireAt > 0 ? Math.max(0, Math.ceil((scannerQrExpireAt - clockNow) / 1000)) : undefined}
+              onDismissQr={handleDismissScannerQr}
+            />
           </div>
 
           {/* Middle: Thumbstick */}
@@ -1125,7 +1150,6 @@ export default function Client() {
                 socialMet={socialMet}
                 hasTip={myState.tips[0]}
                 isLoadingTip={loadingTip[0]}
-                qrCode={tipQrCodes[0]}
                 tipShareCooldownUntil={myState.tipShareCooldownUntil}
                 onTap={() => handleTipTap(0)}
               />
@@ -1137,14 +1161,13 @@ export default function Client() {
                 socialMet={socialMet}
                 hasTip={myState.tips[1]}
                 isLoadingTip={loadingTip[1]}
-                qrCode={tipQrCodes[1]}
                 tipShareCooldownUntil={myState.tipShareCooldownUntil}
                 onTap={() => handleTipTap(1)}
               />
 
               {/* Props button */}
               <div className="flex-shrink-0">
-                <PropsBtn items={myState.props ?? []} onUse={handlePropUse} />
+                <PropsBtn items={myState.props ?? []} onUse={handlePropUse} isEagle={false} />
               </div>
             </div>
           )}

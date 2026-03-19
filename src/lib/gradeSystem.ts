@@ -11,7 +11,6 @@ export const GRADE_LETTERS: Record<number, string> = {
 export const STARTING_HEALTH = 4.3;
 
 export function gradeToLetter(health: number): string {
-  // Find closest grade
   let closest = GRADE_SCALE[GRADE_SCALE.length - 1];
   for (const g of GRADE_SCALE) {
     if (Math.abs(g - health) < Math.abs(closest - health)) closest = g;
@@ -35,15 +34,20 @@ export function dropGrades(currentHealth: number, steps: number): number {
   if (idx === -1) return 0;
   const newIdx = Math.min(idx + steps, GRADE_SCALE.length - 1);
   const newGrade = GRADE_SCALE[newIdx];
-  // Below 1.7 → 1, below 1 → 0
   if (newGrade < 1.7 && newGrade > 1) return 1;
   if (newGrade < 1) return 0;
   return newGrade;
 }
 
-/** Apply attack damage: drop 2 grades */
+/**
+ * Apply attack damage: -2 letter grades (numerically -2.0).
+ * E.g. A+ (4.3) → C+ (2.3), A (4.0) → C (2.0)
+ */
 export function applyDamage(currentHealth: number): number {
-  return dropGrades(currentHealth, 2);
+  const snapped = snapToGrade(currentHealth);
+  const newHealth = snapped - 2;
+  if (newHealth <= 0) return 0;
+  return snapToGrade(newHealth);
 }
 
 /** Heal: raise 1 grade step (if not max) */

@@ -19,7 +19,7 @@ export default function VideoOverlay({ video, onComplete }: Props) {
   const src = video === 'dead' ? '/Animations/Dead.mp4' : '/Animations/Hurt.mp4';
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/90">
+    <div className="fixed inset-0 flex items-center justify-center bg-background/90" style={{ zIndex: 9999 }}>
       <video
         ref={videoRef}
         src={src}

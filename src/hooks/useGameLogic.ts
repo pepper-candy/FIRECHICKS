@@ -443,7 +443,7 @@ export function useGameLogic({ players, broadcast, gameMode }: UseGameLogicProps
         const mode = gameModeRef.current;
         let inZoneBuilding = -1;
         for (const b of gs.buildings) {
-          if (b.hasTip && b.glowing && !b.tipObtained && isInProtectedZone(chick.position.x, chick.position.z, b.id)) {
+          if (b.hasTip && b.glowing && isInProtectedZone(chick.position.x, chick.position.z, b.id)) {
             inZoneBuilding = b.id;
             break;
           }
@@ -459,8 +459,8 @@ export function useGameLogic({ players, broadcast, gameMode }: UseGameLogicProps
               gs.buildingTimers.set(timerKey, { buildingId: inZoneBuilding, startTime: now });
             } else {
               const elapsed = now - timer.startTime;
-              if (elapsed >= TIP_OBTAIN_DURATION && !chick.isStarStudent) {
-                const building = gs.buildings[inZoneBuilding];
+              const building = gs.buildings[inZoneBuilding];
+              if (elapsed >= TIP_OBTAIN_DURATION && building && !chick.tips[building.tipIndex]) {
                 const neededCount = mode === '2v6' ? 2 : 1;
                 if (building && building.tipObtainedCount < neededCount) {
                   // Become Star Student
@@ -877,7 +877,7 @@ export function useGameLogic({ players, broadcast, gameMode }: UseGameLogicProps
     const gs = gameStateRef.current as GameStateRef | null;
     if (!gs) return;
     const p = gs.playerStates.get(connId);
-    if (!p || !p.alive || p.isEagle) return; // per spec: chick name tags
+    if (!p || !p.alive) return;
 
     if (hostDragBackupRef.current.has(connId)) return;
 
@@ -898,7 +898,7 @@ export function useGameLogic({ players, broadcast, gameMode }: UseGameLogicProps
     const gs = gameStateRef.current as GameStateRef | null;
     if (!gs) return;
     const p = gs.playerStates.get(connId);
-    if (!p || !p.alive || p.isEagle) return;
+    if (!p || !p.alive) return;
 
     const resolved = resolvePosition(x, z, p.position.x, p.position.z, 0.5, false);
     p.position.x = resolved.x;
@@ -997,7 +997,7 @@ export function useGameLogic({ players, broadcast, gameMode }: UseGameLogicProps
 
       // ── Prop use ──
       case 'prop-use': {
-        if (player.frozen) return;
+        // Props can be used while moving — no frozen check
         const propItem = player.props.find((p) => p.type === msg.propType && p.count > 0);
         if (!propItem) return;
         propItem.count--;
@@ -1013,6 +1013,9 @@ export function useGameLogic({ players, broadcast, gameMode }: UseGameLogicProps
             break;
           case 'fly':
             if (player.isEagle) {
+              // Unlimited fly — no count decrement, apply cooldown
+              propItem.count++; // undo the decrement above — unlimited
+              if (now < player.speedMultiplierUntil && player.speedMultiplier >= FLY_SPEED_MULTIPLIER) return; // still flying / cooldown
               player.isAttacking = true;
               player.attackAnimUntil = now + FLY_DURATION + 200;
               player.speedMultiplier = FLY_SPEED_MULTIPLIER;
