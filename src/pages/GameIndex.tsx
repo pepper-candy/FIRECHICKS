@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { preloadAllAnimations } from '@/lib/preloadAssets';
 import { useFullscreen } from '@/hooks/useFullscreen';
+import AssetLoadingIndicator from '@/components/AssetLoadingIndicator';
 
 const Index = () => {
   const navigate = useNavigate();
@@ -60,10 +61,11 @@ const Index = () => {
       <div className="text-xs text-muted-foreground font-mono text-center space-y-1 mt-8">
         <p>Host opens the lobby on a big screen</p>
         <p>Players join from phones with the room code</p>
-        
       </div>
-    </div>);
 
+      <AssetLoadingIndicator />
+    </div>
+  );
 };
 
 export default Index;
