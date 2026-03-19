@@ -6,7 +6,6 @@ import { PLAYER_COLORS } from "@/lib/playerColors";
 import CharacterViewer from "@/components/CharacterViewer";
 import type { ChickColor } from "@/components/CharacterViewer";
 import * as THREE from "three";
-import * as THREE from "three";
 
 interface Props {
   players: Map<string, PlayerState>;

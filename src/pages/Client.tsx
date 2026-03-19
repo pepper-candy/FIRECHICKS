@@ -1085,17 +1085,19 @@ export default function Client() {
       {/* ── CHICK LAYOUT ── */}
       {!isEagle && (
         <>
-          {/* Top: Scanner — also shows tip QR codes */}
-          <div className="w-full">
-            <ScannerBox
-              onScan={handleScan}
-              label="SCANNER — scan props & tips"
-              aspectRatio="873/457"
-              displayQr={activeScannerQr}
-              displayQrCountdown={scannerQrExpireAt > 0 ? Math.max(0, Math.ceil((scannerQrExpireAt - clockNow) / 1000)) : undefined}
-              onDismissQr={handleDismissScannerQr}
-            />
-          </div>
+          {/* Top: Scanner — only during gameplay, not lobby */}
+          {gamePhase !== "lobby" && (
+            <div className="w-full">
+              <ScannerBox
+                onScan={handleScan}
+                label="SCANNER — scan props & tips"
+                aspectRatio="873/457"
+                displayQr={activeScannerQr}
+                displayQrCountdown={scannerQrExpireAt > 0 ? Math.max(0, Math.ceil((scannerQrExpireAt - clockNow) / 1000)) : undefined}
+                onDismissQr={handleDismissScannerQr}
+              />
+            </div>
+          )}
 
           {/* Middle: Thumbstick */}
           <div className="flex-1 flex items-center justify-center">
