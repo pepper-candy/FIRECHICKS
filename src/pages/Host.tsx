@@ -15,27 +15,27 @@ import { X, Flame, Zap, Trophy, Star } from 'lucide-react';
 import type { GameMode } from '@/lib/gameTypes';
 import CharacterViewer from '@/components/CharacterViewer';
 import {
-  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
-} from '@/components/ui/select';
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from
+'@/components/ui/select';
 import {
-  Tooltip, TooltipContent, TooltipProvider, TooltipTrigger,
-} from '@/components/ui/tooltip';
+  Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from
+'@/components/ui/tooltip';
 import type { PlayerGameStateSerializable } from '@/lib/gameTypes';
 
 // ─── Event Overlay (shows during mystery box events) ─────────────────────────
-function EventOverlay({ event, players }: { event: GameEvent; players: Record<string, any> }) {
+function EventOverlay({ event, players }: {event: GameEvent;players: Record<string, any>;}) {
   const now = Date.now();
   const aliveChicks = Object.values(players).filter((p: any) => !p.isEagle && p.alive);
   const chickTotal = aliveChicks.reduce((sum: number, p: any) => sum + (event.chickClicks[p.connId] ?? 0), 0);
-  const eagleTotal = Object.values(players).filter((p: any) => p.isEagle && p.alive)
-    .reduce((sum: number, p: any) => sum + (event.eagleClicks[p.connId] ?? 0), 0);
+  const eagleTotal = Object.values(players).filter((p: any) => p.isEagle && p.alive).
+  reduce((sum: number, p: any) => sum + (event.eagleClicks[p.connId] ?? 0), 0);
   const timeLeft = Math.max(0, Math.ceil((event.endAt - now) / 1000));
 
   return (
     <div className="absolute inset-0 z-30 flex items-center justify-center bg-background/80 backdrop-blur-sm">
       <div className="bg-card border-2 border-accent rounded-xl p-6 max-w-lg w-full mx-4 text-center space-y-4">
-        {event.phase === 'countdown' && (
-          <>
+        {event.phase === 'countdown' &&
+        <>
             <h2 className="text-2xl font-pixel text-accent">
               {event.type === 'mock-exam' ? '📝 MOCK EXAM' : '👊 HITBOX CHALLENGE'}
             </h2>
@@ -44,10 +44,10 @@ function EventOverlay({ event, players }: { event: GameEvent; players: Record<st
             </div>
             <p className="text-sm font-mono text-muted-foreground">Get ready!</p>
           </>
-        )}
+        }
 
-        {event.phase === 'active' && event.type === 'mock-exam' && event.questionNum && (
-          <>
+        {event.phase === 'active' && event.type === 'mock-exam' && event.questionNum &&
+        <>
             <h2 className="text-lg font-pixel text-accent">📝 MOCK EXAM — {timeLeft}s</h2>
             <div className="grid grid-cols-2 gap-3">
               <div>
@@ -63,10 +63,10 @@ function EventOverlay({ event, players }: { event: GameEvent; players: Record<st
             </div>
             <p className="text-xs font-mono text-muted-foreground">Players check their phones for layer 2!</p>
           </>
-        )}
+        }
 
-        {event.phase === 'active' && event.type === 'hitbox' && (
-          <>
+        {event.phase === 'active' && event.type === 'hitbox' &&
+        <>
             <h2 className="text-lg font-pixel text-accent">👊 HITBOX BATTLE — {timeLeft}s</h2>
             <div className="flex justify-around">
               <div className="text-center">
@@ -81,10 +81,10 @@ function EventOverlay({ event, players }: { event: GameEvent; players: Record<st
             </div>
             <p className="text-xs font-mono text-muted-foreground">TAP HITBOX AS FAST AS POSSIBLE!</p>
           </>
-        )}
+        }
 
-        {event.phase === 'result' && (
-          <>
+        {event.phase === 'result' &&
+        <>
             <h2 className="text-xl font-pixel text-accent">RESULT</h2>
             <p className="text-2xl font-pixel" style={{ color: event.result === 'chick' ? 'hsl(145 80% 50%)' : 'hsl(0 80% 55%)' }}>
               {event.result === 'chick' ? '🐤 Chicks Win!' : '🦅 Eagle Wins!'}
@@ -93,21 +93,21 @@ function EventOverlay({ event, players }: { event: GameEvent; players: Record<st
               {event.result === 'chick' ? '+2 grades for everyone!' : '-2 grades for chicks'}
             </p>
           </>
-        )}
+        }
       </div>
-    </div>
-  );
+    </div>);
+
 }
 
 // ─── Transcript 3D Character ──────────────────────────────────────────────────
-function DancingChar({ chickColor, isWinner, delay }: { chickColor: string; isWinner: boolean; delay: number }) {
+function DancingChar({ chickColor, isWinner, delay }: {chickColor: string;isWinner: boolean;delay: number;}) {
   const angleRef = useRef(delay);
-  useFrame((_, d) => { angleRef.current += d * (isWinner ? 1.5 : 0.4); });
+  useFrame((_, d) => {angleRef.current += d * (isWinner ? 1.5 : 0.4);});
   return (
     <Suspense fallback={null}>
       <CharacterViewer color={chickColor as any} animState={isWinner ? 'Victory' : 'Idle'} facingAngle={angleRef.current} />
-    </Suspense>
-  );
+    </Suspense>);
+
 }
 
 // ─── Host Component ──────────────────────────────────────────────────────────
@@ -120,7 +120,7 @@ export default function Host() {
   useAdvertiseRoom(roomCode, mode);
 
   const {
-    phase, snapshot, videoPlaying, assignments, startGame, handleClientMessage, onVideoComplete,
+    phase, snapshot, videoPlaying, assignments, startGame, handleClientMessage, onVideoComplete
   } = useGameLogic({ players, broadcast, gameMode });
 
   // Register client message handler — intercept lobby prop scans before game logic
@@ -149,7 +149,7 @@ export default function Host() {
     });
   }, [onClientMessage, handleClientMessage, broadcast]);
 
-  useEffect(() => { preloadVideos(); }, []);
+  useEffect(() => {preloadVideos();}, []);
 
   useEffect(() => {
     broadcast({ type: 'game-mode', gameMode });
@@ -175,45 +175,45 @@ export default function Host() {
     return (
       <div className="flex flex-col h-screen p-3 gap-3">
         {/* Cyber START button — top center absolute */}
-        {isFull && (
-          <div className="absolute top-4 left-1/2 -translate-x-1/2 z-20">
+        {isFull &&
+        <div className="absolute top-4 left-1/2 -translate-x-1/2 z-20">
             <button
-              onClick={() => startGame(lobbyPropClaims)}
-              className="relative px-10 py-3 font-pixel text-base tracking-[0.3em] uppercase
+            onClick={() => startGame(lobbyPropClaims)}
+            className="relative px-10 py-3 font-pixel text-base tracking-[0.3em] uppercase
                 text-primary border-2 border-primary bg-primary/10
                 hover:bg-primary/25 transition-all duration-200
                 shadow-[0_0_25px_hsl(var(--primary)/0.5),inset_0_0_20px_hsl(var(--primary)/0.1)]
                 hover:shadow-[0_0_40px_hsl(var(--primary)/0.7),inset_0_0_30px_hsl(var(--primary)/0.2)]
                 before:absolute before:inset-0 before:border before:border-primary/40 before:animate-pulse
-                after:absolute after:inset-[-3px] after:border after:border-primary/20"
-            >
+                after:absolute after:inset-[-3px] after:border after:border-primary/20">
+            
               <Zap className="inline w-5 h-5 mr-2 -mt-0.5 text-primary" />
               ▶ START GAME
             </button>
           </div>
-        )}
+        }
 
         {/* Header row */}
         <div className="flex items-center justify-between flex-wrap gap-2 z-10">
           <h1 className="text-sm md:text-base text-primary text-glow-green tracking-wider font-pixel">
-            EAGLE VS CHICK — LOBBY
+             LOBBY
           </h1>
 
           <div className="flex items-center gap-2 font-mono text-xs flex-wrap">
             {/* Game mode toggle (only when not full) */}
-            {!isFull && (
-              <button
-                onClick={handleGameModeToggle}
-                className={`flex items-center gap-1 px-3 py-1.5 rounded border font-pixel text-xs transition-all ${
-                  gameMode === '2v6'
-                    ? 'border-accent bg-accent/10 text-accent hover:bg-accent/20'
-                    : 'border-primary bg-primary/10 text-primary hover:bg-primary/20'
-                }`}
-              >
+            {!isFull &&
+            <button
+              onClick={handleGameModeToggle}
+              className={`flex items-center gap-1 px-3 py-1.5 rounded border font-pixel text-xs transition-all ${
+              gameMode === '2v6' ?
+              'border-accent bg-accent/10 text-accent hover:bg-accent/20' :
+              'border-primary bg-primary/10 text-primary hover:bg-primary/20'}`
+              }>
+              
                 <Flame className={`w-3 h-3 ${gameMode === '2v6' ? 'animate-pulse' : ''}`} />
                 {gameMode}
               </button>
-            )}
+            }
 
             {/* Connection mode */}
             <Select value={mode} onValueChange={handleConnectionModeChange}>
@@ -238,29 +238,29 @@ export default function Host() {
             <span className="text-muted-foreground">{playerCount}/{maxPlayers}</span>
 
             {/* Player color dots with kick */}
-            {playerCount > 0 && (
-              <TooltipProvider delayDuration={200}>
+            {playerCount > 0 &&
+            <TooltipProvider delayDuration={200}>
                 <div className="flex items-center gap-1">
                   {Array.from(players.entries()).map(([connId, p]) => {
-                    const color = PLAYER_COLORS[p.colorIndex] ?? PLAYER_COLORS[0];
-                    return (
-                      <Tooltip key={connId}>
+                  const color = PLAYER_COLORS[p.colorIndex] ?? PLAYER_COLORS[0];
+                  return (
+                    <Tooltip key={connId}>
                         <TooltipTrigger asChild>
                           <button
-                            onClick={() => kickPlayer(connId)}
-                            className="group relative w-5 h-5 rounded-full flex items-center justify-center transition-transform hover:scale-125"
-                            style={{ backgroundColor: `hsl(${color.hsl})`, boxShadow: `0 0 6px hsl(${color.hsl} / 0.5)` }}
-                          >
+                          onClick={() => kickPlayer(connId)}
+                          className="group relative w-5 h-5 rounded-full flex items-center justify-center transition-transform hover:scale-125"
+                          style={{ backgroundColor: `hsl(${color.hsl})`, boxShadow: `0 0 6px hsl(${color.hsl} / 0.5)` }}>
+                          
                             <X className="w-3 h-3 text-black/70 opacity-0 group-hover:opacity-100 transition-opacity" strokeWidth={3} />
                           </button>
                         </TooltipTrigger>
                         <TooltipContent side="bottom" className="text-xs font-mono">Kick {color.name}</TooltipContent>
-                      </Tooltip>
-                    );
-                  })}
+                      </Tooltip>);
+
+                })}
                 </div>
               </TooltipProvider>
-            )}
+            }
           </div>
         </div>
 
@@ -271,25 +271,25 @@ export default function Host() {
 
         {/* Instructions */}
         <div className="text-center space-y-1">
-          {playerCount === 0 ? (
-            <p className="text-xs text-muted-foreground font-mono animate-pulse">
+          {playerCount === 0 ?
+          <p className="text-xs text-muted-foreground font-mono animate-pulse">
               Open <span className="text-secondary">/client</span> on phones · Room:{' '}
               <span className="text-accent font-bold">{roomCode}</span>
-            </p>
-          ) : !isFull ? (
-            <p className="text-xs text-muted-foreground font-mono">
+            </p> :
+          !isFull ?
+          <p className="text-xs text-muted-foreground font-mono">
               Waiting for {maxPlayers - playerCount} more player{maxPlayers - playerCount !== 1 ? 's' : ''}...
-            </p>
-          ) : (
-            <p className="text-xs text-primary font-mono animate-pulse">
+            </p> :
+
+          <p className="text-xs text-primary font-mono animate-pulse">
               All players ready! Press START GAME ↑
             </p>
-          )}
+          }
         </div>
 
         <NetworkPerformancePanel players={players} />
-      </div>
-    );
+      </div>);
+
   }
 
   // ─── REVEAL ──────────────────────────────────────────────────────────────────
@@ -302,20 +302,20 @@ export default function Host() {
         <div className="flex flex-col items-center gap-3">
           <p className="text-sm font-mono text-muted-foreground">Roles are being revealed on each phone...</p>
           <div className="flex gap-1.5 mt-2">
-            {[...Array(3)].map((_, i) => (
-              <div
-                key={i}
-                className="w-2 h-2 rounded-full bg-primary animate-pulse"
-                style={{ animationDelay: `${i * 0.2}s` }}
-              />
-            ))}
+            {[...Array(3)].map((_, i) =>
+            <div
+              key={i}
+              className="w-2 h-2 rounded-full bg-primary animate-pulse"
+              style={{ animationDelay: `${i * 0.2}s` }} />
+
+            )}
           </div>
           <p className="text-xs text-muted-foreground font-mono mt-2 opacity-60">
             {Object.keys(assignments).length} player{Object.keys(assignments).length !== 1 ? 's' : ''} assigned
           </p>
         </div>
-      </div>
-    );
+      </div>);
+
   }
 
   // ─── COUNTDOWN ───────────────────────────────────────────────────────────────
@@ -326,13 +326,13 @@ export default function Host() {
         <h1 className="text-xl font-pixel text-primary text-glow-green">GET READY</h1>
         <div
           className="text-8xl font-pixel text-accent animate-pulse"
-          style={{ textShadow: '0 0 30px hsl(var(--accent) / 0.8)' }}
-        >
+          style={{ textShadow: '0 0 30px hsl(var(--accent) / 0.8)' }}>
+          
           {Math.ceil(count)}
         </div>
         <p className="text-sm font-mono text-muted-foreground">Game starting soon!</p>
-      </div>
-    );
+      </div>);
+
   }
 
   // ─── PLAYING / EXAM ──────────────────────────────────────────────────────────
@@ -345,8 +345,8 @@ export default function Host() {
           eagleAwake={snapshot.eagleAwake}
           propSpawns={snapshot.propSpawns}
           mysteryBoxes={snapshot.mysteryBoxes}
-          examState={snapshot.examState}
-        />
+          examState={snapshot.examState} />
+        
 
         {/* Health display top-right */}
         <HealthDisplay players={snapshot.players} />
@@ -360,41 +360,41 @@ export default function Host() {
         </div>
 
         {/* Eagle awake countdown */}
-        {!snapshot.eagleAwake && (
-          <div className="absolute top-12 left-1/2 -translate-x-1/2 z-10 px-4 py-2 rounded bg-destructive/20 border border-destructive/50 font-mono text-xs text-destructive animate-pulse">
+        {!snapshot.eagleAwake &&
+        <div className="absolute top-12 left-1/2 -translate-x-1/2 z-10 px-4 py-2 rounded bg-destructive/20 border border-destructive/50 font-mono text-xs text-destructive animate-pulse">
             🦅 Eagle awakens in {Math.max(0, Math.ceil(5 - snapshot.gameTime))}s
           </div>
-        )}
+        }
 
         {/* Exam layer 1 on screen when holder is dead */}
-        {snapshot.examState?.layer1Dead && (
-          <div className="absolute top-1/2 left-2 -translate-y-1/2 z-20 bg-card/95 border-2 border-accent rounded-lg p-3 max-w-[200px]">
+        {snapshot.examState?.layer1Dead &&
+        <div className="absolute top-1/2 left-2 -translate-y-1/2 z-20 bg-card/95 border-2 border-accent rounded-lg p-3 max-w-[200px]">
             <p className="text-[9px] font-mono text-accent mb-1">📜 EXAM LAYER 1</p>
             <img
-              src={`/PW/PW_Final_${snapshot.examState.questionNum}_layer-1.png`}
-              alt="Layer 1"
-              className="w-full rounded"
-            />
+            src={`/PW/PW_Final_${snapshot.examState.questionNum}_layer-1.png`}
+            alt="Layer 1"
+            className="w-full rounded" />
+          
           </div>
-        )}
+        }
 
         {/* Active event overlay */}
-        {snapshot.activeEvent && (
-          <EventOverlay event={snapshot.activeEvent} players={snapshot.players} />
-        )}
+        {snapshot.activeEvent &&
+        <EventOverlay event={snapshot.activeEvent} players={snapshot.players} />
+        }
 
         <VideoOverlay video={videoPlaying} onComplete={onVideoComplete} />
         <NetworkPerformancePanel players={players} />
-      </div>
-    );
+      </div>);
+
   }
 
   // ─── GAME OVER / TRANSCRIPT ──────────────────────────────────────────────────
   if (phase === 'gameover' && snapshot) {
     const winner = snapshot.winner;
     const sorted = Object.values(snapshot.players).sort((a, b) => {
-      const aWin = (winner === 'eagle' && a.isEagle) || (winner === 'chicks' && !a.isEagle);
-      const bWin = (winner === 'eagle' && b.isEagle) || (winner === 'chicks' && !b.isEagle);
+      const aWin = winner === 'eagle' && a.isEagle || winner === 'chicks' && !a.isEagle;
+      const bWin = winner === 'eagle' && b.isEagle || winner === 'chicks' && !b.isEagle;
       if (aWin !== bWin) return aWin ? -1 : 1;
       return b.actionScore - a.actionScore;
     });
@@ -407,8 +407,8 @@ export default function Host() {
           <h1 className="text-xl font-pixel text-accent text-glow-green mb-1">GAME OVER</h1>
           <p
             className="text-lg font-pixel"
-            style={{ color: winner === 'eagle' ? 'hsl(0 80% 55%)' : winner === 'chicks' ? 'hsl(145 80% 50%)' : 'hsl(45 100% 55%)' }}
-          >
+            style={{ color: winner === 'eagle' ? 'hsl(0 80% 55%)' : winner === 'chicks' ? 'hsl(145 80% 50%)' : 'hsl(45 100% 55%)' }}>
+            
             {winner === 'eagle' ? '🦅 Eagle Wins!' : winner === 'chicks' ? '🐤 Chicks Win!' : '🤝 Draw!'}
           </p>
         </div>
@@ -419,25 +419,25 @@ export default function Host() {
             <ambientLight intensity={0.8} />
             <directionalLight position={[5, 8, 5]} intensity={1.2} />
             {sorted.map((p, i) => {
-              const isWin = (winner === 'eagle' && p.isEagle) || (winner === 'chicks' && !p.isEagle);
+              const isWin = winner === 'eagle' && p.isEagle || winner === 'chicks' && !p.isEagle;
               const spacing = 2.2;
               const x = (i - (sorted.length - 1) / 2) * spacing;
               return (
                 <group key={p.connId} position={[x, 0, 0]}>
                   <DancingChar chickColor={p.chickColor} isWinner={isWin} delay={i * 0.4} />
-                </group>
-              );
+                </group>);
+
             })}
           </Canvas>
 
-          {mvp && (
-            <div className="absolute top-3 left-1/2 -translate-x-1/2 flex items-center gap-2 px-4 py-1.5 rounded bg-accent/20 border border-accent">
+          {mvp &&
+          <div className="absolute top-3 left-1/2 -translate-x-1/2 flex items-center gap-2 px-4 py-1.5 rounded bg-accent/20 border border-accent">
               <Trophy className="w-4 h-4 text-accent" />
               <span className="text-xs font-pixel text-accent">
                 MVP: {PLAYER_COLORS[mvp.colorIndex]?.name ?? '?'}
               </span>
             </div>
-          )}
+          }
         </div>
 
         {/* Transcript table */}
@@ -460,7 +460,7 @@ export default function Host() {
                   const color = PLAYER_COLORS[p.colorIndex];
                   const letter = gradeToLetter(p.health);
                   const gradeColor = getGradeColor(p.health);
-                  const isWin = (winner === 'eagle' && p.isEagle) || (winner === 'chicks' && !p.isEagle);
+                  const isWin = winner === 'eagle' && p.isEagle || winner === 'chicks' && !p.isEagle;
 
                   return (
                     <tr key={p.connId} className="border-b border-border/40 hover:bg-card/30">
@@ -487,27 +487,27 @@ export default function Host() {
                         {p.actionScore.toFixed(0)}
                       </td>
                       <td className="py-2 text-center">
-                        {isWin
-                          ? <span className="text-primary font-bold">WIN</span>
-                          : <span className="text-destructive">LOSE</span>
+                        {isWin ?
+                        <span className="text-primary font-bold">WIN</span> :
+                        <span className="text-destructive">LOSE</span>
                         }
                       </td>
-                    </tr>
-                  );
+                    </tr>);
+
                 })}
               </tbody>
             </table>
           </div>
         </div>
-      </div>
-    );
+      </div>);
+
   }
 
   return (
     <div className="flex items-center justify-center h-screen text-muted-foreground font-mono">
       Loading...
-    </div>
-  );
+    </div>);
+
 }
 
 const COUNTDOWN_DURATION_DISPLAY = 10;
