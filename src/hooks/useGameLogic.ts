@@ -997,7 +997,7 @@ export function useGameLogic({ players, broadcast, gameMode }: UseGameLogicProps
 
       // ── Prop use ──
       case 'prop-use': {
-        if (player.frozen) return;
+        // Props can be used while moving — no frozen check
         const propItem = player.props.find((p) => p.type === msg.propType && p.count > 0);
         if (!propItem) return;
         propItem.count--;
