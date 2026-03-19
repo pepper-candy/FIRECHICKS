@@ -1,29 +1,29 @@
-import { useState, useCallback, useEffect, useRef } from 'react';
-import { useClientRoom, useDiscoverRooms, type ConnectionMode } from '@/hooks/useGameRoom';
-import { PLAYER_COLORS, EAGLE_COLOR_INDICES } from '@/lib/playerColors';
-import { gradeToLetter, getGradeColor } from '@/lib/gradeSystem';
-import Thumbstick from '@/components/Thumbstick';
-import ColorPicker from '@/components/ColorPicker';
-import CharacterReveal from '@/components/CharacterReveal';
-import AttackButton from '@/components/AttackButton';
-import ScannerBox from '@/components/ScannerBox';
-import { Input } from '@/components/ui/input';
-import { Button } from '@/components/ui/button';
-import { Switch } from '@/components/ui/switch';
-import { Label } from '@/components/ui/label';
-import { Slider } from '@/components/ui/slider';
-import { preloadAllAnimations } from '@/lib/preloadAssets';
-import type { GamePhase, GameStateSnapshot, PropType, GameMode, PropItem } from '@/lib/gameTypes';
-import type { ChickColor } from '@/components/CharacterViewer';
-import QRCode from 'react-qr-code';
-import { Zap, Heart, Wind, Shield, ChevronUp } from 'lucide-react';
+import { useState, useCallback, useEffect, useRef } from "react";
+import { useClientRoom, useDiscoverRooms, type ConnectionMode } from "@/hooks/useGameRoom";
+import { PLAYER_COLORS, EAGLE_COLOR_INDICES } from "@/lib/playerColors";
+import { gradeToLetter, getGradeColor } from "@/lib/gradeSystem";
+import Thumbstick from "@/components/Thumbstick";
+import ColorPicker from "@/components/ColorPicker";
+import CharacterReveal from "@/components/CharacterReveal";
+import AttackButton from "@/components/AttackButton";
+import ScannerBox from "@/components/ScannerBox";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
+import { Slider } from "@/components/ui/slider";
+import { preloadAllAnimations } from "@/lib/preloadAssets";
+import type { GamePhase, GameStateSnapshot, PropType, GameMode, PropItem } from "@/lib/gameTypes";
+import type { ChickColor } from "@/components/CharacterViewer";
+import QRCode from "react-qr-code";
+import { Zap, Heart, Wind, Shield, ChevronUp } from "lucide-react";
 
 // ─── Props Button (inline for compact layout) ──────────────────────────────────
 const PROP_COLORS: Record<PropType, string> = {
-  speed: 'hsl(48 96% 53%)',
-  heal: 'hsl(145 80% 50%)',
-  fly: 'hsl(220 80% 55%)',
-  invincible: 'hsl(45 100% 55%)',
+  speed: "hsl(48 96% 53%)",
+  heal: "hsl(145 80% 50%)",
+  fly: "hsl(220 80% 55%)",
+  invincible: "hsl(45 100% 55%)",
 };
 const PROP_ICONS: Record<PropType, React.ReactNode> = {
   speed: <Zap className="w-6 h-6" />,
@@ -81,18 +81,16 @@ function HitboxBtn({ onHit, inZone }: { onHit: () => void; inZone: boolean }) {
       onClick={onHit}
       className={`w-full rounded border flex items-center justify-center transition-all active:scale-95 ${
         inZone
-          ? 'border-destructive/70 bg-destructive/20 hover:bg-destructive/30 animate-pulse'
-          : 'border-border bg-card/50'
+          ? "border-destructive/70 bg-destructive/20 hover:bg-destructive/30 animate-pulse"
+          : "border-border bg-card/50"
       }`}
-      style={{ aspectRatio: '873/457' }}
+      style={{ aspectRatio: "873/457" }}
     >
       <div className="flex flex-col items-center gap-1">
-        <span className={`text-lg font-pixel ${inZone ? 'text-destructive' : 'text-muted-foreground'}`}>
-          {inZone ? '⚡ HITBOX' : 'HITBOX'}
+        <span className={`text-lg font-pixel ${inZone ? "text-destructive" : "text-muted-foreground"}`}>
+          {inZone ? "⚡ HITBOX" : "HITBOX"}
         </span>
-        {inZone && (
-          <span className="text-[10px] font-mono text-destructive/70">Tap to damage zone</span>
-        )}
+        {inZone && <span className="text-[10px] font-mono text-destructive/70">Tap to damage zone</span>}
       </div>
     </button>
   );
@@ -130,10 +128,12 @@ function TipsBox({
   if (stage === 0) {
     const filled = socialMet > tipIndex;
     return (
-      <div className={`flex-1 h-14 rounded border flex items-center justify-center text-xs font-mono transition-all ${
-        filled ? 'border-primary bg-primary/20 text-primary' : 'border-border bg-card text-muted-foreground'
-      }`}>
-        {filled ? '✓ Met' : `Meet ${tipIndex + 1}`}
+      <div
+        className={`flex-1 h-14 rounded border flex items-center justify-center text-xs font-mono transition-all ${
+          filled ? "border-primary bg-primary/20 text-primary" : "border-border bg-card text-muted-foreground"
+        }`}
+      >
+        {filled ? "✓ Met" : `Meet ${tipIndex + 1}`}
       </div>
     );
   }
@@ -163,7 +163,9 @@ function TipsBox({
       <button
         onClick={!onCooldown ? onTap : undefined}
         className={`flex-1 h-14 rounded border-2 flex items-center justify-center text-xs font-mono transition-all active:scale-95 ${
-          onCooldown ? 'border-border bg-card/40 text-muted-foreground' : 'border-accent bg-accent/20 text-accent hover:bg-accent/30'
+          onCooldown
+            ? "border-border bg-card/40 text-muted-foreground"
+            : "border-accent bg-accent/20 text-accent hover:bg-accent/30"
         }`}
       >
         {onCooldown ? `⏳ ${cooldownSec}s` : `💡 Tips ${tipIndex + 1}`}
@@ -189,11 +191,21 @@ function TipsBox({
 
 // ─── Main Client Component ────────────────────────────────────────────────────
 export default function Client() {
-  const [code, setCode] = useState('');
-  const [mode, setMode] = useState<ConnectionMode>('webrtc');
+  const [code, setCode] = useState("");
+  const [mode, setMode] = useState<ConnectionMode>("webrtc");
   const {
-    connected, connect, sendJoystick, disconnect, colorIndex,
-    roomFull, kicked, setIdle, sendToHost, onHostMessage, requestColorSwap, usedColors,
+    connected,
+    connect,
+    sendJoystick,
+    disconnect,
+    colorIndex,
+    roomFull,
+    kicked,
+    setIdle,
+    sendToHost,
+    onHostMessage,
+    requestColorSwap,
+    usedColors,
   } = useClientRoom(code, mode);
   const discoveredRooms = useDiscoverRooms(mode);
 
@@ -201,36 +213,44 @@ export default function Client() {
   const [roomFullDismissed, setRoomFullDismissed] = useState(false);
 
   // Game state
-  const [gamePhase, setGamePhase] = useState<GamePhase>('lobby');
-  const [gameMode, setGameMode] = useState<GameMode>('1v3');
-  const [myAssignment, setMyAssignment] = useState<{ colorIndex: number; isEagle: boolean; chickColor: ChickColor } | null>(null);
+  const [gamePhase, setGamePhase] = useState<GamePhase>("lobby");
+  const [gameMode, setGameMode] = useState<GameMode>("1v3");
+  const [myAssignment, setMyAssignment] = useState<{
+    colorIndex: number;
+    isEagle: boolean;
+    chickColor: ChickColor;
+  } | null>(null);
   const [gameState, setGameState] = useState<GameStateSnapshot | null>(null);
   const [isDead, setIsDead] = useState(false);
   const [colorChosen, setColorChosen] = useState(false);
-  const connIdRef = useRef<string>('');
+  const connIdRef = useRef<string>("");
 
   // Event state
-  const [eventAnswer, setEventAnswer] = useState('');
+  const [eventAnswer, setEventAnswer] = useState("");
 
   // Tips state
   const [tipQrCodes, setTipQrCodes] = useState<[string | null, string | null]>([null, null]);
   const [loadingTip, setLoadingTip] = useState<[boolean, boolean]>([false, false]);
 
   // Exam state
-  const [examLayer, setExamLayer] = useState<'1' | '2' | null>(null);
+  const [examLayer, setExamLayer] = useState<"1" | "2" | null>(null);
   const [examQuestionNum, setExamQuestionNum] = useState(0);
-  const [examAnswer, setExamAnswer] = useState('');
+  const [examAnswer, setExamAnswer] = useState("");
   const [examZoom, setExamZoom] = useState(1);
   const [examOpacity, setExamOpacity] = useState(0.85);
   const examVideoRef = useRef<HTMLVideoElement>(null);
   const examStreamRef = useRef<MediaStream | null>(null);
 
-  useEffect(() => { preloadAllAnimations(); }, []);
-  useEffect(() => { if (kicked) setWasKicked(true); }, [kicked]);
+  useEffect(() => {
+    preloadAllAnimations();
+  }, []);
+  useEffect(() => {
+    if (kicked) setWasKicked(true);
+  }, [kicked]);
 
   // Auto-mark color chosen for 2v6 when all 8 slots taken
   useEffect(() => {
-    if (gameMode === '2v6' && connected && colorIndex >= 0 && usedColors.size >= 8) {
+    if (gameMode === "2v6" && connected && colorIndex >= 0 && usedColors.size >= 8) {
       setColorChosen(true);
     }
   }, [gameMode, connected, colorIndex, usedColors]);
@@ -238,11 +258,14 @@ export default function Client() {
   // Host message handler
   useEffect(() => {
     onHostMessage((msg: any) => {
-      if (msg.type === 'game-mode') {
+      if (msg.type === "game-mode") {
         setGameMode(msg.gameMode);
         setColorChosen(false);
-      } else if (msg.type === 'game-start') {
-        const assigns = msg.assignments as Record<string, { colorIndex: number; isEagle: boolean; chickColor: ChickColor }>;
+      } else if (msg.type === "game-start") {
+        const assigns = msg.assignments as Record<
+          string,
+          { colorIndex: number; isEagle: boolean; chickColor: ChickColor }
+        >;
         for (const [connId, assign] of Object.entries(assigns)) {
           if (assign.colorIndex === colorIndex) {
             connIdRef.current = connId;
@@ -250,17 +273,17 @@ export default function Client() {
             break;
           }
         }
-        setGamePhase('reveal');
-      } else if (msg.type === 'phase-change') {
+        setGamePhase("reveal");
+      } else if (msg.type === "phase-change") {
         setGamePhase(msg.phase);
-      } else if (msg.type === 'game-state') {
+      } else if (msg.type === "game-state") {
         setGameState(msg.state);
         if (msg.state?.phase) setGamePhase(msg.state.phase);
-      } else if (msg.type === 'game-over') {
-        setGamePhase('gameover');
-      } else if (msg.type === 'you-died') {
+      } else if (msg.type === "game-over") {
+        setGamePhase("gameover");
+      } else if (msg.type === "you-died") {
         if (msg.connId === connIdRef.current) setIsDead(true);
-      } else if (msg.type === 'tip-qr') {
+      } else if (msg.type === "tip-qr") {
         if (msg.forConnId === connIdRef.current) {
           setTipQrCodes((prev) => {
             const next: [string | null, string | null] = [...prev] as [string | null, string | null];
@@ -268,14 +291,14 @@ export default function Client() {
             return next;
           });
         }
-      } else if (msg.type === 'exam-start') {
+      } else if (msg.type === "exam-start") {
         const myExam = msg.assignments?.[connIdRef.current];
         if (myExam && myExam.questionNum > 0) {
           setExamLayer(myExam.layer);
           setExamQuestionNum(myExam.questionNum);
-          setExamAnswer('');
+          setExamAnswer("");
         }
-        setGamePhase('exam');
+        setGamePhase("exam");
       }
     });
   }, [onHostMessage, colorIndex]);
@@ -284,14 +307,24 @@ export default function Client() {
   const prevTipsRef = useRef<[boolean, boolean]>([false, false]);
   useEffect(() => {
     if (!gameState) return;
-    const myState = Object.values(gameState.players).find((p) => p.colorIndex === (myAssignment?.colorIndex ?? colorIndex));
+    const myState = Object.values(gameState.players).find(
+      (p) => p.colorIndex === (myAssignment?.colorIndex ?? colorIndex),
+    );
     if (!myState) return;
     for (let i = 0; i < 2; i++) {
       if (!prevTipsRef.current[i] && myState.tips[i]) {
         // Just received this tip — show loading briefly
-        setLoadingTip((prev) => { const n: [boolean, boolean] = [...prev] as [boolean, boolean]; n[i] = true; return n; });
+        setLoadingTip((prev) => {
+          const n: [boolean, boolean] = [...prev] as [boolean, boolean];
+          n[i] = true;
+          return n;
+        });
         setTimeout(() => {
-          setLoadingTip((prev) => { const n: [boolean, boolean] = [...prev] as [boolean, boolean]; n[i] = false; return n; });
+          setLoadingTip((prev) => {
+            const n: [boolean, boolean] = [...prev] as [boolean, boolean];
+            n[i] = false;
+            return n;
+          });
         }, 3000);
       }
     }
@@ -300,8 +333,9 @@ export default function Client() {
 
   // Exam camera management
   useEffect(() => {
-    if (gamePhase === 'exam' && examLayer && examLayer !== null) {
-      navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: 'environment' } } })
+    if (gamePhase === "exam" && examLayer && examLayer !== null) {
+      navigator.mediaDevices
+        .getUserMedia({ video: { facingMode: { ideal: "environment" } } })
         .then((stream) => {
           examStreamRef.current = stream;
           if (examVideoRef.current) examVideoRef.current.srcObject = stream;
@@ -321,49 +355,87 @@ export default function Client() {
   const isEagle = myAssignment?.isEagle ?? myState?.isEagle ?? false;
   const currentColorIndex = myAssignment?.colorIndex ?? colorIndex;
   const displayColor = PLAYER_COLORS[currentColorIndex] ?? playerColor;
-  const currentChickColor = myAssignment?.chickColor ?? playerColor?.chickColor ?? 'Red';
+  const currentChickColor = myAssignment?.chickColor ?? playerColor?.chickColor ?? "Red";
 
-  const handleMove = useCallback((x: number, y: number) => { sendJoystick({ x, y }); }, [sendJoystick]);
-  const handleIdleChange = useCallback((idle: boolean) => { setIdle(idle); }, [setIdle]);
-  const handleAttack = useCallback(() => { sendToHost({ type: 'attack-press' }); }, [sendToHost]);
-  const handlePropUse = useCallback((t: PropType) => { sendToHost({ type: 'prop-use', propType: t }); }, [sendToHost]);
-  const handleHitboxClick = useCallback(() => { sendToHost({ type: 'hitbox-click' }); }, [sendToHost]);
-  const handleScan = useCallback((data: string) => { sendToHost({ type: 'scan-result', data }); }, [sendToHost]);
-  const handleTipTap = useCallback((tipIndex: 0 | 1) => {
-    // If already showing QR, close it
-    if (tipQrCodes[tipIndex]) {
-      setTipQrCodes((prev) => { const n: [string | null, string | null] = [...prev] as [string | null, string | null]; n[tipIndex] = null; return n; });
-      return;
-    }
-    sendToHost({ type: 'tip-request', tipIndex });
-  }, [sendToHost, tipQrCodes]);
+  const handleMove = useCallback(
+    (x: number, y: number) => {
+      sendJoystick({ x, y });
+    },
+    [sendJoystick],
+  );
+  const handleIdleChange = useCallback(
+    (idle: boolean) => {
+      setIdle(idle);
+    },
+    [setIdle],
+  );
+  const handleAttack = useCallback(() => {
+    sendToHost({ type: "attack-press" });
+  }, [sendToHost]);
+  const handlePropUse = useCallback(
+    (t: PropType) => {
+      sendToHost({ type: "prop-use", propType: t });
+    },
+    [sendToHost],
+  );
+  const handleHitboxClick = useCallback(() => {
+    sendToHost({ type: "hitbox-click" });
+  }, [sendToHost]);
+  const handleScan = useCallback(
+    (data: string) => {
+      sendToHost({ type: "scan-result", data });
+    },
+    [sendToHost],
+  );
+  const handleTipTap = useCallback(
+    (tipIndex: 0 | 1) => {
+      // If already showing QR, close it
+      if (tipQrCodes[tipIndex]) {
+        setTipQrCodes((prev) => {
+          const n: [string | null, string | null] = [...prev] as [string | null, string | null];
+          n[tipIndex] = null;
+          return n;
+        });
+        return;
+      }
+      sendToHost({ type: "tip-request", tipIndex });
+    },
+    [sendToHost, tipQrCodes],
+  );
   const handleExamSubmit = useCallback(() => {
     if (examAnswer.trim()) {
-      sendToHost({ type: 'answer-submit', answer: examAnswer.trim() });
-      setExamAnswer('');
+      sendToHost({ type: "answer-submit", answer: examAnswer.trim() });
+      setExamAnswer("");
     }
   }, [sendToHost, examAnswer]);
-  const handleJoin = useCallback((roomCode?: string) => {
-    const target = roomCode || code;
-    if (target.length >= 4) {
-      if (roomCode) setCode(roomCode);
-      setWasKicked(false);
-      setRoomFullDismissed(false);
-      setColorChosen(false);
-      connect(roomCode);
-    }
-  }, [code, connect]);
+  const handleJoin = useCallback(
+    (roomCode?: string) => {
+      const target = roomCode || code;
+      if (target.length >= 4) {
+        if (roomCode) setCode(roomCode);
+        setWasKicked(false);
+        setRoomFullDismissed(false);
+        setColorChosen(false);
+        connect(roomCode);
+      }
+    },
+    [code, connect],
+  );
 
   // ── Eagle-in-zone detection (for hitbox visual cue)
-  const isInZone = gameState && myState
-    ? gameState.buildings.some((b) =>
-        b.zoneActive && !b.tipObtained && (() => {
-          const dx = myState.position.x - b.position.x;
-          const dz = myState.position.z - b.position.z;
-          return Math.sqrt(dx * dx + dz * dz) < 4.0;
-        })()
-      )
-    : false;
+  const isInZone =
+    gameState && myState
+      ? gameState.buildings.some(
+          (b) =>
+            b.zoneActive &&
+            !b.tipObtained &&
+            (() => {
+              const dx = myState.position.x - b.position.x;
+              const dz = myState.position.z - b.position.z;
+              return Math.sqrt(dx * dx + dz * dz) < 4.0;
+            })(),
+        )
+      : false;
 
   // ─── JOIN SCREEN ─────────────────────────────────────────────────────────────
   if (!connected) {
@@ -372,13 +444,19 @@ export default function Client() {
         <h1 className="text-lg text-secondary text-glow-purple tracking-wider text-center font-pixel">JOIN GAME</h1>
 
         {wasKicked && (
-          <div onClick={() => setWasKicked(false)} className="w-full max-w-xs px-4 py-3 rounded border border-destructive/50 bg-destructive/10 text-center cursor-pointer">
+          <div
+            onClick={() => setWasKicked(false)}
+            className="w-full max-w-xs px-4 py-3 rounded border border-destructive/50 bg-destructive/10 text-center cursor-pointer"
+          >
             <p className="text-sm font-mono text-destructive">DISCONNECTED BY HOST</p>
           </div>
         )}
 
         {roomFull && !roomFullDismissed && (
-          <div onClick={() => setRoomFullDismissed(true)} className="w-full max-w-xs px-4 py-3 rounded border border-destructive/50 bg-destructive/10 text-center cursor-pointer">
+          <div
+            onClick={() => setRoomFullDismissed(true)}
+            className="w-full max-w-xs px-4 py-3 rounded border border-destructive/50 bg-destructive/10 text-center cursor-pointer"
+          >
             <p className="text-sm font-mono text-destructive">ROOM IS FULL</p>
           </div>
         )}
@@ -401,13 +479,19 @@ export default function Client() {
 
           <div className="flex items-center justify-between px-2 py-3 rounded border border-border bg-card">
             <Label className="text-xs font-mono text-muted-foreground cursor-pointer">
-              {mode === 'webrtc'
-                ? <span><span className="text-primary">WebRTC</span> — Same network</span>
-                : <span><span className="text-secondary">Supabase</span> — Remote play</span>}
+              {mode === "webrtc" ? (
+                <span>
+                  <span className="text-primary">WebRTC</span> — Same network
+                </span>
+              ) : (
+                <span>
+                  <span className="text-secondary">Supabase</span> — Remote play
+                </span>
+              )}
             </Label>
             <Switch
-              checked={mode === 'supabase'}
-              onCheckedChange={(checked) => setMode(checked ? 'supabase' : 'webrtc')}
+              checked={mode === "supabase"}
+              onCheckedChange={(checked) => setMode(checked ? "supabase" : "webrtc")}
             />
           </div>
 
@@ -416,9 +500,16 @@ export default function Client() {
               <p className="text-xs text-muted-foreground font-mono text-center">ACTIVE ROOMS</p>
               <div className="flex flex-wrap gap-2 justify-center">
                 {discoveredRooms.map((rc) => (
-                  <Button key={rc} variant="outline" size="sm"
-                    onClick={() => { setCode(rc); handleJoin(rc); }}
-                    className="font-mono text-xs tracking-widest text-accent border-accent/30 hover:bg-accent/10">
+                  <Button
+                    key={rc}
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      setCode(rc);
+                      handleJoin(rc);
+                    }}
+                    className="font-mono text-xs tracking-widest text-accent border-accent/30 hover:bg-accent/10"
+                  >
                     {rc}
                   </Button>
                 ))}
@@ -431,7 +522,7 @@ export default function Client() {
   }
 
   // ─── 2V6 COLOR SELECTION ──────────────────────────────────────────────────────
-  if (gameMode === '2v6' && !colorChosen && gamePhase === 'lobby') {
+  if (gameMode === "2v6" && !colorChosen && gamePhase === "lobby") {
     const dc = colorIndex >= 0 ? PLAYER_COLORS[colorIndex] : null;
     const isEagleColor = EAGLE_COLOR_INDICES.includes(colorIndex);
     return (
@@ -447,10 +538,16 @@ export default function Client() {
           gameMode={gameMode}
         />
         {dc && (
-          <div className="px-4 py-2 rounded-md" style={{ backgroundColor: `hsl(${dc.hsl} / 0.15)`, border: `1px solid hsl(${dc.hsl} / 0.3)` }}>
+          <div
+            className="px-4 py-2 rounded-md"
+            style={{ backgroundColor: `hsl(${dc.hsl} / 0.15)`, border: `1px solid hsl(${dc.hsl} / 0.3)` }}
+          >
             <p className="text-sm font-mono text-foreground">
-              You are <span className="font-bold" style={{ color: `hsl(${dc.hsl})` }}>{dc.name}</span>
-              {isEagleColor ? ' 🦅 Eagle' : ' 🐤 Chick'}
+              You are{" "}
+              <span className="font-bold" style={{ color: `hsl(${dc.hsl})` }}>
+                {dc.name}
+              </span>
+              {isEagleColor ? " 🦅 Eagle" : " 🐤 Chick"}
             </p>
           </div>
         )}
@@ -461,7 +558,12 @@ export default function Client() {
         >
           CONFIRM & ENTER LOBBY
         </Button>
-        <Button variant="outline" size="sm" onClick={disconnect} className="text-xs font-mono text-destructive border-destructive/30">
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={disconnect}
+          className="text-xs font-mono text-destructive border-destructive/30"
+        >
           DISCONNECT
         </Button>
       </div>
@@ -469,7 +571,7 @@ export default function Client() {
   }
 
   // ─── REVEAL ──────────────────────────────────────────────────────────────────
-  if (gamePhase === 'reveal') {
+  if (gamePhase === "reveal") {
     return (
       <div className="flex items-center justify-center min-h-screen p-4 bg-background">
         <CharacterReveal colorIndex={currentColorIndex} isEagle={isEagle} />
@@ -478,15 +580,20 @@ export default function Client() {
   }
 
   // ─── DEAD ────────────────────────────────────────────────────────────────────
-  if (isDead && gamePhase !== 'gameover') {
+  if (isDead && gamePhase !== "gameover") {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen gap-6">
-        <div className="text-9xl font-pixel text-destructive" style={{ textShadow: '0 0 30px hsl(0 80% 55% / 0.8)' }}>
+        <div className="text-9xl font-pixel text-destructive" style={{ textShadow: "0 0 30px hsl(0 80% 55% / 0.8)" }}>
           F
         </div>
         <p className="text-xl font-mono text-destructive tracking-widest">ELIMINATED</p>
         <p className="text-xs text-muted-foreground font-mono">Better luck next time...</p>
-        <Button variant="outline" size="sm" onClick={disconnect} className="mt-4 text-xs font-mono text-destructive border-destructive/30">
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={disconnect}
+          className="mt-4 text-xs font-mono text-destructive border-destructive/30"
+        >
           LEAVE
         </Button>
       </div>
@@ -494,32 +601,38 @@ export default function Client() {
   }
 
   // ─── COUNTDOWN ───────────────────────────────────────────────────────────────
-  if (gamePhase === 'countdown') {
+  if (gamePhase === "countdown") {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen gap-6">
         <h2 className="text-lg font-pixel text-primary text-glow-green">GET READY</h2>
         {gameState && (
-          <div className="text-7xl font-pixel text-accent animate-pulse">
-            {Math.ceil(gameState.countdownTime)}
-          </div>
+          <div className="text-7xl font-pixel text-accent animate-pulse">{Math.ceil(gameState.countdownTime)}</div>
         )}
         <p className="text-xs font-mono text-muted-foreground text-center max-w-xs px-4">
-          {isEagle ? '🦅 You are the Eagle — you will awaken 5 seconds after the chicks' : '🐤 You get a 5-second head start!'}
+          {isEagle
+            ? "🦅 You are the Eagle — you will awaken 5 seconds after the chicks"
+            : "🐤 You get a 5-second head start!"}
         </p>
       </div>
     );
   }
 
   // ─── GAME OVER ───────────────────────────────────────────────────────────────
-  if (gamePhase === 'gameover') {
+  if (gamePhase === "gameover") {
     const winner = gameState?.winner;
-    const amWinner = (winner === 'eagle' && isEagle) || (winner === 'chicks' && !isEagle);
+    const amWinner = (winner === "eagle" && isEagle) || (winner === "chicks" && !isEagle);
     return (
       <div className="flex flex-col items-center justify-center min-h-screen gap-6 p-4">
         <h1 className="text-2xl font-pixel text-accent">GAME OVER</h1>
         {gameState && (
-          <p className="text-lg font-pixel" style={{ color: winner === 'eagle' ? 'hsl(0 80% 55%)' : winner === 'chicks' ? 'hsl(145 80% 50%)' : 'hsl(45 100% 55%)' }}>
-            {winner === 'eagle' ? '🦅 Eagle Wins!' : winner === 'chicks' ? '🐤 Chicks Win!' : '🤝 Draw!'}
+          <p
+            className="text-lg font-pixel"
+            style={{
+              color:
+                winner === "eagle" ? "hsl(0 80% 55%)" : winner === "chicks" ? "hsl(145 80% 50%)" : "hsl(45 100% 55%)",
+            }}
+          >
+            {winner === "eagle" ? "🦅 Eagle Wins!" : winner === "chicks" ? "🐤 Chicks Win!" : "🤝 Draw!"}
           </p>
         )}
         {myState && (
@@ -531,30 +644,32 @@ export default function Client() {
           </div>
         )}
         {amWinner && <p className="text-lg font-pixel text-primary text-glow-green">🎉 YOU WIN!</p>}
-        <Button variant="outline" size="sm" onClick={disconnect} className="text-xs font-mono">LEAVE</Button>
+        <Button variant="outline" size="sm" onClick={disconnect} className="text-xs font-mono">
+          LEAVE
+        </Button>
       </div>
     );
   }
 
   // ─── ACTIVE EVENT PHASE ──────────────────────────────────────────────────────
   const activeEvent = gameState?.activeEvent;
-  if (activeEvent && gamePhase === 'playing') {
+  if (activeEvent && gamePhase === "playing") {
     const now = Date.now();
     const timeLeft = Math.max(0, Math.ceil((activeEvent.endAt - now) / 1000));
 
-    if (activeEvent.phase === 'countdown') {
+    if (activeEvent.phase === "countdown") {
       const cdSec = Math.max(1, 3 - Math.floor((now - activeEvent.startedAt) / 1000));
       return (
         <div className="flex flex-col items-center justify-center min-h-screen gap-4">
           <h2 className="text-lg font-pixel text-accent">
-            {activeEvent.type === 'mock-exam' ? '📝 MOCK EXAM' : '👊 HITBOX CHALLENGE'}
+            {activeEvent.type === "mock-exam" ? "📝 MOCK EXAM" : "👊 HITBOX CHALLENGE"}
           </h2>
           <div className="text-7xl font-pixel text-primary animate-pulse">{cdSec}</div>
         </div>
       );
     }
 
-    if (activeEvent.phase === 'active' && activeEvent.type === 'hitbox') {
+    if (activeEvent.phase === "active" && activeEvent.type === "hitbox") {
       return (
         <div className="flex flex-col items-center justify-between min-h-screen p-4">
           <div className="text-center">
@@ -562,20 +677,20 @@ export default function Client() {
             <p className="text-2xl font-pixel text-primary">{timeLeft}s</p>
           </div>
           <button
-            onClick={() => sendToHost({ type: 'event-hitbox-click' })}
+            onClick={() => sendToHost({ type: "event-hitbox-click" })}
             className="w-48 h-48 rounded-full border-4 border-accent bg-accent/20 active:scale-90 transition-all flex items-center justify-center"
-            style={{ boxShadow: '0 0 30px hsl(var(--accent) / 0.5)' }}
+            style={{ boxShadow: "0 0 30px hsl(var(--accent) / 0.5)" }}
           >
             <span className="text-3xl font-pixel text-accent">HIT!</span>
           </button>
           <p className="text-xs font-mono text-muted-foreground">
-            {isEagle ? '🦅 Eagle' : '🐤 Chick'} — tap as fast as you can!
+            {isEagle ? "🦅 Eagle" : "🐤 Chick"} — tap as fast as you can!
           </p>
         </div>
       );
     }
 
-    if (activeEvent.phase === 'active' && activeEvent.type === 'mock-exam') {
+    if (activeEvent.phase === "active" && activeEvent.type === "mock-exam") {
       return (
         <div className="flex flex-col min-h-screen p-4 gap-4">
           <div className="flex justify-between items-center">
@@ -601,9 +716,22 @@ export default function Client() {
                   value={eventAnswer}
                   onChange={(e) => setEventAnswer(e.target.value.toUpperCase())}
                   className="flex-1 uppercase font-mono"
-                  onKeyDown={(e) => { if (e.key === 'Enter' && eventAnswer.trim()) { sendToHost({ type: 'event-answer', answer: eventAnswer.trim() }); setEventAnswer(''); } }}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && eventAnswer.trim()) {
+                      sendToHost({ type: "event-answer", answer: eventAnswer.trim() });
+                      setEventAnswer("");
+                    }
+                  }}
                 />
-                <Button onClick={() => { if (eventAnswer.trim()) { sendToHost({ type: 'event-answer', answer: eventAnswer.trim() }); setEventAnswer(''); } }} className="font-pixel text-xs">
+                <Button
+                  onClick={() => {
+                    if (eventAnswer.trim()) {
+                      sendToHost({ type: "event-answer", answer: eventAnswer.trim() });
+                      setEventAnswer("");
+                    }
+                  }}
+                  className="font-pixel text-xs"
+                >
                   SUBMIT
                 </Button>
               </div>
@@ -613,15 +741,18 @@ export default function Client() {
       );
     }
 
-    if (activeEvent.phase === 'result') {
+    if (activeEvent.phase === "result") {
       return (
         <div className="flex flex-col items-center justify-center min-h-screen gap-4">
           <h2 className="text-xl font-pixel text-accent">EVENT RESULT</h2>
-          <p className="text-2xl font-pixel" style={{ color: activeEvent.result === 'chick' ? 'hsl(145 80% 50%)' : 'hsl(0 80% 55%)' }}>
-            {activeEvent.result === 'chick' ? '🐤 Chicks Win!' : '🦅 Eagle Wins!'}
+          <p
+            className="text-2xl font-pixel"
+            style={{ color: activeEvent.result === "chick" ? "hsl(145 80% 50%)" : "hsl(0 80% 55%)" }}
+          >
+            {activeEvent.result === "chick" ? "🐤 Chicks Win!" : "🦅 Eagle Wins!"}
           </p>
           <p className="text-xs font-mono text-muted-foreground">
-            {activeEvent.result === 'chick' ? '+2 grades!' : '-2 grades for chicks'}
+            {activeEvent.result === "chick" ? "+2 grades!" : "-2 grades for chicks"}
           </p>
         </div>
       );
@@ -629,7 +760,7 @@ export default function Client() {
   }
 
   // ─── EXAM PHASE ──────────────────────────────────────────────────────────────
-  if (gamePhase === 'exam') {
+  if (gamePhase === "exam") {
     // Eagle sees distract message
     if (isEagle) {
       return (
@@ -662,23 +793,31 @@ export default function Client() {
         {/* Header */}
         <div className="flex items-center justify-between p-3 border-b border-border">
           <span className="text-xs font-pixel text-muted-foreground">
-            Layer {examLayer} {examLayer === '1' ? '(You have layer 1!)' : '(layer 2)'}
+            Layer {examLayer} {examLayer === "1" ? "(You have layer 1!)" : "(layer 2)"}
           </span>
           {gameState?.examState && (
-            <span className={`text-sm font-bold font-mono ${gameState.examState.timeRemaining < 10 ? 'text-destructive animate-pulse' : 'text-accent'}`}>
+            <span
+              className={`text-sm font-bold font-mono ${gameState.examState.timeRemaining < 10 ? "text-destructive animate-pulse" : "text-accent"}`}
+            >
               ⏱ {Math.ceil(gameState.examState.timeRemaining)}s
             </span>
           )}
         </div>
 
         {/* Camera + overlay */}
-        <div className="relative w-full overflow-hidden bg-black" style={{ aspectRatio: '873/457' }}>
-          <video ref={examVideoRef} autoPlay playsInline muted className="absolute inset-0 w-full h-full object-cover" />
+        <div className="relative w-full overflow-hidden bg-black" style={{ aspectRatio: "873/457" }}>
+          <video
+            ref={examVideoRef}
+            autoPlay
+            playsInline
+            muted
+            className="absolute inset-0 w-full h-full object-cover"
+          />
           <img
             src={`/PW/PW_Final_${examQuestionNum}_layer-${examLayer}.png`}
             alt={`Layer ${examLayer}`}
             className="absolute inset-0 w-full h-full object-contain pointer-events-none"
-            style={{ opacity: examOpacity, transform: `scale(${examZoom})`, transformOrigin: 'center center' }}
+            style={{ opacity: examOpacity, transform: `scale(${examZoom})`, transformOrigin: "center center" }}
           />
         </div>
 
@@ -686,12 +825,26 @@ export default function Client() {
         <div className="flex flex-col gap-3 p-3">
           <div className="flex items-center gap-3">
             <span className="text-xs font-mono text-muted-foreground w-14 shrink-0">Zoom</span>
-            <Slider value={[examZoom]} onValueChange={([v]) => setExamZoom(v)} min={0.5} max={1.5} step={0.05} className="flex-1" />
+            <Slider
+              value={[examZoom]}
+              onValueChange={([v]) => setExamZoom(v)}
+              min={0.5}
+              max={1.5}
+              step={0.05}
+              className="flex-1"
+            />
             <span className="text-xs text-muted-foreground w-10 text-right">{examZoom.toFixed(2)}×</span>
           </div>
           <div className="flex items-center gap-3">
             <span className="text-xs font-mono text-muted-foreground w-14 shrink-0">Opacity</span>
-            <Slider value={[examOpacity]} onValueChange={([v]) => setExamOpacity(v)} min={0} max={1} step={0.05} className="flex-1" />
+            <Slider
+              value={[examOpacity]}
+              onValueChange={([v]) => setExamOpacity(v)}
+              min={0}
+              max={1}
+              step={0.05}
+              className="flex-1"
+            />
             <span className="text-xs text-muted-foreground w-10 text-right">{Math.round(examOpacity * 100)}%</span>
           </div>
         </div>
@@ -703,7 +856,7 @@ export default function Client() {
             value={examAnswer}
             onChange={(e) => setExamAnswer(e.target.value.toUpperCase())}
             className="flex-1 uppercase font-mono"
-            onKeyDown={(e) => e.key === 'Enter' && handleExamSubmit()}
+            onKeyDown={(e) => e.key === "Enter" && handleExamSubmit()}
           />
           <Button onClick={handleExamSubmit} className="font-pixel text-xs bg-primary">
             SUBMIT
@@ -719,12 +872,17 @@ export default function Client() {
 
   return (
     <div className="flex flex-col min-h-screen p-3 gap-2 select-none">
-
       {/* Status bar */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2 text-xs font-mono">
           {displayColor && (
-            <div className="w-3 h-3 rounded-full" style={{ backgroundColor: `hsl(${displayColor.hsl})`, boxShadow: `0 0 8px hsl(${displayColor.hsl} / 0.5)` }} />
+            <div
+              className="w-3 h-3 rounded-full"
+              style={{
+                backgroundColor: `hsl(${displayColor.hsl})`,
+                boxShadow: `0 0 8px hsl(${displayColor.hsl} / 0.5)`,
+              }}
+            />
           )}
           <div className="flex items-center gap-1">
             <div className="w-2 h-2 rounded-full bg-primary" />
@@ -734,7 +892,7 @@ export default function Client() {
         </div>
 
         {/* Health */}
-        {gamePhase === 'playing' && myState && (
+        {gamePhase === "playing" && myState && (
           <div className="flex items-center gap-1 px-2 py-1 rounded bg-card border border-border">
             <span className="text-base font-bold font-mono" style={{ color: getGradeColor(myState.health) }}>
               {gradeToLetter(myState.health)}
@@ -745,7 +903,12 @@ export default function Client() {
         )}
 
         {/* Disconnect */}
-        <Button variant="ghost" size="sm" onClick={disconnect} className="text-[10px] font-mono text-muted-foreground/60 h-6 px-2">
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={disconnect}
+          className="text-[10px] font-mono text-muted-foreground/60 h-6 px-2"
+        >
           ✕
         </Button>
       </div>
@@ -770,7 +933,7 @@ export default function Client() {
 
           {/* Bottom: Attack + Props */}
           <div className="flex items-center justify-center gap-6">
-            {gamePhase === 'playing' && myState && (
+            {gamePhase === "playing" && myState && (
               <>
                 <AttackButton
                   onAttack={handleAttack}
@@ -803,7 +966,7 @@ export default function Client() {
           </div>
 
           {/* Bottom: Color picker in lobby, tips boxes + props in gameplay */}
-          {gamePhase === 'lobby' && (
+          {gamePhase === "lobby" && (
             <div className="flex flex-col items-center gap-2">
               <ColorPicker
                 currentColorIndex={colorIndex}
@@ -814,7 +977,7 @@ export default function Client() {
             </div>
           )}
 
-          {gamePhase === 'playing' && myState && (
+          {gamePhase === "playing" && myState && (
             <div className="flex items-end gap-2 w-full">
               {/* Tips box 0 */}
               <TipsBox
@@ -851,11 +1014,14 @@ export default function Client() {
 
       {/* Role indicator */}
       {displayColor && (
-        <div className="px-3 py-1 rounded text-center" style={{ background: `hsl(${displayColor.hsl} / 0.1)`, border: `1px solid hsl(${displayColor.hsl} / 0.25)` }}>
+        <div
+          className="px-3 py-1 rounded text-center inline-block"
+          style={{ background: `hsl(${displayColor.hsl} / 0.1)`, border: `1px solid hsl(${displayColor.hsl} / 0.25)` }}
+        >
           <p className="text-xs font-mono">
             <span style={{ color: `hsl(${displayColor.hsl})` }}>{displayColor.name}</span>
-            {isEagle ? ' 🦅 Eagle' : ' 🐤 Chick'}
-            {myState?.isStarStudent ? ' ⭐ Star Student' : ''}
+            {isEagle ? " 🦅 Eagle" : " 🐤 Chick"}
+            {myState?.isStarStudent ? " ⭐ Star Student" : ""}
           </p>
         </div>
       )}
