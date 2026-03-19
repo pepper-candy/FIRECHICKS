@@ -22,10 +22,13 @@ const EAGLE_AWAKE_DELAY = 5000;
 const SPEED_BOOST_DURATION = 500;
 const SPEED_BOOST_MULTIPLIER = 2;
 const FLY_SPEED_MULTIPLIER = 3;
-const PROP_SPAWN_INTERVAL_SPEED = [10000, 12000]; // 10-12 sec
+const PROP_SPAWN_INTERVAL_SPEED = [10000, 12000];
 const PROP_SPAWN_INTERVAL_HEAL = 30000;
 const SOCIAL_CIRCLE_THRESHOLD = 1.5;
 const TIP_OBTAIN_DURATION = 7000;
+
+const REVEAL_DURATION = 5000; // 5 sec reveal
+const COUNTDOWN_DURATION = 3; // 3 sec countdown
 
 interface UseGameLogicProps {
   players: Map<string, PlayerState>;
@@ -36,6 +39,18 @@ interface UseGameLogicProps {
 export function useGameLogic({ players, broadcast, gameMode }: UseGameLogicProps) {
   const [phase, setPhase] = useState<GamePhase>('lobby');
   const [assignments, setAssignments] = useState<Record<string, { colorIndex: number; isEagle: boolean; chickColor: ChickColor }>>({});
+
+  // CRITICAL: Use a ref to always access the latest players Map
+  // so the animation loop doesn't capture a stale reference
+  const playersRef = useRef<Map<string, PlayerState>>(players);
+  useEffect(() => { playersRef.current = players; }, [players]);
+
+  const broadcastRef = useRef(broadcast);
+  useEffect(() => { broadcastRef.current = broadcast; }, [broadcast]);
+
+  const gameModeRef = useRef(gameMode);
+  useEffect(() => { gameModeRef.current = gameMode; }, [gameMode]);
+
   const gameStateRef = useRef<{
     phase: GamePhase;
     stage: GameStage;
@@ -63,34 +78,51 @@ export function useGameLogic({ players, broadcast, gameMode }: UseGameLogicProps
 
   // Start game
   const startGame = useCallback(() => {
-    const playerIds = Array.from(players.keys());
+    const currentPlayers = playersRef.current;
+    const playerIds = Array.from(currentPlayers.keys());
     if (playerIds.length === 0) return;
 
-    // Pick eagle(s)
-    const eagleCount = gameMode === '1v3' ? 1 : 2;
-    const shuffled = [...playerIds].sort(() => Math.random() - 0.5);
-    const eagleIds = new Set(shuffled.slice(0, eagleCount));
+    const currentMode = gameModeRef.current;
 
-    // Assign eagle colors
-    const availableEagleColors = [...EAGLE_COLOR_INDICES].sort(() => Math.random() - 0.5);
-
+    // Role assignment differs by mode
     const assigns: Record<string, { colorIndex: number; isEagle: boolean; chickColor: ChickColor }> = {};
-    let eagleColorIdx = 0;
 
-    for (const id of playerIds) {
-      if (eagleIds.has(id)) {
-        const ci = availableEagleColors[eagleColorIdx++];
-        assigns[id] = {
-          colorIndex: ci,
-          isEagle: true,
-          chickColor: PLAYER_COLORS[ci].chickColor,
-        };
-      } else {
-        const currentPlayer = players.get(id);
+    if (currentMode === '1v3') {
+      // 1v3: All players have good colors. Randomly pick 1 to become eagle.
+      const eagleCount = 1;
+      const shuffled = [...playerIds].sort(() => Math.random() - 0.5);
+      const eagleIds = new Set(shuffled.slice(0, eagleCount));
+
+      // Pick a random eagle color (Black=0 or Gold=1) for the eagle
+      const eagleColorIdx = EAGLE_COLOR_INDICES[Math.floor(Math.random() * EAGLE_COLOR_INDICES.length)];
+
+      for (const id of playerIds) {
+        if (eagleIds.has(id)) {
+          assigns[id] = {
+            colorIndex: eagleColorIdx,
+            isEagle: true,
+            chickColor: PLAYER_COLORS[eagleColorIdx].chickColor,
+          };
+        } else {
+          const currentPlayer = currentPlayers.get(id);
+          const ci = currentPlayer?.colorIndex ?? 2;
+          assigns[id] = {
+            colorIndex: ci,
+            isEagle: false,
+            chickColor: PLAYER_COLORS[ci].chickColor,
+          };
+        }
+      }
+    } else {
+      // 2v6: Players already chose their colors (including Black/Gold as eagles)
+      // No random assignment. Eagle = whoever has Black(0) or Gold(1)
+      for (const id of playerIds) {
+        const currentPlayer = currentPlayers.get(id);
         const ci = currentPlayer?.colorIndex ?? 2;
+        const isEagle = EAGLE_COLOR_INDICES.includes(ci);
         assigns[id] = {
           colorIndex: ci,
-          isEagle: false,
+          isEagle,
           chickColor: PLAYER_COLORS[ci].chickColor,
         };
       }
@@ -99,9 +131,9 @@ export function useGameLogic({ players, broadcast, gameMode }: UseGameLogicProps
     setAssignments(assigns);
 
     // Initialize game state
-    const chickIds = playerIds.filter((id) => !eagleIds.has(id));
     const playerStates = new Map<string, PlayerGameState>();
     let spawnIdx = 0;
+    const totalRevealAndCountdown = REVEAL_DURATION + COUNTDOWN_DURATION * 1000;
 
     for (const [id, assign] of Object.entries(assigns)) {
       const spawn = assign.isEagle ? EAGLE_SPAWN : SPAWN_POINTS[spawnIdx++ % SPAWN_POINTS.length];
@@ -119,8 +151,8 @@ export function useGameLogic({ players, broadcast, gameMode }: UseGameLogicProps
           : [{ type: 'speed', count: 0 }, { type: 'heal', count: 0 }],
         position: { ...spawn },
         facingAngle: 0,
-        frozen: assign.isEagle, // eagle starts frozen
-        frozenUntil: assign.isEagle ? Date.now() + EAGLE_AWAKE_DELAY + 5000 + 10000 : 0, // reveal + countdown + awake delay
+        frozen: assign.isEagle,
+        frozenUntil: assign.isEagle ? Date.now() + totalRevealAndCountdown + EAGLE_AWAKE_DELAY : 0,
         attackCooldownUntil: 0,
         socialCircleMet: new Set(),
         invincibleUntil: 0,
@@ -140,7 +172,7 @@ export function useGameLogic({ players, broadcast, gameMode }: UseGameLogicProps
       position: b.position,
       hasTip: diagPair.includes(b.id),
       tipIndex: b.id === diagPair[0] ? 0 : 1,
-      glowing: false, // will glow in stage 2
+      glowing: false,
       zoneHealth: 50,
       zoneActive: false,
       tipObtained: false,
@@ -151,7 +183,7 @@ export function useGameLogic({ players, broadcast, gameMode }: UseGameLogicProps
       phase: 'reveal',
       stage: 0,
       gameTime: 0,
-      countdownTime: 10,
+      countdownTime: COUNTDOWN_DURATION,
       eagleAwake: false,
       playerStates,
       frozenAll: false,
@@ -168,16 +200,18 @@ export function useGameLogic({ players, broadcast, gameMode }: UseGameLogicProps
     };
 
     setPhase('reveal');
-    broadcast({ type: 'game-start', assignments: assigns });
 
-    // After 5 seconds, transition to countdown
+    // Send individual assignments to each client via broadcast
+    broadcastRef.current({ type: 'game-start', assignments: assigns });
+
+    // After 5 seconds, transition to countdown (3 sec)
     setTimeout(() => {
       if (!gameStateRef.current) return;
       gameStateRef.current.phase = 'countdown';
-      gameStateRef.current.countdownTime = 10;
+      gameStateRef.current.countdownTime = COUNTDOWN_DURATION;
       gameStateRef.current.startTime = Date.now();
       setPhase('countdown');
-      broadcast({ type: 'phase-change', phase: 'countdown' });
+      broadcastRef.current({ type: 'phase-change', phase: 'countdown' });
 
       // Start game loop
       lastTickRef.current = performance.now();
@@ -188,29 +222,32 @@ export function useGameLogic({ players, broadcast, gameMode }: UseGameLogicProps
         frameRef.current = requestAnimationFrame(tick);
       };
       frameRef.current = requestAnimationFrame(tick);
-    }, 5000);
-  }, [players, broadcast, gameMode]);
+    }, REVEAL_DURATION);
+  }, []); // No deps needed - we use refs
 
-  // Main game loop update
+  // Main game loop update - uses refs so it never goes stale
   const updateGameState = useCallback((delta: number) => {
     const gs = gameStateRef.current;
     if (!gs || gs.winner) return;
 
     const now = Date.now();
+    const currentPlayers = playersRef.current;
+    const currentBroadcast = broadcastRef.current;
+    const currentMode = gameModeRef.current;
 
     // Countdown phase
     if (gs.phase === 'countdown') {
       const elapsed = (now - gs.startTime) / 1000;
-      gs.countdownTime = Math.max(0, 10 - elapsed);
+      gs.countdownTime = Math.max(0, COUNTDOWN_DURATION - elapsed);
       if (gs.countdownTime <= 0) {
         gs.phase = 'playing';
         gs.startTime = now;
         gs.gameTime = 0;
         gs.stageLabel = 'Touch every other chick!';
         setPhase('playing');
-        broadcast({ type: 'phase-change', phase: 'playing' });
+        currentBroadcast({ type: 'phase-change', phase: 'playing' });
       }
-      broadcastState(gs);
+      doBroadcastState(gs, currentBroadcast);
       return;
     }
 
@@ -231,7 +268,6 @@ export function useGameLogic({ players, broadcast, gameMode }: UseGameLogicProps
     // Eagle awake check
     if (!gs.eagleAwake && gs.gameTime > 5) {
       gs.eagleAwake = true;
-      // Unfreeze eagles
       for (const [, p] of gs.playerStates) {
         if (p.isEagle) {
           p.frozen = false;
@@ -259,7 +295,8 @@ export function useGameLogic({ players, broadcast, gameMode }: UseGameLogicProps
           p.invincibleUntil = 0;
         }
 
-        const lobbyPlayer = players.get(connId);
+        // READ FROM REF - this is the fix for stale joystick data
+        const lobbyPlayer = currentPlayers.get(connId);
         if (!lobbyPlayer) continue;
 
         const jx = lobbyPlayer.joystick.x;
@@ -274,10 +311,8 @@ export function useGameLogic({ players, broadcast, gameMode }: UseGameLogicProps
           const newX = p.position.x + Math.sin(moveAngle) * speed * -1;
           const newZ = p.position.z + Math.cos(moveAngle) * speed * -1;
 
-          // Check collision (skip for flying eagles)
           const isFlying = p.isEagle && p.speedMultiplier >= FLY_SPEED_MULTIPLIER;
           if (isFlying || !checkCollision(newX, newZ, 0.5)) {
-            // Clamp to map
             p.position.x = Math.max(-MAP_HALF + 0.5, Math.min(MAP_HALF - 0.5, newX));
             p.position.z = Math.max(-MAP_HALF + 0.5, Math.min(MAP_HALF - 0.5, newZ));
           }
@@ -304,13 +339,11 @@ export function useGameLogic({ players, broadcast, gameMode }: UseGameLogicProps
         }
       }
 
-      // Check if all chicks have met all others
       const requiredMeets = chicks.length - 1;
       const allMet = chicks.every((c) => c.socialCircleMet.size >= requiredMeets);
       if (allMet && chicks.length > 0) {
         gs.stage = 1;
         gs.stageLabel = 'Go to glowing buildings to get Exam Tips!';
-        // Activate tip buildings
         for (const b of gs.buildings) {
           if (b.hasTip) {
             b.glowing = true;
@@ -380,18 +413,17 @@ export function useGameLogic({ players, broadcast, gameMode }: UseGameLogicProps
     const totalChicks = Array.from(gs.playerStates.values()).filter((p) => !p.isEagle).length;
     const eliminated = totalChicks - aliveChicks.length;
 
-    if (gameMode === '1v3' && eliminated >= 3) {
+    if (currentMode === '1v3' && eliminated >= 3) {
       gs.winner = 'eagle';
       gs.phase = 'gameover';
       setPhase('gameover');
-      broadcast({ type: 'game-over', winner: 'eagle' });
+      currentBroadcast({ type: 'game-over', winner: 'eagle' });
     }
 
-    // Broadcast state at ~10Hz
-    broadcastState(gs);
-  }, [players, broadcast, gameMode]);
+    doBroadcastState(gs, currentBroadcast);
+  }, []); // No deps - uses refs
 
-  const broadcastState = useCallback((gs: NonNullable<typeof gameStateRef.current>) => {
+  const doBroadcastState = useCallback((gs: NonNullable<typeof gameStateRef.current>, bcast: (msg: any) => void) => {
     const playersObj: Record<string, PlayerGameStateSerializable> = {};
     for (const [id, p] of gs.playerStates) {
       playersObj[id] = serializePlayerState(p);
@@ -414,9 +446,8 @@ export function useGameLogic({ players, broadcast, gameMode }: UseGameLogicProps
     };
 
     setSnapshot(snap);
-    // Throttle broadcasts to ~10Hz
-    broadcast({ type: 'game-state', state: snap });
-  }, [broadcast]);
+    bcast({ type: 'game-state', state: snap });
+  }, []);
 
   // Handle client messages
   const handleClientMessage = useCallback((connId: string, msg: ClientMessage) => {
@@ -434,13 +465,11 @@ export function useGameLogic({ players, broadcast, gameMode }: UseGameLogicProps
 
         player.attackCooldownUntil = now + ATTACK_COOLDOWN;
 
-        // Check overlapping chicks
         const hitChicks: PlayerGameState[] = [];
         for (const [, p] of gs.playerStates) {
           if (p.isEagle || !p.alive) continue;
           if (p.invincibleUntil > now) continue;
 
-          // Check if chick is in protected zone
           let inProtectedZone = false;
           for (const b of gs.buildings) {
             if (b.zoneActive && !b.tipObtained) {
@@ -460,7 +489,6 @@ export function useGameLogic({ players, broadcast, gameMode }: UseGameLogicProps
         }
 
         if (hitChicks.length > 0) {
-          // Apply damage to all hit chicks
           let mostSerious: 'hurt' | 'dead' = 'hurt';
           for (const chick of hitChicks) {
             const newHealth = applyDamage(chick.health);
@@ -473,17 +501,15 @@ export function useGameLogic({ players, broadcast, gameMode }: UseGameLogicProps
               chick.alive = false;
               chick.health = 0;
               mostSerious = 'dead';
-              broadcast({ type: 'you-died' });
+              broadcastRef.current({ type: 'you-died' });
             }
           }
 
-          // Freeze all players, play video
           gs.frozenAll = true;
-          gs.frozenAllUntil = now + 3000; // video duration
+          gs.frozenAllUntil = now + 3000;
           gs.videoPlaying = mostSerious;
           setVideoPlaying(mostSerious);
 
-          // Eagle gets extra freeze after video
           player.frozen = true;
           player.frozenUntil = now + 3000 + FREEZE_DURATION;
           player.attackCooldownUntil = now + 3000 + FREEZE_DURATION + ATTACK_COOLDOWN;
@@ -521,7 +547,6 @@ export function useGameLogic({ players, broadcast, gameMode }: UseGameLogicProps
       }
 
       case 'hitbox-click': {
-        // Eagle hitting protected zone
         if (!player.isEagle) return;
         for (const b of gs.buildings) {
           if (!b.zoneActive || b.tipObtained) continue;
@@ -540,14 +565,13 @@ export function useGameLogic({ players, broadcast, gameMode }: UseGameLogicProps
       }
 
       case 'color-swap': {
-        // Only in lobby phase
         break;
       }
 
       default:
         break;
     }
-  }, [broadcast]);
+  }, []);
 
   const onVideoComplete = useCallback(() => {
     setVideoPlaying(null);

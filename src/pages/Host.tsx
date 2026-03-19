@@ -7,8 +7,9 @@ import HealthDisplay from '@/components/HealthDisplay';
 import StageProgressBar from '@/components/StageProgressBar';
 import VideoOverlay, { preloadVideos } from '@/components/VideoOverlay';
 import NetworkPerformancePanel from '@/components/NetworkPerformancePanel';
-import { PLAYER_COLORS, MAX_PLAYERS_1V3 } from '@/lib/playerColors';
-import { X, Zap } from 'lucide-react';
+import { PLAYER_COLORS, MAX_PLAYERS_1V3, MAX_PLAYERS_2V6 } from '@/lib/playerColors';
+import { X, Zap, Flame } from 'lucide-react';
+import type { GameMode } from '@/lib/gameTypes';
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select';
@@ -18,13 +19,14 @@ import {
 
 export default function Host() {
   const [mode, setMode] = useState<ConnectionMode>('webrtc');
+  const [gameMode, setGameMode] = useState<GameMode>('1v3');
   const { roomCode, players, kickPlayer, broadcast, onClientMessage } = useHostRoom(mode);
 
   useAdvertiseRoom(roomCode, mode);
 
   const {
     phase, snapshot, videoPlaying, assignments, startGame, handleClientMessage, onVideoComplete,
-  } = useGameLogic({ players, broadcast, gameMode: '1v3' });
+  } = useGameLogic({ players, broadcast, gameMode });
 
   // Register client message handler
   useEffect(() => {
@@ -36,8 +38,14 @@ export default function Host() {
   // Preload videos
   useEffect(() => { preloadVideos(); }, []);
 
+  // Broadcast game mode to clients
+  useEffect(() => {
+    broadcast({ type: 'game-mode', gameMode });
+  }, [gameMode, broadcast]);
+
   const playerCount = players.size;
-  const canStart = playerCount >= 2; // min 2 for testing, ideally MAX_PLAYERS_1V3
+  const maxPlayers = gameMode === '1v3' ? MAX_PLAYERS_1V3 : MAX_PLAYERS_2V6;
+  const canStart = playerCount >= 2; // min 2 for testing
 
   // ─── LOBBY PHASE ─────────────────────────────────
   if (phase === 'lobby') {
@@ -48,7 +56,20 @@ export default function Host() {
           <h1 className="text-sm md:text-lg text-primary text-glow-green tracking-wider">LOBBY</h1>
 
           <div className="flex items-center gap-3 font-mono text-xs flex-wrap">
-            {/* Start button - top center, cyber style */}
+            {/* Game mode torch */}
+            <button
+              onClick={() => setGameMode((prev) => (prev === '1v3' ? '2v6' : '1v3'))}
+              className={`relative flex items-center gap-2 px-4 py-2 rounded border-2 font-pixel text-sm tracking-wider transition-all ${
+                gameMode === '2v6'
+                  ? 'border-accent bg-accent/10 text-accent hover:bg-accent/20 shadow-[0_0_20px_hsl(var(--accent)/0.3)]'
+                  : 'border-primary bg-primary/10 text-primary hover:bg-primary/20 shadow-[0_0_20px_hsl(var(--primary)/0.3)]'
+              }`}
+            >
+              <Flame className={`w-4 h-4 ${gameMode === '2v6' ? 'animate-pulse' : ''}`} />
+              {gameMode}
+            </button>
+
+            {/* Start button */}
             {canStart && (
               <button
                 onClick={startGame}
@@ -82,7 +103,7 @@ export default function Host() {
             </div>
 
             {/* Player count */}
-            <span className="text-muted-foreground">{playerCount}/{MAX_PLAYERS_1V3} PLAYERS</span>
+            <span className="text-muted-foreground">{playerCount}/{maxPlayers} PLAYERS</span>
 
             {/* Player dots */}
             {playerCount > 0 && (
@@ -132,36 +153,23 @@ export default function Host() {
   }
 
   // ─── REVEAL / COUNTDOWN PHASE ─────────────────────
+  // Host shows an 8-second countdown (5s reveal + 3s countdown) without revealing who is which color
   if (phase === 'reveal' || phase === 'countdown') {
+    const totalSeconds = phase === 'reveal'
+      ? (snapshot ? Math.ceil(snapshot.countdownTime) + 3 : 8)  // during reveal, show ~8 going down
+      : (snapshot ? Math.ceil(snapshot.countdownTime) : 3);
+
     return (
       <div className="flex flex-col items-center justify-center h-screen gap-6 p-4">
         <h1 className="text-xl font-pixel text-primary text-glow-green">
-          {phase === 'reveal' ? 'ROLE ASSIGNMENT' : 'GET READY'}
+          GET READY
         </h1>
-        {phase === 'countdown' && snapshot && (
-          <div className="text-6xl font-pixel text-accent animate-pulse">
-            {Math.ceil(snapshot.countdownTime)}
-          </div>
-        )}
-        <div className="flex flex-wrap gap-4 justify-center">
-          {Object.entries(assignments).map(([connId, assign]) => {
-            const color = PLAYER_COLORS[assign.colorIndex];
-            return (
-              <div key={connId} className="flex flex-col items-center gap-2 p-3 rounded border border-border bg-card">
-                <div
-                  className="w-8 h-8 rounded-full"
-                  style={{
-                    backgroundColor: `hsl(${color?.hsl ?? '0 0% 50%'})`,
-                    boxShadow: `0 0 12px hsl(${color?.hsl ?? '0 0% 50%'} / 0.5)`,
-                  }}
-                />
-                <span className="text-xs font-mono" style={{ color: `hsl(${color?.hsl ?? '0 0% 50%'})` }}>
-                  {color?.name} {assign.isEagle ? '🦅' : '🐤'}
-                </span>
-              </div>
-            );
-          })}
+        <div className="text-8xl font-pixel text-accent animate-pulse">
+          {phase === 'reveal' ? '...' : Math.ceil(snapshot?.countdownTime ?? 3)}
         </div>
+        <p className="text-sm font-mono text-muted-foreground">
+          {phase === 'reveal' ? 'Assigning roles...' : 'Game starting soon!'}
+        </p>
       </div>
     );
   }
