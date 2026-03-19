@@ -53,7 +53,7 @@ const Index = () => {
           variant="outline"
           className="h-14 text-sm font-pixel border-border text-muted-foreground hover:text-foreground hover:bg-muted"
         >
-          EXAM TIPS
+          📚 EXAM TIPS
         </Button>
         <Button
           onClick={() => navigate("/battlefield")}
