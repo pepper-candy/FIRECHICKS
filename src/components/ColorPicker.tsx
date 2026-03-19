@@ -9,16 +9,12 @@ interface Props {
 }
 
 export default function ColorPicker({ currentColorIndex, usedColorIndices, onColorSelect, gameMode }: Props) {
-  // Filter colors based on game mode
+  // In 1v3, hide eagle colors so players only pick chick colors
   const availableColors = PLAYER_COLORS.map((color, idx) => ({ color, idx })).filter(({ idx }) => {
-    if (gameMode === '1v3') {
-      // Hide eagle colors (Black=0, Gold=1) in 1v3
-      return !EAGLE_COLOR_INDICES.includes(idx);
-    }
+    if (gameMode === '1v3') return !EAGLE_COLOR_INDICES.includes(idx);
     return true;
   });
 
-  // Split into 2 rows
   const half = Math.ceil(availableColors.length / 2);
   const topRow = availableColors.slice(0, half);
   const bottomRow = availableColors.slice(half);
@@ -26,25 +22,46 @@ export default function ColorPicker({ currentColorIndex, usedColorIndices, onCol
   const renderButton = ({ color, idx }: { color: typeof PLAYER_COLORS[number]; idx: number }) => {
     const isMine = idx === currentColorIndex;
     const isTaken = usedColorIndices.has(idx) && !isMine;
+    const isEagleColor = EAGLE_COLOR_INDICES.includes(idx);
+    const showEagleOutline = gameMode === '2v6' && isEagleColor;
 
     return (
       <button
         key={idx}
         onClick={() => !isTaken && onColorSelect(idx)}
         disabled={isTaken}
-        className={`w-9 h-9 rounded-full border-2 transition-all ${
+        title={isTaken ? `${color.name} (taken)` : showEagleOutline ? `${color.name} (Eagle role)` : color.name}
+        className={`w-9 h-9 rounded-full transition-all relative ${
           isMine
-            ? 'scale-125 border-foreground'
+            ? 'scale-125'
             : isTaken
-              ? 'opacity-30 cursor-not-allowed border-transparent'
-              : 'border-transparent hover:scale-110 cursor-pointer'
+              ? 'opacity-30 cursor-not-allowed'
+              : 'hover:scale-110 cursor-pointer'
         }`}
         style={{
           backgroundColor: isTaken ? 'hsl(var(--muted))' : `hsl(${color.hsl})`,
-          boxShadow: isMine ? `0 0 12px hsl(${color.hsl} / 0.6)` : 'none',
+          border: showEagleOutline
+            ? '3px solid hsl(0 80% 55%)'
+            : isMine
+              ? '2px solid hsl(var(--foreground))'
+              : '2px solid transparent',
+          boxShadow: isMine
+            ? `0 0 12px hsl(${color.hsl} / 0.6)`
+            : showEagleOutline && !isTaken
+              ? '0 0 8px hsl(0 80% 55% / 0.5)'
+              : 'none',
         }}
-        title={isTaken ? `${color.name} (taken)` : color.name}
-      />
+      >
+        {/* Eagle indicator badge */}
+        {showEagleOutline && !isTaken && (
+          <span
+            className="absolute -top-1.5 -right-1.5 text-[8px] bg-destructive rounded-full w-3.5 h-3.5 flex items-center justify-center"
+            style={{ fontSize: 8, lineHeight: 1 }}
+          >
+            🦅
+          </span>
+        )}
+      </button>
     );
   };
 
@@ -56,6 +73,11 @@ export default function ColorPicker({ currentColorIndex, usedColorIndices, onCol
       <div className="flex justify-center gap-2">
         {bottomRow.map(renderButton)}
       </div>
+      {gameMode === '2v6' && (
+        <p className="text-[9px] font-mono text-muted-foreground mt-1">
+          🦅 Red border = Eagle role
+        </p>
+      )}
     </div>
   );
 }

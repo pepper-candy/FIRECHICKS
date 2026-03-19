@@ -2,7 +2,7 @@ import type { ChickColor } from '@/components/CharacterViewer';
 
 export type GameMode = '1v3' | '2v6';
 export type GamePhase = 'lobby' | 'reveal' | 'countdown' | 'playing' | 'exam' | 'gameover';
-export type GameStage = 0 | 1 | 2 | 3; // social circle, exam tips, share tips, final exam
+export type GameStage = 0 | 1 | 2 | 3;
 export type PropType = 'speed' | 'heal' | 'fly' | 'invincible';
 export type AnimState = 'Idle' | 'Walking' | 'Running' | 'Victory' | 'Attack';
 
@@ -25,16 +25,50 @@ export interface PropSpawn {
   active: boolean;
 }
 
+export interface MysteryBox {
+  id: string;
+  position: { x: number; z: number };
+  spawnedAt: number;
+  activeAt: number;
+  triggered: boolean;
+  collected: boolean;
+}
+
 export interface BuildingState {
   id: number;
   position: { x: number; z: number };
-  hasTip: boolean;           // T1 or T2
-  tipIndex: 0 | 1;           // which tip
+  hasTip: boolean;
+  tipIndex: 0 | 1;
   glowing: boolean;
-  zoneHealth: number;        // 50 max
+  zoneHealth: number;
   zoneActive: boolean;
   tipObtained: boolean;
-  tipObtainedCount: number;  // for 2v6 needs 2
+  tipObtainedCount: number;
+}
+
+export interface ExamState {
+  questionNum: number;
+  category: 'Final';
+  timeRemaining: number;
+  layer1ConnId: string;
+  layer2ConnIds: string[];
+  answered: boolean;
+  layer1Dead: boolean;
+}
+
+export type EventType = 'mock-exam' | 'hitbox';
+
+export interface GameEvent {
+  type: EventType;
+  phase: 'countdown' | 'active' | 'result';
+  startedAt: number;
+  endAt: number;
+  // Mock exam
+  questionNum?: number;
+  // Hitbox challenge
+  chickClicks: Record<string, number>;
+  eagleClicks: Record<string, number>;
+  result: 'chick' | 'eagle' | 'pending';
 }
 
 export interface PlayerGameState {
@@ -52,7 +86,7 @@ export interface PlayerGameState {
   frozen: boolean;
   frozenUntil: number;
   attackCooldownUntil: number;
-  socialCircleMet: Set<string>;   // connIds of chicks met
+  socialCircleMet: Set<string>;
   invincibleUntil: number;
   actionScore: number;
   survivalTime: number;
@@ -60,9 +94,14 @@ export interface PlayerGameState {
   damageDealt: number;
   speedMultiplier: number;
   speedMultiplierUntil: number;
+  // Animation state
+  isMoving: boolean;
+  isAttacking: boolean;
+  attackAnimUntil: number;
+  // Tips
+  tipShareCooldownUntil: number;
 }
 
-// Serializable version for broadcast
 export interface PlayerGameStateSerializable {
   connId: string;
   colorIndex: number;
@@ -81,8 +120,15 @@ export interface PlayerGameStateSerializable {
   socialCircleMet: string[];
   invincibleUntil: number;
   actionScore: number;
+  survivalTime: number;
+  damageTaken: number;
+  damageDealt: number;
   speedMultiplier: number;
   speedMultiplierUntil: number;
+  isMoving: boolean;
+  isAttacking: boolean;
+  attackAnimUntil: number;
+  tipShareCooldownUntil: number;
 }
 
 export interface GameStateSnapshot {
@@ -97,22 +143,24 @@ export interface GameStateSnapshot {
   videoPlaying: 'hurt' | 'dead' | null;
   propSpawns: PropSpawn[];
   buildings: BuildingState[];
-  winner: 'eagle' | 'chicks' | null;
+  winner: 'eagle' | 'chicks' | 'draw' | null;
   stageLabel: string;
+  examState: ExamState | null;
+  mysteryBoxes: MysteryBox[];
+  activeEvent: GameEvent | null;
 }
 
 // Messages host → client
 export type HostMessage =
   | { type: 'game-start'; assignments: Record<string, { colorIndex: number; isEagle: boolean; chickColor: ChickColor }> }
   | { type: 'game-state'; state: GameStateSnapshot }
-  | { type: 'video-play'; video: 'hurt' | 'dead' }
   | { type: 'phase-change'; phase: GamePhase }
-  | { type: 'game-over'; winner: 'eagle' | 'chicks' }
-  | { type: 'color-update'; colorIndex: number }
-  | { type: 'social-circle-update'; met: string[] }
-  | { type: 'tip-received'; tipIndex: number }
-  | { type: 'you-died' }
-  | { type: 'exam-start'; layer: string; questionNum: number; category: string };
+  | { type: 'game-over'; winner: 'eagle' | 'chicks' | 'draw' }
+  | { type: 'color-update'; colorIndex: number; isEagle?: boolean }
+  | { type: 'you-died'; connId: string }
+  | { type: 'game-mode'; gameMode: GameMode }
+  | { type: 'tip-qr'; forConnId: string; code: string; tipIndex: 0 | 1 }
+  | { type: 'exam-start'; assignments: Record<string, { layer: '1' | '2'; questionNum: number; category: 'Final' }> };
 
 // Messages client → host
 export type ClientMessage =
@@ -122,7 +170,9 @@ export type ClientMessage =
   | { type: 'hitbox-click' }
   | { type: 'scan-result'; data: string }
   | { type: 'answer-submit'; answer: string }
-  | { type: 'tip-share'; tipIndex: number };
+  | { type: 'tip-request'; tipIndex: 0 | 1 }
+  | { type: 'event-hitbox-click' }
+  | { type: 'event-answer'; answer: string };
 
 export function serializePlayerState(p: PlayerGameState): PlayerGameStateSerializable {
   return {

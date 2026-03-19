@@ -21,12 +21,18 @@ function getAnimPath(anim: AnimState, color: ChickColor) {
   return `/FireChick/FireChick_Animation/${folder}/${anim}_${color}.glb`;
 }
 
-// Inner component that remounts when path changes (via key)
-function CharacterModel({ path, facingAngle }: { path: string; facingAngle: number }) {
+function CharacterModel({
+  path,
+  facingAngle,
+  oneShot,
+}: {
+  path: string;
+  facingAngle: number;
+  oneShot?: boolean;
+}) {
   const groupRef = useRef<THREE.Group>(null!);
   const { scene, animations } = useGLTF(path);
 
-  // Clone with skeleton so multiple instances work
   const clone = useRef<THREE.Group | null>(null);
   if (!clone.current) {
     clone.current = SkeletonUtils.clone(scene) as THREE.Group;
@@ -34,19 +40,25 @@ function CharacterModel({ path, facingAngle }: { path: string; facingAngle: numb
 
   const { actions, mixer } = useAnimations(animations, groupRef);
 
-  // Play the first clip
   useEffect(() => {
     const names = Object.keys(actions);
     if (names.length > 0) {
       const action = actions[names[0]];
       if (action) {
+        if (oneShot) {
+          action.setLoop(THREE.LoopOnce, 1);
+          action.clampWhenFinished = true;
+        } else {
+          action.setLoop(THREE.LoopRepeat, Infinity);
+        }
         action.reset().fadeIn(0.15).play();
-        return () => { action.fadeOut(0.15); };
+        return () => {
+          action.fadeOut(0.15);
+        };
       }
     }
-  }, [actions]);
+  }, [actions, oneShot]);
 
-  // Update mixer each frame
   useFrame((_, delta) => {
     mixer?.update(delta);
     if (groupRef.current) {
@@ -54,7 +66,7 @@ function CharacterModel({ path, facingAngle }: { path: string; facingAngle: numb
       const current = groupRef.current.rotation.y;
       let diff = target - current;
       diff = ((diff + Math.PI) % (Math.PI * 2) + Math.PI * 2) % (Math.PI * 2) - Math.PI;
-      groupRef.current.rotation.y += diff * 0.15;
+      groupRef.current.rotation.y += diff * 0.2;
     }
   });
 
@@ -66,13 +78,12 @@ function CharacterModel({ path, facingAngle }: { path: string; facingAngle: numb
 }
 
 export default function CharacterViewer({ color, animState, facingAngle }: Props) {
+  // Only Black and Gold have Attack animation
   const effectiveAnim: AnimState =
-    animState === 'Attack' && color !== 'Black' && color !== 'Gold'
-      ? 'Idle'
-      : animState;
+    animState === 'Attack' && color !== 'Black' && color !== 'Gold' ? 'Idle' : animState;
 
   const path = getAnimPath(effectiveAnim, color);
+  const isOneShot = effectiveAnim === 'Attack';
 
-  // Key forces remount when GLB path changes, ensuring fresh animations
-  return <CharacterModel key={path} path={path} facingAngle={facingAngle} />;
+  return <CharacterModel key={path} path={path} facingAngle={facingAngle} oneShot={isOneShot} />;
 }

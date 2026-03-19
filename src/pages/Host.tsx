@@ -1,4 +1,6 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, Suspense, useRef } from 'react';
+import { Canvas, useFrame } from '@react-three/fiber';
+import type { GameEvent } from '@/lib/gameTypes';
 import { useHostRoom, useAdvertiseRoom, type ConnectionMode } from '@/hooks/useGameRoom';
 import { useGameLogic } from '@/hooks/useGameLogic';
 import LobbyArena from '@/components/LobbyArena';
@@ -8,15 +10,107 @@ import StageProgressBar from '@/components/StageProgressBar';
 import VideoOverlay, { preloadVideos } from '@/components/VideoOverlay';
 import NetworkPerformancePanel from '@/components/NetworkPerformancePanel';
 import { PLAYER_COLORS, MAX_PLAYERS_1V3, MAX_PLAYERS_2V6 } from '@/lib/playerColors';
-import { X, Zap, Flame } from 'lucide-react';
+import { gradeToLetter, getGradeColor } from '@/lib/gradeSystem';
+import { X, Flame, Zap, Trophy, Star } from 'lucide-react';
 import type { GameMode } from '@/lib/gameTypes';
+import CharacterViewer from '@/components/CharacterViewer';
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select';
 import {
   Tooltip, TooltipContent, TooltipProvider, TooltipTrigger,
 } from '@/components/ui/tooltip';
+import type { PlayerGameStateSerializable } from '@/lib/gameTypes';
 
+// ─── Event Overlay (shows during mystery box events) ─────────────────────────
+function EventOverlay({ event, players }: { event: GameEvent; players: Record<string, any> }) {
+  const now = Date.now();
+  const aliveChicks = Object.values(players).filter((p: any) => !p.isEagle && p.alive);
+  const chickTotal = aliveChicks.reduce((sum: number, p: any) => sum + (event.chickClicks[p.connId] ?? 0), 0);
+  const eagleTotal = Object.values(players).filter((p: any) => p.isEagle && p.alive)
+    .reduce((sum: number, p: any) => sum + (event.eagleClicks[p.connId] ?? 0), 0);
+  const timeLeft = Math.max(0, Math.ceil((event.endAt - now) / 1000));
+
+  return (
+    <div className="absolute inset-0 z-30 flex items-center justify-center bg-background/80 backdrop-blur-sm">
+      <div className="bg-card border-2 border-accent rounded-xl p-6 max-w-lg w-full mx-4 text-center space-y-4">
+        {event.phase === 'countdown' && (
+          <>
+            <h2 className="text-2xl font-pixel text-accent">
+              {event.type === 'mock-exam' ? '📝 MOCK EXAM' : '👊 HITBOX CHALLENGE'}
+            </h2>
+            <div className="text-6xl font-pixel text-primary animate-pulse">
+              {Math.max(1, 3 - Math.floor((now - event.startedAt) / 1000))}
+            </div>
+            <p className="text-sm font-mono text-muted-foreground">Get ready!</p>
+          </>
+        )}
+
+        {event.phase === 'active' && event.type === 'mock-exam' && event.questionNum && (
+          <>
+            <h2 className="text-lg font-pixel text-accent">📝 MOCK EXAM — {timeLeft}s</h2>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <p className="text-xs font-mono text-muted-foreground mb-1">HOST (Layer 1)</p>
+                <img src={`/PW/PW_Mock_${event.questionNum}_layer-1.png`} alt="Layer 1" className="w-full rounded border border-border" />
+              </div>
+              <div>
+                <p className="text-xs font-mono text-muted-foreground mb-1">Players (Layer 2)</p>
+                <div className="w-full h-full border border-border rounded bg-muted/20 flex items-center justify-center">
+                  <span className="text-xs font-mono text-muted-foreground">On phones</span>
+                </div>
+              </div>
+            </div>
+            <p className="text-xs font-mono text-muted-foreground">Players check their phones for layer 2!</p>
+          </>
+        )}
+
+        {event.phase === 'active' && event.type === 'hitbox' && (
+          <>
+            <h2 className="text-lg font-pixel text-accent">👊 HITBOX BATTLE — {timeLeft}s</h2>
+            <div className="flex justify-around">
+              <div className="text-center">
+                <div className="text-4xl font-pixel text-primary">{chickTotal}</div>
+                <div className="text-xs font-mono text-muted-foreground">🐤 Chicks</div>
+              </div>
+              <div className="text-2xl text-muted-foreground">vs</div>
+              <div className="text-center">
+                <div className="text-4xl font-pixel text-destructive">{eagleTotal}</div>
+                <div className="text-xs font-mono text-muted-foreground">🦅 Eagle</div>
+              </div>
+            </div>
+            <p className="text-xs font-mono text-muted-foreground">TAP HITBOX AS FAST AS POSSIBLE!</p>
+          </>
+        )}
+
+        {event.phase === 'result' && (
+          <>
+            <h2 className="text-xl font-pixel text-accent">RESULT</h2>
+            <p className="text-2xl font-pixel" style={{ color: event.result === 'chick' ? 'hsl(145 80% 50%)' : 'hsl(0 80% 55%)' }}>
+              {event.result === 'chick' ? '🐤 Chicks Win!' : '🦅 Eagle Wins!'}
+            </p>
+            <p className="text-xs font-mono text-muted-foreground">
+              {event.result === 'chick' ? '+2 grades for everyone!' : '-2 grades for chicks'}
+            </p>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ─── Transcript 3D Character ──────────────────────────────────────────────────
+function DancingChar({ chickColor, isWinner, delay }: { chickColor: string; isWinner: boolean; delay: number }) {
+  const angleRef = useRef(delay);
+  useFrame((_, d) => { angleRef.current += d * (isWinner ? 1.5 : 0.4); });
+  return (
+    <Suspense fallback={null}>
+      <CharacterViewer color={chickColor as any} animState={isWinner ? 'Victory' : 'Idle'} facingAngle={angleRef.current} />
+    </Suspense>
+  );
+}
+
+// ─── Host Component ──────────────────────────────────────────────────────────
 export default function Host() {
   const [mode, setMode] = useState<ConnectionMode>('webrtc');
   const [gameMode, setGameMode] = useState<GameMode>('1v3');
@@ -28,22 +122,16 @@ export default function Host() {
     phase, snapshot, videoPlaying, assignments, startGame, handleClientMessage, onVideoComplete,
   } = useGameLogic({ players, broadcast, gameMode });
 
-  // Register client message handler
   useEffect(() => {
-    onClientMessage((connId, msg) => {
-      handleClientMessage(connId, msg);
-    });
+    onClientMessage((connId, msg) => { handleClientMessage(connId, msg); });
   }, [onClientMessage, handleClientMessage]);
 
-  // Preload videos
   useEffect(() => { preloadVideos(); }, []);
 
-  // Broadcast game mode to clients
   useEffect(() => {
     broadcast({ type: 'game-mode', gameMode });
   }, [gameMode, broadcast]);
 
-  // Kick all players when game mode or connection type changes
   const handleGameModeToggle = useCallback(() => {
     const newMode: GameMode = gameMode === '1v3' ? '2v6' : '1v3';
     kickAllPlayers();
@@ -59,43 +147,54 @@ export default function Host() {
   const maxPlayers = gameMode === '1v3' ? MAX_PLAYERS_1V3 : MAX_PLAYERS_2V6;
   const isFull = playerCount === maxPlayers;
 
-  // ─── LOBBY PHASE ─────────────────────────────────
+  // ─── LOBBY ────────────────────────────────────────────────────────────────────
   if (phase === 'lobby') {
     return (
-      <div className="flex flex-col h-screen p-4 gap-4">
-        {/* Header */}
-        <div className="flex items-center justify-between flex-wrap gap-2">
-          <h1 className="text-sm md:text-lg text-primary text-glow-green tracking-wider">LOBBY</h1>
+      <div className="flex flex-col h-screen p-3 gap-3">
+        {/* Cyber START button — top center absolute */}
+        {isFull && (
+          <div className="absolute top-4 left-1/2 -translate-x-1/2 z-20">
+            <button
+              onClick={startGame}
+              className="relative px-10 py-3 font-pixel text-base tracking-[0.3em] uppercase
+                text-primary border-2 border-primary bg-primary/10
+                hover:bg-primary/25 transition-all duration-200
+                shadow-[0_0_25px_hsl(var(--primary)/0.5),inset_0_0_20px_hsl(var(--primary)/0.1)]
+                hover:shadow-[0_0_40px_hsl(var(--primary)/0.7),inset_0_0_30px_hsl(var(--primary)/0.2)]
+                before:absolute before:inset-0 before:border before:border-primary/40 before:animate-pulse
+                after:absolute after:inset-[-3px] after:border after:border-primary/20"
+            >
+              <Zap className="inline w-5 h-5 mr-2 -mt-0.5 text-primary" />
+              ▶ START GAME
+            </button>
+          </div>
+        )}
 
-          <div className="flex items-center gap-3 font-mono text-xs flex-wrap">
-            {/* Game mode torch OR Start button */}
-            {isFull ? (
-              <button
-                onClick={startGame}
-                className="relative px-6 py-2 rounded border-2 border-primary bg-primary/10 text-primary font-pixel text-sm tracking-widest
-                  hover:bg-primary/20 hover:shadow-[0_0_30px_hsl(var(--primary)/0.4)] transition-all
-                  before:absolute before:inset-0 before:rounded before:border before:border-primary/30 before:animate-pulse"
-              >
-                <Zap className="inline w-4 h-4 mr-1 -mt-0.5" />
-                START GAME
-              </button>
-            ) : (
+        {/* Header row */}
+        <div className="flex items-center justify-between flex-wrap gap-2 z-10">
+          <h1 className="text-sm md:text-base text-primary text-glow-green tracking-wider font-pixel">
+            EAGLE VS CHICK — LOBBY
+          </h1>
+
+          <div className="flex items-center gap-2 font-mono text-xs flex-wrap">
+            {/* Game mode toggle (only when not full) */}
+            {!isFull && (
               <button
                 onClick={handleGameModeToggle}
-                className={`relative flex items-center gap-2 px-4 py-2 rounded border-2 font-pixel text-sm tracking-wider transition-all ${
+                className={`flex items-center gap-1 px-3 py-1.5 rounded border font-pixel text-xs transition-all ${
                   gameMode === '2v6'
-                    ? 'border-accent bg-accent/10 text-accent hover:bg-accent/20 shadow-[0_0_20px_hsl(var(--accent)/0.3)]'
-                    : 'border-primary bg-primary/10 text-primary hover:bg-primary/20 shadow-[0_0_20px_hsl(var(--primary)/0.3)]'
+                    ? 'border-accent bg-accent/10 text-accent hover:bg-accent/20'
+                    : 'border-primary bg-primary/10 text-primary hover:bg-primary/20'
                 }`}
               >
-                <Flame className={`w-4 h-4 ${gameMode === '2v6' ? 'animate-pulse' : ''}`} />
+                <Flame className={`w-3 h-3 ${gameMode === '2v6' ? 'animate-pulse' : ''}`} />
                 {gameMode}
               </button>
             )}
 
-            {/* Mode dropdown */}
+            {/* Connection mode */}
             <Select value={mode} onValueChange={handleConnectionModeChange}>
-              <SelectTrigger className="h-8 w-[130px] text-xs font-mono bg-card border-border">
+              <SelectTrigger className="h-7 w-[120px] text-xs font-mono bg-card border-border">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -109,14 +208,13 @@ export default function Host() {
             </Select>
 
             {/* Room code */}
-            <div className="px-3 py-1.5 rounded border border-border bg-card">
+            <div className="px-2 py-1 rounded border border-border bg-card text-xs">
               ROOM: <span className="text-accent font-bold tracking-widest">{roomCode}</span>
             </div>
 
-            {/* Player count */}
-            <span className="text-muted-foreground">{playerCount}/{maxPlayers} PLAYERS</span>
+            <span className="text-muted-foreground">{playerCount}/{maxPlayers}</span>
 
-            {/* Player dots */}
+            {/* Player color dots with kick */}
             {playerCount > 0 && (
               <TooltipProvider delayDuration={200}>
                 <div className="flex items-center gap-1">
@@ -127,11 +225,8 @@ export default function Host() {
                         <TooltipTrigger asChild>
                           <button
                             onClick={() => kickPlayer(connId)}
-                            className="group relative w-5 h-5 rounded-full flex items-center justify-center cursor-pointer transition-transform hover:scale-125"
-                            style={{
-                              backgroundColor: `hsl(${color.hsl})`,
-                              boxShadow: `0 0 8px hsl(${color.hsl} / 0.5)`,
-                            }}
+                            className="group relative w-5 h-5 rounded-full flex items-center justify-center transition-transform hover:scale-125"
+                            style={{ backgroundColor: `hsl(${color.hsl})`, boxShadow: `0 0 6px hsl(${color.hsl} / 0.5)` }}
                           >
                             <X className="w-3 h-3 text-black/70 opacity-0 group-hover:opacity-100 transition-opacity" strokeWidth={3} />
                           </button>
@@ -151,36 +246,77 @@ export default function Host() {
           <LobbyArena players={players} />
         </div>
 
-        {playerCount === 0 && (
-          <p className="text-center text-xs text-muted-foreground font-mono animate-pulse">
-            Open <span className="text-secondary text-glow-purple">/client</span> on your phone and enter code{' '}
-            <span className="text-accent">{roomCode}</span>
-          </p>
-        )}
+        {/* Instructions */}
+        <div className="text-center space-y-1">
+          {playerCount === 0 ? (
+            <p className="text-xs text-muted-foreground font-mono animate-pulse">
+              Open <span className="text-secondary">/client</span> on phones · Room:{' '}
+              <span className="text-accent font-bold">{roomCode}</span>
+            </p>
+          ) : !isFull ? (
+            <p className="text-xs text-muted-foreground font-mono">
+              Waiting for {maxPlayers - playerCount} more player{maxPlayers - playerCount !== 1 ? 's' : ''}...
+            </p>
+          ) : (
+            <p className="text-xs text-primary font-mono animate-pulse">
+              All players ready! Press START GAME ↑
+            </p>
+          )}
+        </div>
 
         <NetworkPerformancePanel players={players} />
       </div>
     );
   }
 
-  // ─── REVEAL / COUNTDOWN PHASE ─────────────────────
-  if (phase === 'reveal' || phase === 'countdown') {
+  // ─── REVEAL ──────────────────────────────────────────────────────────────────
+  if (phase === 'reveal') {
     return (
-      <div className="flex flex-col items-center justify-center h-screen gap-6 p-4">
-        <h1 className="text-xl font-pixel text-primary text-glow-green">
+      <div className="flex flex-col items-center justify-center h-screen gap-6 p-4 bg-background">
+        <h1 className="text-2xl font-pixel text-primary text-glow-green tracking-widest animate-pulse">
           GET READY
         </h1>
-        <div className="text-8xl font-pixel text-accent animate-pulse">
-          {phase === 'reveal' ? '...' : Math.ceil(snapshot?.countdownTime ?? 3)}
+        <div className="text-lg font-mono text-muted-foreground">
+          Assigning roles...
         </div>
-        <p className="text-sm font-mono text-muted-foreground">
-          {phase === 'reveal' ? 'Assigning roles...' : 'Game starting soon!'}
-        </p>
+        <div className="flex gap-6 flex-wrap justify-center mt-4">
+          {Object.entries(assignments).map(([connId, assign]) => {
+            const color = PLAYER_COLORS[assign.colorIndex];
+            return (
+              <div
+                key={connId}
+                className="flex flex-col items-center gap-2 px-4 py-3 rounded border"
+                style={{ borderColor: `hsl(${color?.hsl})`, background: `hsl(${color?.hsl} / 0.1)` }}
+              >
+                <span className="text-xs font-mono" style={{ color: `hsl(${color?.hsl})` }}>
+                  {color?.name} {assign.isEagle ? '🦅' : '🐤'}
+                </span>
+              </div>
+            );
+          })}
+        </div>
       </div>
     );
   }
 
-  // ─── GAMEPLAY PHASE ───────────────────────────────
+  // ─── COUNTDOWN ───────────────────────────────────────────────────────────────
+  if (phase === 'countdown') {
+    const count = snapshot?.countdownTime ?? COUNTDOWN_DURATION_DISPLAY;
+    return (
+      <div className="flex flex-col items-center justify-center h-screen gap-4 p-4">
+        <h1 className="text-xl font-pixel text-primary text-glow-green">GET READY</h1>
+        <div
+          className="text-8xl font-pixel text-accent animate-pulse"
+          style={{ textShadow: '0 0 30px hsl(var(--accent) / 0.8)' }}
+        >
+          {Math.ceil(count)}
+        </div>
+        <p className="text-sm font-mono text-muted-foreground">Game starting soon!</p>
+      </div>
+    );
+  }
+
+  // ─── PLAYING / EXAM ──────────────────────────────────────────────────────────
   if ((phase === 'playing' || phase === 'exam') && snapshot) {
     return (
       <div className="relative h-screen">
@@ -188,8 +324,15 @@ export default function Host() {
           players={snapshot.players}
           buildings={snapshot.buildings}
           eagleAwake={snapshot.eagleAwake}
+          propSpawns={snapshot.propSpawns}
+          mysteryBoxes={snapshot.mysteryBoxes}
+          examState={snapshot.examState}
         />
+
+        {/* Health display top-right */}
         <HealthDisplay players={snapshot.players} />
+
+        {/* Stage progress bottom */}
         <StageProgressBar currentStage={snapshot.stage} stageLabel={snapshot.stageLabel} />
 
         {/* Game time */}
@@ -197,11 +340,28 @@ export default function Host() {
           ⏱ {Math.floor(snapshot.gameTime)}s
         </div>
 
-        {/* Eagle status */}
+        {/* Eagle awake countdown */}
         {!snapshot.eagleAwake && (
           <div className="absolute top-12 left-1/2 -translate-x-1/2 z-10 px-4 py-2 rounded bg-destructive/20 border border-destructive/50 font-mono text-xs text-destructive animate-pulse">
             🦅 Eagle awakens in {Math.max(0, Math.ceil(5 - snapshot.gameTime))}s
           </div>
+        )}
+
+        {/* Exam layer 1 on screen when holder is dead */}
+        {snapshot.examState?.layer1Dead && (
+          <div className="absolute top-1/2 left-2 -translate-y-1/2 z-20 bg-card/95 border-2 border-accent rounded-lg p-3 max-w-[200px]">
+            <p className="text-[9px] font-mono text-accent mb-1">📜 EXAM LAYER 1</p>
+            <img
+              src={`/PW/PW_Final_${snapshot.examState.questionNum}_layer-1.png`}
+              alt="Layer 1"
+              className="w-full rounded"
+            />
+          </div>
+        )}
+
+        {/* Active event overlay */}
+        {snapshot.activeEvent && (
+          <EventOverlay event={snapshot.activeEvent} players={snapshot.players} />
         )}
 
         <VideoOverlay video={videoPlaying} onComplete={onVideoComplete} />
@@ -210,18 +370,125 @@ export default function Host() {
     );
   }
 
-  // ─── GAME OVER ────────────────────────────────────
+  // ─── GAME OVER / TRANSCRIPT ──────────────────────────────────────────────────
   if (phase === 'gameover' && snapshot) {
+    const winner = snapshot.winner;
+    const sorted = Object.values(snapshot.players).sort((a, b) => {
+      const aWin = (winner === 'eagle' && a.isEagle) || (winner === 'chicks' && !a.isEagle);
+      const bWin = (winner === 'eagle' && b.isEagle) || (winner === 'chicks' && !b.isEagle);
+      if (aWin !== bWin) return aWin ? -1 : 1;
+      return b.actionScore - a.actionScore;
+    });
+    const mvp = sorted[0];
+
     return (
-      <div className="flex flex-col items-center justify-center h-screen gap-6 p-4">
-        <h1 className="text-2xl font-pixel text-accent text-glow-green">GAME OVER</h1>
-        <p className="text-lg font-pixel" style={{ color: snapshot.winner === 'eagle' ? 'hsl(0 80% 55%)' : 'hsl(145 80% 50%)' }}>
-          {snapshot.winner === 'eagle' ? '🦅 Eagle Wins!' : '🐤 Chicks Win!'}
-        </p>
-        <HealthDisplay players={snapshot.players} />
+      <div className="flex flex-col h-screen bg-background overflow-auto">
+        {/* Win banner */}
+        <div className="py-4 text-center border-b border-border">
+          <h1 className="text-xl font-pixel text-accent text-glow-green mb-1">GAME OVER</h1>
+          <p
+            className="text-lg font-pixel"
+            style={{ color: winner === 'eagle' ? 'hsl(0 80% 55%)' : winner === 'chicks' ? 'hsl(145 80% 50%)' : 'hsl(45 100% 55%)' }}
+          >
+            {winner === 'eagle' ? '🦅 Eagle Wins!' : winner === 'chicks' ? '🐤 Chicks Win!' : '🤝 Draw!'}
+          </p>
+        </div>
+
+        {/* 3D Character stage */}
+        <div className="h-[35vh] relative flex-shrink-0">
+          <Canvas camera={{ position: [0, 3, sorted.length * 2.2 + 4], fov: 40 }}>
+            <ambientLight intensity={0.8} />
+            <directionalLight position={[5, 8, 5]} intensity={1.2} />
+            {sorted.map((p, i) => {
+              const isWin = (winner === 'eagle' && p.isEagle) || (winner === 'chicks' && !p.isEagle);
+              const spacing = 2.2;
+              const x = (i - (sorted.length - 1) / 2) * spacing;
+              return (
+                <group key={p.connId} position={[x, 0, 0]}>
+                  <DancingChar chickColor={p.chickColor} isWinner={isWin} delay={i * 0.4} />
+                </group>
+              );
+            })}
+          </Canvas>
+
+          {mvp && (
+            <div className="absolute top-3 left-1/2 -translate-x-1/2 flex items-center gap-2 px-4 py-1.5 rounded bg-accent/20 border border-accent">
+              <Trophy className="w-4 h-4 text-accent" />
+              <span className="text-xs font-pixel text-accent">
+                MVP: {PLAYER_COLORS[mvp.colorIndex]?.name ?? '?'}
+              </span>
+            </div>
+          )}
+        </div>
+
+        {/* Transcript table */}
+        <div className="flex-1 p-4 overflow-auto">
+          <h2 className="text-center text-sm font-pixel text-foreground mb-4 tracking-widest">📋 TRANSCRIPT</h2>
+          <div className="max-w-3xl mx-auto">
+            <table className="w-full text-xs font-mono border-collapse">
+              <thead>
+                <tr className="text-muted-foreground border-b border-border">
+                  <th className="py-2 text-left pl-2">Player</th>
+                  <th className="py-2 text-center">Grade</th>
+                  <th className="py-2 text-center">Survival</th>
+                  <th className="py-2 text-center">Damage</th>
+                  <th className="py-2 text-center">Score</th>
+                  <th className="py-2 text-center">Result</th>
+                </tr>
+              </thead>
+              <tbody>
+                {sorted.map((p, i) => {
+                  const color = PLAYER_COLORS[p.colorIndex];
+                  const letter = gradeToLetter(p.health);
+                  const gradeColor = getGradeColor(p.health);
+                  const isWin = (winner === 'eagle' && p.isEagle) || (winner === 'chicks' && !p.isEagle);
+
+                  return (
+                    <tr key={p.connId} className="border-b border-border/40 hover:bg-card/30">
+                      <td className="py-2 pl-2">
+                        <div className="flex items-center gap-1.5">
+                          <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: `hsl(${color?.hsl ?? '0 0% 50%'})` }} />
+                          <span style={{ color: `hsl(${color?.hsl ?? '0 0% 50%'})` }}>{color?.name}</span>
+                          {p.isEagle ? ' 🦅' : ' 🐤'}
+                          {p.isStarStudent && <Star className="w-3 h-3 text-accent fill-accent ml-0.5" />}
+                          {i === 0 && <Trophy className="w-3 h-3 text-accent ml-0.5" />}
+                        </div>
+                      </td>
+                      <td className="py-2 text-center">
+                        <span className="text-2xl font-bold" style={{ color: gradeColor }}>{letter}</span>
+                        <span className="text-[9px] text-muted-foreground block">{p.health.toFixed(1)}</span>
+                      </td>
+                      <td className="py-2 text-center text-muted-foreground">
+                        {Math.floor(p.survivalTime)}s
+                      </td>
+                      <td className="py-2 text-center text-muted-foreground">
+                        {p.isEagle ? `+${p.damageDealt.toFixed(1)}` : `-${p.damageTaken.toFixed(1)}`}
+                      </td>
+                      <td className="py-2 text-center text-foreground font-bold">
+                        {p.actionScore.toFixed(0)}
+                      </td>
+                      <td className="py-2 text-center">
+                        {isWin
+                          ? <span className="text-primary font-bold">WIN</span>
+                          : <span className="text-destructive">LOSE</span>
+                        }
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </div>
       </div>
     );
   }
 
-  return <div className="flex items-center justify-center h-screen text-muted-foreground font-mono">Loading...</div>;
+  return (
+    <div className="flex items-center justify-center h-screen text-muted-foreground font-mono">
+      Loading...
+    </div>
+  );
 }
+
+const COUNTDOWN_DURATION_DISPLAY = 10;

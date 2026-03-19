@@ -1,6 +1,6 @@
 import { useRef, useCallback, useEffect, useState } from 'react';
 import type {
-  GamePhase, GameStage, GameStateSnapshot,
+  GamePhase, GameStage, GameStateSnapshot, ExamState, MysteryBox, GameEvent,
   PlayerGameState, PlayerGameStateSerializable, PropSpawn, BuildingState,
   ClientMessage, PropType,
 } from '@/lib/gameTypes';
@@ -9,11 +9,16 @@ import { PLAYER_COLORS, EAGLE_COLOR_INDICES } from '@/lib/playerColors';
 import { STARTING_HEALTH, applyDamage, applyHeal, isDead, addSubGrades } from '@/lib/gradeSystem';
 import {
   BUILDINGS, SPAWN_POINTS, EAGLE_SPAWN, DIAGONAL_PAIRS,
-  checkCollision, checkOverlap, MAP_HALF,
+  resolvePosition, pushOutOfWall, checkOverlap,
+  isInProtectedZone, getAdjacentBuilding,
+  checkCollision,
+  ATTACK_OVERLAP_THRESHOLD, SOCIAL_CIRCLE_THRESHOLD, PROP_PICKUP_RADIUS,
+  MAP_HALF,
 } from '@/lib/gameplayMapData';
 import type { PlayerState } from '@/hooks/useGameRoom';
 import type { ChickColor } from '@/components/CharacterViewer';
 
+// ─── Constants ────────────────────────────────────────────────────────────────
 const SPEED = 5;
 const EAGLE_SPEED = 5;
 const ATTACK_COOLDOWN = 5000;
@@ -22,13 +27,49 @@ const EAGLE_AWAKE_DELAY = 5000;
 const SPEED_BOOST_DURATION = 500;
 const SPEED_BOOST_MULTIPLIER = 2;
 const FLY_SPEED_MULTIPLIER = 3;
-const PROP_SPAWN_INTERVAL_SPEED = [10000, 12000];
+const FLY_DURATION = 500;
+const ATTACK_ANIM_DURATION = 1000;
+const PROP_SPAWN_INTERVAL_MIN = 10000;
+const PROP_SPAWN_INTERVAL_MAX = 12000;
 const PROP_SPAWN_INTERVAL_HEAL = 30000;
-const SOCIAL_CIRCLE_THRESHOLD = 1.5;
-const TIP_OBTAIN_DURATION = 7000;
+const TIP_OBTAIN_DURATION = 7000;      // 7 sec in protected zone to become star student
+const TIP_QR_COOLDOWN = 5000;          // 5 sec before tip QR can regenerate
+const EXAM_TIMER_1V3 = 45;
+const EXAM_TIMER_2V6 = 60;
+const MYSTERY_BOX_INTERVAL = 60000;    // every 60 sec
+const MYSTERY_BOX_ACTIVE_MIN = 10000;
+const MYSTERY_BOX_ACTIVE_MAX = 15000;
+const EVENT_HITBOX_DURATION = 10000;   // 10s hitbox challenge
+const EVENT_MOCK_DURATION = 30000;     // 30s mock exam
+const STAR_STUDENT_GRADE_BONUS = 5;
+const REVEAL_DURATION = 5000;
+const COUNTDOWN_DURATION = 10;
 
-const REVEAL_DURATION = 5000; // 5 sec reveal
-const COUNTDOWN_DURATION = 3; // 3 sec countdown
+// Answer keys
+const FINAL_ANSWER_KEY: Record<number, string> = {
+  1: 'A+', 2: '4.3', 3: 'FIRE', 4: 'RED',
+};
+const MOCK_ANSWER_KEY: Record<number, string> = {
+  1: 'UST', 2: '11M', 3: 'BIRD', 4: 'HALL',
+};
+
+// ─── Interfaces ───────────────────────────────────────────────────────────────
+interface TipShare {
+  connId: string;
+  tipIndex: 0 | 1;
+  code: string;
+  cooldownUntil: number;
+}
+
+interface BuildingTimer {
+  buildingId: number;
+  startTime: number;
+}
+
+interface EagleZoneState {
+  buildingId: number;
+  entryHealth: number;
+}
 
 interface UseGameLogicProps {
   players: Map<string, PlayerState>;
@@ -36,12 +77,44 @@ interface UseGameLogicProps {
   gameMode: '1v3' | '2v6';
 }
 
+// Named type for the full game state reference — avoids TypeScript `unknown` inference issues
+interface GameStateRef {
+  phase: GamePhase;
+  stage: GameStage;
+  gameTime: number;
+  countdownTime: number;
+  eagleAwake: boolean;
+  playerStates: Map<string, PlayerGameState>;
+  frozenAll: boolean;
+  frozenAllUntil: number;
+  pendingEagleFreezeAfterVideo: boolean;
+  videoPlaying: 'hurt' | 'dead' | null;
+  propSpawns: PropSpawn[];
+  buildings: BuildingState[];
+  winner: 'eagle' | 'chicks' | 'draw' | null;
+  lastPropSpawnSpeed: number;
+  lastPropSpawnHeal: number;
+  propIdCounter: number;
+  startTime: number;
+  stageLabel: string;
+  examState: ExamState | null;
+  examStarted: boolean;
+  mysteryBoxes: MysteryBox[];
+  lastMysteryBoxSpawn: number;
+  mysteryBoxIdCounter: number;
+  activeTipShares: Map<string, TipShare>;
+  tipShareIdCounter: number;
+  buildingTimers: Map<string, BuildingTimer>;
+  eagleZoneStates: Map<string, EagleZoneState>;
+  activeEvent: GameEvent | null;
+  eventCountdown: number;
+}
+
+// ─── Hook ─────────────────────────────────────────────────────────────────────
 export function useGameLogic({ players, broadcast, gameMode }: UseGameLogicProps) {
   const [phase, setPhase] = useState<GamePhase>('lobby');
   const [assignments, setAssignments] = useState<Record<string, { colorIndex: number; isEagle: boolean; chickColor: ChickColor }>>({});
 
-  // CRITICAL: Use a ref to always access the latest players Map
-  // so the animation loop doesn't capture a stale reference
   const playersRef = useRef<Map<string, PlayerState>>(players);
   useEffect(() => { playersRef.current = players; }, [players]);
 
@@ -51,89 +124,50 @@ export function useGameLogic({ players, broadcast, gameMode }: UseGameLogicProps
   const gameModeRef = useRef(gameMode);
   useEffect(() => { gameModeRef.current = gameMode; }, [gameMode]);
 
-  const gameStateRef = useRef<{
-    phase: GamePhase;
-    stage: GameStage;
-    gameTime: number;
-    countdownTime: number;
-    eagleAwake: boolean;
-    playerStates: Map<string, PlayerGameState>;
-    frozenAll: boolean;
-    frozenAllUntil: number;
-    videoPlaying: 'hurt' | 'dead' | null;
-    propSpawns: PropSpawn[];
-    buildings: BuildingState[];
-    winner: 'eagle' | 'chicks' | null;
-    lastPropSpawnSpeed: number;
-    lastPropSpawnHeal: number;
-    propIdCounter: number;
-    startTime: number;
-    stageLabel: string;
-  } | null>(null);
+  const gameStateRef = useRef<GameStateRef | null>(null);
 
   const [snapshot, setSnapshot] = useState<GameStateSnapshot | null>(null);
   const [videoPlaying, setVideoPlaying] = useState<'hurt' | 'dead' | null>(null);
   const frameRef = useRef<number>(0);
   const lastTickRef = useRef<number>(0);
 
-  // Start game
+  // ─── Start Game ──────────────────────────────────────────────────────────────
   const startGame = useCallback(() => {
-    const currentPlayers = playersRef.current;
-    const playerIds = Array.from(currentPlayers.keys());
+    const currentPlayers = playersRef.current as Map<string, PlayerState>;
+    const playerIds: string[] = Array.from(currentPlayers.keys());
     if (playerIds.length === 0) return;
 
-    const currentMode = gameModeRef.current;
-
-    // Role assignment differs by mode
+    const currentMode = gameModeRef.current as '1v3' | '2v6';
     const assigns: Record<string, { colorIndex: number; isEagle: boolean; chickColor: ChickColor }> = {};
 
     if (currentMode === '1v3') {
-      // 1v3: All players have good colors. Randomly pick 1 to become eagle.
-      const eagleCount = 1;
+      // Randomly assign 1 eagle from 4 players, random eagle color (Black or Gold, no repeat)
       const shuffled = [...playerIds].sort(() => Math.random() - 0.5);
-      const eagleIds = new Set(shuffled.slice(0, eagleCount));
-
-      // Pick a random eagle color (Black=0 or Gold=1) for the eagle
+      const eagleId = shuffled[0];
       const eagleColorIdx = EAGLE_COLOR_INDICES[Math.floor(Math.random() * EAGLE_COLOR_INDICES.length)];
 
       for (const id of playerIds) {
-        if (eagleIds.has(id)) {
-          assigns[id] = {
-            colorIndex: eagleColorIdx,
-            isEagle: true,
-            chickColor: PLAYER_COLORS[eagleColorIdx].chickColor,
-          };
+        if (id === eagleId) {
+          assigns[id] = { colorIndex: eagleColorIdx, isEagle: true, chickColor: PLAYER_COLORS[eagleColorIdx].chickColor };
         } else {
-          const currentPlayer = currentPlayers.get(id);
-          const ci = currentPlayer?.colorIndex ?? 2;
-          assigns[id] = {
-            colorIndex: ci,
-            isEagle: false,
-            chickColor: PLAYER_COLORS[ci].chickColor,
-          };
+          const ci = currentPlayers.get(id)?.colorIndex ?? 2;
+          assigns[id] = { colorIndex: ci, isEagle: false, chickColor: PLAYER_COLORS[ci].chickColor };
         }
       }
     } else {
-      // 2v6: Players already chose their colors (including Black/Gold as eagles)
-      // No random assignment. Eagle = whoever has Black(0) or Gold(1)
+      // 2v6: color already chosen (Black/Gold = eagle)
       for (const id of playerIds) {
-        const currentPlayer = currentPlayers.get(id);
-        const ci = currentPlayer?.colorIndex ?? 2;
+        const ci = currentPlayers.get(id)?.colorIndex ?? 2;
         const isEagle = EAGLE_COLOR_INDICES.includes(ci);
-        assigns[id] = {
-          colorIndex: ci,
-          isEagle,
-          chickColor: PLAYER_COLORS[ci].chickColor,
-        };
+        assigns[id] = { colorIndex: ci, isEagle, chickColor: PLAYER_COLORS[ci].chickColor };
       }
     }
 
     setAssignments(assigns);
 
-    // Initialize game state
+    const totalRevealAndCountdown = REVEAL_DURATION + COUNTDOWN_DURATION * 1000;
     const playerStates = new Map<string, PlayerGameState>();
     let spawnIdx = 0;
-    const totalRevealAndCountdown = REVEAL_DURATION + COUNTDOWN_DURATION * 1000;
 
     for (const [id, assign] of Object.entries(assigns)) {
       const spawn = assign.isEagle ? EAGLE_SPAWN : SPAWN_POINTS[spawnIdx++ % SPAWN_POINTS.length];
@@ -148,7 +182,7 @@ export function useGameLogic({ players, broadcast, gameMode }: UseGameLogicProps
         tips: [false, false],
         props: assign.isEagle
           ? [{ type: 'fly', count: 3 }]
-          : [{ type: 'speed', count: 0 }, { type: 'heal', count: 0 }],
+          : [{ type: 'speed', count: 1 }, { type: 'heal', count: 1 }],
         position: { ...spawn },
         facingAngle: 0,
         frozen: assign.isEagle,
@@ -162,16 +196,19 @@ export function useGameLogic({ players, broadcast, gameMode }: UseGameLogicProps
         damageDealt: 0,
         speedMultiplier: 1,
         speedMultiplierUntil: 0,
+        isMoving: false,
+        isAttacking: false,
+        attackAnimUntil: 0,
+        tipShareCooldownUntil: 0,
       });
     }
 
-    // Choose diagonal buildings for tips
     const diagPair = DIAGONAL_PAIRS[Math.floor(Math.random() * DIAGONAL_PAIRS.length)];
     const buildings: BuildingState[] = BUILDINGS.map((b) => ({
       id: b.id,
       position: b.position,
       hasTip: diagPair.includes(b.id),
-      tipIndex: b.id === diagPair[0] ? 0 : 1,
+      tipIndex: b.id === diagPair[0] ? 0 : b.id === diagPair[1] ? 1 : 0,
       glowing: false,
       zoneHealth: 50,
       zoneActive: false,
@@ -188,6 +225,7 @@ export function useGameLogic({ players, broadcast, gameMode }: UseGameLogicProps
       playerStates,
       frozenAll: false,
       frozenAllUntil: 0,
+      pendingEagleFreezeAfterVideo: false,
       videoPlaying: null,
       propSpawns: [],
       buildings,
@@ -196,24 +234,32 @@ export function useGameLogic({ players, broadcast, gameMode }: UseGameLogicProps
       lastPropSpawnHeal: 0,
       propIdCounter: 0,
       startTime: 0,
-      stageLabel: 'Reveal...',
+      stageLabel: 'Roles assigned! Get ready...',
+      examState: null,
+      examStarted: false,
+      mysteryBoxes: [],
+      lastMysteryBoxSpawn: 0,
+      mysteryBoxIdCounter: 0,
+      activeTipShares: new Map(),
+      tipShareIdCounter: 0,
+      buildingTimers: new Map(),
+      eagleZoneStates: new Map(),
+      activeEvent: null,
+      eventCountdown: 0,
     };
 
     setPhase('reveal');
-
-    // Send individual assignments to each client via broadcast
     broadcastRef.current({ type: 'game-start', assignments: assigns });
 
-    // After 5 seconds, transition to countdown (3 sec)
     setTimeout(() => {
-      if (!gameStateRef.current) return;
-      gameStateRef.current.phase = 'countdown';
-      gameStateRef.current.countdownTime = COUNTDOWN_DURATION;
-      gameStateRef.current.startTime = Date.now();
+      const gsInner = gameStateRef.current as GameStateRef | null;
+      if (!gsInner) return;
+      gsInner.phase = 'countdown';
+      gsInner.countdownTime = COUNTDOWN_DURATION;
+      gsInner.startTime = Date.now();
       setPhase('countdown');
-      broadcastRef.current({ type: 'phase-change', phase: 'countdown' });
+      (broadcastRef.current as (msg: any) => void)({ type: 'phase-change', phase: 'countdown' });
 
-      // Start game loop
       lastTickRef.current = performance.now();
       const tick = (time: number) => {
         const delta = (time - lastTickRef.current) / 1000;
@@ -223,19 +269,19 @@ export function useGameLogic({ players, broadcast, gameMode }: UseGameLogicProps
       };
       frameRef.current = requestAnimationFrame(tick);
     }, REVEAL_DURATION);
-  }, []); // No deps needed - we use refs
+  }, []);
 
-  // Main game loop update - uses refs so it never goes stale
+  // ─── Main Game Loop ───────────────────────────────────────────────────────────
   const updateGameState = useCallback((delta: number) => {
-    const gs = gameStateRef.current;
+    const gs = gameStateRef.current as GameStateRef | null;
     if (!gs || gs.winner) return;
 
     const now = Date.now();
-    const currentPlayers = playersRef.current;
-    const currentBroadcast = broadcastRef.current;
-    const currentMode = gameModeRef.current;
+    const currentPlayers = playersRef.current as Map<string, PlayerState>;
+    const currentBroadcast = broadcastRef.current as (msg: any) => void;
+    const currentMode = gameModeRef.current as '1v3' | '2v6';
 
-    // Countdown phase
+    // ── Countdown ──
     if (gs.phase === 'countdown') {
       const elapsed = (now - gs.startTime) / 1000;
       gs.countdownTime = Math.max(0, COUNTDOWN_DURATION - elapsed);
@@ -243,6 +289,9 @@ export function useGameLogic({ players, broadcast, gameMode }: UseGameLogicProps
         gs.phase = 'playing';
         gs.startTime = now;
         gs.gameTime = 0;
+        gs.lastPropSpawnSpeed = now;
+        gs.lastPropSpawnHeal = now;
+        gs.lastMysteryBoxSpawn = now;
         gs.stageLabel = 'Touch every other chick!';
         setPhase('playing');
         currentBroadcast({ type: 'phase-change', phase: 'playing' });
@@ -253,148 +302,227 @@ export function useGameLogic({ players, broadcast, gameMode }: UseGameLogicProps
 
     if (gs.phase !== 'playing' && gs.phase !== 'exam') return;
 
-    // Update game time
+    // ── Time ──
     if (!gs.frozenAll) {
       gs.gameTime += delta;
     }
 
-    // Unfreeze checks
+    // ── Unfreeze all ──
     if (gs.frozenAll && now > gs.frozenAllUntil) {
       gs.frozenAll = false;
       gs.videoPlaying = null;
       setVideoPlaying(null);
     }
 
-    // Eagle awake check
-    if (!gs.eagleAwake && gs.gameTime > 5) {
+    // ── Eagle awakening ──
+    if (!gs.eagleAwake && gs.gameTime > EAGLE_AWAKE_DELAY / 1000) {
       gs.eagleAwake = true;
       for (const [, p] of gs.playerStates) {
-        if (p.isEagle) {
-          p.frozen = false;
-          p.frozenUntil = 0;
-        }
+        if (p.isEagle) { p.frozen = false; p.frozenUntil = 0; }
       }
     }
 
-    // Update player positions from joystick input
+    // ── Player movement ──
     if (!gs.frozenAll) {
       for (const [connId, p] of gs.playerStates) {
         if (!p.alive) continue;
         if (p.frozen && now < p.frozenUntil) continue;
-        if (p.frozen && now >= p.frozenUntil) {
-          p.frozen = false;
+        if (p.frozen && now >= p.frozenUntil) p.frozen = false;
+
+        if (p.speedMultiplier > 1 && now > p.speedMultiplierUntil) p.speedMultiplier = 1;
+        if (p.invincibleUntil > 0 && now > p.invincibleUntil) p.invincibleUntil = 0;
+        if (p.isAttacking && now > p.attackAnimUntil) p.isAttacking = false;
+
+        // After fly: push eagle out of walls
+        const wasFlying = p.isEagle && p.speedMultiplier >= FLY_SPEED_MULTIPLIER;
+        if (wasFlying && now >= p.speedMultiplierUntil) {
+          const resolved = pushOutOfWall(p.position.x, p.position.z, 0.5);
+          p.position.x = resolved.x;
+          p.position.z = resolved.z;
         }
 
-        // Speed multiplier expiry
-        if (p.speedMultiplier > 1 && now > p.speedMultiplierUntil) {
-          p.speedMultiplier = 1;
-        }
-
-        // Invincibility expiry
-        if (p.invincibleUntil > 0 && now > p.invincibleUntil) {
-          p.invincibleUntil = 0;
-        }
-
-        // READ FROM REF - this is the fix for stale joystick data
         const lobbyPlayer = currentPlayers.get(connId);
         if (!lobbyPlayer) continue;
 
         const jx = lobbyPlayer.joystick.x;
         const jy = -lobbyPlayer.joystick.y;
         const magnitude = Math.sqrt(jx * jx + jy * jy);
+        p.isMoving = magnitude > 0.05;
 
         if (magnitude > 0.05) {
           const moveAngle = Math.atan2(-jx, jy);
           const baseSpeed = p.isEagle ? EAGLE_SPEED : SPEED;
           const speed = magnitude * baseSpeed * p.speedMultiplier * delta;
 
-          const newX = p.position.x + Math.sin(moveAngle) * speed * -1;
-          const newZ = p.position.z + Math.cos(moveAngle) * speed * -1;
+          const dx = Math.sin(moveAngle) * speed * -1;
+          const dz = Math.cos(moveAngle) * speed * -1;
+          const newX = p.position.x + dx;
+          const newZ = p.position.z + dz;
 
           const isFlying = p.isEagle && p.speedMultiplier >= FLY_SPEED_MULTIPLIER;
-          if (isFlying || !checkCollision(newX, newZ, 0.5)) {
-            p.position.x = Math.max(-MAP_HALF + 0.5, Math.min(MAP_HALF - 0.5, newX));
-            p.position.z = Math.max(-MAP_HALF + 0.5, Math.min(MAP_HALF - 0.5, newZ));
-          }
-
+          const resolved = resolvePosition(newX, newZ, p.position.x, p.position.z, 0.5, isFlying);
+          p.position.x = resolved.x;
+          p.position.z = resolved.z;
           p.facingAngle = moveAngle;
           p.survivalTime = gs.gameTime;
         }
       }
     }
 
-    // Stage 1: Social Circle check
+    // ── Stage 0: Social Circle ──
     if (gs.stage === 0) {
-      const chicks = Array.from(gs.playerStates.values()).filter((p) => !p.isEagle && p.alive);
+      const chicks = Array.from<PlayerGameState>(gs.playerStates.values()).filter((p) => !p.isEagle && p.alive);
       for (let i = 0; i < chicks.length; i++) {
         for (let j = i + 1; j < chicks.length; j++) {
-          if (checkOverlap(
-            chicks[i].position.x, chicks[i].position.z,
-            chicks[j].position.x, chicks[j].position.z,
-            SOCIAL_CIRCLE_THRESHOLD
-          )) {
+          if (checkOverlap(chicks[i].position.x, chicks[i].position.z, chicks[j].position.x, chicks[j].position.z, SOCIAL_CIRCLE_THRESHOLD)) {
             chicks[i].socialCircleMet.add(chicks[j].connId);
             chicks[j].socialCircleMet.add(chicks[i].connId);
           }
         }
       }
-
       const requiredMeets = chicks.length - 1;
-      const allMet = chicks.every((c) => c.socialCircleMet.size >= requiredMeets);
-      if (allMet && chicks.length > 0) {
+      if (chicks.length > 0 && chicks.every((c) => c.socialCircleMet.size >= requiredMeets)) {
         gs.stage = 1;
-        gs.stageLabel = 'Go to glowing buildings to get Exam Tips!';
+        gs.stageLabel = 'Get Exam Tips from glowing buildings!';
         for (const b of gs.buildings) {
-          if (b.hasTip) {
-            b.glowing = true;
-            b.zoneActive = true;
-          }
+          if (b.hasTip) { b.glowing = true; b.zoneActive = true; }
         }
       }
     }
 
-    // Prop spawning
+    // ── Stage 1: Exam Tips building timers ──
+    if (gs.stage === 1 || gs.stage === 2) {
+      const chicks = Array.from<PlayerGameState>(gs.playerStates.values()).filter((p) => !p.isEagle && p.alive);
+
+      for (const chick of chicks) {
+        const mode = gameModeRef.current;
+        let inZoneBuilding = -1;
+        for (const b of gs.buildings) {
+          if (b.hasTip && b.glowing && !b.tipObtained && isInProtectedZone(chick.position.x, chick.position.z, b.id)) {
+            inZoneBuilding = b.id;
+            break;
+          }
+        }
+
+        const timerKey = `${chick.connId}-building`;
+        if (inZoneBuilding >= 0) {
+          if (!gs.buildingTimers.has(timerKey)) {
+            gs.buildingTimers.set(timerKey, { buildingId: inZoneBuilding, startTime: now });
+          } else {
+            const timer = gs.buildingTimers.get(timerKey)!;
+            if (timer.buildingId !== inZoneBuilding) {
+              gs.buildingTimers.set(timerKey, { buildingId: inZoneBuilding, startTime: now });
+            } else {
+              const elapsed = now - timer.startTime;
+              if (elapsed >= TIP_OBTAIN_DURATION && !chick.isStarStudent) {
+                const building = gs.buildings[inZoneBuilding];
+                const neededCount = mode === '2v6' ? 2 : 1;
+                if (building && building.tipObtainedCount < neededCount) {
+                  // Become Star Student
+                  chick.isStarStudent = true;
+                  const tipIdx = building.tipIndex as 0 | 1;
+                  chick.tips[tipIdx] = true;
+                  chick.health = Math.min(STARTING_HEALTH, addSubGrades(chick.health, STAR_STUDENT_GRADE_BONUS));
+                  chick.props.push({ type: 'invincible', count: 1 });
+                  chick.actionScore += 10;
+
+                  building.tipObtainedCount++;
+                  if (building.tipObtainedCount >= neededCount) {
+                    building.tipObtained = true;
+                    building.glowing = false;
+                    building.zoneActive = false;
+                  }
+
+                  gs.buildingTimers.delete(timerKey);
+
+                  // Transition to stage 2 label if first tip obtained
+                  if (gs.stage === 1) {
+                    gs.stage = 2;
+                    gs.stageLabel = 'Stage 2 & 3: Share Exam Tips with everyone!';
+                  }
+                }
+              }
+            }
+          }
+        } else {
+          gs.buildingTimers.delete(timerKey);
+        }
+      }
+
+      // Stage 2 → 3: All alive chicks have both tips
+      if (gs.stage === 2) {
+        const aliveChicks = Array.from<PlayerGameState>(gs.playerStates.values()).filter((p) => !p.isEagle && p.alive);
+        if (aliveChicks.length > 0 && aliveChicks.every((c) => c.tips[0] && c.tips[1])) {
+          gs.stage = 3;
+          gs.stageLabel = 'Run to any building to start the Final Exam!';
+        }
+      }
+    }
+
+    // ── Eagle zone tracking (for zone health reset on exit) ──
+    if (gs.stage >= 1) {
+      for (const [, p] of gs.playerStates) {
+        if (!p.isEagle || !p.alive) continue;
+        const zoneKey = p.connId;
+        let currentZone = -1;
+        for (const b of gs.buildings) {
+          if (b.zoneActive && !b.tipObtained && isInProtectedZone(p.position.x, p.position.z, b.id)) {
+            currentZone = b.id;
+            break;
+          }
+        }
+        const prev = gs.eagleZoneStates.get(zoneKey);
+        if (currentZone >= 0) {
+          if (!prev || prev.buildingId !== currentZone) {
+            gs.eagleZoneStates.set(zoneKey, { buildingId: currentZone, entryHealth: gs.buildings[currentZone].zoneHealth });
+          }
+        } else if (prev) {
+          // Eagle left the zone — reset zone health
+          const b = gs.buildings[prev.buildingId];
+          if (b && b.zoneActive) b.zoneHealth = 50;
+          gs.eagleZoneStates.delete(zoneKey);
+        }
+      }
+    }
+
+    // ── Stage 3: Exam venue entry check ──
+    if (gs.stage === 3 && !gs.examStarted && gs.phase === 'playing') {
+      const aliveChicks = Array.from<PlayerGameState>(gs.playerStates.values()).filter((p) => !p.isEagle && p.alive);
+      if (aliveChicks.length > 0 && aliveChicks.every((c) => getAdjacentBuilding(c.position.x, c.position.z) >= 0)) {
+        startExam(gs, currentBroadcast, currentMode);
+      }
+    }
+
+    // ── Exam timer countdown ──
+    if (gs.phase === 'exam' && gs.examState && !gs.examState.answered) {
+      if (!gs.frozenAll) {
+        gs.examState.timeRemaining -= delta;
+        if (gs.examState.timeRemaining <= 0) {
+          gs.examState.timeRemaining = 0;
+          // Time's up — eagle wins
+          endGame(gs, 'eagle', currentBroadcast);
+        }
+      }
+    }
+
+    // ── Prop spawning ──
     if (gs.phase === 'playing') {
-      const speedInterval = PROP_SPAWN_INTERVAL_SPEED[0] +
-        Math.random() * (PROP_SPAWN_INTERVAL_SPEED[1] - PROP_SPAWN_INTERVAL_SPEED[0]);
+      const speedInterval = PROP_SPAWN_INTERVAL_MIN + Math.random() * (PROP_SPAWN_INTERVAL_MAX - PROP_SPAWN_INTERVAL_MIN);
       if (now - gs.lastPropSpawnSpeed > speedInterval) {
         gs.lastPropSpawnSpeed = now;
-        const pos = {
-          x: (Math.random() - 0.5) * (MAP_HALF * 1.5),
-          z: (Math.random() - 0.5) * (MAP_HALF * 1.5),
-        };
-        if (!checkCollision(pos.x, pos.z, 1)) {
-          gs.propSpawns.push({
-            id: `prop-${gs.propIdCounter++}`,
-            type: 'speed',
-            position: pos,
-            active: true,
-          });
-        }
+        spawnProp(gs, 'speed');
       }
-
       if (now - gs.lastPropSpawnHeal > PROP_SPAWN_INTERVAL_HEAL) {
         gs.lastPropSpawnHeal = now;
-        const pos = {
-          x: (Math.random() - 0.5) * (MAP_HALF * 1.5),
-          z: (Math.random() - 0.5) * (MAP_HALF * 1.5),
-        };
-        if (!checkCollision(pos.x, pos.z, 1)) {
-          gs.propSpawns.push({
-            id: `prop-${gs.propIdCounter++}`,
-            type: 'heal',
-            position: pos,
-            active: true,
-          });
-        }
+        spawnProp(gs, 'heal');
       }
 
-      // Check prop pickups (chicks only)
+      // Prop pickup (proximity-based)
       for (const [, p] of gs.playerStates) {
         if (!p.alive || p.isEagle) continue;
         for (const prop of gs.propSpawns) {
           if (!prop.active) continue;
-          if (checkOverlap(p.position.x, p.position.z, prop.position.x, prop.position.z, 1.5)) {
+          if (checkOverlap(p.position.x, p.position.z, prop.position.x, prop.position.z, PROP_PICKUP_RADIUS)) {
             prop.active = false;
             const existing = p.props.find((pi) => pi.type === prop.type);
             if (existing) existing.count++;
@@ -403,27 +531,255 @@ export function useGameLogic({ players, broadcast, gameMode }: UseGameLogicProps
           }
         }
       }
-
-      // Clean up inactive props
       gs.propSpawns = gs.propSpawns.filter((p) => p.active);
+
+      // Mystery box spawning
+      if (now - gs.lastMysteryBoxSpawn > MYSTERY_BOX_INTERVAL) {
+        gs.lastMysteryBoxSpawn = now;
+        const activeDelay = MYSTERY_BOX_ACTIVE_MIN + Math.random() * (MYSTERY_BOX_ACTIVE_MAX - MYSTERY_BOX_ACTIVE_MIN);
+        const pos = findOpenPosition(gs);
+        if (pos) {
+          gs.mysteryBoxes.push({
+            id: `box-${gs.mysteryBoxIdCounter++}`,
+            position: pos,
+            spawnedAt: now,
+            activeAt: now + activeDelay,
+            triggered: false,
+            collected: false,
+          });
+        }
+      }
+
+      // Mystery box collection / trigger
+      for (const box of gs.mysteryBoxes) {
+        if (box.collected || box.triggered) continue;
+        if (now < box.activeAt) continue; // not active yet
+        for (const [, p] of gs.playerStates) {
+          if (!p.alive) continue;
+          if (checkOverlap(p.position.x, p.position.z, box.position.x, box.position.z, 1.5)) {
+            if (!p.isEagle) {
+              // Chick gets 3 speed props
+              box.collected = true;
+              const existing = p.props.find((pi) => pi.type === 'speed');
+              if (existing) existing.count += 3;
+              else p.props.push({ type: 'speed', count: 3 });
+              p.actionScore += 3;
+            } else {
+              // Eagle triggers a random event
+              box.triggered = true;
+              gs.frozenAll = true;
+              gs.frozenAllUntil = now + 60000; // lifted when event ends
+              const eventType = Math.random() < 0.5 ? 'mock-exam' : 'hitbox';
+              const questionNum = Math.floor(Math.random() * 4) + 1;
+              const eventDuration = eventType === 'hitbox' ? EVENT_HITBOX_DURATION : EVENT_MOCK_DURATION;
+              gs.activeEvent = {
+                type: eventType,
+                phase: 'countdown',
+                startedAt: now,
+                endAt: now + 3000 + eventDuration,
+                questionNum: eventType === 'mock-exam' ? questionNum : undefined,
+                chickClicks: {},
+                eagleClicks: {},
+                result: 'pending',
+              };
+              gs.eventCountdown = 3;
+              gs.stageLabel = eventType === 'mock-exam' ? '🎲 Event: Mock Exam!' : '🎲 Event: Hitbox Challenge!';
+              currentBroadcast({ type: 'phase-change', phase: gs.phase });
+            }
+            break;
+          }
+        }
+      }
+      gs.mysteryBoxes = gs.mysteryBoxes.filter((b) => !b.collected && !b.triggered);
     }
 
-    // Win condition check
-    const aliveChicks = Array.from(gs.playerStates.values()).filter((p) => !p.isEagle && p.alive);
-    const totalChicks = Array.from(gs.playerStates.values()).filter((p) => !p.isEagle).length;
+    // ── Active event lifecycle ──
+    if (gs.activeEvent) {
+      const ev = gs.activeEvent as GameEvent;
+      const elapsed = now - ev.startedAt;
+
+      if (ev.phase === 'countdown' && elapsed >= 3000) {
+        ev.phase = 'active';
+        ev.endAt = now + (ev.type === 'hitbox' ? EVENT_HITBOX_DURATION : EVENT_MOCK_DURATION);
+      } else if (ev.phase === 'active' && now >= ev.endAt) {
+        // Event over — evaluate results
+        ev.phase = 'result';
+
+        if (ev.type === 'hitbox') {
+          const chickTotal = (Object.values(ev.chickClicks) as number[]).reduce((a: number, b: number) => a + b, 0);
+          const eagleTotal = (Object.values(ev.eagleClicks) as number[]).reduce((a: number, b: number) => a + b, 0);
+          const aliveChicks = Array.from<PlayerGameState>(gs.playerStates.values()).filter((p) => !p.isEagle && p.alive);
+          const avgChick = aliveChicks.length > 0 ? chickTotal / aliveChicks.length : 0;
+          const eagles = Array.from<PlayerGameState>(gs.playerStates.values()).filter((p) => p.isEagle && p.alive);
+          const avgEagle = eagles.length > 0 ? eagleTotal / eagles.length : 0;
+
+          if (avgChick >= avgEagle) {
+            ev.result = 'chick';
+            for (const [, p] of gs.playerStates) {
+              if (p.alive) p.health = addSubGrades(p.health, 2);
+            }
+          } else {
+            ev.result = 'eagle';
+            for (const [, p] of gs.playerStates) {
+              if (!p.isEagle && p.alive) p.health = addSubGrades(p.health, -2);
+            }
+          }
+        } else if (ev.type === 'mock-exam') {
+          // If nobody answered correctly → -2 sub-grades to all chicks (fail)
+          const anyCorrect = (Object.values(ev.chickClicks) as number[]).some((v: number) => v > 0);
+          if (!anyCorrect) {
+            ev.result = 'eagle';
+            for (const [, p] of gs.playerStates) {
+              if (!p.isEagle && p.alive) p.health = addSubGrades(p.health, -2);
+            }
+          } else {
+            ev.result = 'chick';
+          }
+        }
+
+        // Post-event: freeze all eagles for 5 seconds (buffer for chicks)
+        for (const [, p] of gs.playerStates) {
+          if (p.isEagle) {
+            p.frozen = true;
+            p.frozenUntil = now + 5000;
+          }
+        }
+
+        // Unfreeze all after short result display (3s)
+        gs.frozenAllUntil = now + 3000;
+
+        // Clear event after 3 more seconds
+        setTimeout(() => {
+          const gsCleanup = gameStateRef.current as GameStateRef | null;
+          if (gsCleanup) {
+            gsCleanup.frozenAll = false;
+            gsCleanup.frozenAllUntil = 0;
+            gsCleanup.activeEvent = null;
+            gsCleanup.stageLabel = getStageLabel(gsCleanup.stage as number);
+          }
+        }, 3000);
+      }
+    }
+
+    // ── Win condition check ──
+    const aliveChicks = Array.from<PlayerGameState>(gs.playerStates.values()).filter((p) => !p.isEagle && p.alive);
+    const totalChicks = Array.from<PlayerGameState>(gs.playerStates.values()).filter((p) => !p.isEagle).length;
     const eliminated = totalChicks - aliveChicks.length;
 
-    if (currentMode === '1v3' && eliminated >= 3) {
-      gs.winner = 'eagle';
-      gs.phase = 'gameover';
-      setPhase('gameover');
-      currentBroadcast({ type: 'game-over', winner: 'eagle' });
+    if (!gs.winner) {
+      if (currentMode === '1v3') {
+        if (eliminated >= 3) endGame(gs, 'eagle', currentBroadcast);
+        else if (eliminated >= 2 && aliveChicks.length === 1 && gs.stage < 1) {
+          // Only 1 chick left and not even in exam tips stage yet — eagle wins
+          // (We still let game continue but will end if last chick eliminated)
+        }
+      } else {
+        if (eliminated > 4) endGame(gs, 'eagle', currentBroadcast);
+        else if (eliminated === 4) { /* draw — only if exam not running */ }
+      }
     }
 
     doBroadcastState(gs, currentBroadcast);
-  }, []); // No deps - uses refs
+  }, []);
 
-  const doBroadcastState = useCallback((gs: NonNullable<typeof gameStateRef.current>, bcast: (msg: any) => void) => {
+  // ─── Helpers ─────────────────────────────────────────────────────────────────
+  function getStageLabel(stage: number): string {
+    switch (stage) {
+      case 0: return 'Touch every other chick!';
+      case 1: return 'Get Exam Tips from glowing buildings!';
+      case 2: return 'Stage 2 & 3: Share Exam Tips with everyone!';
+      case 3: return 'Run to any building to start the Final Exam!';
+      default: return '';
+    }
+  }
+
+  function spawnProp(gs: GameStateRef, type: 'speed' | 'heal') {
+    for (let attempt = 0; attempt < 10; attempt++) {
+      const pos = {
+        x: (Math.random() - 0.5) * (MAP_HALF * 1.6),
+        z: (Math.random() - 0.5) * (MAP_HALF * 1.6),
+      };
+      if (!checkCollision(pos.x, pos.z, 1.5)) {
+        gs.propSpawns.push({
+          id: `prop-${gs.propIdCounter++}`,
+          type,
+          position: pos,
+          active: true,
+        });
+        break;
+      }
+    }
+  }
+
+  function findOpenPosition(gs: GameStateRef): { x: number; z: number } | null {
+    for (let attempt = 0; attempt < 15; attempt++) {
+      const pos = { x: (Math.random() - 0.5) * MAP_HALF * 1.4, z: (Math.random() - 0.5) * MAP_HALF * 1.4 };
+      if (!checkCollision(pos.x, pos.z, 1.5)) return pos;
+    }
+    return null;
+  }
+
+  function startExam(
+    gs: GameStateRef,
+    bcast: (msg: any) => void,
+    mode: '1v3' | '2v6',
+  ) {
+    gs.examStarted = true;
+    gs.phase = 'exam';
+    setPhase('exam');
+
+    const aliveChicks = Array.from<PlayerGameState>(gs.playerStates.values()).filter((p) => !p.isEagle && p.alive);
+    const questionNum = Math.floor(Math.random() * 4) + 1;
+    const timer = mode === '1v3' ? EXAM_TIMER_1V3 : EXAM_TIMER_2V6;
+
+    // Pick 1 random layer-1 holder
+    const shuffled = [...aliveChicks].sort(() => Math.random() - 0.5);
+    const layer1Player = shuffled[0];
+    const layer2Players = shuffled.slice(1);
+
+    gs.examState = {
+      questionNum,
+      category: 'Final',
+      timeRemaining: timer,
+      layer1ConnId: layer1Player.connId,
+      layer2ConnIds: layer2Players.map((p) => p.connId),
+      answered: false,
+      layer1Dead: false,
+    };
+    gs.stageLabel = 'FINAL EXAM — Solve together!';
+
+    // Build per-client assignments
+    const examAssigns: Record<string, { layer: '1' | '2'; questionNum: number; category: 'Final' }> = {};
+    examAssigns[layer1Player.connId] = { layer: '1', questionNum, category: 'Final' };
+    for (const p of layer2Players) {
+      examAssigns[p.connId] = { layer: '2', questionNum, category: 'Final' };
+    }
+    // Eagles don't get a layer
+    for (const [, p] of gs.playerStates) {
+      if (p.isEagle) examAssigns[p.connId] = { layer: '2', questionNum: 0, category: 'Final' };
+    }
+
+    bcast({ type: 'phase-change', phase: 'exam' });
+    bcast({ type: 'exam-start', assignments: examAssigns });
+  }
+
+  function endGame(
+    gs: GameStateRef,
+    winner: 'eagle' | 'chicks' | 'draw',
+    bcast: (msg: any) => void,
+  ) {
+    gs.winner = winner;
+    gs.phase = 'gameover';
+    setPhase('gameover');
+    cancelAnimationFrame(frameRef.current);
+    bcast({ type: 'game-over', winner });
+  }
+
+  // ─── Broadcast state ────────────────────────────────────────────────────────
+  const doBroadcastState = useCallback((
+    gs: GameStateRef,
+    bcast: (msg: any) => void,
+  ) => {
     const playersObj: Record<string, PlayerGameStateSerializable> = {};
     for (const [id, p] of gs.playerStates) {
       playersObj[id] = serializePlayerState(p);
@@ -443,47 +799,47 @@ export function useGameLogic({ players, broadcast, gameMode }: UseGameLogicProps
       buildings: gs.buildings,
       winner: gs.winner,
       stageLabel: gs.stageLabel,
+      examState: gs.examState,
+      mysteryBoxes: gs.mysteryBoxes,
+      activeEvent: gs.activeEvent,
     };
 
     setSnapshot(snap);
     bcast({ type: 'game-state', state: snap });
   }, []);
 
-  // Handle client messages
+  // ─── Handle Client Messages ───────────────────────────────────────────────────
   const handleClientMessage = useCallback((connId: string, msg: ClientMessage) => {
-    const gs = gameStateRef.current;
+    const gs = gameStateRef.current as GameStateRef | null;
     if (!gs) return;
     const now = Date.now();
-    const player = gs.playerStates.get(connId);
+    const player = gs.playerStates.get(connId) as PlayerGameState | undefined;
     if (!player || !player.alive) return;
 
     switch (msg.type) {
+      // ── Attack ──
       case 'attack-press': {
         if (!player.isEagle) return;
         if (now < player.attackCooldownUntil) return;
         if (player.frozen) return;
 
         player.attackCooldownUntil = now + ATTACK_COOLDOWN;
+        player.isAttacking = true;
+        player.attackAnimUntil = now + ATTACK_ANIM_DURATION;
 
         const hitChicks: PlayerGameState[] = [];
         for (const [, p] of gs.playerStates) {
           if (p.isEagle || !p.alive) continue;
           if (p.invincibleUntil > now) continue;
 
-          let inProtectedZone = false;
-          for (const b of gs.buildings) {
-            if (b.zoneActive && !b.tipObtained) {
-              const dx = p.position.x - b.position.x;
-              const dz = p.position.z - b.position.z;
-              if (Math.sqrt(dx * dx + dz * dz) < 2.5) {
-                inProtectedZone = true;
-                break;
-              }
-            }
-          }
-          if (inProtectedZone) continue;
+          // Check if chick is fully inside a protected zone
+          const inZone = gs.buildings.some((b) =>
+            b.zoneActive && !b.tipObtained &&
+            isInProtectedZone(p.position.x, p.position.z, b.id)
+          );
+          if (inZone) continue;
 
-          if (checkOverlap(player.position.x, player.position.z, p.position.x, p.position.z, 1.5)) {
+          if (checkOverlap(player.position.x, player.position.z, p.position.x, p.position.z, ATTACK_OVERLAP_THRESHOLD)) {
             hitChicks.push(p);
           }
         }
@@ -492,51 +848,59 @@ export function useGameLogic({ players, broadcast, gameMode }: UseGameLogicProps
           let mostSerious: 'hurt' | 'dead' = 'hurt';
           for (const chick of hitChicks) {
             const newHealth = applyDamage(chick.health);
-            chick.damageTaken += chick.health - newHealth;
-            chick.health = newHealth;
-            player.damageDealt += chick.health;
+            const dmg = chick.health - newHealth;
+            chick.damageTaken += dmg;
+            player.damageDealt += dmg;
             player.actionScore += 5;
+            chick.health = newHealth;
 
             if (isDead(chick.health)) {
               chick.alive = false;
               chick.health = 0;
               mostSerious = 'dead';
-              broadcastRef.current({ type: 'you-died' });
+
+              // Handle layer-1 death during exam
+              if (gs.examState && gs.examState.layer1ConnId === chick.connId && !gs.examState.layer1Dead) {
+                gs.examState.layer1Dead = true;
+                for (const [, pp] of gs.playerStates) {
+                  if (pp.alive) pp.health = addSubGrades(pp.health, -1);
+                }
+              }
+
+              broadcastRef.current({ type: 'you-died', connId: chick.connId });
             }
           }
 
           gs.frozenAll = true;
-          gs.frozenAllUntil = now + 3000;
+          gs.frozenAllUntil = now + 60000; // lifted by video completion
           gs.videoPlaying = mostSerious;
+          gs.pendingEagleFreezeAfterVideo = true;
           setVideoPlaying(mostSerious);
-
-          player.frozen = true;
-          player.frozenUntil = now + 3000 + FREEZE_DURATION;
-          player.attackCooldownUntil = now + 3000 + FREEZE_DURATION + ATTACK_COOLDOWN;
         }
         break;
       }
 
+      // ── Prop use ──
       case 'prop-use': {
         const propItem = player.props.find((p) => p.type === msg.propType && p.count > 0);
         if (!propItem) return;
         propItem.count--;
         player.actionScore += 2;
 
-        switch (msg.propType) {
+        switch (msg.propType as PropType) {
           case 'speed':
             player.speedMultiplier = SPEED_BOOST_MULTIPLIER;
             player.speedMultiplierUntil = now + SPEED_BOOST_DURATION;
             break;
           case 'heal':
-            if (player.health < STARTING_HEALTH) {
-              player.health = applyHeal(player.health);
-            }
+            if (player.health < STARTING_HEALTH) player.health = applyHeal(player.health);
             break;
           case 'fly':
             if (player.isEagle) {
+              player.isAttacking = true;
+              player.attackAnimUntil = now + FLY_DURATION + 200;
               player.speedMultiplier = FLY_SPEED_MULTIPLIER;
-              player.speedMultiplierUntil = now + SPEED_BOOST_DURATION;
+              player.speedMultiplierUntil = now + FLY_DURATION;
             }
             break;
           case 'invincible':
@@ -546,25 +910,143 @@ export function useGameLogic({ players, broadcast, gameMode }: UseGameLogicProps
         break;
       }
 
+      // ── Hitbox click (eagle attacking building zone) ──
       case 'hitbox-click': {
         if (!player.isEagle) return;
         for (const b of gs.buildings) {
           if (!b.zoneActive || b.tipObtained) continue;
-          const dx = player.position.x - b.position.x;
-          const dz = player.position.z - b.position.z;
-          if (Math.sqrt(dx * dx + dz * dz) < 2.5) {
+          if (isInProtectedZone(player.position.x, player.position.z, b.id)) {
             b.zoneHealth = Math.max(0, b.zoneHealth - 1);
             player.actionScore += 0.5;
             if (b.zoneHealth <= 0) {
               b.zoneActive = false;
               b.glowing = false;
+              gs.eagleZoneStates.delete(player.connId);
             }
+            break;
           }
         }
         break;
       }
 
-      case 'color-swap': {
+      // ── Scan result (props and tips) ──
+      case 'scan-result': {
+        if (player.isEagle) return;
+        const data = msg.data;
+
+        // Check if it's a tip share code
+        const tipShare = Array.from<TipShare>(gs.activeTipShares.values()).find((ts: TipShare) => ts.code === data);
+        if (tipShare) {
+          if (tipShare.connId === connId) return; // can't scan own tip
+          if (player.tips[tipShare.tipIndex]) return; // already have it
+          if (now < tipShare.cooldownUntil) return; // on cooldown
+
+          player.tips[tipShare.tipIndex] = true;
+          player.actionScore += 5;
+          tipShare.cooldownUntil = now + TIP_QR_COOLDOWN;
+
+          // Check if all alive chicks now have both tips
+          if (gs.stage === 2) {
+            const aliveChicks = Array.from<PlayerGameState>(gs.playerStates.values()).filter((p) => !p.isEagle && p.alive);
+            if (aliveChicks.length > 0 && aliveChicks.every((c) => c.tips[0] && c.tips[1])) {
+              gs.stage = 3;
+              gs.stageLabel = 'Run to any building to start the Final Exam!';
+            }
+          }
+          break;
+        }
+
+        // Check if it's a prop ID
+        const prop = gs.propSpawns.find((p) => p.id === data && p.active);
+        if (prop) {
+          // Validate proximity
+          if (checkOverlap(player.position.x, player.position.z, prop.position.x, prop.position.z, PROP_PICKUP_RADIUS * 2)) {
+            prop.active = false;
+            const existing = player.props.find((pi) => pi.type === prop.type);
+            if (existing) existing.count++;
+            else player.props.push({ type: prop.type, count: 1 });
+            player.actionScore += 1;
+          }
+          break;
+        }
+        break;
+      }
+
+      // ── Tip request (star student generating QR) ──
+      case 'tip-request': {
+        if (player.isEagle) return;
+        const tipIndex = msg.tipIndex as 0 | 1;
+        if (!player.tips[tipIndex]) return;
+        if (now < player.tipShareCooldownUntil) return;
+
+        // Generate a unique tip share code
+        const code = `FIRETIP-${tipIndex}-${Math.random().toString(36).slice(2, 8).toUpperCase()}`;
+        const tipKey = `${connId}-${tipIndex}`;
+        gs.activeTipShares.set(tipKey, {
+          connId,
+          tipIndex,
+          code,
+          cooldownUntil: 0,
+        });
+
+        player.tipShareCooldownUntil = now + TIP_QR_COOLDOWN;
+        broadcastRef.current({ type: 'tip-qr', forConnId: connId, code, tipIndex });
+        break;
+      }
+
+      // ── Event hitbox click ──
+      case 'event-hitbox-click': {
+        if (!gs.activeEvent || gs.activeEvent.type !== 'hitbox' || gs.activeEvent.phase !== 'active') return;
+        if (player.isEagle) {
+          gs.activeEvent.eagleClicks[connId] = (gs.activeEvent.eagleClicks[connId] ?? 0) + 1;
+        } else {
+          gs.activeEvent.chickClicks[connId] = (gs.activeEvent.chickClicks[connId] ?? 0) + 1;
+        }
+        player.actionScore += 0.1;
+        break;
+      }
+
+      // ── Event mock exam answer ──
+      case 'event-answer': {
+        if (!gs.activeEvent || gs.activeEvent.type !== 'mock-exam' || gs.activeEvent.phase !== 'active') return;
+        if (player.isEagle) return;
+        const questionNum = gs.activeEvent.questionNum ?? 1;
+        const correct = MOCK_ANSWER_KEY[questionNum];
+        if (msg.answer.toUpperCase().trim() === correct) {
+          // First correct answer = +1 sub-grade for this player
+          if (!gs.activeEvent.chickClicks[connId]) {
+            gs.activeEvent.chickClicks[connId] = 1;
+            player.health = addSubGrades(player.health, 1);
+            player.actionScore += 5;
+          }
+        }
+        break;
+      }
+
+      // ── Answer submit (exam) ──
+      case 'answer-submit': {
+        if (player.isEagle) return;
+        if (!gs.examState || gs.examState.answered) return;
+        if (gs.phase !== 'exam') return;
+
+        const correct = FINAL_ANSWER_KEY[gs.examState.questionNum];
+        if (msg.answer.toUpperCase().trim() === correct) {
+          gs.examState.answered = true;
+          player.actionScore += 20;
+          endGame(gs, 'chicks', broadcastRef.current);
+        } else {
+          // Wrong: -1 grade to all alive players
+          for (const [, p] of gs.playerStates) {
+            if (p.alive) {
+              p.health = addSubGrades(p.health, -1);
+              if (isDead(p.health)) {
+                p.alive = false;
+                p.health = 0;
+                broadcastRef.current({ type: 'you-died', connId: p.connId });
+              }
+            }
+          }
+        }
         break;
       }
 
@@ -573,20 +1055,46 @@ export function useGameLogic({ players, broadcast, gameMode }: UseGameLogicProps
     }
   }, []);
 
+  // ─── Video complete → post-video eagle freeze ──────────────────────────────
   const onVideoComplete = useCallback(() => {
+    const gs = gameStateRef.current as GameStateRef | null;
+    if (!gs) return;
+    const now = Date.now();
+
+    gs.frozenAll = false;
+    gs.frozenAllUntil = 0;
+    gs.videoPlaying = null;
     setVideoPlaying(null);
-    if (gameStateRef.current) {
-      gameStateRef.current.videoPlaying = null;
+
+    if (gs.pendingEagleFreezeAfterVideo) {
+      gs.pendingEagleFreezeAfterVideo = false;
+      for (const [, p] of gs.playerStates) {
+        if (p.isEagle) {
+          p.frozen = true;
+          p.frozenUntil = now + FREEZE_DURATION;
+          p.attackCooldownUntil = now + FREEZE_DURATION + ATTACK_COOLDOWN;
+        }
+      }
+    }
+
+    // Check win condition after damage applied
+    const mode = gameModeRef.current;
+    if (gs) {
+      const aliveChicks = Array.from<PlayerGameState>(gs.playerStates.values()).filter((p) => !p.isEagle && p.alive);
+      const totalChicks = Array.from<PlayerGameState>(gs.playerStates.values()).filter((p) => !p.isEagle).length;
+      const eliminated = totalChicks - aliveChicks.length;
+      if (mode === '1v3' && eliminated >= 3) endGame(gs, 'eagle', broadcastRef.current);
+      else if (mode === '2v6' && eliminated > 4) endGame(gs, 'eagle', broadcastRef.current);
+      else if (mode === '2v6' && eliminated === 4) endGame(gs, 'draw', broadcastRef.current);
     }
   }, []);
 
-  // Cleanup
+  // ─── Cleanup ─────────────────────────────────────────────────────────────────
   useEffect(() => {
-    return () => {
-      if (frameRef.current) cancelAnimationFrame(frameRef.current);
-    };
+    return () => { if (frameRef.current) cancelAnimationFrame(frameRef.current); };
   }, []);
 
+  // ─── Public API ───────────────────────────────────────────────────────────────
   return {
     phase,
     snapshot,
