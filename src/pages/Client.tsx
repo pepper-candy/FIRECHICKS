@@ -462,13 +462,13 @@ export default function Client() {
           </div>
         )}
 
-        <div className="flex flex-col gap-4 w-full max-w-[320px] sm:max-w-xs">
+        <div className="flex flex-col gap-4 w-full max-w-[340px] sm:max-w-xs">
           <Input
             value={code}
             onChange={(e) => setCode(e.target.value.toUpperCase())}
             placeholder="ROOM CODE"
             maxLength={6}
-            className="text-center text-2xl tracking-[0.5em] font-pixel bg-card border-border h-14 uppercase"
+            className="text-center text-xl sm:text-2xl tracking-[0.3em] sm:tracking-[0.5em] font-pixel bg-card border-border h-14 uppercase"
           />
 
           <Button
