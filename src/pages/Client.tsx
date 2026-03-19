@@ -1018,7 +1018,7 @@ export default function Client() {
           className="px-3 py-1 rounded text-center inline-block"
           style={{ background: `hsl(${displayColor.hsl} / 0.1)`, border: `1px solid hsl(${displayColor.hsl} / 0.25)` }}
         >
-          <p className="text-xs font-mono inline-block text-center">
+          <p className="text-xs font-mono inline">
             <span style={{ color: `hsl(${displayColor.hsl})` }}>{displayColor.name}</span>
             {isEagle ? " 🦅 Eagle" : " 🐤 Chick"}
             {myState?.isStarStudent ? " ⭐ Star Student" : ""}
