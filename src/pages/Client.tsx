@@ -1015,7 +1015,7 @@ export default function Client() {
       {/* Role indicator */}
       {displayColor && (
         <div
-          className="px-3 py-1 rounded text-center inline-block w-fit"
+          className="px-3 py-1 rounded text-center inline-block w-fit mx-auto"
           style={{ background: `hsl(${displayColor.hsl} / 0.1)`, border: `1px solid hsl(${displayColor.hsl} / 0.25)` }}
         >
           <p className="text-xs font-mono inline">
