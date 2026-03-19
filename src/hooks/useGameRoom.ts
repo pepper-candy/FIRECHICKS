@@ -154,7 +154,7 @@ function useHostWebRTC() {
       const connId = conn.peer;
 
       conn.on('open', () => {
-        const colorIndex = allocateColor(usedColorsRef.current);
+        const colorIndex = allocateColor(usedColorsRef.current, EAGLE_COLOR_INDICES as unknown as number[]);
         if (colorIndex === null) {
           conn.send(JSON.stringify({ type: 'room-full' }));
           setTimeout(() => conn.close(), 200);
