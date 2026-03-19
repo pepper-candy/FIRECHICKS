@@ -215,13 +215,7 @@ export function useGameLogic({ players, broadcast, gameMode }: UseGameLogicProps
         tips: [false, false],
         props: assign.isEagle
           ? [{ type: 'fly', count: 3 }]
-          : (() => {
-              const claims = lobbyPropClaims?.get(id);
-              const p: { type: PropType; count: number }[] = [];
-              if (claims?.has('speed')) p.push({ type: 'speed', count: 1 });
-              if (claims?.has('heal')) p.push({ type: 'heal', count: 1 });
-              return p;
-            })(),
+          : [],
         position: { ...spawn },
         facingAngle: 0,
         frozen: assign.isEagle,

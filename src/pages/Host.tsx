@@ -177,7 +177,7 @@ export default function Host() {
             <button
             onClick={() => {
               setStartClickAt(Date.now());
-              startGame(lobbyPropClaims);
+              startGame();
             }}
             className="relative px-10 py-3 font-pixel text-base tracking-[0.3em] uppercase
                 text-primary border-2 border-primary bg-primary/10
