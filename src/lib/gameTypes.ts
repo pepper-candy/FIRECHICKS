@@ -160,7 +160,8 @@ export type HostMessage =
   | { type: 'you-died'; connId: string }
   | { type: 'game-mode'; gameMode: GameMode }
   | { type: 'tip-qr'; forConnId: string; code: string; tipIndex: 0 | 1 }
-  | { type: 'exam-start'; assignments: Record<string, { layer: '1' | '2'; questionNum: number; category: 'Final' }> };
+  | { type: 'exam-start'; assignments: Record<string, { layer: '1' | '2'; questionNum: number; category: 'Final' }> }
+  | { type: 'lobby-prop-granted'; colorIndex: number; propType: 'speed' | 'heal' };
 
 // Messages client → host
 export type ClientMessage =

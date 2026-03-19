@@ -1,5 +1,5 @@
-import { Suspense, useRef } from 'react';
-import { Canvas, useFrame } from '@react-three/fiber';
+import { Suspense, useRef, useEffect } from 'react';
+import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import { Grid, Html } from '@react-three/drei';
 import * as THREE from 'three';
 import QRCode from 'react-qr-code';
@@ -9,6 +9,18 @@ import { PLAYER_COLORS } from '@/lib/playerColors';
 import type { PlayerGameStateSerializable, BuildingState, PropSpawn, MysteryBox, ExamState } from '@/lib/gameTypes';
 
 const FLY_SPEED_MULTIPLIER = 3;
+
+// Tilts camera forward so the far edge of the 64x64 map sits near the top of the screen
+function MapCamera() {
+  const { camera } = useThree();
+  useEffect(() => {
+    camera.position.set(0, 56, 42);
+    (camera as any).fov = 58;
+    (camera as any).updateProjectionMatrix?.();
+    camera.lookAt(0, 0, -14);
+  }, [camera]);
+  return null;
+}
 
 
 interface Props {
@@ -108,40 +120,58 @@ const PROP_COLORS: Record<string, string> = {
   heal: '#22c55e',
 };
 
+// Crystal ball prop marker — small (half a chick size), pushable by eagle
 function PropMarker({ spawn }: { spawn: PropSpawn }) {
-  const meshRef = useRef<THREE.Mesh>(null!);
+  const outerRef = useRef<THREE.Mesh>(null!);
+  const innerRef = useRef<THREE.Mesh>(null!);
+  const color = PROP_COLORS[spawn.type] ?? '#ffffff';
+  const icon = spawn.type === 'speed' ? '⚡' : '💚';
+  const BALL_R = 0.4; // half a chick size
+
   useFrame((_, delta) => {
-    if (meshRef.current) {
-      meshRef.current.rotation.y += delta * 2;
-      meshRef.current.position.y = 0.6 + Math.sin(Date.now() * 0.003) * 0.15;
+    const t = Date.now() * 0.002;
+    if (outerRef.current) {
+      outerRef.current.position.y = BALL_R + Math.sin(t) * 0.06;
+    }
+    if (innerRef.current) {
+      innerRef.current.rotation.y += delta * 1.2;
     }
   });
 
-  const color = PROP_COLORS[spawn.type] ?? '#ffffff';
-  const icon = spawn.type === 'speed' ? '⚡' : '💚';
-
   return (
     <group position={[spawn.position.x, 0, spawn.position.z]}>
-      {/* Glowing orb */}
-      <mesh ref={meshRef} position={[0, 0.6, 0]}>
-        <sphereGeometry args={[0.35, 12, 12]} />
-        <meshStandardMaterial color={color} emissive={color} emissiveIntensity={0.8} />
+      {/* Outer crystal sphere */}
+      <mesh ref={outerRef} position={[0, BALL_R, 0]}>
+        <sphereGeometry args={[BALL_R, 20, 20]} />
+        <meshStandardMaterial
+          color={color} emissive={color} emissiveIntensity={0.4}
+          transparent opacity={0.55} roughness={0.0} metalness={0.1}
+        />
       </mesh>
-      {/* QR code panel via HTML overlay */}
-      <Html position={[0, -0.1, 0]} center occlude={false}>
+      {/* Glowing inner core */}
+      <mesh ref={innerRef} position={[0, BALL_R, 0]}>
+        <sphereGeometry args={[BALL_R * 0.45, 12, 12]} />
+        <meshStandardMaterial color={color} emissive={color} emissiveIntensity={1.4} transparent opacity={0.7} />
+      </mesh>
+      {/* Ground glow */}
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.02, 0]}>
+        <ringGeometry args={[BALL_R * 0.6, BALL_R * 1.2, 20]} />
+        <meshStandardMaterial color={color} emissive={color} emissiveIntensity={0.6} transparent opacity={0.2} side={THREE.DoubleSide} />
+      </mesh>
+      {/* Label */}
+      <Html position={[0, BALL_R * 2.6, 0]} center occlude={false}>
         <div style={{
-          background: 'white',
-          padding: 3,
+          background: 'rgba(0,0,0,0.75)',
+          border: `1px solid ${color}`,
           borderRadius: 3,
-          transform: 'scale(0.22)',
-          transformOrigin: 'top center',
+          padding: '1px 5px',
+          color,
+          fontSize: 8,
+          fontFamily: 'monospace',
+          whiteSpace: 'nowrap',
           pointerEvents: 'none',
-          boxShadow: `0 0 8px ${color}`,
         }}>
-          <div style={{ textAlign: 'center', fontSize: 9, fontFamily: 'monospace', color: '#000', marginBottom: 2 }}>
-            {icon} {spawn.type.toUpperCase()}
-          </div>
-          <QRCode value={spawn.id} size={100} />
+          {icon} {spawn.type.toUpperCase()}
         </div>
       </Html>
     </group>
@@ -245,9 +275,10 @@ export default function GameplayMap({ players, buildings, eagleAwake, propSpawns
   return (
     <div className="w-full h-full rounded-lg border border-border overflow-hidden bg-background">
       <Canvas
-        camera={{ position: [0, 58, 46], fov: 55 }}
+        camera={{ position: [0, 56, 42], fov: 58 }}
         shadows
       >
+        <MapCamera />
         <ambientLight intensity={0.5} />
         <directionalLight position={[15, 30, 15]} intensity={1.2} castShadow shadow-mapSize={[2048, 2048]} />
         <directionalLight position={[-10, 20, -10]} intensity={0.3} />

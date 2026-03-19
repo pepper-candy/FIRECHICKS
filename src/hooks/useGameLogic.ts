@@ -132,7 +132,7 @@ export function useGameLogic({ players, broadcast, gameMode }: UseGameLogicProps
   const lastTickRef = useRef<number>(0);
 
   // ─── Start Game ──────────────────────────────────────────────────────────────
-  const startGame = useCallback(() => {
+  const startGame = useCallback((lobbyPropClaims?: Map<string, Set<string>>) => {
     const currentPlayers = playersRef.current as Map<string, PlayerState>;
     const playerIds: string[] = Array.from(currentPlayers.keys());
     if (playerIds.length === 0) return;
@@ -182,7 +182,13 @@ export function useGameLogic({ players, broadcast, gameMode }: UseGameLogicProps
         tips: [false, false],
         props: assign.isEagle
           ? [{ type: 'fly', count: 3 }]
-          : [{ type: 'speed', count: 1 }, { type: 'heal', count: 1 }],
+          : (() => {
+              const claims = lobbyPropClaims?.get(id);
+              const p: { type: PropType; count: number }[] = [];
+              if (claims?.has('speed')) p.push({ type: 'speed', count: 1 });
+              if (claims?.has('heal')) p.push({ type: 'heal', count: 1 });
+              return p;
+            })(),
         position: { ...spawn },
         facingAngle: 0,
         frozen: assign.isEagle,

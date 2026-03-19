@@ -1,4 +1,5 @@
 import { useState, useCallback, useEffect, useRef } from "react";
+import { useFullscreen } from "@/hooks/useFullscreen";
 import { useClientRoom, useDiscoverRooms, type ConnectionMode } from "@/hooks/useGameRoom";
 import { PLAYER_COLORS, EAGLE_COLOR_INDICES } from "@/lib/playerColors";
 import { gradeToLetter, getGradeColor } from "@/lib/gradeSystem";
@@ -228,6 +229,9 @@ export default function Client() {
   // Event state
   const [eventAnswer, setEventAnswer] = useState("");
 
+  // Lobby prop claims
+  const [claimedLobbyProps, setClaimedLobbyProps] = useState<Set<string>>(new Set());
+
   // Tips state
   const [tipQrCodes, setTipQrCodes] = useState<[string | null, string | null]>([null, null]);
   const [loadingTip, setLoadingTip] = useState<[boolean, boolean]>([false, false]);
@@ -240,6 +244,22 @@ export default function Client() {
   const [examOpacity, setExamOpacity] = useState(0.85);
   const examVideoRef = useRef<HTMLVideoElement>(null);
   const examStreamRef = useRef<MediaStream | null>(null);
+
+  const { isFullscreen, isSupported: fsSupported, enter: enterFullscreen } = useFullscreen();
+
+  // ── Prevent body scroll / overscroll bounce on mobile ──────────────────────
+  useEffect(() => {
+    const prevOverflow = document.body.style.overflow;
+    const prevPosition = document.body.style.position;
+    document.body.style.overflow = 'hidden';
+    document.body.style.position = 'fixed';
+    document.body.style.width = '100%';
+    return () => {
+      document.body.style.overflow = prevOverflow;
+      document.body.style.position = prevPosition;
+      document.body.style.width = '';
+    };
+  }, []);
 
   useEffect(() => {
     preloadAllAnimations();
@@ -300,6 +320,15 @@ export default function Client() {
           setExamAnswer("");
         }
         setGamePhase("exam");
+      } else if (msg.type === "lobby-prop-granted") {
+        // Match by colorIndex since we don't have connId yet during lobby
+        if (msg.colorIndex === colorIndex) {
+          setClaimedLobbyProps((prev) => {
+            const next = new Set(prev);
+            next.add(msg.propType as string);
+            return next;
+          });
+        }
       }
     });
   }, [onHostMessage, colorIndex]);
@@ -417,10 +446,11 @@ export default function Client() {
         setWasKicked(false);
         setRoomFullDismissed(false);
         setColorChosen(false);
+        enterFullscreen(); // request fullscreen on first intentional interaction
         connect(roomCode);
       }
     },
-    [code, connect],
+    [code, connect, enterFullscreen],
   );
 
   // ── Eagle-in-zone detection (for hitbox visual cue)
@@ -441,8 +471,18 @@ export default function Client() {
   // ─── JOIN SCREEN ─────────────────────────────────────────────────────────────
   if (!connected) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-screen p-6 gap-8">
+      <div className="flex flex-col items-center justify-center h-dvh overflow-hidden p-5 gap-6">
         <h1 className="text-lg text-secondary text-glow-purple tracking-wider text-center font-pixel">JOIN GAME</h1>
+
+        {/* Fullscreen prompt — appears only when API is available and not yet fullscreen */}
+        {fsSupported && !isFullscreen && (
+          <button
+            onClick={enterFullscreen}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-primary/40 bg-primary/10 text-primary text-[11px] font-mono tracking-wide hover:bg-primary/20 transition-all animate-pulse"
+          >
+            ⛶ Tap for fullscreen
+          </button>
+        )}
 
         {wasKicked && (
           <div
@@ -528,7 +568,7 @@ export default function Client() {
     const dc = colorIndex >= 0 ? PLAYER_COLORS[colorIndex] : null;
     const isEagleColor = EAGLE_COLOR_INDICES.includes(colorIndex);
     return (
-      <div className="flex flex-col items-center justify-center min-h-screen p-6 gap-6">
+      <div className="flex flex-col items-center justify-center h-dvh overflow-hidden p-4 gap-4 overflow-y-auto">
         <h1 className="text-lg text-accent tracking-wider text-center font-pixel">CHOOSE YOUR COLOR</h1>
         <p className="text-xs text-muted-foreground font-mono text-center">
           🦅 Red border = Eagle role • Pick carefully!
@@ -576,7 +616,7 @@ export default function Client() {
   // ─── REVEAL ──────────────────────────────────────────────────────────────────
   if (gamePhase === "reveal") {
     return (
-      <div className="flex items-center justify-center min-h-screen p-4 bg-background">
+      <div className="flex items-center justify-center h-dvh overflow-hidden bg-background">
         <CharacterReveal colorIndex={currentColorIndex} isEagle={isEagle} />
       </div>
     );
@@ -585,7 +625,7 @@ export default function Client() {
   // ─── DEAD ────────────────────────────────────────────────────────────────────
   if (isDead && gamePhase !== "gameover") {
     return (
-      <div className="flex flex-col items-center justify-center min-h-screen gap-6">
+      <div className="flex flex-col items-center justify-center h-dvh overflow-hidden gap-6">
         <div className="text-9xl font-pixel text-destructive" style={{ textShadow: "0 0 30px hsl(0 80% 55% / 0.8)" }}>
           F
         </div>
@@ -606,7 +646,7 @@ export default function Client() {
   // ─── COUNTDOWN ───────────────────────────────────────────────────────────────
   if (gamePhase === "countdown") {
     return (
-      <div className="flex flex-col items-center justify-center min-h-screen gap-6">
+      <div className="flex flex-col items-center justify-center h-dvh overflow-hidden gap-6">
         <h2 className="text-lg font-pixel text-primary text-glow-green">GET READY</h2>
         {gameState && (
           <div className="text-7xl font-pixel text-accent animate-pulse">{Math.ceil(gameState.countdownTime)}</div>
@@ -625,7 +665,7 @@ export default function Client() {
     const winner = gameState?.winner;
     const amWinner = (winner === "eagle" && isEagle) || (winner === "chicks" && !isEagle);
     return (
-      <div className="flex flex-col items-center justify-center min-h-screen gap-6 p-4">
+      <div className="flex flex-col items-center justify-center h-dvh overflow-hidden gap-6 p-4">
         <h1 className="text-2xl font-pixel text-accent">GAME OVER</h1>
         {gameState && (
           <p
@@ -663,7 +703,7 @@ export default function Client() {
     if (activeEvent.phase === "countdown") {
       const cdSec = Math.max(1, 3 - Math.floor((now - activeEvent.startedAt) / 1000));
       return (
-        <div className="flex flex-col items-center justify-center min-h-screen gap-4">
+        <div className="flex flex-col items-center justify-center h-dvh overflow-hidden gap-4">
           <h2 className="text-lg font-pixel text-accent">
             {activeEvent.type === "mock-exam" ? "📝 MOCK EXAM" : "👊 HITBOX CHALLENGE"}
           </h2>
@@ -674,7 +714,7 @@ export default function Client() {
 
     if (activeEvent.phase === "active" && activeEvent.type === "hitbox") {
       return (
-        <div className="flex flex-col items-center justify-between min-h-screen p-4">
+        <div className="flex flex-col items-center justify-between h-dvh overflow-hidden p-4">
           <div className="text-center">
             <h2 className="text-lg font-pixel text-accent">👊 HITBOX BATTLE</h2>
             <p className="text-2xl font-pixel text-primary">{timeLeft}s</p>
@@ -695,7 +735,7 @@ export default function Client() {
 
     if (activeEvent.phase === "active" && activeEvent.type === "mock-exam") {
       return (
-        <div className="flex flex-col min-h-screen p-4 gap-4">
+        <div className="flex flex-col h-dvh overflow-hidden p-4 gap-4">
           <div className="flex justify-between items-center">
             <h2 className="text-sm font-pixel text-accent">MOCK EXAM</h2>
             <span className="font-mono text-sm text-accent">{timeLeft}s</span>
@@ -748,7 +788,7 @@ export default function Client() {
 
     if (activeEvent.phase === "result") {
       return (
-        <div className="flex flex-col items-center justify-center min-h-screen gap-4">
+        <div className="flex flex-col items-center justify-center h-dvh overflow-hidden gap-4">
           <h2 className="text-xl font-pixel text-accent">EVENT RESULT</h2>
           <p
             className="text-2xl font-pixel"
@@ -769,7 +809,7 @@ export default function Client() {
     // Eagle sees distract message
     if (isEagle) {
       return (
-        <div className="flex flex-col items-center justify-center min-h-screen p-6 gap-6">
+        <div className="flex flex-col items-center justify-center h-dvh overflow-hidden p-6 gap-6">
           <div className="text-4xl">🦅</div>
           <p className="text-lg font-pixel text-destructive text-center">DISTRACT THE CHICKS!</p>
           <p className="text-sm font-mono text-muted-foreground text-center max-w-xs">
@@ -787,14 +827,14 @@ export default function Client() {
     // No layer assigned — shouldn't happen but fallback
     if (!examLayer || examQuestionNum === 0) {
       return (
-        <div className="flex items-center justify-center min-h-screen">
+        <div className="flex items-center justify-center h-dvh overflow-hidden">
           <p className="text-sm font-mono text-muted-foreground animate-pulse">Loading exam...</p>
         </div>
       );
     }
 
     return (
-      <div className="flex flex-col min-h-screen bg-background">
+      <div className="flex flex-col h-dvh overflow-hidden bg-background">
         {/* Header */}
         <div className="flex items-center justify-between p-3 border-b border-border">
           <span className="text-xs font-pixel text-muted-foreground">
@@ -880,9 +920,19 @@ export default function Client() {
   const socialMet = myState?.socialCircleMet?.length ?? 0;
 
   return (
-    <div className="flex flex-col min-h-screen p-3 gap-2 select-none">
+    <div className="flex flex-col h-dvh overflow-hidden p-2 gap-2 select-none">
       {/* Status bar */}
       <div className="flex items-center justify-between">
+        {/* Fullscreen toggle when not already fullscreen */}
+        {fsSupported && !isFullscreen && (
+          <button
+            onClick={enterFullscreen}
+            className="text-[10px] font-mono text-primary/60 hover:text-primary px-1.5 py-0.5 rounded border border-primary/20 hover:border-primary/40 transition-all"
+            title="Enter fullscreen"
+          >
+            ⛶
+          </button>
+        )}
         <div className="flex items-center gap-2 text-xs font-mono">
           {displayColor && (
             <div
@@ -975,15 +1025,37 @@ export default function Client() {
             />
           </div>
 
-          {/* Bottom: Color picker in lobby, tips boxes + props in gameplay */}
+          {/* Bottom: Color picker + lobby prop claims in lobby */}
           {gamePhase === "lobby" && (
-            <div className="flex flex-col items-center gap-2">
+            <div className="flex flex-col items-center gap-3">
               <ColorPicker
                 currentColorIndex={colorIndex}
                 usedColorIndices={usedColors}
                 onColorSelect={requestColorSwap}
                 gameMode={gameMode}
               />
+              {/* Lobby prop claimed indicators */}
+              {(claimedLobbyProps.size > 0 || true) && (
+                <div className="flex gap-3 items-center">
+                  {(['speed', 'heal'] as const).map((pt) => {
+                    const claimed = claimedLobbyProps.has(pt);
+                    return (
+                      <div
+                        key={pt}
+                        className={`flex items-center gap-1 px-2 py-1 rounded border text-[10px] font-mono transition-all ${
+                          claimed
+                            ? 'border-primary bg-primary/15 text-primary'
+                            : 'border-border bg-card/40 text-muted-foreground opacity-50'
+                        }`}
+                      >
+                        {pt === 'speed' ? '⚡' : '💚'} {pt.toUpperCase()}
+                        {claimed ? ' ✓' : ' —'}
+                      </div>
+                    );
+                  })}
+                  <span className="text-[9px] text-muted-foreground font-mono">scan lobby balls</span>
+                </div>
+              )}
             </div>
           )}
 

@@ -114,6 +114,7 @@ function DancingChar({ chickColor, isWinner, delay }: { chickColor: string; isWi
 export default function Host() {
   const [mode, setMode] = useState<ConnectionMode>('webrtc');
   const [gameMode, setGameMode] = useState<GameMode>('1v3');
+  const [lobbyPropClaims, setLobbyPropClaims] = useState<Map<string, Set<'speed' | 'heal'>>>(new Map());
   const { roomCode, players, kickPlayer, kickAllPlayers, broadcast, onClientMessage } = useHostRoom(mode);
 
   useAdvertiseRoom(roomCode, mode);
@@ -122,9 +123,31 @@ export default function Host() {
     phase, snapshot, videoPlaying, assignments, startGame, handleClientMessage, onVideoComplete,
   } = useGameLogic({ players, broadcast, gameMode });
 
+  // Register client message handler — intercept lobby prop scans before game logic
   useEffect(() => {
-    onClientMessage((connId, msg) => { handleClientMessage(connId, msg); });
-  }, [onClientMessage, handleClientMessage]);
+    onClientMessage((connId, msg) => {
+      if ((msg as any).type === 'scan-result') {
+        const data = (msg as any).data as string;
+        if (data === 'LOBBY-SPEED' || data === 'LOBBY-HEAL') {
+          const propType: 'speed' | 'heal' = data === 'LOBBY-SPEED' ? 'speed' : 'heal';
+          setLobbyPropClaims((prev) => {
+            const next = new Map(prev);
+            const existing = new Set(next.get(connId) ?? []);
+            if (!existing.has(propType)) {
+              existing.add(propType);
+              next.set(connId, existing);
+              // Use colorIndex so client can identify themselves before game-start
+              const playerColorIndex = players.get(connId)?.colorIndex ?? -1;
+              broadcast({ type: 'lobby-prop-granted', colorIndex: playerColorIndex, propType });
+            }
+            return next;
+          });
+          return; // don't pass lobby prop scans to game logic
+        }
+      }
+      handleClientMessage(connId, msg);
+    });
+  }, [onClientMessage, handleClientMessage, broadcast]);
 
   useEffect(() => { preloadVideos(); }, []);
 
@@ -155,7 +178,7 @@ export default function Host() {
         {isFull && (
           <div className="absolute top-4 left-1/2 -translate-x-1/2 z-20">
             <button
-              onClick={startGame}
+              onClick={() => startGame(lobbyPropClaims)}
               className="relative px-10 py-3 font-pixel text-base tracking-[0.3em] uppercase
                 text-primary border-2 border-primary bg-primary/10
                 hover:bg-primary/25 transition-all duration-200
@@ -276,24 +299,20 @@ export default function Host() {
         <h1 className="text-2xl font-pixel text-primary text-glow-green tracking-widest animate-pulse">
           GET READY
         </h1>
-        <div className="text-lg font-mono text-muted-foreground">
-          Assigning roles...
-        </div>
-        <div className="flex gap-6 flex-wrap justify-center mt-4">
-          {Object.entries(assignments).map(([connId, assign]) => {
-            const color = PLAYER_COLORS[assign.colorIndex];
-            return (
+        <div className="flex flex-col items-center gap-3">
+          <p className="text-sm font-mono text-muted-foreground">Roles are being revealed on each phone...</p>
+          <div className="flex gap-1.5 mt-2">
+            {[...Array(3)].map((_, i) => (
               <div
-                key={connId}
-                className="flex flex-col items-center gap-2 px-4 py-3 rounded border"
-                style={{ borderColor: `hsl(${color?.hsl})`, background: `hsl(${color?.hsl} / 0.1)` }}
-              >
-                <span className="text-xs font-mono" style={{ color: `hsl(${color?.hsl})` }}>
-                  {color?.name} {assign.isEagle ? '🦅' : '🐤'}
-                </span>
-              </div>
-            );
-          })}
+                key={i}
+                className="w-2 h-2 rounded-full bg-primary animate-pulse"
+                style={{ animationDelay: `${i * 0.2}s` }}
+              />
+            ))}
+          </div>
+          <p className="text-xs text-muted-foreground font-mono mt-2 opacity-60">
+            {Object.keys(assignments).length} player{Object.keys(assignments).length !== 1 ? 's' : ''} assigned
+          </p>
         </div>
       </div>
     );

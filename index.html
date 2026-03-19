@@ -2,30 +2,64 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <!-- TODO: Set the document title to the name of your application -->
+    <!--
+      viewport-fit=cover: extends into safe-area on iPhone notch/Dynamic Island.
+      user-scalable=no: prevents pinch-zoom on game controls.
+      interactive-widget=resizes-content: prevents layout shift when virtual keyboard opens.
+    -->
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover, interactive-widget=resizes-content"
+    />
+
+    <!-- PWA / home-screen install -->
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="FireChick" />
+
+    <!-- Theme colour matches app background (dark) -->
+    <meta name="theme-color" content="#09090b" />
+
     <title>FireChick</title>
-    <meta name="description" content="GPA Eagle is chasing FireChicks, join the race now!">
+    <meta name="description" content="GPA Eagle is chasing FireChicks, join the race now!" />
     <meta name="author" content="Lovable" />
 
-    <!-- TODO: Update og:title to match your application name -->
-    
-    
     <meta property="og:type" content="website" />
-    <meta property="og:image" content="https://storage.googleapis.com/gpt-engineer-file-uploads/huxWkWnjcCc3ZXrICxwU8qkuu413/social-images/social-1773835238510-Untitled_design_(1).webp">
+    <meta property="og:title" content="FireChick" />
+    <meta property="og:description" content="GPA Eagle is chasing FireChicks, join the race now!" />
+    <meta
+      property="og:image"
+      content="https://storage.googleapis.com/gpt-engineer-file-uploads/huxWkWnjcCc3ZXrICxwU8qkuu413/social-images/social-1773835238510-Untitled_design_(1).webp"
+    />
 
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:site" content="@Lovable" />
-    <meta name="twitter:image" content="https://storage.googleapis.com/gpt-engineer-file-uploads/huxWkWnjcCc3ZXrICxwU8qkuu413/social-images/social-1773835238510-Untitled_design_(1).webp">
-    
-  
-  
-  
-  <meta property="og:title" content="FireChick">
-  <meta name="twitter:title" content="FireChick">
-  <meta property="og:description" content="GPA Eagle is chasing FireChicks, join the race now!">
-  <meta name="twitter:description" content="GPA Eagle is chasing FireChicks, join the race now!">
-</head>
+    <meta name="twitter:title" content="FireChick" />
+    <meta name="twitter:description" content="GPA Eagle is chasing FireChicks, join the race now!" />
+    <meta
+      name="twitter:image"
+      content="https://storage.googleapis.com/gpt-engineer-file-uploads/huxWkWnjcCc3ZXrICxwU8qkuu413/social-images/social-1773835238510-Untitled_design_(1).webp"
+    />
+
+    <style>
+      /* Prevent any page-level scrolling / bounce on iOS */
+      html, body {
+        overflow: hidden;
+        overscroll-behavior: none;
+        -webkit-overflow-scrolling: auto;
+        height: 100%;
+        width: 100%;
+        position: fixed;
+        /* Use dynamic viewport height so content always fits visible area */
+        /* (fallback for browsers that don't support dvh) */
+      }
+      #root {
+        height: 100%;
+        width: 100%;
+      }
+    </style>
+  </head>
 
   <body>
     <div id="root"></div>

@@ -24,6 +24,8 @@ export default function ColorPicker({ currentColorIndex, usedColorIndices, onCol
     const isTaken = usedColorIndices.has(idx) && !isMine;
     const isEagleColor = EAGLE_COLOR_INDICES.includes(idx);
     const showEagleOutline = gameMode === '2v6' && isEagleColor;
+    // Button size: slightly larger for 2v6 (8 colors fit 4+4)
+    const btnSize = gameMode === '2v6' ? 'w-10 h-10' : 'w-9 h-9';
 
     return (
       <button
@@ -31,7 +33,7 @@ export default function ColorPicker({ currentColorIndex, usedColorIndices, onCol
         onClick={() => !isTaken && onColorSelect(idx)}
         disabled={isTaken}
         title={isTaken ? `${color.name} (taken)` : showEagleOutline ? `${color.name} (Eagle role)` : color.name}
-        className={`w-9 h-9 rounded-full transition-all relative ${
+        className={`${btnSize} rounded-full transition-all relative ${
           isMine
             ? 'scale-125'
             : isTaken
