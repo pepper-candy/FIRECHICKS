@@ -462,7 +462,7 @@ export default function Client() {
           </div>
         )}
 
-        <div className="flex flex-col gap-4 w-full max-w-[340px] sm:max-w-xs">
+        <div className="flex flex-col gap-4 w-full-xs sm:max-w-xs">
           <Input
             value={code}
             onChange={(e) => setCode(e.target.value.toUpperCase())}
