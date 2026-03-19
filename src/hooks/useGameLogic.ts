@@ -136,7 +136,7 @@ export function useGameLogic({ players, broadcast, gameMode }: UseGameLogicProps
   >(new Map());
 
   // ─── Start Game ──────────────────────────────────────────────────────────────
-  const startGame = useCallback((lobbyPropClaims?: Map<string, Set<string>>) => {
+  const startGame = useCallback(() => {
     const currentPlayers = playersRef.current as Map<string, PlayerState>;
     const playerIds: string[] = Array.from(currentPlayers.keys());
     if (playerIds.length === 0) return;
