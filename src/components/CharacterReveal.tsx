@@ -27,9 +27,6 @@ function RotatingCharacter({ chickColor }: { chickColor: ChickColor }) {
 
 export default function CharacterReveal({ colorIndex, isEagle }: Props) {
   const color = PLAYER_COLORS[colorIndex];
-  if (!color) return null;
-
-  // 5 sec reveal then 3 sec countdown
   const [countdown, setCountdown] = useState<number | null>(null);
 
   useEffect(() => {
