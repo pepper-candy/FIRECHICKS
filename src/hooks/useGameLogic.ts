@@ -877,7 +877,7 @@ export function useGameLogic({ players, broadcast, gameMode }: UseGameLogicProps
     const gs = gameStateRef.current as GameStateRef | null;
     if (!gs) return;
     const p = gs.playerStates.get(connId);
-    if (!p || !p.alive || p.isEagle) return; // per spec: chick name tags
+    if (!p || !p.alive) return;
 
     if (hostDragBackupRef.current.has(connId)) return;
 
