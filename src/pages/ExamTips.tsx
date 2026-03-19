@@ -6,7 +6,7 @@ import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import QrScanner from "qr-scanner";
-import BarcodeDisplay from "@/components/BarcodeDisplay";
+import QRCode from "react-qr-code";
 
 type Role = "holder" | "receiver";
 
@@ -34,7 +34,7 @@ const ExamTips = () => {
       return;
     }
 
-    toast.success("Share code generated! Show the barcode to a receiver.");
+    toast.success("Share code generated! Show the QR to a receiver.");
   }, []);
 
   // Holder: listen for realtime updates on their share code
@@ -182,11 +182,11 @@ const ExamTips = () => {
           {shareCode &&
           <div className="flex flex-col items-center gap-4 p-6 rounded-xl border border-border bg-card w-full">
               <p className="text-xs text-muted-foreground font-mono">
-                {codeUsed ? "This code has been used" : "Show this barcode to a nearby receiver"}
+                {codeUsed ? "This code has been used" : "Show this QR to a nearby receiver"}
               </p>
               <div className="relative bg-white p-4 rounded-lg">
                 <div className={codeUsed ? "blur-[2px] grayscale opacity-80 pointer-events-none select-none" : ""}>
-                  <BarcodeDisplay value={shareCode} height={90} className="w-[280px] max-w-full" />
+                  <QRCode value={shareCode} size={200} />
                 </div>
                 {/* The "USED" Stamp overlay */}
                 {codeUsed &&

@@ -379,6 +379,7 @@ function useHostSupabase() {
 function useClientWebRTC(roomCode: string) {
   const [connected, setConnected] = useState(false);
   const [colorIndex, setColorIndex] = useState<number>(-1);
+  const [clientId, setClientId] = useState<string>("");
   const [roomFull, setRoomFull] = useState(false);
   const [kicked, setKicked] = useState(false);
   const [usedColors, setUsedColors] = useState<Set<number>>(new Set());
@@ -409,6 +410,7 @@ function useClientWebRTC(roomCode: string) {
     peerRef.current = peer;
 
     peer.on('open', () => {
+      setClientId(peer.id);
       const conn = peer.connect(`${PEER_PREFIX}${code}`, {
         serialization: 'binary',
         reliable: false,
@@ -509,13 +511,14 @@ function useClientWebRTC(roomCode: string) {
     };
   }, []);
 
-  return { connected, connect, sendJoystick, disconnect, colorIndex, roomFull, kicked, setIdle, sendToHost, onHostMessage, requestColorSwap, usedColors };
+  return { connected, connect, sendJoystick, disconnect, colorIndex, roomFull, kicked, clientId, setIdle, sendToHost, onHostMessage, requestColorSwap, usedColors };
 }
 
 // ─── CLIENT: Supabase ───────────────────────────────────────
 function useClientSupabase(roomCode: string) {
   const [connected, setConnected] = useState(false);
   const [colorIndex, setColorIndex] = useState<number>(-1);
+  const [clientId, setClientId] = useState<string>("");
   const [roomFull, setRoomFull] = useState(false);
   const [kicked, setKicked] = useState(false);
   const [usedColors, setUsedColors] = useState<Set<number>>(new Set());
@@ -537,6 +540,7 @@ function useClientSupabase(roomCode: string) {
     }
 
     clientIdRef.current = Math.random().toString(36).substring(2, 10);
+    setClientId(clientIdRef.current);
 
     const channel = supabase.channel(`game-room-${code}`, {
       config: { broadcast: { self: false } },
@@ -628,7 +632,7 @@ function useClientSupabase(roomCode: string) {
     return () => { channelRef.current?.unsubscribe(); };
   }, []);
 
-  return { connected, connect, sendJoystick, disconnect, colorIndex, roomFull, kicked, setIdle, sendToHost, onHostMessage, requestColorSwap, usedColors };
+  return { connected, connect, sendJoystick, disconnect, colorIndex, roomFull, kicked, clientId, setIdle, sendToHost, onHostMessage, requestColorSwap, usedColors };
 }
 
 // ─── Public hooks ───────────────────────────────────────────

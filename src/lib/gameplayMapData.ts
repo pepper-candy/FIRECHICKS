@@ -73,10 +73,10 @@ export const SPAWN_POINTS: { x: number; z: number }[] = [
 ];
 
 export const EAGLE_SPAWN_CANDIDATES: { x: number; z: number }[] = [
-  { x: -18, z: -18 },
-  { x: 18, z: -18 },
-  { x: -18, z: 18 },
-  { x: 18, z: 18 },
+  { x: 2, z: -2 },
+  { x: 2, z: 2 },
+  { x: -2, z: 2 },
+  { x: -2, z: -2 },
 ];
 
 // Protected zone radius (around buildings)

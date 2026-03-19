@@ -8,7 +8,7 @@ import { serializePlayerState } from '@/lib/gameTypes';
 import { PLAYER_COLORS, EAGLE_COLOR_INDICES } from '@/lib/playerColors';
 import { STARTING_HEALTH, applyDamage, applyHeal, isDead, addSubGrades } from '@/lib/gradeSystem';
 import {
-  BUILDINGS, SPAWN_POINTS, EAGLE_SPAWN_CANDIDATES, DIAGONAL_PAIRS,
+  BUILDINGS, EAGLE_SPAWN_CANDIDATES, DIAGONAL_PAIRS,
   resolvePosition, pushOutOfWall, checkOverlap,
   isInProtectedZone, getAdjacentBuilding,
   checkCollision,
@@ -130,6 +130,10 @@ export function useGameLogic({ players, broadcast, gameMode }: UseGameLogicProps
   const [videoPlaying, setVideoPlaying] = useState<'hurt' | 'dead' | null>(null);
   const frameRef = useRef<number>(0);
   const lastTickRef = useRef<number>(0);
+  // Used by the host to drag/teleport players by their name tags.
+  const hostDragBackupRef = useRef<
+    Map<string, { position: { x: number; z: number }; frozen: boolean; frozenUntil: number }>
+  >(new Map());
 
   // ─── Start Game ──────────────────────────────────────────────────────────────
   const startGame = useCallback((lobbyPropClaims?: Map<string, Set<string>>) => {
@@ -167,11 +171,39 @@ export function useGameLogic({ players, broadcast, gameMode }: UseGameLogicProps
 
     const totalRevealAndCountdown = REVEAL_DURATION + COUNTDOWN_DURATION * 1000;
     const playerStates = new Map<string, PlayerGameState>();
-    let spawnIdx = 0;
     const eagleSpawn = EAGLE_SPAWN_CANDIDATES[Math.floor(Math.random() * EAGLE_SPAWN_CANDIDATES.length)];
+    const chosenSpawnPositions: Array<{ x: number; z: number }> = [];
+
+    const getRandomChickSpawn = (): { x: number; z: number } => {
+      // Spawn randomly near any of the 4 buildings.
+      // We bias toward the "inner" side of each building (toward map center), then add jitter.
+      for (let attempt = 0; attempt < 25; attempt++) {
+        const b = BUILDINGS[Math.floor(Math.random() * BUILDINGS.length)];
+        const dirX = -Math.sign(b.position.x) || 1;
+        const dirZ = -Math.sign(b.position.z) || 1;
+
+        const innerDist = 4 + (Math.random() - 0.5) * 1.8; // around building inner edge
+        const jitter = 2.2;
+        const x = b.position.x + dirX * innerDist + (Math.random() - 0.5) * jitter;
+        const z = b.position.z + dirZ * innerDist + (Math.random() - 0.5) * jitter;
+
+        // Avoid collisions with buildings/obstacles.
+        if (checkCollision(x, z, 0.6)) continue;
+        // Avoid stacking multiple chicks too tightly.
+        if (chosenSpawnPositions.some((p) => checkOverlap(p.x, p.z, x, z, 2.0))) continue;
+        return { x, z };
+      }
+
+      // Fallback: pick any open-ish position around the first building inner edge.
+      const b0 = BUILDINGS[0];
+      const dirX = -Math.sign(b0.position.x) || 1;
+      const dirZ = -Math.sign(b0.position.z) || 1;
+      return { x: b0.position.x + dirX * 4, z: b0.position.z + dirZ * 4 };
+    };
 
     for (const [id, assign] of Object.entries(assigns)) {
-      const spawn = assign.isEagle ? eagleSpawn : SPAWN_POINTS[spawnIdx++ % SPAWN_POINTS.length];
+      const spawn = assign.isEagle ? eagleSpawn : getRandomChickSpawn();
+      chosenSpawnPositions.push(spawn);
       playerStates.set(id, {
         connId: id,
         colorIndex: assign.colorIndex,
@@ -336,17 +368,19 @@ export function useGameLogic({ players, broadcast, gameMode }: UseGameLogicProps
         if (p.frozen && now < p.frozenUntil) continue;
         if (p.frozen && now >= p.frozenUntil) p.frozen = false;
 
-        if (p.speedMultiplier > 1 && now > p.speedMultiplierUntil) p.speedMultiplier = 1;
-        if (p.invincibleUntil > 0 && now > p.invincibleUntil) p.invincibleUntil = 0;
-        if (p.isAttacking && now > p.attackAnimUntil) p.isAttacking = false;
-
-        // After fly: push eagle out of walls
-        const wasFlying = p.isEagle && p.speedMultiplier >= FLY_SPEED_MULTIPLIER;
-        if (wasFlying && now >= p.speedMultiplierUntil) {
+        const flyingActive = p.isEagle && p.speedMultiplier >= FLY_SPEED_MULTIPLIER;
+        const flyingJustEnded = flyingActive && p.speedMultiplierUntil > 0 && now >= p.speedMultiplierUntil;
+        if (flyingJustEnded) {
+          // If flight ended while inside obstacles, push eagle out immediately.
           const resolved = pushOutOfWall(p.position.x, p.position.z, 0.5);
           p.position.x = resolved.x;
           p.position.z = resolved.z;
         }
+        if (p.speedMultiplier > 1 && now > p.speedMultiplierUntil) p.speedMultiplier = 1;
+        if (p.invincibleUntil > 0 && now > p.invincibleUntil) p.invincibleUntil = 0;
+        if (p.isAttacking && now > p.attackAnimUntil) p.isAttacking = false;
+
+        // (Fly out-of-wall handled when flight actually ends.)
 
         const lobbyPlayer = currentPlayers.get(connId);
         if (!lobbyPlayer) continue;
@@ -354,12 +388,16 @@ export function useGameLogic({ players, broadcast, gameMode }: UseGameLogicProps
         const jx = lobbyPlayer.joystick.x;
         const jy = -lobbyPlayer.joystick.y;
         const magnitude = Math.sqrt(jx * jx + jy * jy);
-        p.isMoving = magnitude > 0.05;
+        const isFlyingNow = p.isEagle && p.speedMultiplier >= FLY_SPEED_MULTIPLIER;
+        p.isMoving = magnitude > 0.05 || isFlyingNow;
 
-        if (magnitude > 0.05) {
-          const moveAngle = Math.atan2(-jx, jy);
+        if (magnitude > 0.05 || isFlyingNow) {
+          // If joystick is idle, flight continues in the last facing direction.
+          const moveAngle = magnitude > 0.05 ? Math.atan2(-jx, jy) : p.facingAngle;
           const baseSpeed = p.isEagle ? EAGLE_SPEED : SPEED;
-          const speed = magnitude * baseSpeed * p.speedMultiplier * delta;
+          // Normal movement uses joystick magnitude; flight keeps moving even if joystick is idle.
+          const speedFactor = magnitude > 0.05 ? magnitude : (isFlyingNow ? 1 : 0);
+          const speed = speedFactor * baseSpeed * p.speedMultiplier * delta;
 
           const dx = Math.sin(moveAngle) * speed * -1;
           const dz = Math.cos(moveAngle) * speed * -1;
@@ -514,12 +552,16 @@ export function useGameLogic({ players, broadcast, gameMode }: UseGameLogicProps
 
     // ── Prop spawning ──
     if (gs.phase === 'playing') {
+      const activeSpeedCount = gs.propSpawns.filter((p) => p.active && p.type === 'speed').length;
+      const activeHealCount = gs.propSpawns.filter((p) => p.active && p.type === 'heal').length;
+      const activeBoxCount = gs.mysteryBoxes.filter((b) => !b.collected && !b.triggered).length;
+
       const speedInterval = PROP_SPAWN_INTERVAL_MIN + Math.random() * (PROP_SPAWN_INTERVAL_MAX - PROP_SPAWN_INTERVAL_MIN);
-      if (now - gs.lastPropSpawnSpeed > speedInterval) {
+      if (activeSpeedCount < 5 && now - gs.lastPropSpawnSpeed > speedInterval) {
         gs.lastPropSpawnSpeed = now;
         spawnProp(gs, 'speed');
       }
-      if (now - gs.lastPropSpawnHeal > PROP_SPAWN_INTERVAL_HEAL) {
+      if (activeHealCount < 5 && now - gs.lastPropSpawnHeal > PROP_SPAWN_INTERVAL_HEAL) {
         gs.lastPropSpawnHeal = now;
         spawnProp(gs, 'heal');
       }
@@ -531,6 +573,9 @@ export function useGameLogic({ players, broadcast, gameMode }: UseGameLogicProps
           if (!prop.active) continue;
           if (checkOverlap(p.position.x, p.position.z, prop.position.x, prop.position.z, PROP_PICKUP_RADIUS)) {
             prop.active = false;
+            // Restart spawn timer after claim (if we're below cap)
+            if (prop.type === 'speed') gs.lastPropSpawnSpeed = now;
+            if (prop.type === 'heal') gs.lastPropSpawnHeal = now;
             const existing = p.props.find((pi) => pi.type === prop.type);
             if (existing) existing.count++;
             else p.props.push({ type: prop.type, count: 1 });
@@ -541,7 +586,7 @@ export function useGameLogic({ players, broadcast, gameMode }: UseGameLogicProps
       gs.propSpawns = gs.propSpawns.filter((p) => p.active);
 
       // Mystery box spawning
-      if (now - gs.lastMysteryBoxSpawn > MYSTERY_BOX_INTERVAL) {
+      if (activeBoxCount < 1 && now - gs.lastMysteryBoxSpawn > MYSTERY_BOX_INTERVAL) {
         gs.lastMysteryBoxSpawn = now;
         const activeDelay = MYSTERY_BOX_ACTIVE_MIN + Math.random() * (MYSTERY_BOX_ACTIVE_MAX - MYSTERY_BOX_ACTIVE_MIN);
         const pos = findOpenPosition(gs);
@@ -567,6 +612,7 @@ export function useGameLogic({ players, broadcast, gameMode }: UseGameLogicProps
             if (!p.isEagle) {
               // Chick gets 3 speed props
               box.collected = true;
+              gs.lastMysteryBoxSpawn = now; // restart after claim
               const existing = p.props.find((pi) => pi.type === 'speed');
               if (existing) existing.count += 3;
               else p.props.push({ type: 'speed', count: 3 });
@@ -574,6 +620,7 @@ export function useGameLogic({ players, broadcast, gameMode }: UseGameLogicProps
             } else {
               // Eagle triggers a random event
               box.triggered = true;
+              gs.lastMysteryBoxSpawn = now; // restart after claim
               gs.frozenAll = true;
               gs.frozenAllUntil = now + 60000; // lifted when event ends
               const eventType = Math.random() < 0.5 ? 'mock-exam' : 'hitbox';
@@ -825,6 +872,57 @@ export function useGameLogic({ players, broadcast, gameMode }: UseGameLogicProps
     bcast({ type: 'game-state', state: snap });
   }, []);
 
+  // ─── Host Drag Helpers (teleport during gameplay) ──────────────────────
+  const hostDragBegin = useCallback((connId: string) => {
+    const gs = gameStateRef.current as GameStateRef | null;
+    if (!gs) return;
+    const p = gs.playerStates.get(connId);
+    if (!p || !p.alive || p.isEagle) return; // per spec: chick name tags
+
+    if (hostDragBackupRef.current.has(connId)) return;
+
+    hostDragBackupRef.current.set(connId, {
+      position: { ...p.position },
+      frozen: p.frozen,
+      frozenUntil: p.frozenUntil,
+    });
+
+    // Prevent client joystick updates from overriding the host drag.
+    p.frozen = true;
+    p.frozenUntil = Number.MAX_SAFE_INTEGER;
+    p.isMoving = false;
+    p.isAttacking = false;
+  }, []);
+
+  const hostDragUpdate = useCallback((connId: string, x: number, z: number) => {
+    const gs = gameStateRef.current as GameStateRef | null;
+    if (!gs) return;
+    const p = gs.playerStates.get(connId);
+    if (!p || !p.alive || p.isEagle) return;
+
+    const resolved = resolvePosition(x, z, p.position.x, p.position.z, 0.5, false);
+    p.position.x = resolved.x;
+    p.position.z = resolved.z;
+  }, []);
+
+  const hostDragEnd = useCallback((connId: string, valid: boolean) => {
+    const gs = gameStateRef.current as GameStateRef | null;
+    if (!gs) return;
+    const p = gs.playerStates.get(connId);
+    const backup = hostDragBackupRef.current.get(connId);
+    if (!p || !backup) return;
+
+    if (!valid) {
+      p.position.x = backup.position.x;
+      p.position.z = backup.position.z;
+    }
+
+    p.frozen = backup.frozen;
+    p.frozenUntil = backup.frozenUntil;
+
+    hostDragBackupRef.current.delete(connId);
+  }, []);
+
   // ─── Handle Client Messages ───────────────────────────────────────────────────
   const handleClientMessage = useCallback((connId: string, msg: ClientMessage) => {
     const gs = gameStateRef.current as GameStateRef | null;
@@ -899,6 +997,7 @@ export function useGameLogic({ players, broadcast, gameMode }: UseGameLogicProps
 
       // ── Prop use ──
       case 'prop-use': {
+        if (player.frozen) return;
         const propItem = player.props.find((p) => p.type === msg.propType && p.count > 0);
         if (!propItem) return;
         propItem.count--;
@@ -1120,5 +1219,8 @@ export function useGameLogic({ players, broadcast, gameMode }: UseGameLogicProps
     startGame,
     handleClientMessage,
     onVideoComplete,
+    hostDragBegin,
+    hostDragUpdate,
+    hostDragEnd,
   };
 }

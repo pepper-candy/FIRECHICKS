@@ -3,7 +3,7 @@ import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import { Grid, Html } from '@react-three/drei';
 import * as THREE from 'three';
 import CharacterViewer from '@/components/CharacterViewer';
-import { BUILDINGS, OBSTACLES, MAP_SIZE, ZONE_RADIUS } from '@/lib/gameplayMapData';
+import { BUILDINGS, OBSTACLES, MAP_SIZE, MAP_HALF, ZONE_RADIUS } from '@/lib/gameplayMapData';
 import { PLAYER_COLORS } from '@/lib/playerColors';
 import type { PlayerGameStateSerializable, BuildingState, PropSpawn, MysteryBox, ExamState } from '@/lib/gameTypes';
 
@@ -17,7 +17,12 @@ function MapCamera({ zoomLevel = 1 }: { zoomLevel?: number }) {
     camera.position.set(0, 56 / clamped, 42 / clamped);
     (camera as any).fov = 58 / Math.max(0.75, clamped);
     (camera as any).updateProjectionMatrix?.();
-    camera.lookAt(0, 0, 0);
+    // When zooming in too much, the near (bottom) edge can overlap the host's progress bar.
+    // We keep zooming but tilt the camera upwards after a threshold.
+    const threshold = 1.2;
+    const excess = Math.max(0, clamped - threshold);
+    const yLookAt = Math.min(2.0, excess * 1.8);
+    camera.lookAt(0, yLookAt, 0);
   }, [camera, zoomLevel]);
   return null;
 }
@@ -31,6 +36,10 @@ interface Props {
   mysteryBoxes?: MysteryBox[];
   examState?: ExamState | null;
   zoomLevel?: number;
+  enableHostDrag?: boolean;
+  onHostDragBegin?: (connId: string) => void;
+  onHostDragUpdate?: (connId: string, x: number, z: number) => void;
+  onHostDragEnd?: (connId: string, valid: boolean) => void;
 }
 
 // ─── Building ──────────────────────────────────────────────────────────────────
@@ -219,10 +228,26 @@ function MysteryBoxMarker({ box }: { box: MysteryBox }) {
 }
 
 // ─── Game Character ────────────────────────────────────────────────────────────
-function GameCharacter({ player }: { player: PlayerGameStateSerializable }) {
+function GameCharacter({
+  player,
+  enableHostDrag,
+  onHostDragBegin,
+  onHostDragUpdate,
+  onHostDragEnd,
+}: {
+  player: PlayerGameStateSerializable;
+  enableHostDrag?: boolean;
+  onHostDragBegin?: (connId: string) => void;
+  onHostDragUpdate?: (connId: string, x: number, z: number) => void;
+  onHostDragEnd?: (connId: string, valid: boolean) => void;
+}) {
   if (!player.alive) return null;
   const color = PLAYER_COLORS[player.colorIndex];
   if (!color) return null;
+
+  const { camera, gl, raycaster } = useThree();
+  const planeRef = useRef(() => new THREE.Plane(new THREE.Vector3(0, 1, 0), 0));
+  const draggable = !!enableHostDrag && !player.isEagle;
 
   const isFlying = player.isEagle && player.speedMultiplier >= (FLY_SPEED_MULTIPLIER ?? 3);
   const anim =
@@ -260,9 +285,54 @@ function GameCharacter({ player }: { player: PlayerGameStateSerializable }) {
           fontSize: 9,
           fontFamily: 'monospace',
           whiteSpace: 'nowrap',
-          pointerEvents: 'none',
+          pointerEvents: draggable ? 'auto' : 'none',
+          cursor: draggable ? 'grab' : 'default',
         }}>
-          {color.name} {player.isEagle ? '🦅' : (player.isStarStudent ? '⭐' : '🐤')}
+          <div
+            onPointerDown={(e) => {
+              if (!draggable) return;
+              e.preventDefault();
+              e.stopPropagation();
+
+              const connId = player.connId;
+              onHostDragBegin?.(connId);
+
+              let lastValid = true;
+              const computeHit = (ev: PointerEvent) => {
+                const rect = gl.domElement.getBoundingClientRect();
+                const ndcX = ((ev.clientX - rect.left) / rect.width) * 2 - 1;
+                const ndcY = -(((ev.clientY - rect.top) / rect.height) * 2 - 1);
+                raycaster.setFromCamera({ x: ndcX, y: ndcY }, camera);
+                const pt = new THREE.Vector3();
+                const plane = planeRef.current();
+                const hit = raycaster.ray.intersectPlane(plane, pt);
+                if (!hit) return null;
+                const valid = Math.abs(pt.x) <= MAP_HALF && Math.abs(pt.z) <= MAP_HALF;
+                return { x: pt.x, z: pt.z, valid };
+              };
+
+              const move = (ev: PointerEvent) => {
+                const hit = computeHit(ev);
+                if (!hit) return;
+                lastValid = hit.valid;
+                onHostDragUpdate?.(connId, hit.x, hit.z);
+              };
+              const up = (ev: PointerEvent) => {
+                ev.preventDefault();
+                window.removeEventListener('pointermove', move);
+                window.removeEventListener('pointerup', up);
+                window.removeEventListener('pointercancel', up);
+                const hit = computeHit(ev);
+                onHostDragEnd?.(player.connId, hit ? hit.valid : lastValid);
+              };
+
+              window.addEventListener('pointermove', move);
+              window.addEventListener('pointerup', up, { once: true });
+              window.addEventListener('pointercancel', up, { once: true });
+            }}
+          >
+            {color.name} {player.isEagle ? '🦅' : (player.isStarStudent ? '⭐' : '🐤')}
+          </div>
         </div>
       </Html>
     </group>
@@ -270,7 +340,19 @@ function GameCharacter({ player }: { player: PlayerGameStateSerializable }) {
 }
 
 // ─── Main Map Component ────────────────────────────────────────────────────────
-export default function GameplayMap({ players, buildings, eagleAwake, propSpawns, mysteryBoxes, examState, zoomLevel = 1 }: Props) {
+export default function GameplayMap({
+  players,
+  buildings,
+  eagleAwake,
+  propSpawns,
+  mysteryBoxes,
+  examState,
+  zoomLevel = 1,
+  enableHostDrag,
+  onHostDragBegin,
+  onHostDragUpdate,
+  onHostDragEnd,
+}: Props) {
   const playerList = Object.values(players);
 
   return (
@@ -348,7 +430,14 @@ export default function GameplayMap({ players, buildings, eagleAwake, propSpawns
 
         {/* Characters */}
         {playerList.map((p) => (
-          <GameCharacter key={p.connId} player={p} />
+          <GameCharacter
+            key={p.connId}
+            player={p}
+            enableHostDrag={enableHostDrag}
+            onHostDragBegin={onHostDragBegin}
+            onHostDragUpdate={onHostDragUpdate}
+            onHostDragEnd={onHostDragEnd}
+          />
         ))}
 
         {/* Eagle awake countdown */}

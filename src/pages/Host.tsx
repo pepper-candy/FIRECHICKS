@@ -123,7 +123,16 @@ export default function Host() {
   useAdvertiseRoom(roomCode, mode);
 
   const {
-    phase, snapshot, videoPlaying, assignments, startGame, handleClientMessage, onVideoComplete
+    phase,
+    snapshot,
+    videoPlaying,
+    assignments,
+    startGame,
+    handleClientMessage,
+    onVideoComplete,
+    hostDragBegin,
+    hostDragUpdate,
+    hostDragEnd,
   } = useGameLogic({ players, broadcast, gameMode });
 
   // Register client message handler — intercept lobby prop scans before game logic
@@ -359,7 +368,12 @@ export default function Host() {
           propSpawns={snapshot.propSpawns}
           mysteryBoxes={snapshot.mysteryBoxes}
           examState={snapshot.examState}
-          zoomLevel={zoomLevel} />
+          zoomLevel={zoomLevel}
+          enableHostDrag={phase === 'playing'}
+          onHostDragBegin={hostDragBegin}
+          onHostDragUpdate={hostDragUpdate}
+          onHostDragEnd={hostDragEnd}
+        />
         
 
         {/* Health display top-right */}
