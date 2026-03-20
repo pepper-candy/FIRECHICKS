@@ -386,7 +386,13 @@ export default function Client() {
     if (!myState) return;
     for (let i = 0; i < 2; i++) {
       if (!prevTipsRef.current[i] && myState.tips[i]) {
-        // Just received this tip — show loading briefly
+        // Just received this tip — show copying countdown
+        const copyStart = Date.now();
+        setTipCopyStartedAt((prev) => {
+          const n: [number, number] = [...prev] as [number, number];
+          n[i] = copyStart;
+          return n;
+        });
         setLoadingTip((prev) => {
           const n: [boolean, boolean] = [...prev] as [boolean, boolean];
           n[i] = true;
