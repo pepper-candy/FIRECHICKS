@@ -737,6 +737,14 @@ export function useGameLogic({ players, broadcast, gameMode }: UseGameLogicProps
               if (!p.isEagle && p.alive) p.health = addSubGrades(p.health, -2);
             }
           }
+          // F-grade elimination after hitbox
+          for (const [, p] of gs.playerStates) {
+            if (!p.isEagle && p.alive && isDead(p.health)) {
+              p.alive = false;
+              p.health = 0;
+              currentBroadcast({ type: "you-died", connId: p.connId });
+            }
+          }
         } else if (ev.type === "mock-exam") {
           const anyCorrect = (Object.values(ev.chickClicks) as number[]).some((v: number) => v > 0);
           if (!anyCorrect) {
