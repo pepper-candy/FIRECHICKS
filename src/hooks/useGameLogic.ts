@@ -863,10 +863,12 @@ export function useGameLogic({ players, broadcast, gameMode }: UseGameLogicProps
     const questionNum = Math.floor(Math.random() * 4) + 1;
     const timer = mode === "1v3" ? EXAM_TIMER_1V3 : EXAM_TIMER_2V6;
 
-    // Pick 1 random layer-1 holder
+    // If only 1 chick left, they get both layers — layer1 shown on host automatically
     const shuffled = [...aliveChicks].sort(() => Math.random() - 0.5);
     const layer1Player = shuffled[0];
     const layer2Players = shuffled.slice(1);
+
+    const soloExam = aliveChicks.length === 1;
 
     gs.examState = {
       questionNum,
@@ -875,15 +877,20 @@ export function useGameLogic({ players, broadcast, gameMode }: UseGameLogicProps
       layer1ConnId: layer1Player.connId,
       layer2ConnIds: layer2Players.map((p) => p.connId),
       answered: false,
-      layer1Dead: false,
+      layer1Dead: soloExam, // If solo, show layer 1 on host screen
     };
     gs.stageLabel = "FINAL EXAM — Solve together!";
 
     // Build per-client assignments
     const examAssigns: Record<string, { layer: "1" | "2"; questionNum: number; category: "Final" }> = {};
-    examAssigns[layer1Player.connId] = { layer: "1", questionNum, category: "Final" };
-    for (const p of layer2Players) {
-      examAssigns[p.connId] = { layer: "2", questionNum, category: "Final" };
+    if (soloExam) {
+      // Solo player gets layer 2 on their device, layer 1 on host screen
+      examAssigns[layer1Player.connId] = { layer: "2", questionNum, category: "Final" };
+    } else {
+      examAssigns[layer1Player.connId] = { layer: "1", questionNum, category: "Final" };
+      for (const p of layer2Players) {
+        examAssigns[p.connId] = { layer: "2", questionNum, category: "Final" };
+      }
     }
     // Eagles don't get a layer
     for (const [, p] of gs.playerStates) {
