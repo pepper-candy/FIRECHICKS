@@ -471,7 +471,7 @@ export default function Host() {
 
         {/* Eagle awake countdown */}
         {!snapshot.eagleAwake &&
-        <div className={`absolute left-1/2 -translate-x-1/2 z-10 px-4 py-2 rounded bg-destructive/20 border border-destructive/50 font-mono text-xs text-destructive animate-pulse ${focusPanelOpen ? 'top-[140px]' : 'top-12'}`}>
+        <div className="absolute left-1/2 -translate-x-1/2 z-10 px-4 py-2 rounded bg-destructive/20 border border-destructive/50 font-mono text-xs text-destructive animate-pulse top-12">
             🦅 Eagle awakens in {Math.max(0, Math.ceil(5 - snapshot.gameTime))}s
           </div>
         }
