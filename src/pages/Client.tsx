@@ -909,12 +909,14 @@ export default function Client() {
             </div>
           ) : (
             <>
-              {/* Layer 2 image in scanner area */}
-              <div className="w-full overflow-hidden rounded border border-border bg-black" style={{ aspectRatio: "873/457" }}>
+              {/* Layer 2 overlaid on camera for visual cryptography */}
+              <div className="relative w-full overflow-hidden rounded border border-border bg-black" style={{ aspectRatio: "873/457" }}>
+                <MockExamCamera />
                 <img
                   src={`/PW/PW_Mock_${activeEvent.questionNum}_layer-2.png`}
                   alt="Mock exam layer 2"
-                  className="w-full h-full object-contain"
+                  className="absolute inset-0 w-full h-full object-contain pointer-events-none"
+                  style={{ opacity: 0.85, mixBlendMode: 'multiply' }}
                 />
               </div>
 
