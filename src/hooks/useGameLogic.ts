@@ -1256,15 +1256,10 @@ export function useGameLogic({ players, broadcast, gameMode }: UseGameLogicProps
       }
     }
 
-    // Check win condition after damage applied
-    const mode = gameModeRef.current;
-    if (gs) {
-      const aliveChicks = Array.from<PlayerGameState>(gs.playerStates.values()).filter((p) => !p.isEagle && p.alive);
-      const totalChicks = Array.from<PlayerGameState>(gs.playerStates.values()).filter((p) => !p.isEagle).length;
-      const eliminated = totalChicks - aliveChicks.length;
-      if (mode === "1v3" && eliminated >= 3) endGame(gs, "eagle", broadcastRef.current);
-      else if (mode === "2v6" && eliminated > 4) endGame(gs, "eagle", broadcastRef.current);
-      else if (mode === "2v6" && eliminated === 4) endGame(gs, "draw", broadcastRef.current);
+    // Check win condition: only auto-end when ALL chicks dead
+    const aliveChicks = Array.from<PlayerGameState>(gs.playerStates.values()).filter((p) => !p.isEagle && p.alive);
+    if (aliveChicks.length === 0) {
+      endGame(gs, "eagle", broadcastRef.current);
     }
   }, []);
 
