@@ -1148,6 +1148,32 @@ export default function Client() {
             </div>
           )}
 
+          {/* Tips boxes right under scanner */}
+          {gamePhase === "playing" && myState && (
+            <div className="flex gap-2 w-full">
+              <TipsBox
+                tipIndex={0}
+                stage={stage}
+                socialMet={socialMet}
+                hasTip={myState.tips[0]}
+                isLoadingTip={loadingTip[0]}
+                tipShareCooldownUntil={Math.max(myState.tipShareCooldownUntil, tipExpiryCooldown[0])}
+                tipCopyingCountdown={loadingTip[0] && tipCopyStartedAt[0] > 0 ? Math.max(0, Math.ceil((tipCopyStartedAt[0] + 3000 - clockNow) / 1000)) : undefined}
+                onTap={() => handleTipTap(0)}
+              />
+              <TipsBox
+                tipIndex={1}
+                stage={stage}
+                socialMet={socialMet}
+                hasTip={myState.tips[1]}
+                isLoadingTip={loadingTip[1]}
+                tipShareCooldownUntil={Math.max(myState.tipShareCooldownUntil, tipExpiryCooldown[1])}
+                tipCopyingCountdown={loadingTip[1] && tipCopyStartedAt[1] > 0 ? Math.max(0, Math.ceil((tipCopyStartedAt[1] + 3000 - clockNow) / 1000)) : undefined}
+                onTap={() => handleTipTap(1)}
+              />
+            </div>
+          )}
+
           {/* Middle: Thumbstick */}
           <div className="flex-1 flex items-center justify-center">
             <Thumbstick
@@ -1170,36 +1196,10 @@ export default function Client() {
             </div>
           )}
 
+          {/* Props stacked downward at bottom */}
           {gamePhase === "playing" && myState && (
-            <div className="flex items-end gap-2 w-full">
-              {/* Tips box 0 */}
-              <TipsBox
-                tipIndex={0}
-                stage={stage}
-                socialMet={socialMet}
-                hasTip={myState.tips[0]}
-                isLoadingTip={loadingTip[0]}
-                tipShareCooldownUntil={Math.max(myState.tipShareCooldownUntil, tipExpiryCooldown[0])}
-                tipCopyingCountdown={loadingTip[0] && tipCopyStartedAt[0] > 0 ? Math.max(0, Math.ceil((tipCopyStartedAt[0] + 3000 - clockNow) / 1000)) : undefined}
-                onTap={() => handleTipTap(0)}
-              />
-
-              {/* Tips box 1 */}
-              <TipsBox
-                tipIndex={1}
-                stage={stage}
-                socialMet={socialMet}
-                hasTip={myState.tips[1]}
-                isLoadingTip={loadingTip[1]}
-                tipShareCooldownUntil={Math.max(myState.tipShareCooldownUntil, tipExpiryCooldown[1])}
-                tipCopyingCountdown={loadingTip[1] && tipCopyStartedAt[1] > 0 ? Math.max(0, Math.ceil((tipCopyStartedAt[1] + 3000 - clockNow) / 1000)) : undefined}
-                onTap={() => handleTipTap(1)}
-              />
-
-              {/* Props button */}
-              <div className="flex-shrink-0" style={{ touchAction: 'manipulation' }}>
-                <PropsBtn items={myState.props ?? []} onUse={handlePropUse} isEagle={false} />
-              </div>
+            <div className="flex items-center justify-center">
+              <PropsStackBtn items={myState.props ?? []} onUse={handlePropUse} />
             </div>
           )}
         </>

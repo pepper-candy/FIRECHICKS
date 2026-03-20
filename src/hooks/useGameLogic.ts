@@ -1238,18 +1238,40 @@ export function useGameLogic({ players, broadcast, gameMode }: UseGameLogicProps
         if (msg.answer.toUpperCase().trim() === correct) {
           gs.examState.answered = true;
           player.actionScore += 20;
+          // Correct answer = chicks win (regardless of alive count)
           endGame(gs, "chicks", broadcastRef.current);
         } else {
-          // Wrong: -1 grade to all alive players
+          // Wrong: -1 grade to all alive chick players
           for (const [, p] of gs.playerStates) {
-            if (p.alive) {
+            if (p.alive && !p.isEagle) {
               p.health = addSubGrades(p.health, -1);
               if (isDead(p.health)) {
                 p.alive = false;
                 p.health = 0;
                 broadcastRef.current({ type: "you-died", connId: p.connId });
+
+                // If the layer-1 holder dies from wrong answer, show layer 1 on host
+                if (gs.examState && gs.examState.layer1ConnId === p.connId && !gs.examState.layer1Dead) {
+                  gs.examState.layer1Dead = true;
+                  // Additional -1 to all remaining alive players
+                  for (const [, pp] of gs.playerStates) {
+                    if (pp.alive && !pp.isEagle) {
+                      pp.health = addSubGrades(pp.health, -1);
+                      if (isDead(pp.health)) {
+                        pp.alive = false;
+                        pp.health = 0;
+                        broadcastRef.current({ type: "you-died", connId: pp.connId });
+                      }
+                    }
+                  }
+                }
               }
             }
+          }
+          // Check if all chicks dead after wrong answer
+          const aliveAfter = Array.from<PlayerGameState>(gs.playerStates.values()).filter((p) => !p.isEagle && p.alive);
+          if (aliveAfter.length === 0) {
+            endGame(gs, "eagle", broadcastRef.current);
           }
         }
         break;

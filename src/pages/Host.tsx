@@ -476,10 +476,10 @@ export default function Host() {
           </div>
         }
 
-        {/* Exam layer 1 on screen when holder is dead */}
-        {snapshot.examState?.layer1Dead &&
-        <div className="absolute top-1/2 left-2 -translate-y-1/2 z-20 bg-card/95 border-2 border-accent rounded-lg p-3 max-w-[200px]">
-            <p className="text-[9px] font-mono text-accent mb-1">📜 EXAM LAYER 1</p>
+        {/* Exam layer 1 on screen when holder is dead or solo exam */}
+        {snapshot.examState?.layer1Dead && snapshot.examState.questionNum > 0 &&
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-30 bg-white border-2 border-accent rounded-xl p-4 max-w-md w-[90%] shadow-2xl">
+            <p className="text-xs font-mono text-accent mb-2 text-center">📜 EXAM LAYER 1</p>
             <img
             src={`/PW/PW_Final_${snapshot.examState.questionNum}_layer-1.png`}
             alt="Layer 1"
