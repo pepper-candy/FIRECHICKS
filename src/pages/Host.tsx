@@ -447,7 +447,7 @@ function GameOverCeremony({ snapshot, gameMode }: { snapshot: GameStateSnapshot;
   const [ceremonyPhase, setCeremonyPhase] = useState<'mvp' | 'team' | 'transcript'>('mvp');
 
   const winner = snapshot.winner;
-  const sorted = Object.values(snapshot.players).sort((a, b) => {
+  const sorted: PlayerGameStateSerializable[] = Object.values(snapshot.players).sort((a, b) => {
     const aWin = (winner === 'eagle' && a.isEagle) || (winner === 'chicks' && !a.isEagle) || winner === 'draw';
     const bWin = (winner === 'eagle' && b.isEagle) || (winner === 'chicks' && !b.isEagle) || winner === 'draw';
     if (aWin !== bWin) return aWin ? -1 : 1;
