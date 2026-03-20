@@ -1,5 +1,7 @@
 import { useState, useEffect, useCallback, Suspense, useRef } from 'react';
-import { Canvas, useFrame } from '@react-three/fiber';
+import { createPortal } from 'react-dom';
+import { Canvas, useFrame, useThree } from '@react-three/fiber';
+import { OrbitControls } from '@react-three/drei';
 import type { GameEvent, GameStateSnapshot } from '@/lib/gameTypes';
 import { useHostRoom, useAdvertiseRoom, type ConnectionMode } from '@/hooks/useGameRoom';
 import { useGameLogic } from '@/hooks/useGameLogic';
@@ -11,7 +13,7 @@ import VideoOverlay, { preloadVideos } from '@/components/VideoOverlay';
 import NetworkPerformancePanel from '@/components/NetworkPerformancePanel';
 import { PLAYER_COLORS, MAX_PLAYERS_1V3, MAX_PLAYERS_2V6 } from '@/lib/playerColors';
 import { gradeToLetter, getGradeColor } from '@/lib/gradeSystem';
-import { X, Flame, Zap, Trophy, Star } from 'lucide-react';
+import { X, Flame, Zap, Trophy, Star, ChevronDown } from 'lucide-react';
 import type { GameMode } from '@/lib/gameTypes';
 import CharacterViewer from '@/components/CharacterViewer';
 import {
@@ -31,10 +33,10 @@ function EventOverlay({ event, players, gameMode }: {event: GameEvent;players: R
   reduce((sum: number, p: any) => sum + (event.eagleClicks[p.connId] ?? 0), 0);
   const timeLeft = Math.max(0, Math.ceil((event.endAt - now) / 1000));
 
-  // Mock exam active: show layer 1 full-screen centered with white bg
+  // Mock exam active: show layer 1 full-screen centered with white bg — via portal
   if (event.phase === 'active' && event.type === 'mock-exam' && event.questionNum) {
-    return (
-      <div className="absolute inset-0 z-40 flex items-center justify-center bg-white">
+    return createPortal(
+      <div className="fixed inset-0 flex items-center justify-center bg-white" style={{ zIndex: 9998 }}>
         <div className="flex flex-col items-center gap-4 max-w-2xl w-full px-6">
           <div className="flex items-center justify-between w-full">
             <h2 className="text-lg font-pixel text-gray-800">📝 MOCK EXAM</h2>
@@ -45,7 +47,8 @@ function EventOverlay({ event, players, gameMode }: {event: GameEvent;players: R
           </div>
           <p className="text-xs font-mono text-gray-500">Players check their phones for layer 2!</p>
         </div>
-      </div>
+      </div>,
+      document.body
     );
   }
 
@@ -100,13 +103,23 @@ function EventOverlay({ event, players, gameMode }: {event: GameEvent;players: R
 
 // ─── Transcript 3D Character ──────────────────────────────────────────────────
 function DancingChar({ chickColor, isWinner, delay }: {chickColor: string;isWinner: boolean;delay: number;}) {
-  const angleRef = useRef(delay);
+  const angleRef = useRef(delay + Math.PI);
   useFrame((_, d) => {angleRef.current += d * (isWinner ? 1.5 : 0.4);});
   return (
     <Suspense fallback={null}>
       <CharacterViewer color={chickColor as any} animState={isWinner ? 'Victory' : 'Idle'} facingAngle={angleRef.current} />
     </Suspense>);
 
+}
+
+// ─── Focus Camera for individual player ──────────────────────────────────────
+function PlayerFocusCamera({ target }: { target: { x: number; z: number } }) {
+  const { camera } = useThree();
+  useFrame(() => {
+    camera.position.set(target.x, 8, target.z + 6);
+    camera.lookAt(target.x, 0, target.z);
+  });
+  return null;
 }
 
 // ─── Host Component ──────────────────────────────────────────────────────────
@@ -116,6 +129,7 @@ export default function Host() {
   const [startClickAt, setStartClickAt] = useState<number | null>(null);
   const [zoomLevel, setZoomLevel] = useState(1);
   const [revealNow, setRevealNow] = useState(Date.now());
+  const [focusPanelOpen, setFocusPanelOpen] = useState(false);
   const { roomCode, players, kickPlayer, kickAllPlayers, broadcast, onClientMessage } = useHostRoom(mode);
 
   useAdvertiseRoom(roomCode, mode);
@@ -293,7 +307,7 @@ export default function Host() {
 
   // ─── REVEAL ──────────────────────────────────────────────────────────────────
   if (phase === 'reveal') {
-    const revealCountdown = startClickAt ? Math.max(0, 8 - (revealNow - startClickAt) / 1000) : 8;
+    const revealCountdown = startClickAt ? Math.max(0, 10 - (revealNow - startClickAt) / 1000) : 10;
     return (
       <div className="flex flex-col items-center justify-center h-screen gap-6 p-4 bg-background">
         <h1 className="text-2xl font-pixel text-primary text-glow-green tracking-widest animate-pulse">
@@ -338,6 +352,8 @@ export default function Host() {
 
   // ─── PLAYING / EXAM ──────────────────────────────────────────────────────────
   if ((phase === 'playing' || phase === 'exam') && snapshot) {
+    const alivePlayers = Object.values(snapshot.players).filter(p => p.alive);
+
     return (
       <div className="relative h-screen">
         <GameplayMap
@@ -354,9 +370,64 @@ export default function Host() {
           onHostDragEnd={hostDragEnd}
         />
 
-        {/* Tip obtain countdowns — stacked in flex column to avoid overlap */}
+        {/* Focus camera panel toggle button */}
+        <button
+          onClick={() => setFocusPanelOpen(prev => !prev)}
+          className="absolute top-2 left-1/2 -translate-x-1/2 z-20 w-10 h-6 rounded-full bg-card/90 border border-border flex items-center justify-center hover:bg-card transition-all"
+          title="Toggle player cameras"
+        >
+          <ChevronDown className={`w-4 h-4 text-muted-foreground transition-transform ${focusPanelOpen ? 'rotate-180' : ''}`} />
+        </button>
+
+        {/* Focus camera panel */}
+        {focusPanelOpen && (
+          <div className="absolute top-10 left-0 right-0 z-20 bg-card/95 border-b border-border p-2">
+            <div className="flex gap-2 overflow-x-auto">
+              {alivePlayers.map(p => {
+                const color = PLAYER_COLORS[p.colorIndex];
+                return (
+                  <div key={p.connId} className="flex-shrink-0 flex flex-col items-center gap-1">
+                    <div
+                      className="w-[140px] h-[100px] rounded border overflow-hidden"
+                      style={{ borderColor: `hsl(${color?.hsl ?? '0 0% 50%'})` }}
+                    >
+                      <Canvas camera={{ position: [p.position.x, 8, p.position.z + 6], fov: 40 }}>
+                        <ambientLight intensity={0.7} />
+                        <directionalLight position={[5, 8, 5]} intensity={1} />
+                        <PlayerFocusCamera target={p.position} />
+                        <OrbitControls
+                          target={[p.position.x, 0, p.position.z]}
+                          enablePan={false}
+                          enableZoom={true}
+                          enableRotate={true}
+                          minDistance={3}
+                          maxDistance={15}
+                        />
+                        <gridHelper args={[40, 40, 'hsl(0 0% 20%)', 'hsl(0 0% 15%)']} />
+                        <Suspense fallback={null}>
+                          <group position={[p.position.x, 0, p.position.z]}>
+                            <CharacterViewer
+                              color={p.chickColor as any}
+                              animState={p.isMoving ? 'Running' : 'Idle'}
+                              facingAngle={p.facingAngle}
+                            />
+                          </group>
+                        </Suspense>
+                      </Canvas>
+                    </div>
+                    <span className="text-[9px] font-mono" style={{ color: `hsl(${color?.hsl ?? '0 0% 50%'})` }}>
+                      {color?.name} {p.isEagle ? '🦅' : '🐤'}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* Tip obtain countdowns — stacked, pushed down when panel is open */}
         {snapshot.tipObtainTimers && Object.keys(snapshot.tipObtainTimers).length > 0 && (
-          <div className="absolute top-2 left-1/2 -translate-x-1/2 z-10 flex flex-col gap-1 items-center">
+          <div className={`absolute left-1/2 -translate-x-1/2 z-10 flex flex-col gap-1 items-center ${focusPanelOpen ? 'top-[140px]' : 'top-2'}`}>
             {Object.entries(snapshot.tipObtainTimers).map(([connId, timer]) => {
               const player = snapshot.players[connId];
               if (!player) return null;
@@ -382,7 +453,7 @@ export default function Host() {
         <div className="absolute top-2 left-2 z-10 px-3 py-1 rounded bg-card/80 border border-border font-mono text-xs text-muted-foreground">
           ⏱ {Math.floor(snapshot.gameTime)}s
         </div>
-        <div className="absolute top-12 left-2 z-10 px-2 py-2 rounded bg-card/85 border border-border w-44">
+        <div className={`absolute left-2 z-10 px-2 py-2 rounded bg-card/85 border border-border w-44 ${focusPanelOpen ? 'top-[140px]' : 'top-12'}`}>
           <div className="flex items-center justify-between text-[10px] font-mono text-muted-foreground mb-1">
             <span>Zoom</span>
             <span>{zoomLevel.toFixed(2)}x</span>
@@ -400,7 +471,7 @@ export default function Host() {
 
         {/* Eagle awake countdown */}
         {!snapshot.eagleAwake &&
-        <div className="absolute top-12 left-1/2 -translate-x-1/2 z-10 px-4 py-2 rounded bg-destructive/20 border border-destructive/50 font-mono text-xs text-destructive animate-pulse">
+        <div className={`absolute left-1/2 -translate-x-1/2 z-10 px-4 py-2 rounded bg-destructive/20 border border-destructive/50 font-mono text-xs text-destructive animate-pulse ${focusPanelOpen ? 'top-[140px]' : 'top-12'}`}>
             🦅 Eagle awakens in {Math.max(0, Math.ceil(5 - snapshot.gameTime))}s
           </div>
         }
@@ -457,10 +528,8 @@ function GameOverCeremony({ snapshot, gameMode }: { snapshot: GameStateSnapshot;
   // Determine MVP
   const mvp = (() => {
     if (winner === 'draw') {
-      // Compare eagle(s) vs last surviving chick(s) — highest score wins MVP
       return sorted[0];
     }
-    // MVP from winning team
     const winningTeam = sorted.filter(p =>
       (winner === 'eagle' && p.isEagle) || (winner === 'chicks' && !p.isEagle)
     );
@@ -471,7 +540,6 @@ function GameOverCeremony({ snapshot, gameMode }: { snapshot: GameStateSnapshot;
     (winner === 'eagle' && p.isEagle) || (winner === 'chicks' && !p.isEagle)
   ).filter(p => p.connId !== mvp?.connId);
 
-  // Skip team phase if draw, or 1v3 eagle (solo winner)
   const skipTeamPhase = winner === 'draw' || (winner === 'eagle' && gameMode === '1v3') || winningTeamPlayers.length === 0;
 
   useEffect(() => {
@@ -502,10 +570,12 @@ function GameOverCeremony({ snapshot, gameMode }: { snapshot: GameStateSnapshot;
       <div className="flex flex-col items-center justify-center h-screen bg-background gap-6">
         <h1 className="text-2xl font-pixel text-accent text-glow-green animate-pulse tracking-widest">🏆 MVP</h1>
         <div className="h-[50vh] w-full max-w-md">
-          <Canvas camera={{ position: [0, 3, 5], fov: 35 }}>
+          <Canvas camera={{ position: [0, 2, 4], fov: 30 }}>
             <ambientLight intensity={0.8} />
             <directionalLight position={[5, 8, 5]} intensity={1.2} />
-            <DancingChar chickColor={mvp.chickColor} isWinner={true} delay={0} />
+            <group position={[0, -0.5, 0]}>
+              <DancingChar chickColor={mvp.chickColor} isWinner={true} delay={0} />
+            </group>
           </Canvas>
         </div>
         <div className="flex items-center gap-3 px-6 py-3 rounded-xl bg-accent/20 border-2 border-accent">
@@ -531,13 +601,13 @@ function GameOverCeremony({ snapshot, gameMode }: { snapshot: GameStateSnapshot;
           {teamName}
         </h1>
         <div className="h-[50vh] w-full max-w-2xl">
-          <Canvas camera={{ position: [0, 3, winningTeamPlayers.length * 2.5 + 3], fov: 40 }}>
+          <Canvas camera={{ position: [0, 2, winningTeamPlayers.length * 2.5 + 3], fov: 35 }}>
             <ambientLight intensity={0.8} />
             <directionalLight position={[5, 8, 5]} intensity={1.2} />
             {winningTeamPlayers.map((p, i) => {
               const x = (i - (winningTeamPlayers.length - 1) / 2) * 2.5;
               return (
-                <group key={p.connId} position={[x, 0, 0]}>
+                <group key={p.connId} position={[x, -0.5, 0]}>
                   <DancingChar chickColor={p.chickColor} isWinner={true} delay={i * 0.4} />
                 </group>
               );
@@ -549,7 +619,7 @@ function GameOverCeremony({ snapshot, gameMode }: { snapshot: GameStateSnapshot;
     );
   }
 
-  // Phase 3: Full transcript
+  // Phase 3: Full transcript — character base at 2/5 screen height
   return (
     <div className="flex flex-col h-screen bg-background overflow-auto">
       <div className="py-4 text-center border-b border-border">
@@ -561,8 +631,8 @@ function GameOverCeremony({ snapshot, gameMode }: { snapshot: GameStateSnapshot;
         </p>
       </div>
 
-      <div className="h-[35vh] relative flex-shrink-0">
-        <Canvas camera={{ position: [0, 3, sorted.length * 2.2 + 4], fov: 40 }}>
+      <div className="h-[40vh] relative flex-shrink-0">
+        <Canvas camera={{ position: [0, 2, sorted.length * 2.2 + 4], fov: 35 }}>
           <ambientLight intensity={0.8} />
           <directionalLight position={[5, 8, 5]} intensity={1.2} />
           {sorted.map((p, i) => {
@@ -570,7 +640,7 @@ function GameOverCeremony({ snapshot, gameMode }: { snapshot: GameStateSnapshot;
             const spacing = 2.2;
             const x = (i - (sorted.length - 1) / 2) * spacing;
             return (
-              <group key={p.connId} position={[x, 0, 0]}>
+              <group key={p.connId} position={[x, -0.8, 0]}>
                 <DancingChar chickColor={p.chickColor} isWinner={isWin} delay={i * 0.4} />
               </group>
             );
@@ -602,7 +672,7 @@ function GameOverCeremony({ snapshot, gameMode }: { snapshot: GameStateSnapshot;
               </tr>
             </thead>
             <tbody>
-              {sorted.map((p, i) => {
+              {sorted.map((p) => {
                 const color = PLAYER_COLORS[p.colorIndex];
                 const letter = gradeToLetter(p.health);
                 const gradeColor = getGradeColor(p.health);
