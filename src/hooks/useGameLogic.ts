@@ -40,11 +40,11 @@ const EAGLE_SPEED = 10;
 const ATTACK_COOLDOWN = 5000;
 const FREEZE_DURATION = 5000;
 const EAGLE_AWAKE_DELAY = 5000;
-const SPEED_BOOST_DURATION = 5000;
+const SPEED_BOOST_DURATION = 2000;
 const SPEED_BOOST_MULTIPLIER = 2;
 const FLY_SPEED_MULTIPLIER = 3;
-const FLY_DURATION = 3000;
-const FLY_COOLDOWN = 10000;
+const FLY_DURATION = 2000;
+const FLY_COOLDOWN = 15000;
 const ATTACK_ANIM_DURATION = 1000;
 const PROP_SPAWN_INTERVAL_MIN = 10000;
 const PROP_SPAWN_INTERVAL_MAX = 12000;
@@ -591,7 +591,9 @@ export function useGameLogic({ players, broadcast, gameMode }: UseGameLogicProps
         if (gs.examState.timeRemaining <= 0) {
           gs.examState.timeRemaining = 0;
           // Time's up — check alive chick count for result
-          const aliveChicksExam = Array.from<PlayerGameState>(gs.playerStates.values()).filter((p) => !p.isEagle && p.alive);
+          const aliveChicksExam = Array.from<PlayerGameState>(gs.playerStates.values()).filter(
+            (p) => !p.isEagle && p.alive,
+          );
           if (currentMode === "1v3") {
             if (aliveChicksExam.length >= 2) endGame(gs, "chicks", currentBroadcast);
             else if (aliveChicksExam.length === 1) endGame(gs, "draw", currentBroadcast);
