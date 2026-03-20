@@ -590,8 +590,17 @@ export function useGameLogic({ players, broadcast, gameMode }: UseGameLogicProps
         gs.examState.timeRemaining -= delta;
         if (gs.examState.timeRemaining <= 0) {
           gs.examState.timeRemaining = 0;
-          // Time's up — eagle wins
-          endGame(gs, "eagle", currentBroadcast);
+          // Time's up — check alive chick count for result
+          const aliveChicksExam = Array.from<PlayerGameState>(gs.playerStates.values()).filter((p) => !p.isEagle && p.alive);
+          if (currentMode === "1v3") {
+            if (aliveChicksExam.length >= 2) endGame(gs, "chicks", currentBroadcast);
+            else if (aliveChicksExam.length === 1) endGame(gs, "draw", currentBroadcast);
+            else endGame(gs, "eagle", currentBroadcast);
+          } else {
+            if (aliveChicksExam.length >= 3) endGame(gs, "chicks", currentBroadcast);
+            else if (aliveChicksExam.length >= 1) endGame(gs, "draw", currentBroadcast);
+            else endGame(gs, "eagle", currentBroadcast);
+          }
         }
       }
     }
