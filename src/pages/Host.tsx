@@ -453,7 +453,7 @@ export default function Host() {
         <div className="absolute top-2 left-2 z-10 px-3 py-1 rounded bg-card/80 border border-border font-mono text-xs text-muted-foreground">
           ⏱ {Math.floor(snapshot.gameTime)}s
         </div>
-        <div className={`absolute left-2 z-10 px-2 py-2 rounded bg-card/85 border border-border w-44 ${focusPanelOpen ? 'top-[140px]' : 'top-12'}`}>
+        <div className="absolute left-2 top-12 z-10 px-2 py-2 rounded bg-card/85 border border-border w-44">
           <div className="flex items-center justify-between text-[10px] font-mono text-muted-foreground mb-1">
             <span>Zoom</span>
             <span>{zoomLevel.toFixed(2)}x</span>
