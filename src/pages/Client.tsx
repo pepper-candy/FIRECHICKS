@@ -1111,7 +1111,7 @@ export default function Client() {
                   disabled={myState.frozen}
                 />
 
-                <PropsBtn items={myState.props ?? []} onUse={handlePropUse} isEagle={true} />
+                <PropsBtn items={myState.props ?? []} onUse={handlePropUse} isEagle={true} flyCooldownUntil={myState.flyCooldownUntil} />
               </>
             )}
           </div>
