@@ -475,7 +475,9 @@ export default function Client() {
   );
   const handleTipTap = useCallback(
     (tipIndex: 0 | 1) => {
-      // If QR is already showing in scanner, dismiss it
+      // Check local expiry cooldown
+      if (Date.now() < tipExpiryCooldown[tipIndex]) return;
+      // If QR is already showing in scanner, dismiss it + set cooldown
       if (activeScannerQr && tipQrCodes[tipIndex]) {
         setActiveScannerQr(null);
         setScannerQrExpireAt(0);
@@ -484,17 +486,28 @@ export default function Client() {
           n[tipIndex] = null;
           return n;
         });
+        setTipExpiryCooldown((prev) => {
+          const n: [number, number] = [...prev] as [number, number];
+          n[tipIndex] = Date.now() + 5000;
+          return n;
+        });
         return;
       }
       sendToHost({ type: "tip-request", tipIndex });
     },
-    [sendToHost, tipQrCodes, activeScannerQr],
+    [sendToHost, tipQrCodes, activeScannerQr, tipExpiryCooldown],
   );
   const handleDismissScannerQr = useCallback(() => {
     setActiveScannerQr(null);
     setScannerQrExpireAt(0);
+    // Set local 5s cooldown on the active tip
+    setTipExpiryCooldown((prev) => {
+      const n: [number, number] = [...prev] as [number, number];
+      n[activeScannerTipIdx] = Date.now() + 5000;
+      return n;
+    });
     setTipQrCodes([null, null]);
-  }, []);
+  }, [activeScannerTipIdx]);
   const handleExamSubmit = useCallback(() => {
     if (examAnswer.trim()) {
       sendToHost({ type: "answer-submit", answer: examAnswer.trim() });
