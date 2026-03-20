@@ -1146,6 +1146,8 @@ export default function Client() {
 
   return (
     <div className="flex flex-col h-dvh overflow-hidden p-2 gap-2 select-none">
+      {/* Invincible ripple effect */}
+      {invincibleRemainingSec > 0 && <InvincibleRipple />}
       {/* Status bar */}
       <div className="flex items-center justify-between">
         {/* Fullscreen toggle when not already fullscreen */}
