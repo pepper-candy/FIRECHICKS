@@ -59,7 +59,7 @@ const MYSTERY_BOX_ACTIVE_MAX = 15000;
 const EVENT_HITBOX_DURATION = 10000; // 10s hitbox challenge
 const EVENT_MOCK_DURATION = 30000; // 30s mock exam
 const STAR_STUDENT_GRADE_BONUS = 5;
-const REVEAL_DURATION = 5000;
+const REVEAL_DURATION = 7000;
 const COUNTDOWN_DURATION = 3;
 
 // Answer keys
