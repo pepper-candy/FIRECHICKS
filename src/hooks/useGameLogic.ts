@@ -547,6 +547,7 @@ export function useGameLogic({ players, broadcast, gameMode }: UseGameLogicProps
         if (aliveChicks.length > 0 && aliveChicks.every((c) => c.tips[0] && c.tips[1])) {
           gs.stage = 3;
           gs.stageLabel = "Run to any building to start the Final Exam!";
+          gs.stageTransitionUntil = now + 5000;
         }
       }
     }
