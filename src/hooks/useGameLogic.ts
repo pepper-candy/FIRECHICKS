@@ -1,56 +1,78 @@
-import { useRef, useCallback, useEffect, useState } from 'react';
+import { useRef, useCallback, useEffect, useState } from "react";
 import type {
-  GamePhase, GameStage, GameStateSnapshot, ExamState, MysteryBox, GameEvent,
-  PlayerGameState, PlayerGameStateSerializable, PropSpawn, BuildingState,
-  ClientMessage, PropType,
-} from '@/lib/gameTypes';
-import { serializePlayerState } from '@/lib/gameTypes';
-import { PLAYER_COLORS, EAGLE_COLOR_INDICES } from '@/lib/playerColors';
-import { STARTING_HEALTH, applyDamage, applyHeal, isDead, addSubGrades } from '@/lib/gradeSystem';
+  GamePhase,
+  GameStage,
+  GameStateSnapshot,
+  ExamState,
+  MysteryBox,
+  GameEvent,
+  PlayerGameState,
+  PlayerGameStateSerializable,
+  PropSpawn,
+  BuildingState,
+  ClientMessage,
+  PropType,
+} from "@/lib/gameTypes";
+import { serializePlayerState } from "@/lib/gameTypes";
+import { PLAYER_COLORS, EAGLE_COLOR_INDICES } from "@/lib/playerColors";
+import { STARTING_HEALTH, applyDamage, applyHeal, isDead, addSubGrades } from "@/lib/gradeSystem";
 import {
-  BUILDINGS, EAGLE_SPAWN_CANDIDATES, DIAGONAL_PAIRS,
-  resolvePosition, pushOutOfWall, checkOverlap,
-  isInProtectedZone, getAdjacentBuilding,
+  BUILDINGS,
+  EAGLE_SPAWN_CANDIDATES,
+  DIAGONAL_PAIRS,
+  resolvePosition,
+  pushOutOfWall,
+  checkOverlap,
+  isInProtectedZone,
+  getAdjacentBuilding,
   checkCollision,
-  ATTACK_OVERLAP_THRESHOLD, SOCIAL_CIRCLE_THRESHOLD, PROP_PICKUP_RADIUS,
+  ATTACK_OVERLAP_THRESHOLD,
+  SOCIAL_CIRCLE_THRESHOLD,
+  PROP_PICKUP_RADIUS,
   MAP_HALF,
-} from '@/lib/gameplayMapData';
-import type { PlayerState } from '@/hooks/useGameRoom';
-import type { ChickColor } from '@/components/CharacterViewer';
+} from "@/lib/gameplayMapData";
+import type { PlayerState } from "@/hooks/useGameRoom";
+import type { ChickColor } from "@/components/CharacterViewer";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
-const SPEED = 5;
-const EAGLE_SPEED = 5;
+const SPEED = 10;
+const EAGLE_SPEED = 10;
 const ATTACK_COOLDOWN = 5000;
 const FREEZE_DURATION = 5000;
 const EAGLE_AWAKE_DELAY = 5000;
-const SPEED_BOOST_DURATION = 5000;
+const SPEED_BOOST_DURATION = 1000;
 const SPEED_BOOST_MULTIPLIER = 2;
 const FLY_SPEED_MULTIPLIER = 3;
-const FLY_DURATION = 500;
+const FLY_DURATION = 1000;
 const ATTACK_ANIM_DURATION = 1000;
 const PROP_SPAWN_INTERVAL_MIN = 10000;
 const PROP_SPAWN_INTERVAL_MAX = 12000;
 const PROP_SPAWN_INTERVAL_HEAL = 30000;
-const TIP_OBTAIN_DURATION = 7000;      // 7 sec in protected zone to become star student
-const TIP_QR_COOLDOWN = 5000;          // 5 sec before tip QR can regenerate
+const TIP_OBTAIN_DURATION = 7000; // 7 sec in protected zone to become star student
+const TIP_QR_COOLDOWN = 5000; // 5 sec before tip QR can regenerate
 const EXAM_TIMER_1V3 = 45;
 const EXAM_TIMER_2V6 = 60;
-const MYSTERY_BOX_INTERVAL = 60000;    // every 60 sec
+const MYSTERY_BOX_INTERVAL = 60000; // every 60 sec
 const MYSTERY_BOX_ACTIVE_MIN = 10000;
 const MYSTERY_BOX_ACTIVE_MAX = 15000;
-const EVENT_HITBOX_DURATION = 10000;   // 10s hitbox challenge
-const EVENT_MOCK_DURATION = 30000;     // 30s mock exam
+const EVENT_HITBOX_DURATION = 10000; // 10s hitbox challenge
+const EVENT_MOCK_DURATION = 30000; // 30s mock exam
 const STAR_STUDENT_GRADE_BONUS = 5;
 const REVEAL_DURATION = 5000;
 const COUNTDOWN_DURATION = 3;
 
 // Answer keys
 const FINAL_ANSWER_KEY: Record<number, string> = {
-  1: 'A+', 2: '4.3', 3: 'FIRE', 4: 'RED',
+  1: "A+",
+  2: "4.3",
+  3: "FIRE",
+  4: "RED",
 };
 const MOCK_ANSWER_KEY: Record<number, string> = {
-  1: 'UST', 2: '11M', 3: 'BIRD', 4: 'HALL',
+  1: "UST",
+  2: "11M",
+  3: "BIRD",
+  4: "HALL",
 };
 
 // ─── Interfaces ───────────────────────────────────────────────────────────────
@@ -74,7 +96,7 @@ interface EagleZoneState {
 interface UseGameLogicProps {
   players: Map<string, PlayerState>;
   broadcast: (msg: any) => void;
-  gameMode: '1v3' | '2v6';
+  gameMode: "1v3" | "2v6";
 }
 
 // Named type for the full game state reference — avoids TypeScript `unknown` inference issues
@@ -88,10 +110,10 @@ interface GameStateRef {
   frozenAll: boolean;
   frozenAllUntil: number;
   pendingEagleFreezeAfterVideo: boolean;
-  videoPlaying: 'hurt' | 'dead' | null;
+  videoPlaying: "hurt" | "dead" | null;
   propSpawns: PropSpawn[];
   buildings: BuildingState[];
-  winner: 'eagle' | 'chicks' | 'draw' | null;
+  winner: "eagle" | "chicks" | "draw" | null;
   lastPropSpawnSpeed: number;
   lastPropSpawnHeal: number;
   propIdCounter: number;
@@ -112,22 +134,30 @@ interface GameStateRef {
 
 // ─── Hook ─────────────────────────────────────────────────────────────────────
 export function useGameLogic({ players, broadcast, gameMode }: UseGameLogicProps) {
-  const [phase, setPhase] = useState<GamePhase>('lobby');
-  const [assignments, setAssignments] = useState<Record<string, { colorIndex: number; isEagle: boolean; chickColor: ChickColor }>>({});
+  const [phase, setPhase] = useState<GamePhase>("lobby");
+  const [assignments, setAssignments] = useState<
+    Record<string, { colorIndex: number; isEagle: boolean; chickColor: ChickColor }>
+  >({});
 
   const playersRef = useRef<Map<string, PlayerState>>(players);
-  useEffect(() => { playersRef.current = players; }, [players]);
+  useEffect(() => {
+    playersRef.current = players;
+  }, [players]);
 
   const broadcastRef = useRef(broadcast);
-  useEffect(() => { broadcastRef.current = broadcast; }, [broadcast]);
+  useEffect(() => {
+    broadcastRef.current = broadcast;
+  }, [broadcast]);
 
   const gameModeRef = useRef(gameMode);
-  useEffect(() => { gameModeRef.current = gameMode; }, [gameMode]);
+  useEffect(() => {
+    gameModeRef.current = gameMode;
+  }, [gameMode]);
 
   const gameStateRef = useRef<GameStateRef | null>(null);
 
   const [snapshot, setSnapshot] = useState<GameStateSnapshot | null>(null);
-  const [videoPlaying, setVideoPlaying] = useState<'hurt' | 'dead' | null>(null);
+  const [videoPlaying, setVideoPlaying] = useState<"hurt" | "dead" | null>(null);
   const frameRef = useRef<number>(0);
   const lastTickRef = useRef<number>(0);
   // Used by the host to drag/teleport players by their name tags.
@@ -141,10 +171,10 @@ export function useGameLogic({ players, broadcast, gameMode }: UseGameLogicProps
     const playerIds: string[] = Array.from(currentPlayers.keys());
     if (playerIds.length === 0) return;
 
-    const currentMode = gameModeRef.current as '1v3' | '2v6';
+    const currentMode = gameModeRef.current as "1v3" | "2v6";
     const assigns: Record<string, { colorIndex: number; isEagle: boolean; chickColor: ChickColor }> = {};
 
-    if (currentMode === '1v3') {
+    if (currentMode === "1v3") {
       // Randomly assign 1 eagle from 4 players, random eagle color (Black or Gold, no repeat)
       const shuffled = [...playerIds].sort(() => Math.random() - 0.5);
       const eagleId = shuffled[0];
@@ -152,7 +182,11 @@ export function useGameLogic({ players, broadcast, gameMode }: UseGameLogicProps
 
       for (const id of playerIds) {
         if (id === eagleId) {
-          assigns[id] = { colorIndex: eagleColorIdx, isEagle: true, chickColor: PLAYER_COLORS[eagleColorIdx].chickColor };
+          assigns[id] = {
+            colorIndex: eagleColorIdx,
+            isEagle: true,
+            chickColor: PLAYER_COLORS[eagleColorIdx].chickColor,
+          };
         } else {
           const ci = currentPlayers.get(id)?.colorIndex ?? 2;
           assigns[id] = { colorIndex: ci, isEagle: false, chickColor: PLAYER_COLORS[ci].chickColor };
@@ -213,9 +247,7 @@ export function useGameLogic({ players, broadcast, gameMode }: UseGameLogicProps
         alive: true,
         isStarStudent: false,
         tips: [false, false],
-        props: assign.isEagle
-          ? [{ type: 'fly', count: 3 }]
-          : [],
+        props: assign.isEagle ? [{ type: "fly", count: 3 }] : [],
         position: { ...spawn },
         facingAngle: 0,
         frozen: assign.isEagle,
@@ -250,7 +282,7 @@ export function useGameLogic({ players, broadcast, gameMode }: UseGameLogicProps
     }));
 
     gameStateRef.current = {
-      phase: 'reveal',
+      phase: "reveal",
       stage: 0,
       gameTime: 0,
       countdownTime: COUNTDOWN_DURATION,
@@ -267,7 +299,7 @@ export function useGameLogic({ players, broadcast, gameMode }: UseGameLogicProps
       lastPropSpawnHeal: 0,
       propIdCounter: 0,
       startTime: 0,
-      stageLabel: 'Roles assigned! Get ready...',
+      stageLabel: "Roles assigned! Get ready...",
       examState: null,
       examStarted: false,
       mysteryBoxes: [],
@@ -281,17 +313,17 @@ export function useGameLogic({ players, broadcast, gameMode }: UseGameLogicProps
       eventCountdown: 0,
     };
 
-    setPhase('reveal');
-    broadcastRef.current({ type: 'game-start', assignments: assigns });
+    setPhase("reveal");
+    broadcastRef.current({ type: "game-start", assignments: assigns });
 
     setTimeout(() => {
       const gsInner = gameStateRef.current as GameStateRef | null;
       if (!gsInner) return;
-      gsInner.phase = 'countdown';
+      gsInner.phase = "countdown";
       gsInner.countdownTime = COUNTDOWN_DURATION;
       gsInner.startTime = Date.now();
-      setPhase('countdown');
-      (broadcastRef.current as (msg: any) => void)({ type: 'phase-change', phase: 'countdown' });
+      setPhase("countdown");
+      (broadcastRef.current as (msg: any) => void)({ type: "phase-change", phase: "countdown" });
 
       lastTickRef.current = performance.now();
       const tick = (time: number) => {
@@ -312,28 +344,28 @@ export function useGameLogic({ players, broadcast, gameMode }: UseGameLogicProps
     const now = Date.now();
     const currentPlayers = playersRef.current as Map<string, PlayerState>;
     const currentBroadcast = broadcastRef.current as (msg: any) => void;
-    const currentMode = gameModeRef.current as '1v3' | '2v6';
+    const currentMode = gameModeRef.current as "1v3" | "2v6";
 
     // ── Countdown ──
-    if (gs.phase === 'countdown') {
+    if (gs.phase === "countdown") {
       const elapsed = (now - gs.startTime) / 1000;
       gs.countdownTime = Math.max(0, COUNTDOWN_DURATION - elapsed);
       if (gs.countdownTime <= 0) {
-        gs.phase = 'playing';
+        gs.phase = "playing";
         gs.startTime = now;
         gs.gameTime = 0;
         gs.lastPropSpawnSpeed = now;
         gs.lastPropSpawnHeal = now;
         gs.lastMysteryBoxSpawn = now;
-        gs.stageLabel = 'Touch every other chick!';
-        setPhase('playing');
-        currentBroadcast({ type: 'phase-change', phase: 'playing' });
+        gs.stageLabel = "Touch every other chick!";
+        setPhase("playing");
+        currentBroadcast({ type: "phase-change", phase: "playing" });
       }
       doBroadcastState(gs, currentBroadcast);
       return;
     }
 
-    if (gs.phase !== 'playing' && gs.phase !== 'exam') return;
+    if (gs.phase !== "playing" && gs.phase !== "exam") return;
 
     // ── Time ──
     if (!gs.frozenAll) {
@@ -351,7 +383,10 @@ export function useGameLogic({ players, broadcast, gameMode }: UseGameLogicProps
     if (!gs.eagleAwake && gs.gameTime > EAGLE_AWAKE_DELAY / 1000) {
       gs.eagleAwake = true;
       for (const [, p] of gs.playerStates) {
-        if (p.isEagle) { p.frozen = false; p.frozenUntil = 0; }
+        if (p.isEagle) {
+          p.frozen = false;
+          p.frozenUntil = 0;
+        }
       }
     }
 
@@ -390,7 +425,7 @@ export function useGameLogic({ players, broadcast, gameMode }: UseGameLogicProps
           const moveAngle = magnitude > 0.05 ? Math.atan2(-jx, jy) : p.facingAngle;
           const baseSpeed = p.isEagle ? EAGLE_SPEED : SPEED;
           // Normal movement uses joystick magnitude; flight keeps moving even if joystick is idle.
-          const speedFactor = magnitude > 0.05 ? magnitude : (isFlyingNow ? 1 : 0);
+          const speedFactor = magnitude > 0.05 ? magnitude : isFlyingNow ? 1 : 0;
           const speed = speedFactor * baseSpeed * p.speedMultiplier * delta;
 
           const dx = Math.sin(moveAngle) * speed * -1;
@@ -413,7 +448,15 @@ export function useGameLogic({ players, broadcast, gameMode }: UseGameLogicProps
       const chicks = Array.from<PlayerGameState>(gs.playerStates.values()).filter((p) => !p.isEagle && p.alive);
       for (let i = 0; i < chicks.length; i++) {
         for (let j = i + 1; j < chicks.length; j++) {
-          if (checkOverlap(chicks[i].position.x, chicks[i].position.z, chicks[j].position.x, chicks[j].position.z, SOCIAL_CIRCLE_THRESHOLD)) {
+          if (
+            checkOverlap(
+              chicks[i].position.x,
+              chicks[i].position.z,
+              chicks[j].position.x,
+              chicks[j].position.z,
+              SOCIAL_CIRCLE_THRESHOLD,
+            )
+          ) {
             chicks[i].socialCircleMet.add(chicks[j].connId);
             chicks[j].socialCircleMet.add(chicks[i].connId);
           }
@@ -422,9 +465,12 @@ export function useGameLogic({ players, broadcast, gameMode }: UseGameLogicProps
       const requiredMeets = chicks.length - 1;
       if (chicks.length > 0 && chicks.every((c) => c.socialCircleMet.size >= requiredMeets)) {
         gs.stage = 1;
-        gs.stageLabel = 'Get Exam Tips from glowing buildings!';
+        gs.stageLabel = "Get Exam Tips from glowing buildings!";
         for (const b of gs.buildings) {
-          if (b.hasTip) { b.glowing = true; b.zoneActive = true; }
+          if (b.hasTip) {
+            b.glowing = true;
+            b.zoneActive = true;
+          }
         }
       }
     }
@@ -455,14 +501,14 @@ export function useGameLogic({ players, broadcast, gameMode }: UseGameLogicProps
               const elapsed = now - timer.startTime;
               const building = gs.buildings[inZoneBuilding];
               if (elapsed >= TIP_OBTAIN_DURATION && building && !chick.tips[building.tipIndex]) {
-                const neededCount = mode === '2v6' ? 2 : 1;
+                const neededCount = mode === "2v6" ? 2 : 1;
                 if (building && building.tipObtainedCount < neededCount) {
                   // Become Star Student
                   chick.isStarStudent = true;
                   const tipIdx = building.tipIndex as 0 | 1;
                   chick.tips[tipIdx] = true;
                   chick.health = Math.min(STARTING_HEALTH, addSubGrades(chick.health, STAR_STUDENT_GRADE_BONUS));
-                  chick.props.push({ type: 'invincible', count: 1 });
+                  chick.props.push({ type: "invincible", count: 1 });
                   chick.actionScore += 10;
 
                   building.tipObtainedCount++;
@@ -477,7 +523,7 @@ export function useGameLogic({ players, broadcast, gameMode }: UseGameLogicProps
                   // Transition to stage 2 label if first tip obtained
                   if (gs.stage === 1) {
                     gs.stage = 2;
-                    gs.stageLabel = 'Stage 2 & 3: Share Exam Tips with everyone!';
+                    gs.stageLabel = "Stage 2 & 3: Share Exam Tips with everyone!";
                   }
                 }
               }
@@ -493,7 +539,7 @@ export function useGameLogic({ players, broadcast, gameMode }: UseGameLogicProps
         const aliveChicks = Array.from<PlayerGameState>(gs.playerStates.values()).filter((p) => !p.isEagle && p.alive);
         if (aliveChicks.length > 0 && aliveChicks.every((c) => c.tips[0] && c.tips[1])) {
           gs.stage = 3;
-          gs.stageLabel = 'Run to any building to start the Final Exam!';
+          gs.stageLabel = "Run to any building to start the Final Exam!";
         }
       }
     }
@@ -513,7 +559,10 @@ export function useGameLogic({ players, broadcast, gameMode }: UseGameLogicProps
         const prev = gs.eagleZoneStates.get(zoneKey);
         if (currentZone >= 0) {
           if (!prev || prev.buildingId !== currentZone) {
-            gs.eagleZoneStates.set(zoneKey, { buildingId: currentZone, entryHealth: gs.buildings[currentZone].zoneHealth });
+            gs.eagleZoneStates.set(zoneKey, {
+              buildingId: currentZone,
+              entryHealth: gs.buildings[currentZone].zoneHealth,
+            });
           }
         } else if (prev) {
           // Eagle left the zone — reset zone health
@@ -525,7 +574,7 @@ export function useGameLogic({ players, broadcast, gameMode }: UseGameLogicProps
     }
 
     // ── Stage 3: Exam venue entry check ──
-    if (gs.stage === 3 && !gs.examStarted && gs.phase === 'playing') {
+    if (gs.stage === 3 && !gs.examStarted && gs.phase === "playing") {
       const aliveChicks = Array.from<PlayerGameState>(gs.playerStates.values()).filter((p) => !p.isEagle && p.alive);
       if (aliveChicks.length > 0 && aliveChicks.every((c) => getAdjacentBuilding(c.position.x, c.position.z) >= 0)) {
         startExam(gs, currentBroadcast, currentMode);
@@ -533,31 +582,32 @@ export function useGameLogic({ players, broadcast, gameMode }: UseGameLogicProps
     }
 
     // ── Exam timer countdown ──
-    if (gs.phase === 'exam' && gs.examState && !gs.examState.answered) {
+    if (gs.phase === "exam" && gs.examState && !gs.examState.answered) {
       if (!gs.frozenAll) {
         gs.examState.timeRemaining -= delta;
         if (gs.examState.timeRemaining <= 0) {
           gs.examState.timeRemaining = 0;
           // Time's up — eagle wins
-          endGame(gs, 'eagle', currentBroadcast);
+          endGame(gs, "eagle", currentBroadcast);
         }
       }
     }
 
     // ── Prop spawning ──
-    if (gs.phase === 'playing') {
-      const activeSpeedCount = gs.propSpawns.filter((p) => p.active && p.type === 'speed').length;
-      const activeHealCount = gs.propSpawns.filter((p) => p.active && p.type === 'heal').length;
+    if (gs.phase === "playing") {
+      const activeSpeedCount = gs.propSpawns.filter((p) => p.active && p.type === "speed").length;
+      const activeHealCount = gs.propSpawns.filter((p) => p.active && p.type === "heal").length;
       const activeBoxCount = gs.mysteryBoxes.filter((b) => !b.collected && !b.triggered).length;
 
-      const speedInterval = PROP_SPAWN_INTERVAL_MIN + Math.random() * (PROP_SPAWN_INTERVAL_MAX - PROP_SPAWN_INTERVAL_MIN);
+      const speedInterval =
+        PROP_SPAWN_INTERVAL_MIN + Math.random() * (PROP_SPAWN_INTERVAL_MAX - PROP_SPAWN_INTERVAL_MIN);
       if (activeSpeedCount < 5 && now - gs.lastPropSpawnSpeed > speedInterval) {
         gs.lastPropSpawnSpeed = now;
-        spawnProp(gs, 'speed');
+        spawnProp(gs, "speed");
       }
       if (activeHealCount < 5 && now - gs.lastPropSpawnHeal > PROP_SPAWN_INTERVAL_HEAL) {
         gs.lastPropSpawnHeal = now;
-        spawnProp(gs, 'heal');
+        spawnProp(gs, "heal");
       }
 
       // Prop pickup (proximity-based)
@@ -568,8 +618,8 @@ export function useGameLogic({ players, broadcast, gameMode }: UseGameLogicProps
           if (checkOverlap(p.position.x, p.position.z, prop.position.x, prop.position.z, PROP_PICKUP_RADIUS)) {
             prop.active = false;
             // Restart spawn timer after claim (if we're below cap)
-            if (prop.type === 'speed') gs.lastPropSpawnSpeed = now;
-            if (prop.type === 'heal') gs.lastPropSpawnHeal = now;
+            if (prop.type === "speed") gs.lastPropSpawnSpeed = now;
+            if (prop.type === "heal") gs.lastPropSpawnHeal = now;
             const existing = p.props.find((pi) => pi.type === prop.type);
             if (existing) existing.count++;
             else p.props.push({ type: prop.type, count: 1 });
@@ -607,9 +657,9 @@ export function useGameLogic({ players, broadcast, gameMode }: UseGameLogicProps
               // Chick gets 3 speed props
               box.collected = true;
               gs.lastMysteryBoxSpawn = now; // restart after claim
-              const existing = p.props.find((pi) => pi.type === 'speed');
+              const existing = p.props.find((pi) => pi.type === "speed");
               if (existing) existing.count += 3;
-              else p.props.push({ type: 'speed', count: 3 });
+              else p.props.push({ type: "speed", count: 3 });
               p.actionScore += 3;
             } else {
               // Eagle triggers a random event
@@ -617,22 +667,22 @@ export function useGameLogic({ players, broadcast, gameMode }: UseGameLogicProps
               gs.lastMysteryBoxSpawn = now; // restart after claim
               gs.frozenAll = true;
               gs.frozenAllUntil = now + 60000; // lifted when event ends
-              const eventType = Math.random() < 0.5 ? 'mock-exam' : 'hitbox';
+              const eventType = Math.random() < 0.5 ? "mock-exam" : "hitbox";
               const questionNum = Math.floor(Math.random() * 4) + 1;
-              const eventDuration = eventType === 'hitbox' ? EVENT_HITBOX_DURATION : EVENT_MOCK_DURATION;
+              const eventDuration = eventType === "hitbox" ? EVENT_HITBOX_DURATION : EVENT_MOCK_DURATION;
               gs.activeEvent = {
                 type: eventType,
-                phase: 'countdown',
+                phase: "countdown",
                 startedAt: now,
                 endAt: now + 3000 + eventDuration,
-                questionNum: eventType === 'mock-exam' ? questionNum : undefined,
+                questionNum: eventType === "mock-exam" ? questionNum : undefined,
                 chickClicks: {},
                 eagleClicks: {},
-                result: 'pending',
+                result: "pending",
               };
               gs.eventCountdown = 3;
-              gs.stageLabel = eventType === 'mock-exam' ? '🎲 Event: Mock Exam!' : '🎲 Event: Hitbox Challenge!';
-              currentBroadcast({ type: 'phase-change', phase: gs.phase });
+              gs.stageLabel = eventType === "mock-exam" ? "🎲 Event: Mock Exam!" : "🎲 Event: Hitbox Challenge!";
+              currentBroadcast({ type: "phase-change", phase: gs.phase });
             }
             break;
           }
@@ -646,42 +696,44 @@ export function useGameLogic({ players, broadcast, gameMode }: UseGameLogicProps
       const ev = gs.activeEvent as GameEvent;
       const elapsed = now - ev.startedAt;
 
-      if (ev.phase === 'countdown' && elapsed >= 3000) {
-        ev.phase = 'active';
-        ev.endAt = now + (ev.type === 'hitbox' ? EVENT_HITBOX_DURATION : EVENT_MOCK_DURATION);
-      } else if (ev.phase === 'active' && now >= ev.endAt) {
+      if (ev.phase === "countdown" && elapsed >= 3000) {
+        ev.phase = "active";
+        ev.endAt = now + (ev.type === "hitbox" ? EVENT_HITBOX_DURATION : EVENT_MOCK_DURATION);
+      } else if (ev.phase === "active" && now >= ev.endAt) {
         // Event over — evaluate results
-        ev.phase = 'result';
+        ev.phase = "result";
 
-        if (ev.type === 'hitbox') {
+        if (ev.type === "hitbox") {
           const chickTotal = (Object.values(ev.chickClicks) as number[]).reduce((a: number, b: number) => a + b, 0);
           const eagleTotal = (Object.values(ev.eagleClicks) as number[]).reduce((a: number, b: number) => a + b, 0);
-          const aliveChicks = Array.from<PlayerGameState>(gs.playerStates.values()).filter((p) => !p.isEagle && p.alive);
+          const aliveChicks = Array.from<PlayerGameState>(gs.playerStates.values()).filter(
+            (p) => !p.isEagle && p.alive,
+          );
           const avgChick = aliveChicks.length > 0 ? chickTotal / aliveChicks.length : 0;
           const eagles = Array.from<PlayerGameState>(gs.playerStates.values()).filter((p) => p.isEagle && p.alive);
           const avgEagle = eagles.length > 0 ? eagleTotal / eagles.length : 0;
 
           if (avgChick >= avgEagle) {
-            ev.result = 'chick';
+            ev.result = "chick";
             for (const [, p] of gs.playerStates) {
               if (p.alive) p.health = addSubGrades(p.health, 2);
             }
           } else {
-            ev.result = 'eagle';
+            ev.result = "eagle";
             for (const [, p] of gs.playerStates) {
               if (!p.isEagle && p.alive) p.health = addSubGrades(p.health, -2);
             }
           }
-        } else if (ev.type === 'mock-exam') {
+        } else if (ev.type === "mock-exam") {
           // If nobody answered correctly → -2 sub-grades to all chicks (fail)
           const anyCorrect = (Object.values(ev.chickClicks) as number[]).some((v: number) => v > 0);
           if (!anyCorrect) {
-            ev.result = 'eagle';
+            ev.result = "eagle";
             for (const [, p] of gs.playerStates) {
               if (!p.isEagle && p.alive) p.health = addSubGrades(p.health, -2);
             }
           } else {
-            ev.result = 'chick';
+            ev.result = "chick";
           }
         }
 
@@ -714,20 +766,20 @@ export function useGameLogic({ players, broadcast, gameMode }: UseGameLogicProps
     const totalChicks = Array.from<PlayerGameState>(gs.playerStates.values()).filter((p) => !p.isEagle).length;
 
     if (!gs.winner) {
-      if (currentMode === '1v3') {
+      if (currentMode === "1v3") {
         // 1v3: 3 chicks vs 1 eagle
         // 2+ chicks alive = chicks win (only checked at exam completion)
         // 1 chick left = draw
         // 0 chicks left = eagle wins
-        if (aliveChicks.length === 0) endGame(gs, 'eagle', currentBroadcast);
-        else if (aliveChicks.length === 1) endGame(gs, 'draw', currentBroadcast);
+        if (aliveChicks.length === 0) endGame(gs, "eagle", currentBroadcast);
+        else if (aliveChicks.length === 1) endGame(gs, "draw", currentBroadcast);
       } else {
         // 2v6: 6 chicks vs 2 eagles
         // 4+ chicks alive = chicks win (only at exam)
         // 2-3 chicks = draw
         // 0-1 chicks = eagle wins
-        if (aliveChicks.length <= 1) endGame(gs, 'eagle', currentBroadcast);
-        else if (aliveChicks.length <= 3) endGame(gs, 'draw', currentBroadcast);
+        if (aliveChicks.length <= 1) endGame(gs, "eagle", currentBroadcast);
+        else if (aliveChicks.length <= 3) endGame(gs, "draw", currentBroadcast);
       }
     }
 
@@ -737,15 +789,20 @@ export function useGameLogic({ players, broadcast, gameMode }: UseGameLogicProps
   // ─── Helpers ─────────────────────────────────────────────────────────────────
   function getStageLabel(stage: number): string {
     switch (stage) {
-      case 0: return 'Touch every other chick!';
-      case 1: return 'Get Exam Tips from glowing buildings!';
-      case 2: return 'Stage 2 & 3: Share Exam Tips with everyone!';
-      case 3: return 'Run to any building to start the Final Exam!';
-      default: return '';
+      case 0:
+        return "Touch every other chick!";
+      case 1:
+        return "Get Exam Tips from glowing buildings!";
+      case 2:
+        return "Stage 2 & 3: Share Exam Tips with everyone!";
+      case 3:
+        return "Run to any building to start the Final Exam!";
+      default:
+        return "";
     }
   }
 
-  function spawnProp(gs: GameStateRef, type: 'speed' | 'heal') {
+  function spawnProp(gs: GameStateRef, type: "speed" | "heal") {
     for (let attempt = 0; attempt < 10; attempt++) {
       const pos = {
         x: (Math.random() - 0.5) * (MAP_HALF * 1.6),
@@ -771,18 +828,14 @@ export function useGameLogic({ players, broadcast, gameMode }: UseGameLogicProps
     return null;
   }
 
-  function startExam(
-    gs: GameStateRef,
-    bcast: (msg: any) => void,
-    mode: '1v3' | '2v6',
-  ) {
+  function startExam(gs: GameStateRef, bcast: (msg: any) => void, mode: "1v3" | "2v6") {
     gs.examStarted = true;
-    gs.phase = 'exam';
-    setPhase('exam');
+    gs.phase = "exam";
+    setPhase("exam");
 
     const aliveChicks = Array.from<PlayerGameState>(gs.playerStates.values()).filter((p) => !p.isEagle && p.alive);
     const questionNum = Math.floor(Math.random() * 4) + 1;
-    const timer = mode === '1v3' ? EXAM_TIMER_1V3 : EXAM_TIMER_2V6;
+    const timer = mode === "1v3" ? EXAM_TIMER_1V3 : EXAM_TIMER_2V6;
 
     // Pick 1 random layer-1 holder
     const shuffled = [...aliveChicks].sort(() => Math.random() - 0.5);
@@ -791,47 +844,40 @@ export function useGameLogic({ players, broadcast, gameMode }: UseGameLogicProps
 
     gs.examState = {
       questionNum,
-      category: 'Final',
+      category: "Final",
       timeRemaining: timer,
       layer1ConnId: layer1Player.connId,
       layer2ConnIds: layer2Players.map((p) => p.connId),
       answered: false,
       layer1Dead: false,
     };
-    gs.stageLabel = 'FINAL EXAM — Solve together!';
+    gs.stageLabel = "FINAL EXAM — Solve together!";
 
     // Build per-client assignments
-    const examAssigns: Record<string, { layer: '1' | '2'; questionNum: number; category: 'Final' }> = {};
-    examAssigns[layer1Player.connId] = { layer: '1', questionNum, category: 'Final' };
+    const examAssigns: Record<string, { layer: "1" | "2"; questionNum: number; category: "Final" }> = {};
+    examAssigns[layer1Player.connId] = { layer: "1", questionNum, category: "Final" };
     for (const p of layer2Players) {
-      examAssigns[p.connId] = { layer: '2', questionNum, category: 'Final' };
+      examAssigns[p.connId] = { layer: "2", questionNum, category: "Final" };
     }
     // Eagles don't get a layer
     for (const [, p] of gs.playerStates) {
-      if (p.isEagle) examAssigns[p.connId] = { layer: '2', questionNum: 0, category: 'Final' };
+      if (p.isEagle) examAssigns[p.connId] = { layer: "2", questionNum: 0, category: "Final" };
     }
 
-    bcast({ type: 'phase-change', phase: 'exam' });
-    bcast({ type: 'exam-start', assignments: examAssigns });
+    bcast({ type: "phase-change", phase: "exam" });
+    bcast({ type: "exam-start", assignments: examAssigns });
   }
 
-  function endGame(
-    gs: GameStateRef,
-    winner: 'eagle' | 'chicks' | 'draw',
-    bcast: (msg: any) => void,
-  ) {
+  function endGame(gs: GameStateRef, winner: "eagle" | "chicks" | "draw", bcast: (msg: any) => void) {
     gs.winner = winner;
-    gs.phase = 'gameover';
-    setPhase('gameover');
+    gs.phase = "gameover";
+    setPhase("gameover");
     cancelAnimationFrame(frameRef.current);
-    bcast({ type: 'game-over', winner });
+    bcast({ type: "game-over", winner });
   }
 
   // ─── Broadcast state ────────────────────────────────────────────────────────
-  const doBroadcastState = useCallback((
-    gs: GameStateRef,
-    bcast: (msg: any) => void,
-  ) => {
+  const doBroadcastState = useCallback((gs: GameStateRef, bcast: (msg: any) => void) => {
     const now = Date.now();
     const playersObj: Record<string, PlayerGameStateSerializable> = {};
     for (const [id, p] of gs.playerStates) {
@@ -839,7 +885,7 @@ export function useGameLogic({ players, broadcast, gameMode }: UseGameLogicProps
     }
     const tipObtainTimers: Record<string, { buildingId: number; remainingMs: number }> = {};
     for (const [timerKey, t] of gs.buildingTimers.entries()) {
-      const connId = timerKey.replace('-building', '');
+      const connId = timerKey.replace("-building", "");
       tipObtainTimers[connId] = {
         buildingId: t.buildingId,
         remainingMs: Math.max(0, TIP_OBTAIN_DURATION - (now - t.startTime)),
@@ -867,7 +913,7 @@ export function useGameLogic({ players, broadcast, gameMode }: UseGameLogicProps
     };
 
     setSnapshot(snap);
-    bcast({ type: 'game-state', state: snap });
+    bcast({ type: "game-state", state: snap });
   }, []);
 
   // ─── Host Drag Helpers (teleport during gameplay) ──────────────────────
@@ -931,7 +977,7 @@ export function useGameLogic({ players, broadcast, gameMode }: UseGameLogicProps
 
     switch (msg.type) {
       // ── Attack ──
-      case 'attack-press': {
+      case "attack-press": {
         if (!player.isEagle) return;
         if (now < player.attackCooldownUntil) return;
         if (player.frozen) return;
@@ -946,19 +992,20 @@ export function useGameLogic({ players, broadcast, gameMode }: UseGameLogicProps
           if (p.invincibleUntil > now) continue;
 
           // Check if chick is fully inside a protected zone
-          const inZone = gs.buildings.some((b) =>
-            b.zoneActive && !b.tipObtained &&
-            isInProtectedZone(p.position.x, p.position.z, b.id)
+          const inZone = gs.buildings.some(
+            (b) => b.zoneActive && !b.tipObtained && isInProtectedZone(p.position.x, p.position.z, b.id),
           );
           if (inZone) continue;
 
-          if (checkOverlap(player.position.x, player.position.z, p.position.x, p.position.z, ATTACK_OVERLAP_THRESHOLD)) {
+          if (
+            checkOverlap(player.position.x, player.position.z, p.position.x, p.position.z, ATTACK_OVERLAP_THRESHOLD)
+          ) {
             hitChicks.push(p);
           }
         }
 
         if (hitChicks.length > 0) {
-          let mostSerious: 'hurt' | 'dead' = 'hurt';
+          let mostSerious: "hurt" | "dead" = "hurt";
           for (const chick of hitChicks) {
             const newHealth = applyDamage(chick.health);
             const dmg = chick.health - newHealth;
@@ -970,7 +1017,7 @@ export function useGameLogic({ players, broadcast, gameMode }: UseGameLogicProps
             if (isDead(chick.health)) {
               chick.alive = false;
               chick.health = 0;
-              mostSerious = 'dead';
+              mostSerious = "dead";
 
               // Handle layer-1 death during exam
               if (gs.examState && gs.examState.layer1ConnId === chick.connId && !gs.examState.layer1Dead) {
@@ -980,7 +1027,7 @@ export function useGameLogic({ players, broadcast, gameMode }: UseGameLogicProps
                 }
               }
 
-              broadcastRef.current({ type: 'you-died', connId: chick.connId });
+              broadcastRef.current({ type: "you-died", connId: chick.connId });
             }
           }
 
@@ -994,7 +1041,7 @@ export function useGameLogic({ players, broadcast, gameMode }: UseGameLogicProps
       }
 
       // ── Prop use ──
-      case 'prop-use': {
+      case "prop-use": {
         // Props can be used while moving — no frozen check
         const propItem = player.props.find((p) => p.type === msg.propType && p.count > 0);
         if (!propItem) return;
@@ -1002,14 +1049,14 @@ export function useGameLogic({ players, broadcast, gameMode }: UseGameLogicProps
         player.actionScore += 2;
 
         switch (msg.propType as PropType) {
-          case 'speed':
+          case "speed":
             player.speedMultiplier = SPEED_BOOST_MULTIPLIER;
             player.speedMultiplierUntil = now + SPEED_BOOST_DURATION;
             break;
-          case 'heal':
+          case "heal":
             if (player.health < STARTING_HEALTH) player.health = applyHeal(player.health);
             break;
-          case 'fly':
+          case "fly":
             if (player.isEagle) {
               // Unlimited fly — no count decrement, apply cooldown
               propItem.count++; // undo the decrement above — unlimited
@@ -1020,7 +1067,7 @@ export function useGameLogic({ players, broadcast, gameMode }: UseGameLogicProps
               player.speedMultiplierUntil = now + FLY_DURATION;
             }
             break;
-          case 'invincible':
+          case "invincible":
             player.invincibleUntil = now + 3000;
             break;
         }
@@ -1028,7 +1075,7 @@ export function useGameLogic({ players, broadcast, gameMode }: UseGameLogicProps
       }
 
       // ── Hitbox click (eagle attacking building zone) ──
-      case 'hitbox-click': {
+      case "hitbox-click": {
         if (!player.isEagle) return;
         for (const b of gs.buildings) {
           if (!b.zoneActive || b.tipObtained) continue;
@@ -1047,7 +1094,7 @@ export function useGameLogic({ players, broadcast, gameMode }: UseGameLogicProps
       }
 
       // ── Scan result (props and tips) ──
-      case 'scan-result': {
+      case "scan-result": {
         if (player.isEagle) return;
         const data = msg.data;
 
@@ -1064,10 +1111,12 @@ export function useGameLogic({ players, broadcast, gameMode }: UseGameLogicProps
 
           // Check if all alive chicks now have both tips
           if (gs.stage === 2) {
-            const aliveChicks = Array.from<PlayerGameState>(gs.playerStates.values()).filter((p) => !p.isEagle && p.alive);
+            const aliveChicks = Array.from<PlayerGameState>(gs.playerStates.values()).filter(
+              (p) => !p.isEagle && p.alive,
+            );
             if (aliveChicks.length > 0 && aliveChicks.every((c) => c.tips[0] && c.tips[1])) {
               gs.stage = 3;
-              gs.stageLabel = 'Run to any building to start the Final Exam!';
+              gs.stageLabel = "Run to any building to start the Final Exam!";
             }
           }
           break;
@@ -1077,7 +1126,9 @@ export function useGameLogic({ players, broadcast, gameMode }: UseGameLogicProps
         const prop = gs.propSpawns.find((p) => p.id === data && p.active);
         if (prop) {
           // Validate proximity
-          if (checkOverlap(player.position.x, player.position.z, prop.position.x, prop.position.z, PROP_PICKUP_RADIUS * 2)) {
+          if (
+            checkOverlap(player.position.x, player.position.z, prop.position.x, prop.position.z, PROP_PICKUP_RADIUS * 2)
+          ) {
             prop.active = false;
             const existing = player.props.find((pi) => pi.type === prop.type);
             if (existing) existing.count++;
@@ -1090,7 +1141,7 @@ export function useGameLogic({ players, broadcast, gameMode }: UseGameLogicProps
       }
 
       // ── Tip request (star student generating QR) ──
-      case 'tip-request': {
+      case "tip-request": {
         if (player.isEagle) return;
         const tipIndex = msg.tipIndex as 0 | 1;
         if (!player.tips[tipIndex]) return;
@@ -1107,13 +1158,13 @@ export function useGameLogic({ players, broadcast, gameMode }: UseGameLogicProps
         });
 
         player.tipShareCooldownUntil = now + TIP_QR_COOLDOWN;
-        broadcastRef.current({ type: 'tip-qr', forConnId: connId, code, tipIndex });
+        broadcastRef.current({ type: "tip-qr", forConnId: connId, code, tipIndex });
         break;
       }
 
       // ── Event hitbox click ──
-      case 'event-hitbox-click': {
-        if (!gs.activeEvent || gs.activeEvent.type !== 'hitbox' || gs.activeEvent.phase !== 'active') return;
+      case "event-hitbox-click": {
+        if (!gs.activeEvent || gs.activeEvent.type !== "hitbox" || gs.activeEvent.phase !== "active") return;
         if (player.isEagle) {
           gs.activeEvent.eagleClicks[connId] = (gs.activeEvent.eagleClicks[connId] ?? 0) + 1;
         } else {
@@ -1124,8 +1175,8 @@ export function useGameLogic({ players, broadcast, gameMode }: UseGameLogicProps
       }
 
       // ── Event mock exam answer ──
-      case 'event-answer': {
-        if (!gs.activeEvent || gs.activeEvent.type !== 'mock-exam' || gs.activeEvent.phase !== 'active') return;
+      case "event-answer": {
+        if (!gs.activeEvent || gs.activeEvent.type !== "mock-exam" || gs.activeEvent.phase !== "active") return;
         if (player.isEagle) return;
         const questionNum = gs.activeEvent.questionNum ?? 1;
         const correct = MOCK_ANSWER_KEY[questionNum];
@@ -1141,16 +1192,16 @@ export function useGameLogic({ players, broadcast, gameMode }: UseGameLogicProps
       }
 
       // ── Answer submit (exam) ──
-      case 'answer-submit': {
+      case "answer-submit": {
         if (player.isEagle) return;
         if (!gs.examState || gs.examState.answered) return;
-        if (gs.phase !== 'exam') return;
+        if (gs.phase !== "exam") return;
 
         const correct = FINAL_ANSWER_KEY[gs.examState.questionNum];
         if (msg.answer.toUpperCase().trim() === correct) {
           gs.examState.answered = true;
           player.actionScore += 20;
-          endGame(gs, 'chicks', broadcastRef.current);
+          endGame(gs, "chicks", broadcastRef.current);
         } else {
           // Wrong: -1 grade to all alive players
           for (const [, p] of gs.playerStates) {
@@ -1159,7 +1210,7 @@ export function useGameLogic({ players, broadcast, gameMode }: UseGameLogicProps
               if (isDead(p.health)) {
                 p.alive = false;
                 p.health = 0;
-                broadcastRef.current({ type: 'you-died', connId: p.connId });
+                broadcastRef.current({ type: "you-died", connId: p.connId });
               }
             }
           }
@@ -1200,15 +1251,17 @@ export function useGameLogic({ players, broadcast, gameMode }: UseGameLogicProps
       const aliveChicks = Array.from<PlayerGameState>(gs.playerStates.values()).filter((p) => !p.isEagle && p.alive);
       const totalChicks = Array.from<PlayerGameState>(gs.playerStates.values()).filter((p) => !p.isEagle).length;
       const eliminated = totalChicks - aliveChicks.length;
-      if (mode === '1v3' && eliminated >= 3) endGame(gs, 'eagle', broadcastRef.current);
-      else if (mode === '2v6' && eliminated > 4) endGame(gs, 'eagle', broadcastRef.current);
-      else if (mode === '2v6' && eliminated === 4) endGame(gs, 'draw', broadcastRef.current);
+      if (mode === "1v3" && eliminated >= 3) endGame(gs, "eagle", broadcastRef.current);
+      else if (mode === "2v6" && eliminated > 4) endGame(gs, "eagle", broadcastRef.current);
+      else if (mode === "2v6" && eliminated === 4) endGame(gs, "draw", broadcastRef.current);
     }
   }, []);
 
   // ─── Cleanup ─────────────────────────────────────────────────────────────────
   useEffect(() => {
-    return () => { if (frameRef.current) cancelAnimationFrame(frameRef.current); };
+    return () => {
+      if (frameRef.current) cancelAnimationFrame(frameRef.current);
+    };
   }, []);
 
   // ─── Public API ───────────────────────────────────────────────────────────────
