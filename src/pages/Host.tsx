@@ -497,6 +497,11 @@ export default function Host() {
 
         <NetworkPerformancePanel players={players} />
 
+        {/* Stage transition overlay */}
+        {snapshot.stageTransitionUntil > 0 && Date.now() < snapshot.stageTransitionUntil && (
+          <StageTransition stage={snapshot.stage} remainingMs={snapshot.stageTransitionUntil - Date.now()} />
+        )}
+
         {/* VideoOverlay LAST so it renders on top of everything */}
         <VideoOverlay video={videoPlaying} onComplete={onVideoComplete} />
       </div>);
