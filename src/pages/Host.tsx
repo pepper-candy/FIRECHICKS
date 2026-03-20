@@ -130,7 +130,7 @@ export default function Host() {
   const [zoomLevel, setZoomLevel] = useState(1);
   const [revealNow, setRevealNow] = useState(Date.now());
   const [focusPanelOpen, setFocusPanelOpen] = useState(false);
-  const { roomCode, players, kickPlayer, kickAllPlayers, broadcast, onClientMessage } = useHostRoom(mode);
+  const { roomCode, players, kickPlayer, kickAllPlayers, broadcast, onClientMessage, gameModeRef } = useHostRoom(mode);
 
   useAdvertiseRoom(roomCode, mode);
 
