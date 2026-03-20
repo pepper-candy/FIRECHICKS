@@ -1166,7 +1166,8 @@ export default function Client() {
                 socialMet={socialMet}
                 hasTip={myState.tips[0]}
                 isLoadingTip={loadingTip[0]}
-                tipShareCooldownUntil={myState.tipShareCooldownUntil}
+                tipShareCooldownUntil={Math.max(myState.tipShareCooldownUntil, tipExpiryCooldown[0])}
+                tipCopyingCountdown={loadingTip[0] && tipCopyStartedAt[0] > 0 ? Math.max(0, Math.ceil((tipCopyStartedAt[0] + 3000 - clockNow) / 1000)) : undefined}
                 onTap={() => handleTipTap(0)}
               />
 
@@ -1177,12 +1178,13 @@ export default function Client() {
                 socialMet={socialMet}
                 hasTip={myState.tips[1]}
                 isLoadingTip={loadingTip[1]}
-                tipShareCooldownUntil={myState.tipShareCooldownUntil}
+                tipShareCooldownUntil={Math.max(myState.tipShareCooldownUntil, tipExpiryCooldown[1])}
+                tipCopyingCountdown={loadingTip[1] && tipCopyStartedAt[1] > 0 ? Math.max(0, Math.ceil((tipCopyStartedAt[1] + 3000 - clockNow) / 1000)) : undefined}
                 onTap={() => handleTipTap(1)}
               />
 
               {/* Props button */}
-              <div className="flex-shrink-0">
+              <div className="flex-shrink-0" style={{ touchAction: 'manipulation' }}>
                 <PropsBtn items={myState.props ?? []} onUse={handlePropUse} isEagle={false} />
               </div>
             </div>
