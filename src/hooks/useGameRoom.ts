@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import Peer, { DataConnection } from 'peerjs';
 import { supabase } from '@/integrations/supabase/client';
 import type { RealtimeChannel } from '@supabase/supabase-js';
-import { MAX_PLAYERS, EAGLE_COLOR_INDICES } from '@/lib/playerColors';
+import { MAX_PLAYERS, MAX_PLAYERS_1V3, MAX_PLAYERS_2V6, EAGLE_COLOR_INDICES } from '@/lib/playerColors';
 
 export type ConnectionMode = 'webrtc' | 'supabase';
 
@@ -155,7 +155,15 @@ function useHostWebRTC() {
       const connId = conn.peer;
 
       conn.on('open', () => {
-        const excludeIndices = gameModeRef.current === '2v6' ? [] : (EAGLE_COLOR_INDICES as unknown as number[]);
+        const mode = gameModeRef.current;
+        const maxSlots = mode === '2v6' ? MAX_PLAYERS_2V6 : MAX_PLAYERS_1V3;
+        // Hard capacity check — prevents exceeding player limit even if colors remain
+        if (usedColorsRef.current.size >= maxSlots) {
+          conn.send(JSON.stringify({ type: 'room-full' }));
+          setTimeout(() => conn.close(), 200);
+          return;
+        }
+        const excludeIndices = mode === '2v6' ? [] : (EAGLE_COLOR_INDICES as unknown as number[]);
         const colorIndex = allocateColor(usedColorsRef.current, excludeIndices);
         if (colorIndex === null) {
           conn.send(JSON.stringify({ type: 'room-full' }));
@@ -324,7 +332,13 @@ function useHostSupabase() {
       })
       .on('broadcast', { event: 'client-join' }, (payload) => {
         const { clientId } = payload.payload as { clientId: string };
-        const excludeIndices = gameModeRef.current === '2v6' ? [] : (EAGLE_COLOR_INDICES as unknown as number[]);
+        const mode = gameModeRef.current;
+        const maxSlots = mode === '2v6' ? MAX_PLAYERS_2V6 : MAX_PLAYERS_1V3;
+        if (usedColorsRef.current.size >= maxSlots) {
+          channel.send({ type: 'broadcast', event: 'room-full', payload: { clientId } });
+          return;
+        }
+        const excludeIndices = mode === '2v6' ? [] : (EAGLE_COLOR_INDICES as unknown as number[]);
         const colorIndex = allocateColor(usedColorsRef.current, excludeIndices);
         if (colorIndex === null) {
           channel.send({ type: 'broadcast', event: 'room-full', payload: { clientId } });

@@ -54,6 +54,7 @@ export interface ExamState {
   layer2ConnIds: string[];
   answered: boolean;
   layer1Dead: boolean;
+  anyAnswerSubmitted: boolean;
 }
 
 export type EventType = 'mock-exam' | 'hitbox';

@@ -125,7 +125,7 @@ function CrystalBall({ ball, propType }: { ball: BallState; propType: 'speed' | 
       </mesh>
 
       {/* Label tag only — no QR code */}
-      <Html position={[0, BALL_RADIUS * 2.2, 0]} center occlude={false}>
+      <Html position={[0, BALL_RADIUS * 2.2, 0]} center occlude={false} zIndexRange={[100, 0]}>
         <div style={{ pointerEvents: 'none', textAlign: 'center', userSelect: 'none' }}>
           <div style={{
             background: 'linear-gradient(135deg, #fff 60%, #f0f0f0)',

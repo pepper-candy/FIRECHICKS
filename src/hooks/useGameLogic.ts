@@ -111,6 +111,7 @@ interface GameStateRef {
   frozenAll: boolean;
   frozenAllUntil: number;
   pendingEagleFreezeAfterVideo: boolean;
+  pendingExamEndAfterVideo: boolean;
   videoPlaying: "hurt" | "dead" | null;
   propSpawns: PropSpawn[];
   buildings: BuildingState[];
@@ -294,6 +295,7 @@ export function useGameLogic({ players, broadcast, gameMode }: UseGameLogicProps
       frozenAll: false,
       frozenAllUntil: 0,
       pendingEagleFreezeAfterVideo: false,
+      pendingExamEndAfterVideo: false,
       videoPlaying: null,
       propSpawns: [],
       buildings,
@@ -595,18 +597,37 @@ export function useGameLogic({ players, broadcast, gameMode }: UseGameLogicProps
         gs.examState.timeRemaining -= delta;
         if (gs.examState.timeRemaining <= 0) {
           gs.examState.timeRemaining = 0;
-          // Time's up — check alive chick count for result
-          const aliveChicksExam = Array.from<PlayerGameState>(gs.playerStates.values()).filter(
-            (p) => !p.isEagle && p.alive,
-          );
-          if (currentMode === "1v3") {
-            if (aliveChicksExam.length >= 2) endGame(gs, "chicks", currentBroadcast);
-            else if (aliveChicksExam.length === 1) endGame(gs, "draw", currentBroadcast);
-            else endGame(gs, "eagle", currentBroadcast);
+          gs.examState.answered = true; // prevent re-entry
+
+          // Apply attack-equivalent damage to all alive chicks (same as a valid eagle hit)
+          let mostSerious: "hurt" | "dead" = "hurt";
+          for (const [, p] of gs.playerStates) {
+            if (p.isEagle || !p.alive) continue;
+            const newHealth = applyDamage(p.health);
+            const dmg = p.health - newHealth;
+            p.damageTaken += dmg;
+            p.health = newHealth;
+            if (isDead(p.health)) {
+              p.alive = false;
+              p.health = 0;
+              mostSerious = "dead";
+              if (gs.examState.layer1ConnId === p.connId && !gs.examState.layer1Dead) {
+                gs.examState.layer1Dead = true;
+              }
+              currentBroadcast({ type: "you-died", connId: p.connId });
+            }
+          }
+
+          if (!gs.examState.anyAnswerSubmitted) {
+            // Nobody tried — play the video, defer winner resolution to onVideoComplete
+            gs.frozenAll = true;
+            gs.frozenAllUntil = now + 60000;
+            gs.videoPlaying = mostSerious;
+            gs.pendingExamEndAfterVideo = true;
+            setVideoPlaying(mostSerious);
           } else {
-            if (aliveChicksExam.length >= 3) endGame(gs, "chicks", currentBroadcast);
-            else if (aliveChicksExam.length >= 1) endGame(gs, "draw", currentBroadcast);
-            else endGame(gs, "eagle", currentBroadcast);
+            // Someone submitted (wrong) — no video, resolve immediately
+            resolveExamWinner(gs, currentMode, currentBroadcast);
           }
         }
       }
@@ -883,6 +904,7 @@ export function useGameLogic({ players, broadcast, gameMode }: UseGameLogicProps
       layer2ConnIds: layer2Players.map((p) => p.connId),
       answered: false,
       layer1Dead: soloExam, // If solo, show layer 1 on host screen
+      anyAnswerSubmitted: false,
     };
     gs.stageLabel = "FINAL EXAM — Solve together!";
 
@@ -912,6 +934,20 @@ export function useGameLogic({ players, broadcast, gameMode }: UseGameLogicProps
     setPhase("gameover");
     cancelAnimationFrame(frameRef.current);
     bcast({ type: "game-over", winner });
+  }
+
+  // Decide winner after exam timeout based on alive counts
+  function resolveExamWinner(gs: GameStateRef, mode: "1v3" | "2v6", bcast: (msg: any) => void) {
+    const aliveChicks = Array.from<PlayerGameState>(gs.playerStates.values()).filter((p) => !p.isEagle && p.alive);
+    const aliveEagles = Array.from<PlayerGameState>(gs.playerStates.values()).filter((p) => p.isEagle && p.alive);
+    const C = aliveChicks.length;
+    const E = aliveEagles.length;
+    const threshold = mode === "1v3" ? 1 : 2;
+    if (C >= threshold) {
+      endGame(gs, C === E ? "draw" : "chicks", bcast);
+    } else {
+      endGame(gs, "eagle", bcast);
+    }
   }
 
   // ─── Broadcast state ────────────────────────────────────────────────────────
@@ -1240,6 +1276,9 @@ export function useGameLogic({ players, broadcast, gameMode }: UseGameLogicProps
         if (!gs.examState || gs.examState.answered) return;
         if (gs.phase !== "exam") return;
 
+        // Mark that at least one submission happened (suppress timeout video)
+        gs.examState.anyAnswerSubmitted = true;
+
         const correct = FINAL_ANSWER_KEY[gs.examState.questionNum];
         if (msg.answer.toUpperCase().trim() === correct) {
           gs.examState.answered = true;
@@ -1298,6 +1337,13 @@ export function useGameLogic({ players, broadcast, gameMode }: UseGameLogicProps
     gs.frozenAllUntil = 0;
     gs.videoPlaying = null;
     setVideoPlaying(null);
+
+    // Exam timeout video completed — resolve winner now
+    if (gs.pendingExamEndAfterVideo) {
+      gs.pendingExamEndAfterVideo = false;
+      resolveExamWinner(gs, gameModeRef.current as "1v3" | "2v6", broadcastRef.current);
+      return;
+    }
 
     if (gs.pendingEagleFreezeAfterVideo) {
       gs.pendingEagleFreezeAfterVideo = false;

@@ -897,8 +897,9 @@ export default function Client() {
             <span className="text-sm font-mono text-muted-foreground">Your final grade</span>
           </div>
         )}
+        {winner === 'draw' && <p className="text-lg font-pixel" style={{ color: 'hsl(45 100% 55%)' }}>🤝 It's a Draw!</p>}
         {amWinner && <p className="text-lg font-pixel text-primary text-glow-green">🎉 YOU WIN!</p>}
-        <Button variant="outline" size="sm" onClick={() => { disconnect(); }} className="text-xs font-mono">
+        <Button variant="outline" size="sm" onClick={() => { disconnect(); setGamePhase("lobby"); setGameState(null); setIsDead(false); }} className="text-xs font-mono">
           LEAVE
         </Button>
       </div>
@@ -1288,33 +1289,45 @@ export default function Client() {
             </div>
           )}
 
-          {/* Middle: Thumbstick */}
-          <div className="flex-1 flex items-center justify-center">
-            <Thumbstick
-              onMove={handleMove}
-              onIdleChange={handleIdleChange}
-              size={200}
-              color={displayColor ? `hsl(${displayColor.hsl})` : undefined}
-            />
-          </div>
-
-          {/* Bottom: Color picker in lobby (no scanner/prop claims) */}
-          {gamePhase === "lobby" && (
-            <div className="flex flex-col items-center gap-3">
-              <ColorPicker
-                currentColorIndex={colorIndex}
-                usedColorIndices={usedColors}
-                onColorSelect={requestColorSwap}
-                gameMode={gameMode}
-              />
+          {/* Middle+Bottom: Props on left under tip boxes, thumbstick on right */}
+          {gamePhase === "playing" && myState ? (
+            <div className="flex-1 flex items-center w-full">
+              {/* Left column: props stacked vertically, aligned under left tip box */}
+              <div className="flex items-center justify-center" style={{ width: 80 }}>
+                <PropsStackBtn items={myState.props ?? []} onUse={handlePropUse} />
+              </div>
+              {/* Right column: thumbstick centered in remaining space */}
+              <div className="flex-1 flex items-center justify-center">
+                <Thumbstick
+                  onMove={handleMove}
+                  onIdleChange={handleIdleChange}
+                  size={200}
+                  color={displayColor ? `hsl(${displayColor.hsl})` : undefined}
+                />
+              </div>
             </div>
-          )}
-
-          {/* Props stacked downward at bottom */}
-          {gamePhase === "playing" && myState && (
-            <div className="flex items-center justify-center">
-              <PropsStackBtn items={myState.props ?? []} onUse={handlePropUse} />
-            </div>
+          ) : (
+            <>
+              {/* Lobby: thumbstick centered, color picker below */}
+              <div className="flex-1 flex items-center justify-center">
+                <Thumbstick
+                  onMove={handleMove}
+                  onIdleChange={handleIdleChange}
+                  size={200}
+                  color={displayColor ? `hsl(${displayColor.hsl})` : undefined}
+                />
+              </div>
+              {gamePhase === "lobby" && (
+                <div className="flex flex-col items-center gap-3">
+                  <ColorPicker
+                    currentColorIndex={colorIndex}
+                    usedColorIndices={usedColors}
+                    onColorSelect={requestColorSwap}
+                    gameMode={gameMode}
+                  />
+                </div>
+              )}
+            </>
           )}
         </>
       )}

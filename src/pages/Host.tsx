@@ -683,7 +683,7 @@ function GameOverCeremony({ snapshot, gameMode }: { snapshot: GameStateSnapshot;
                 const color = PLAYER_COLORS[p.colorIndex];
                 const letter = gradeToLetter(p.health);
                 const gradeColor = getGradeColor(p.health);
-                const isWin = (winner === 'eagle' && p.isEagle) || (winner === 'chicks' && !p.isEagle) || winner === 'draw';
+                const isWin = (winner === 'eagle' && p.isEagle) || (winner === 'chicks' && !p.isEagle);
 
                 return (
                   <tr key={p.connId} className="border-b border-border/40 hover:bg-card/30">
@@ -710,9 +710,11 @@ function GameOverCeremony({ snapshot, gameMode }: { snapshot: GameStateSnapshot;
                       {p.actionScore.toFixed(0)}
                     </td>
                     <td className="py-2 text-center">
-                      {isWin ?
-                        <span className="text-primary font-bold">WIN</span> :
-                        <span className="text-destructive">LOSE</span>
+                      {winner === 'draw'
+                        ? <span className="text-yellow-400 font-bold">DRAW</span>
+                        : isWin
+                          ? <span className="text-primary font-bold">WIN</span>
+                          : <span className="text-destructive">LOSE</span>
                       }
                     </td>
                   </tr>

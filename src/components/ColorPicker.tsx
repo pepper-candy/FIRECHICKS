@@ -25,14 +25,16 @@ export default function ColorPicker({ currentColorIndex, usedColorIndices, onCol
     const isEagleColor = EAGLE_COLOR_INDICES.includes(idx);
     const showEagleOutline = gameMode === '2v6' && isEagleColor;
     // Button size: slightly larger for 2v6 (8 colors fit 4+4)
-    const btnSize = gameMode === '2v6' ? 'w-10 h-10' : 'w-9 h-9';
+    const btnSize = gameMode === '2v6' ? 'w-11 h-11' : 'w-9 h-9';
+    // Black (index 0) is near-invisible on dark backgrounds — use a light inner ring to show it
+    const isBlack = idx === 0;
 
     return (
       <button
         key={idx}
         onClick={() => !isTaken && onColorSelect(idx)}
         disabled={isTaken}
-        title={isTaken ? `${color.name} (taken)` : showEagleOutline ? `${color.name} (Eagle role)` : color.name}
+        title={isTaken ? `${color.name} (taken)` : showEagleOutline ? `${color.name} (Eagle role 🦅)` : color.name}
         className={`${btnSize} rounded-full transition-all relative ${
           isMine
             ? 'scale-125'
@@ -43,22 +45,24 @@ export default function ColorPicker({ currentColorIndex, usedColorIndices, onCol
         style={{
           backgroundColor: isTaken ? 'hsl(var(--muted))' : `hsl(${color.hsl})`,
           border: showEagleOutline
-            ? '3px solid hsl(0 80% 55%)'
+            ? '3px solid hsl(45 100% 55%)'
             : isMine
               ? '2px solid hsl(var(--foreground))'
-              : '2px solid transparent',
+              : isBlack
+                ? '2px solid hsl(0 0% 60%)'
+                : '2px solid transparent',
           boxShadow: isMine
             ? `0 0 12px hsl(${color.hsl} / 0.6)`
             : showEagleOutline && !isTaken
-              ? '0 0 8px hsl(0 80% 55% / 0.5)'
+              ? '0 0 10px hsl(45 100% 55% / 0.7)'
               : 'none',
         }}
       >
-        {/* Eagle indicator badge */}
-        {showEagleOutline && !isTaken && (
+        {/* Eagle role badge — always visible for eagle colors in 2v6 */}
+        {showEagleOutline && (
           <span
-            className="absolute -top-1.5 -right-1.5 text-[8px] bg-destructive rounded-full w-3.5 h-3.5 flex items-center justify-center"
-            style={{ fontSize: 8, lineHeight: 1 }}
+            className="absolute inset-0 flex items-center justify-center text-[13px] font-bold"
+            style={{ pointerEvents: 'none', textShadow: '0 0 4px #000, 0 0 8px #000' }}
           >
             🦅
           </span>
@@ -77,7 +81,7 @@ export default function ColorPicker({ currentColorIndex, usedColorIndices, onCol
       </div>
       {gameMode === '2v6' && (
         <p className="text-[9px] font-mono text-muted-foreground mt-1">
-          🦅 Red border = Eagle role
+          Gold border + 🦅 = Eagle role
         </p>
       )}
     </div>

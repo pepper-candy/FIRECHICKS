@@ -90,7 +90,7 @@ function Building({ position, size, glowing, zoneActive, zoneHealth }: {
       )}
       {/* Zone health display */}
       {zoneActive && zoneHealth !== undefined && (
-        <Html position={[0, size.h + 2, 0]} center>
+        <Html position={[0, size.h + 2, 0]} center zIndexRange={[100, 0]}>
           <div style={{
             background: 'rgba(0,0,0,0.7)',
             border: '1px solid #ffd700',
@@ -169,7 +169,7 @@ function PropMarker({ spawn }: { spawn: PropSpawn }) {
         <meshStandardMaterial color={color} emissive={color} emissiveIntensity={0.6} transparent opacity={0.2} side={THREE.DoubleSide} />
       </mesh>
       {/* Label */}
-      <Html position={[0, BALL_R * 2.6, 0]} center occlude={false}>
+      <Html position={[0, BALL_R * 2.6, 0]} center occlude={false} zIndexRange={[100, 0]}>
         <div style={{
           background: 'rgba(0,0,0,0.75)',
           border: `1px solid ${color}`,
@@ -211,7 +211,7 @@ function MysteryBoxMarker({ box }: { box: MysteryBox }) {
           emissiveIntensity={isActive ? 1.0 : 0.3}
         />
       </mesh>
-      <Html position={[0, 1.8, 0]} center>
+      <Html position={[0, 1.8, 0]} center zIndexRange={[100, 0]}>
         <div style={{
           color: isActive ? '#ff8c00' : '#888',
           fontSize: 14,
@@ -276,7 +276,7 @@ function GameCharacter({
         />
       </Suspense>
       {/* Name tag */}
-      <Html position={[0, 2.8, 0]} center>
+      <Html position={[0, 2.8, 0]} center zIndexRange={[100, 0]}>
         <div style={{
           background: 'rgba(0,0,0,0.6)',
           border: `1px solid hsl(${color.hsl})`,
@@ -451,7 +451,7 @@ export default function GameplayMap({
 
         {/* Exam stage indicator */}
         {examState && !examState.answered && (
-          <Html position={[0, 8, 0]} center>
+          <Html position={[0, 8, 0]} center zIndexRange={[100, 0]}>
             <div style={{
               background: 'rgba(0,0,0,0.8)',
               border: '2px solid #ffd700',
