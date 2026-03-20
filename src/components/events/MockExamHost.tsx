@@ -16,7 +16,7 @@ export default function MockExamHost({ questionNum, timeLeft }: Props) {
         <div className="w-full border-2 border-gray-300 rounded-xl overflow-hidden bg-white shadow-lg">
           <img src={`/PW/PW_Mock_${questionNum}_layer-1.png`} alt="Layer 1" className="w-full" />
         </div>
-        <p className="text-xs font-mono text-gray-500">Players check their phones for layer 2!</p>
+        <p className="text-xs font-mono text-gray-500">Players check their phones for another layer!</p>
       </div>
     </div>,
     document.body
