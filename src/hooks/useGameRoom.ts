@@ -62,6 +62,7 @@ function useHostWebRTC() {
   const usedColorsRef = useRef<Set<number>>(new Set());
   const connColorMapRef = useRef<Map<string, number>>(new Map());
   const clientMsgCallbackRef = useRef<((connId: string, msg: any) => void) | null>(null);
+  const gameModeRef = useRef<'1v3' | '2v6'>('1v3');
 
   const removePlayer = useCallback((connId: string) => {
     const colorIdx = connColorMapRef.current.get(connId);
