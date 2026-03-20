@@ -799,7 +799,7 @@ export default function Client() {
           </div>
         )}
         {amWinner && <p className="text-lg font-pixel text-primary text-glow-green">🎉 YOU WIN!</p>}
-        <Button variant="outline" size="sm" onClick={disconnect} className="text-xs font-mono">
+        <Button variant="outline" size="sm" onClick={() => { disconnect(); }} className="text-xs font-mono">
           LEAVE
         </Button>
       </div>
