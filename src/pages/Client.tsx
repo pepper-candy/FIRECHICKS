@@ -1118,7 +1118,7 @@ export default function Client() {
                 <AttackButton
                   onAttack={handleAttack}
                   cooldownUntil={myState.attackCooldownUntil}
-                  disabled={myState.frozen}
+                  disabled={myState.frozen || !!gameState?.videoPlaying}
                 />
 
                 <PropsBtn items={myState.props ?? []} onUse={handlePropUse} isEagle={true} flyCooldownUntil={myState.flyCooldownUntil} />
