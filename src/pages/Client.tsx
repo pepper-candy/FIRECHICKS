@@ -343,14 +343,21 @@ export default function Client() {
           });
           // Show QR in scanner area with 5s expiry
           setActiveScannerQr(code);
+          setActiveScannerTipIdx(tipIdx);
           const expireAt = Date.now() + 5000;
           setScannerQrExpireAt(expireAt);
-          // Auto-expire
+          // Auto-expire → set 5s cooldown on that tip box
           setTimeout(() => {
             setScannerQrExpireAt((cur) => {
               if (cur === expireAt) {
                 setActiveScannerQr(null);
                 setTipQrCodes([null, null]);
+                // Set local 5s cooldown on the tip box
+                setTipExpiryCooldown((prev) => {
+                  const n: [number, number] = [...prev] as [number, number];
+                  n[tipIdx] = Date.now() + 5000;
+                  return n;
+                });
                 return 0;
               }
               return cur;
