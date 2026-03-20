@@ -151,6 +151,7 @@ export interface GameStateSnapshot {
   mysteryBoxes: MysteryBox[];
   activeEvent: GameEvent | null;
   tipObtainTimers?: Record<string, { buildingId: number; remainingMs: number }>;
+  stageTransitionUntil: number;
 }
 
 // Messages host → client
