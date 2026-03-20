@@ -229,6 +229,7 @@ export default function Client() {
   const [gameState, setGameState] = useState<GameStateSnapshot | null>(null);
   const [isDead, setIsDead] = useState(false);
   const [colorChosen, setColorChosen] = useState(false);
+  const [hasSubmittedMockExam, setHasSubmittedMockExam] = useState(false);
   const connIdRef = useRef<string>("");
 
   // Event state
