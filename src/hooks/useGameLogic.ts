@@ -764,26 +764,14 @@ export function useGameLogic({ players, broadcast, gameMode }: UseGameLogicProps
       }
     }
 
-    // ── Win condition check ──
+    // ── Win condition check: only auto-end when ALL chicks dead ──
     const aliveChicks = Array.from<PlayerGameState>(gs.playerStates.values()).filter((p) => !p.isEagle && p.alive);
-    const totalChicks = Array.from<PlayerGameState>(gs.playerStates.values()).filter((p) => !p.isEagle).length;
 
     if (!gs.winner) {
-      if (currentMode === "1v3") {
-        // 1v3: 3 chicks vs 1 eagle
-        // 2+ chicks alive = chicks win (only checked at exam completion)
-        // 1 chick left = draw
-        // 0 chicks left = eagle wins
-        if (aliveChicks.length === 0) endGame(gs, "eagle", currentBroadcast);
-        else if (aliveChicks.length === 1) endGame(gs, "draw", currentBroadcast);
-      } else {
-        // 2v6: 6 chicks vs 2 eagles
-        // 4+ chicks alive = chicks win (only at exam)
-        // 2-3 chicks = draw
-        // 0-1 chicks = eagle wins
-        if (aliveChicks.length <= 1) endGame(gs, "eagle", currentBroadcast);
-        else if (aliveChicks.length <= 3) endGame(gs, "draw", currentBroadcast);
+      if (aliveChicks.length === 0) {
+        endGame(gs, "eagle", currentBroadcast);
       }
+      // After exam: check for chicks-win vs draw (handled in endGame after exam completion)
     }
 
     doBroadcastState(gs, currentBroadcast);
