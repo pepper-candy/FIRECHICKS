@@ -229,6 +229,7 @@ export default function Client() {
   const [gameState, setGameState] = useState<GameStateSnapshot | null>(null);
   const [isDead, setIsDead] = useState(false);
   const [colorChosen, setColorChosen] = useState(false);
+  const [hasSubmittedMockExam, setHasSubmittedMockExam] = useState(false);
   const connIdRef = useRef<string>("");
 
   // Event state
@@ -857,13 +858,20 @@ export default function Client() {
                 🦅 Watch the host screen — layer 1 is displayed there!
               </p>
             </div>
+          ) : hasSubmittedMockExam ? (
+            <div className="flex-1 flex items-center justify-center">
+              <p className="text-lg font-pixel text-primary">✓ Submitted</p>
+            </div>
           ) : (
             <>
-              <img
-                src={`/PW/PW_Mock_${activeEvent.questionNum}_layer-2.png`}
-                alt="Mock exam layer 2"
-                className="w-full rounded border border-border"
-              />
+              {/* Layer 2 image in scanner area */}
+              <div className="w-full overflow-hidden rounded border border-border bg-black" style={{ aspectRatio: "873/457" }}>
+                <img
+                  src={`/PW/PW_Mock_${activeEvent.questionNum}_layer-2.png`}
+                  alt="Mock exam layer 2"
+                  className="w-full h-full object-contain"
+                />
+              </div>
 
               <div className="flex gap-2 mt-auto">
                 <Input
@@ -874,6 +882,7 @@ export default function Client() {
                   onKeyDown={(e) => {
                     if (e.key === "Enter" && eventAnswer.trim()) {
                       sendToHost({ type: "event-answer", answer: eventAnswer.trim() });
+                      setHasSubmittedMockExam(true);
                       setEventAnswer("");
                     }
                   }}
@@ -883,6 +892,7 @@ export default function Client() {
                   onClick={() => {
                     if (eventAnswer.trim()) {
                       sendToHost({ type: "event-answer", answer: eventAnswer.trim() });
+                      setHasSubmittedMockExam(true);
                       setEventAnswer("");
                     }
                   }}
@@ -896,6 +906,9 @@ export default function Client() {
         </div>
       );
     }
+
+    // Reset mock exam submission for next event
+    if (hasSubmittedMockExam) setHasSubmittedMockExam(false);
 
     if (activeEvent.phase === "result") {
       return (
@@ -1108,7 +1121,7 @@ export default function Client() {
                 <AttackButton
                   onAttack={handleAttack}
                   cooldownUntil={myState.attackCooldownUntil}
-                  disabled={myState.frozen}
+                  disabled={myState.frozen || !!gameState?.videoPlaying}
                 />
 
                 <PropsBtn items={myState.props ?? []} onUse={handlePropUse} isEagle={true} flyCooldownUntil={myState.flyCooldownUntil} />

@@ -59,7 +59,7 @@ const MYSTERY_BOX_ACTIVE_MAX = 15000;
 const EVENT_HITBOX_DURATION = 10000; // 10s hitbox challenge
 const EVENT_MOCK_DURATION = 30000; // 30s mock exam
 const STAR_STUDENT_GRADE_BONUS = 5;
-const REVEAL_DURATION = 5000;
+const REVEAL_DURATION = 7000;
 const COUNTDOWN_DURATION = 3;
 
 // Answer keys
@@ -737,6 +737,14 @@ export function useGameLogic({ players, broadcast, gameMode }: UseGameLogicProps
               if (!p.isEagle && p.alive) p.health = addSubGrades(p.health, -2);
             }
           }
+          // F-grade elimination after hitbox
+          for (const [, p] of gs.playerStates) {
+            if (!p.isEagle && p.alive && isDead(p.health)) {
+              p.alive = false;
+              p.health = 0;
+              currentBroadcast({ type: "you-died", connId: p.connId });
+            }
+          }
         } else if (ev.type === "mock-exam") {
           const anyCorrect = (Object.values(ev.chickClicks) as number[]).some((v: number) => v > 0);
           if (!anyCorrect) {
@@ -754,6 +762,14 @@ export function useGameLogic({ players, broadcast, gameMode }: UseGameLogicProps
             }
           } else {
             ev.result = "chick";
+            // F-grade elimination after mock exam chick-win too
+            for (const [, p] of gs.playerStates) {
+              if (!p.isEagle && p.alive && isDead(p.health)) {
+                p.alive = false;
+                p.health = 0;
+                currentBroadcast({ type: "you-died", connId: p.connId });
+              }
+            }
           }
         }
 
@@ -1068,6 +1084,7 @@ export function useGameLogic({ players, broadcast, gameMode }: UseGameLogicProps
             if (player.isEagle) {
               propItem.count++; // undo the decrement above — unlimited
               if (now < player.flyCooldownUntil) return; // on cooldown
+              if (now < player.attackCooldownUntil) return; // blocked during post-attack freeze
               if (now < player.speedMultiplierUntil && player.speedMultiplier >= FLY_SPEED_MULTIPLIER) return; // still flying
               player.isAttacking = true;
               player.attackAnimUntil = now + FLY_DURATION + 200;
@@ -1252,6 +1269,8 @@ export function useGameLogic({ players, broadcast, gameMode }: UseGameLogicProps
           p.frozen = true;
           p.frozenUntil = now + FREEZE_DURATION;
           p.attackCooldownUntil = now + FREEZE_DURATION + ATTACK_COOLDOWN;
+          // Disable fly until attack is re-enabled (~18s total from hit)
+          p.flyCooldownUntil = Math.max(p.flyCooldownUntil, now + FREEZE_DURATION + ATTACK_COOLDOWN);
         }
       }
     }
