@@ -314,6 +314,7 @@ export function useGameLogic({ players, broadcast, gameMode }: UseGameLogicProps
       eagleZoneStates: new Map(),
       activeEvent: null,
       eventCountdown: 0,
+      stageTransitionUntil: 0,
     };
 
     setPhase("reveal");
