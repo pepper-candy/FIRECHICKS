@@ -27,7 +27,7 @@ export default function AttackButton({ onAttack, cooldownUntil, disabled }: Prop
     <button
       onClick={handlePress}
       disabled={onCooldown || disabled}
-      className={`relative w-24 h-24 rounded-full border-4 flex items-center justify-center transition-all select-none ${
+      className={`relative w-20 h-20 sm:w-24 sm:h-24 rounded-full border-4 flex items-center justify-center transition-all select-none flex-shrink-0 ${
         onCooldown || disabled
           ? 'border-muted bg-muted/30 opacity-50'
           : 'border-destructive bg-destructive/20 hover:bg-destructive/30 active:scale-95'
