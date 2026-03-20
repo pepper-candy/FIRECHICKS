@@ -126,6 +126,7 @@ export interface PlayerGameStateSerializable {
   damageDealt: number;
   speedMultiplier: number;
   speedMultiplierUntil: number;
+  flyCooldownUntil: number;
   isMoving: boolean;
   isAttacking: boolean;
   attackAnimUntil: number;
