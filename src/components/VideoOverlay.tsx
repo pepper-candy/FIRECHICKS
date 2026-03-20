@@ -21,14 +21,24 @@ export default function VideoOverlay({ video, onComplete }: Props) {
 
   return createPortal(
     <div className="fixed inset-0 flex items-center justify-center bg-background/90" style={{ zIndex: 99999 }}>
-      <video
-        ref={videoRef}
-        src={src}
-        className="max-w-[80vw] max-h-[60vh] rounded-lg shadow-2xl"
-        onEnded={onComplete}
-        playsInline
-        muted={false}
-      />
+      <div className="relative flex flex-col items-center">
+        <video
+          ref={videoRef}
+          src={src}
+          className="max-w-[80vw] max-h-[60vh] rounded-lg shadow-2xl"
+          onEnded={onComplete}
+          playsInline
+          muted={false}
+        />
+        {/* Skip button aligned to bottom-right of video */}
+        <button
+          onClick={onComplete}
+          className="absolute bottom-2 right-2 px-3 py-1.5 rounded bg-card/80 border border-border text-xs font-mono text-muted-foreground hover:text-foreground hover:bg-card transition-all active:scale-95"
+          style={{ backdropFilter: 'blur(4px)' }}
+        >
+          SKIP ▶
+        </button>
+      </div>
     </div>,
     document.body
   );
