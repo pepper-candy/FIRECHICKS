@@ -712,10 +712,11 @@ export function useGameLogic({ players, broadcast, gameMode }: UseGameLogicProps
             (p) => !p.isEagle && p.alive,
           );
           const avgChick = aliveChicks.length > 0 ? chickTotal / aliveChicks.length : 0;
+          // 1v3: raw eagle sum; 2v6: average of 2 eagles
           const eagles = Array.from<PlayerGameState>(gs.playerStates.values()).filter((p) => p.isEagle && p.alive);
-          const avgEagle = eagles.length > 0 ? eagleTotal / eagles.length : 0;
+          const eagleCompare = currentMode === "2v6" && eagles.length > 0 ? eagleTotal / eagles.length : eagleTotal;
 
-          if (avgChick >= avgEagle) {
+          if (avgChick >= eagleCompare) {
             ev.result = "chick";
             for (const [, p] of gs.playerStates) {
               if (p.alive) p.health = addSubGrades(p.health, 2);
