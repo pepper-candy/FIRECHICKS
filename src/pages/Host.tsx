@@ -158,7 +158,8 @@ export default function Host() {
 
   useEffect(() => {
     broadcast({ type: 'game-mode', gameMode });
-  }, [gameMode, broadcast]);
+    if (gameModeRef) gameModeRef.current = gameMode;
+  }, [gameMode, broadcast, gameModeRef]);
   useEffect(() => {
     if (phase !== 'reveal') return;
     const id = setInterval(() => setRevealNow(Date.now()), 100);
