@@ -1,141 +1,103 @@
-# Fix & Enhance Plan — 13 Items
+# Fix & Enhance Plan — 11 Items
 
-## 1. Smooth Character Rotation in Reveal
+## 1. Focus Camera Panel on Host Gameplay
+
+**File: `src/pages/Host.tsx**`
+
+- Add a notification-style button (iPhone pull-down icon) at top-center of the gameplay screen (`z-20`).
+- On click, toggle a panel overlay showing N rectangular screens (one per alive player) in a horizontal flex row.
+- Each screen is a small `<Canvas>` with a camera following that player's position, using `OrbitControls` (zoom, rotate, but no movement control). Camera `target` is the player's `position`, updated each frame via `useFrame`.
+- A close button or tap-outside dismisses the panel.
+- The leaderboard and stop watch timer height will locate right under the panel when toggle, relocate to original when dismisses the panel.
+
+## 2. Eagle Attack/Fly Disabled During Video
+
+**Files: `src/pages/Client.tsx`, `src/hooks/useGameLogic.ts**`
+
+- Client: The `AttackButton` already has a `disabled` prop. Pass `disabled={myState.frozen || !!videoOverlayActive}` where `videoOverlayActive` is derived from `gameState?.videoPlaying`.
+- Game logic: In `onVideoComplete`, after the existing freeze logic, also disable fly: set `flyCooldownUntil = now + FREEZE_DURATION + ATTACK_COOLDOWN` (≈18s total from attack hit). The attack cooldown is already set to `now + FREEZE_DURATION + ATTACK_COOLDOWN` — match fly to that same value.
+- In the `prop-use` → `fly` handler, add check: `if (now < player.attackCooldownUntil) return;` to block fly while attack is on cooldown (post-video).
+
+## 3. Video Overlay Z-Index Fix (Portal)
+
+**File: `src/components/VideoOverlay.tsx**`
+
+- Render the overlay via `ReactDOM.createPortal(...)` into `document.body` so it escapes any stacking context. This guarantees it sits above all other elements regardless of parent z-index.
+
+## 4. Mock Exam Layer on Host — Portal
+
+**File: `src/pages/Host.tsx**`
+
+- Same portal approach: when `snapshot.activeEvent?.type === 'mock-exam'` and phase is `active`, render the `EventOverlay` via `createPortal` into `document.body` with `z-index: 9998` (below video overlay at 9999).
+
+## 5. Mock Exam Layer 2 on Client Scanner
+
+**File: `src/pages/Client.tsx**` (mock-exam active phase, lines ~847-897)
+
+- For chick players: show layer 2 image inside the scanner box area (replace scanner with the exam image). Currently the image renders but may not appear if the layout doesn't match the scanner's aspect ratio. Fix by using the same `aspectRatio: "873/457"` container with `w-full` and placing the layer-2 image inside it at full width.
+- Make sure the layer 2 is there overlaying when the camera is on so that the visual cryptography can work.
+
+## 6. Mock Exam Client Submit Button
+
+**File: `src/pages/Client.tsx**` (lines ~847-897)
+
+- Already has Input + Submit button for mock exam (lines 868-894). Verify the submit button works — add `hasSubmittedMockExam` state to prevent double submission. After submit, replace the form with "✓ Submitted" text.
+- After the countdown/all good chicks have submitted, the client side will tell the user whether the answer is correct or not. and the host side will display which chicks fails. then main game continue after checking whether there are chicks received F-grade afte the grade deduction. (details in point 7)
+
+## 7. F-Grade Elimination After Events
+
+**File: `src/hooks/useGameLogic.ts**`
+
+- After hitbox event result processing (lines 729-738), add F-grade elimination check:
+  ```
+  for (const [, p] of gs.playerStates) {
+    if (!p.isEagle && p.alive && isDead(p.health)) {
+      p.alive = false; p.health = 0;
+      currentBroadcast({ type: "you-died", connId: p.connId });
+    }
+  }
+  ```
+- The mock-exam eagle-win path already has this check (lines 748-752). Verify the chick-win path also checks.
+
+## 8. End Game Characters Rotated 180°
+
+**File: `src/pages/Host.tsx**` (`DancingChar` component, line ~102-110)
+
+- The `facingAngle` starts at the `delay` value and increments. Add `Math.PI` offset so characters face the camera:
+  ```
+  const angleRef = useRef(delay + Math.PI);
+  ```
+
+## 9. End Game Character Base at 2/5 Screen Height
+
+**File: `src/pages/Host.tsx**`
+
+- In the transcript phase (Phase 3), change the Canvas camera position to look slightly downward and move the character group down. Set the Canvas container height to fill more space, and adjust camera `position` and `fov` so characters are visible with heads not clipped by the header.
+- Move the MVP/team showcase Canvas camera position similarly: `position: [0, 2, 4]` and lower `fov` to ~30.
+
+## 10. Client Reveal Timer: 7s Rotation + 3s Countdown = 10s
+
+**Files: `src/components/CharacterReveal.tsx`, `src/hooks/useGameLogic.ts`, `src/pages/Host.tsx**`
+
+- `CharacterReveal.tsx`: Change `duration = 7000` (from 5000). The component already handles the countdown display.
+- `useGameLogic.ts`: Change `REVEAL_DURATION = 7000` (from 5000), `COUNTDOWN_DURATION = 3` stays.
+- `Host.tsx`: The reveal countdown uses `startClickAt` with 8s total. Change to 10s: `Math.max(0, 10 - (revealNow - startClickAt) / 1000)`.
+
+## 11. Client Reveal Character Base at 2/3 Screen Height
 
 **File: `src/components/CharacterReveal.tsx**`
 
-- Replace the `setInterval` + `Date.now()` approach with `requestAnimationFrame` for smooth per-frame angle interpolation. Use a ref for elapsed time and update via rAF delta, producing a continuous rotation instead of jumpy 100ms steps.
-
-## 2. Eagle Fly Cooldown (10s)
-
-**File: `src/hooks/useGameLogic.ts**`
-
-- Add `FLY_COOLDOWN = 10000` constant.
-- In the `fly` prop-use handler, track `flyCooldownUntil` on the player state (add to `PlayerGameState`).
-- Block fly activation if `now < flyCooldownUntil`. Set `flyCooldownUntil = now + FLY_COOLDOWN` after each use.
-- Broadcast `flyCooldownUntil` in serialized state so client can show countdown.
-
-**File: `src/lib/gameTypes.ts**` — Add `flyCooldownUntil: number` to both `PlayerGameState` and `PlayerGameStateSerializable`.
-
-## 3. Tip Obtain Countdown Overlap Fix
-
-**File: `src/pages/Host.tsx**`
-
-- Change the tip obtain countdown display from a single absolute-positioned element to a stacked list (flex column) at the top of the screen so multiple countdowns don't overlap.
-
-## 4. Tips Persist After Zone Break
-
-**File: `src/hooks/useGameLogic.ts**`
-
-- In the hitbox-click handler, when `b.zoneHealth <= 0`: set `b.zoneActive = false` and `b.glowing = false`, but do NOT set `b.hasTip = false` or `b.tipObtained = true`. Tips remain obtainable — chicks just lose protection. Already mostly correct; verify `b.hasTip` is never set to false when zone breaks.
-
-## 5. Hitbox Challenge: Average of Chicks vs Sum of Eagle
-
-**File: `src/hooks/useGameLogic.ts**` (line ~706-716)
-
-- Currently computes `avgChick` (total/count) vs `avgEagle` (total/count). Change to: `avgChick` (total/aliveChickCount) vs `eagleTotal` (raw sum, no averaging for 1v3 and  average of the 2 eagles in 2v6). Remove the eagle averaging calculation for 1v3, but not 2v6.
-
-## 6. Tip QR Expiry → 5s Cooldown on Rectangular Box
-
-**File: `src/pages/Client.tsx**`
-
-- When `scannerQrExpireAt` fires (QR expires), set `tipShareCooldownLocal[tipIndex] = Date.now() + 5000` in local state.
-- In `TipsBox`, show "⏳ 5s" countdown when local cooldown is active, preventing clicks.
-- When host sends `tipShareCooldownUntil` via game state, use the larger of local and server cooldowns.
-
-## 7. Tip Receiver: 3s Copying Countdown in Box
-
-**File: `src/pages/Client.tsx**`
-
-- Already has `loadingTip` state with 3s timeout. Pass `tipCopyingCountdown` to `TipsBox` — compute from a `tipCopyStartedAt` ref so the countdown displays seconds remaining (3, 2, 1) inside the rectangular box. Currently `tipCopyingCountdown` prop exists in `TipsBox` but isn't being computed properly from the caller.
-
-## 8. Props Usable During Walking (Critical Fix)
-
-**Root cause**: The prop-use message is sent via `sendToHost` which uses the data channel. The issue is likely that on the client side, the thumbstick `onMove` is continuously sending joystick data, and the prop button's `onClick` handler doesn't fire reliably on mobile while the thumbstick touch is active (touch event conflict).
-
-**Fix approach in `src/pages/Client.tsx**`:
-
-- Change `PropsBtn` button from `onClick` to `onPointerDown` with `stopPropagation` to avoid touch conflicts with the thumbstick.
-- Ensure the prop button is outside the thumbstick touch area and uses pointer events that don't interfere.
-- Add `touch-action: manipulation` to the props button to prevent delays.
-
-## 9. Mock Exam: Layer 1 Display on Host
-
-**File: `src/pages/Host.tsx**`
-
-- When `snapshot.activeEvent?.type === 'mock-exam'` and phase is `active`, show layer 1 image full-size centered with white background, at `z-index: 40+` (above all other overlays including health/stage/zoom controls/props tags).
-- On client side, layer 2 image in scanner area + answer input replacing the 2 tip boxes. One submission only per event — track `hasSubmittedEvent` state.
-
-**Grade F elimination fix**: In `useGameLogic.ts` event result handling and answer-submit handler, after applying grade changes, iterate all players and set `alive = false` for any with `health <= 0` or `isDead(health)`, then broadcast `you-died`.
-
-## 10. Video Overlay Z-Index Fix
-
-**File: `src/components/VideoOverlay.tsx**` — Already has `z-index: 9999`.
-**File: `src/pages/Host.tsx**` — Move `<VideoOverlay>` to be the LAST child in the render tree (after all other overlays). Ensure no other element has a higher z-index or creates a new stacking context that traps it.
-
-## 11. End Game Conditions (Revised)
-
-**File: `src/hooks/useGameLogic.ts**`
-
-- Remove the continuous win-check in the game loop that auto-ends on draw/low chick count during playing phase.
-- Only auto-end when ALL chicks are dead → eagle wins.
-- After Final Exam completion: check alive chick count for chicks-win vs draw.
-- MVP selection: highest `actionScore` among the winning team (or between eagle and last chick in draw).
-
-**1v3**: 0 chicks = eagle wins. After exam: 1+ chicks = chicks win, 1 chick = draw.
-**2v6**: 0 chicks = eagle wins. After exam: 3+ chicks = chicks win, 1-2 chicks = draw.
-
-## 12. End Game Ceremony (5s MVP → 5s Team → Transcript)
-
-**File: `src/pages/Host.tsx**` (gameover section)
-
-- Add phased reveal using local state: `ceremonyPhase: 'mvp' | 'team' | 'transcript'`
-- Phase 1 (0-5s): Show MVP character in Victory animation, centered, with name and "MVP" badge.
-- Phase 2 (5-10s): Show winning team characters in Victory animation (skip if draw or 1v3 eagle solo win). Title: "Fire Chicks Win!" or "GAP Killers Win!".
-- Phase 3 (10s+): Full transcript with all characters (winners in Victory, losers in static Idle) and stats table.
-
-**File: `src/pages/Client.tsx**` (gameover section) — Similar phased display.
-
-## 13. Route Separation for Preview/Debug
-
-**File: `src/App.tsx**` — Add dedicated routes for each game phase/stage so they can be viewed independently:
-
-
-| Route              | Component               | Purpose                           |
-| ------------------ | ----------------------- | --------------------------------- |
-| `/`                | GameIndex               | Home/landing                      |
-| `/pw-exam`         | PWExam                  | PW exam tool (renamed from `/pw`) |
-| `/exam-tips`       | ExamTips                | Exam tips page                    |
-| `/character`       | Character               | Character viewer                  |
-| `/host-lobby`      | Host (lobby phase)      | Host lobby                        |
-| `/host-reveal`     | Host (reveal phase)     | Host reveal countdown             |
-| `/host-gameplay`   | Host (playing phase)    | Host gameplay map                 |
-| `/host-exam`       | Host (exam phase)       | Host exam overlay                 |
-| `/host-gameover`   | Host (gameover phase)   | Host end game                     |
-| `/client-join`     | Client (join screen)    | Client join                       |
-| `/client-lobby`    | Client (lobby phase)    | Client lobby controller           |
-| `/client-reveal`   | Client (reveal phase)   | Client character reveal           |
-| `/client-gameplay` | Client (playing phase)  | Client remote controller          |
-| `/client-exam`     | Client (exam phase)     | Client exam view                  |
-| `/client-gameover` | Client (gameover phase) | Client end game                   |
-
-
-**Implementation**: Extract each phase rendering block from `Host.tsx` and `Client.tsx` into standalone wrapper components that accept mock/default props. The main `/host` and `/client` routes continue to work as the full game flow. The phase-specific routes render the same components with mock data for preview purposes.
-
-This adds ~10 small wrapper files in `src/pages/preview/` that import and render individual phases with placeholder data.
+- The Canvas currently uses `flex-1` for the 3D area. Change the layout so the Canvas takes up 2/3 of `h-dvh` and the info panel takes 1/3. Adjust camera position to `[0, 2.2, 3.8]` and `lookAt(0, 0.6, 0)` so the character's feet are visible and head isn't clipped.
 
 ---
 
 ## Files Modified Summary
 
 
-| File                                       | Changes                                                                                         |
-| ------------------------------------------ | ----------------------------------------------------------------------------------------------- |
-| `src/components/CharacterReveal.tsx`       | Smooth rAF rotation                                                                             |
-| `src/hooks/useGameLogic.ts`                | Fly cooldown, hitbox avg fix, zone break tips fix, F-grade elimination, win conditions overhaul |
-| `src/lib/gameTypes.ts`                     | Add `flyCooldownUntil` field                                                                    |
-| `src/pages/Host.tsx`                       | Tip countdown stacking, video overlay ordering, mock exam layer 1 display, ceremony phases      |
-| `src/pages/Client.tsx`                     | Props touch fix, tip cooldowns, copying countdown, ceremony phases                              |
-| `src/components/VideoOverlay.tsx`          | Verify z-index stacking                                                                         |
-| `src/App.tsx`                              | New routes for preview pages                                                                    |
-| `src/pages/preview/*.tsx` (new, ~10 files) | Phase-specific preview wrappers                                                                 |
+| File                                 | Changes                                                                                                           |
+| ------------------------------------ | ----------------------------------------------------------------------------------------------------------------- |
+| `src/pages/Host.tsx`                 | Focus camera panel, portal for mock exam, DancingChar 180° rotation, character base positioning, 10s reveal timer |
+| `src/pages/Client.tsx`               | Attack disabled during video, mock exam layout fix, submit state tracking                                         |
+| `src/hooks/useGameLogic.ts`          | Fly disabled post-attack, F-grade elimination after hitbox, REVEAL_DURATION=7000                                  |
+| `src/components/VideoOverlay.tsx`    | Portal rendering for guaranteed top layer                                                                         |
+| `src/components/CharacterReveal.tsx` | 7s duration, character base at 2/3 height                                                                         |
