@@ -34,11 +34,17 @@ const PROP_ICONS: Record<PropType, React.ReactNode> = {
   invincible: <Shield className="w-6 h-6" />,
 };
 
-function PropsBtn({ items, onUse, isEagle }: { items: PropItem[]; onUse: (t: PropType) => void; isEagle?: boolean }) {
+function PropsBtn({ items, onUse, isEagle, flyCooldownUntil }: { items: PropItem[]; onUse: (t: PropType) => void; isEagle?: boolean; flyCooldownUntil?: number }) {
   const [selIdx, setSelIdx] = useState(0);
+  const [now, setNow] = useState(Date.now());
   const available = items.filter((i) => i.count > 0 || (isEagle && i.type === 'fly'));
   const current = available[selIdx % Math.max(1, available.length)];
   const hasMultiple = available.length > 1;
+
+  useEffect(() => {
+    const id = setInterval(() => setNow(Date.now()), 250);
+    return () => clearInterval(id);
+  }, []);
 
   if (!current) {
     return (
@@ -49,24 +55,32 @@ function PropsBtn({ items, onUse, isEagle }: { items: PropItem[]; onUse: (t: Pro
   }
 
   const showBadge = !(isEagle && current.type === 'fly');
+  const flyOnCooldown = isEagle && current.type === 'fly' && flyCooldownUntil && now < flyCooldownUntil;
+  const flyCdSec = flyOnCooldown ? Math.ceil((flyCooldownUntil! - now) / 1000) : 0;
 
   return (
-    <div className="relative flex flex-col items-center">
+    <div className="relative flex flex-col items-center" style={{ touchAction: 'manipulation' }}>
       {hasMultiple && (
-        <button onClick={() => setSelIdx((i) => i + 1)} className="mb-1 text-muted-foreground hover:text-foreground">
+        <button onPointerDown={(e) => { e.stopPropagation(); setSelIdx((i) => i + 1); }} className="mb-1 text-muted-foreground hover:text-foreground">
           <ChevronUp className="w-5 h-5" />
         </button>
       )}
       <button
-        onClick={() => onUse(current.type)}
+        onPointerDown={(e) => { e.stopPropagation(); e.preventDefault(); onUse(current.type); }}
         className="relative w-16 h-16 rounded-full border-2 flex items-center justify-center transition-all active:scale-90"
         style={{
           borderColor: PROP_COLORS[current.type],
           color: PROP_COLORS[current.type],
           boxShadow: `0 0 12px ${PROP_COLORS[current.type]}55`,
+          touchAction: 'manipulation',
+          opacity: flyOnCooldown ? 0.5 : 1,
         }}
       >
-        {PROP_ICONS[current.type]}
+        {flyOnCooldown ? (
+          <span className="text-xs font-mono font-bold">{flyCdSec}s</span>
+        ) : (
+          PROP_ICONS[current.type]
+        )}
         {showBadge && (
           <span
             className="absolute -top-1 -right-1 w-5 h-5 rounded-full text-[10px] font-bold flex items-center justify-center bg-card border"
