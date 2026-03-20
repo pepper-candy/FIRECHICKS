@@ -1146,6 +1146,17 @@ export default function Client() {
 
   return (
     <div className="flex flex-col h-dvh overflow-hidden p-2 gap-2 select-none">
+      {/* Stage transition overlay */}
+      {gameState?.stageTransitionUntil && gameState.stageTransitionUntil > 0 && clockNow < gameState.stageTransitionUntil && (
+        <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-background/95 backdrop-blur-sm">
+          <div className="text-4xl mb-4">{gameState.stage === 0 ? '🤝' : gameState.stage === 1 ? '📍' : gameState.stage === 2 ? '🔗' : '📝'}</div>
+          <h1 className="text-xl font-pixel text-accent tracking-widest mb-2">STAGE {(gameState.stage ?? 0) + 1}</h1>
+          <p className="text-sm font-mono text-muted-foreground text-center max-w-xs px-4">
+            {gameState.stage === 0 ? 'Meet ALL other Chicks!' : gameState.stage <= 2 ? 'Get tips & share them!' : 'Run to a building for the exam!'}
+          </p>
+          <div className="text-3xl font-pixel text-primary animate-pulse mt-4">{Math.ceil((gameState.stageTransitionUntil - clockNow) / 1000)}</div>
+        </div>
+      )}
       {/* Invincible ripple effect */}
       {invincibleRemainingSec > 0 && <InvincibleRipple />}
       {/* Status bar */}

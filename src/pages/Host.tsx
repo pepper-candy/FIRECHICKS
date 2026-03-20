@@ -10,6 +10,7 @@ import GameplayMap from '@/components/GameplayMap';
 import HealthDisplay from '@/components/HealthDisplay';
 import StageProgressBar from '@/components/StageProgressBar';
 import VideoOverlay, { preloadVideos } from '@/components/VideoOverlay';
+import StageTransition from '@/components/StageTransition';
 import NetworkPerformancePanel from '@/components/NetworkPerformancePanel';
 import { PLAYER_COLORS, MAX_PLAYERS_1V3, MAX_PLAYERS_2V6 } from '@/lib/playerColors';
 import { gradeToLetter, getGradeColor } from '@/lib/gradeSystem';
@@ -130,7 +131,7 @@ export default function Host() {
   const [zoomLevel, setZoomLevel] = useState(1);
   const [revealNow, setRevealNow] = useState(Date.now());
   const [focusPanelOpen, setFocusPanelOpen] = useState(false);
-  const { roomCode, players, kickPlayer, kickAllPlayers, broadcast, onClientMessage } = useHostRoom(mode);
+  const { roomCode, players, kickPlayer, kickAllPlayers, broadcast, onClientMessage, gameModeRef } = useHostRoom(mode);
 
   useAdvertiseRoom(roomCode, mode);
 
@@ -158,7 +159,8 @@ export default function Host() {
 
   useEffect(() => {
     broadcast({ type: 'game-mode', gameMode });
-  }, [gameMode, broadcast]);
+    if (gameModeRef) gameModeRef.current = gameMode;
+  }, [gameMode, broadcast, gameModeRef]);
   useEffect(() => {
     if (phase !== 'reveal') return;
     const id = setInterval(() => setRevealNow(Date.now()), 100);
@@ -494,6 +496,11 @@ export default function Host() {
         }
 
         <NetworkPerformancePanel players={players} />
+
+        {/* Stage transition overlay */}
+        {snapshot.stageTransitionUntil > 0 && Date.now() < snapshot.stageTransitionUntil && (
+          <StageTransition stage={snapshot.stage} remainingMs={snapshot.stageTransitionUntil - Date.now()} />
+        )}
 
         {/* VideoOverlay LAST so it renders on top of everything */}
         <VideoOverlay video={videoPlaying} onComplete={onVideoComplete} />

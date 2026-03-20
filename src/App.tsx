@@ -18,6 +18,19 @@ import PreviewHostGameover from "./pages/preview/HostGameover";
 import PreviewClientDead from "./pages/preview/ClientDead";
 import PreviewClientCountdown from "./pages/preview/ClientCountdown";
 import PreviewHostCountdown from "./pages/preview/HostCountdown";
+// New preview pages
+import PreviewVideoHurt from "./pages/preview/VideoHurt";
+import PreviewVideoDead from "./pages/preview/VideoDead";
+import PreviewMockExamHost from "./pages/preview/MockExamHost";
+import PreviewMockExamClient from "./pages/preview/MockExamClient";
+import PreviewHitboxHost from "./pages/preview/HitboxHost";
+import PreviewHitboxClient from "./pages/preview/HitboxClient";
+import PreviewFinalExamHost from "./pages/preview/FinalExamHost";
+import PreviewFinalExamClient from "./pages/preview/FinalExamClient";
+import PreviewChickStage1 from "./pages/preview/ChickStage1";
+import PreviewChickStage23 from "./pages/preview/ChickStage23";
+import PreviewEagleControl from "./pages/preview/EagleControl";
+import PreviewStageTransition from "./pages/preview/StageTransitionPreview";
 
 const queryClient = new QueryClient();
 
@@ -43,6 +56,19 @@ const App = () => (
           <Route path="/client-dead" element={<PreviewClientDead />} />
           <Route path="/client-countdown" element={<PreviewClientCountdown />} />
           <Route path="/host-countdown" element={<PreviewHostCountdown />} />
+          {/* New preview routes */}
+          <Route path="/preview/video-hurt" element={<PreviewVideoHurt />} />
+          <Route path="/preview/video-dead" element={<PreviewVideoDead />} />
+          <Route path="/preview/mock-exam-host" element={<PreviewMockExamHost />} />
+          <Route path="/preview/mock-exam-client" element={<PreviewMockExamClient />} />
+          <Route path="/preview/hitbox-host" element={<PreviewHitboxHost />} />
+          <Route path="/preview/hitbox-client" element={<PreviewHitboxClient />} />
+          <Route path="/preview/final-exam-host" element={<PreviewFinalExamHost />} />
+          <Route path="/preview/final-exam-client" element={<PreviewFinalExamClient />} />
+          <Route path="/preview/chick-stage1" element={<PreviewChickStage1 />} />
+          <Route path="/preview/chick-stage23" element={<PreviewChickStage23 />} />
+          <Route path="/preview/eagle-control" element={<PreviewEagleControl />} />
+          <Route path="/preview/stage-transition" element={<PreviewStageTransition />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>

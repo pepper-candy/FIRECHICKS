@@ -131,6 +131,7 @@ interface GameStateRef {
   eagleZoneStates: Map<string, EagleZoneState>;
   activeEvent: GameEvent | null;
   eventCountdown: number;
+  stageTransitionUntil: number;
 }
 
 // ─── Hook ─────────────────────────────────────────────────────────────────────
@@ -313,6 +314,7 @@ export function useGameLogic({ players, broadcast, gameMode }: UseGameLogicProps
       eagleZoneStates: new Map(),
       activeEvent: null,
       eventCountdown: 0,
+      stageTransitionUntil: 0,
     };
 
     setPhase("reveal");
@@ -468,6 +470,7 @@ export function useGameLogic({ players, broadcast, gameMode }: UseGameLogicProps
       if (chicks.length > 0 && chicks.every((c) => c.socialCircleMet.size >= requiredMeets)) {
         gs.stage = 1;
         gs.stageLabel = "Get Exam Tips from glowing buildings!";
+        gs.stageTransitionUntil = now + 5000;
         for (const b of gs.buildings) {
           if (b.hasTip) {
             b.glowing = true;
@@ -527,6 +530,7 @@ export function useGameLogic({ players, broadcast, gameMode }: UseGameLogicProps
                   if (gs.stage === 1) {
                     gs.stage = 2;
                     gs.stageLabel = "Stage 2 & 3: Share Exam Tips with everyone!";
+                    gs.stageTransitionUntil = now + 5000;
                   }
                 }
               }
@@ -543,6 +547,7 @@ export function useGameLogic({ players, broadcast, gameMode }: UseGameLogicProps
         if (aliveChicks.length > 0 && aliveChicks.every((c) => c.tips[0] && c.tips[1])) {
           gs.stage = 3;
           gs.stageLabel = "Run to any building to start the Final Exam!";
+          gs.stageTransitionUntil = now + 5000;
         }
       }
     }
@@ -943,6 +948,7 @@ export function useGameLogic({ players, broadcast, gameMode }: UseGameLogicProps
       mysteryBoxes: gs.mysteryBoxes,
       activeEvent: gs.activeEvent,
       tipObtainTimers,
+      stageTransitionUntil: gs.stageTransitionUntil ?? 0,
     };
 
     setSnapshot(snap);
