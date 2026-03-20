@@ -419,11 +419,13 @@ export default function Host() {
 
         {/* Active event overlay */}
         {snapshot.activeEvent &&
-        <EventOverlay event={snapshot.activeEvent} players={snapshot.players} />
+        <EventOverlay event={snapshot.activeEvent} players={snapshot.players} gameMode={gameMode} />
         }
 
-        <VideoOverlay video={videoPlaying} onComplete={onVideoComplete} />
         <NetworkPerformancePanel players={players} />
+
+        {/* VideoOverlay LAST so it renders on top of everything */}
+        <VideoOverlay video={videoPlaying} onComplete={onVideoComplete} />
       </div>);
 
   }
