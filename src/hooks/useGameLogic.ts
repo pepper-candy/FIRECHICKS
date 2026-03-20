@@ -1084,6 +1084,7 @@ export function useGameLogic({ players, broadcast, gameMode }: UseGameLogicProps
             if (player.isEagle) {
               propItem.count++; // undo the decrement above — unlimited
               if (now < player.flyCooldownUntil) return; // on cooldown
+              if (now < player.attackCooldownUntil) return; // blocked during post-attack freeze
               if (now < player.speedMultiplierUntil && player.speedMultiplier >= FLY_SPEED_MULTIPLIER) return; // still flying
               player.isAttacking = true;
               player.attackAnimUntil = now + FLY_DURATION + 200;
