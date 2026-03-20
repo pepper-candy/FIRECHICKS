@@ -907,6 +907,9 @@ export default function Client() {
       );
     }
 
+    // Reset mock exam submission for next event
+    if (hasSubmittedMockExam) setHasSubmittedMockExam(false);
+
     if (activeEvent.phase === "result") {
       return (
         <div className="flex flex-col items-center justify-center h-dvh overflow-hidden gap-4">
