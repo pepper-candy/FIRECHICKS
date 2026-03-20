@@ -243,6 +243,7 @@ function useHostSupabase() {
   const usedColorsRef = useRef<Set<number>>(new Set());
   const clientColorMapRef = useRef<Map<string, number>>(new Map());
   const clientMsgCallbackRef = useRef<((connId: string, msg: any) => void) | null>(null);
+  const gameModeRef = useRef<'1v3' | '2v6'>('1v3');
 
   const removePlayer = useCallback((clientId: string) => {
     const colorIdx = clientColorMapRef.current.get(clientId);
