@@ -943,6 +943,7 @@ export function useGameLogic({ players, broadcast, gameMode }: UseGameLogicProps
       mysteryBoxes: gs.mysteryBoxes,
       activeEvent: gs.activeEvent,
       tipObtainTimers,
+      stageTransitionUntil: gs.stageTransitionUntil ?? 0,
     };
 
     setSnapshot(snap);
