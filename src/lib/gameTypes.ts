@@ -94,6 +94,7 @@ export interface PlayerGameState {
   damageDealt: number;
   speedMultiplier: number;
   speedMultiplierUntil: number;
+  flyCooldownUntil: number;
   // Animation state
   isMoving: boolean;
   isAttacking: boolean;
@@ -125,6 +126,7 @@ export interface PlayerGameStateSerializable {
   damageDealt: number;
   speedMultiplier: number;
   speedMultiplierUntil: number;
+  flyCooldownUntil: number;
   isMoving: boolean;
   isAttacking: boolean;
   attackAnimUntil: number;

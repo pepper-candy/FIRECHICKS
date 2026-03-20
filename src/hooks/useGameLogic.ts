@@ -40,10 +40,11 @@ const EAGLE_SPEED = 10;
 const ATTACK_COOLDOWN = 5000;
 const FREEZE_DURATION = 5000;
 const EAGLE_AWAKE_DELAY = 5000;
-const SPEED_BOOST_DURATION = 1000;
+const SPEED_BOOST_DURATION = 5000;
 const SPEED_BOOST_MULTIPLIER = 2;
 const FLY_SPEED_MULTIPLIER = 3;
-const FLY_DURATION = 1000;
+const FLY_DURATION = 3000;
+const FLY_COOLDOWN = 10000;
 const ATTACK_ANIM_DURATION = 1000;
 const PROP_SPAWN_INTERVAL_MIN = 10000;
 const PROP_SPAWN_INTERVAL_MAX = 12000;
@@ -261,6 +262,7 @@ export function useGameLogic({ players, broadcast, gameMode }: UseGameLogicProps
         damageDealt: 0,
         speedMultiplier: 1,
         speedMultiplierUntil: 0,
+        flyCooldownUntil: 0,
         isMoving: false,
         isAttacking: false,
         attackAnimUntil: 0,
@@ -483,7 +485,8 @@ export function useGameLogic({ players, broadcast, gameMode }: UseGameLogicProps
         const mode = gameModeRef.current;
         let inZoneBuilding = -1;
         for (const b of gs.buildings) {
-          if (b.hasTip && b.glowing && isInProtectedZone(chick.position.x, chick.position.z, b.id)) {
+          // Tips persist even after zone break — chick can obtain from any building with hasTip
+          if (b.hasTip && isInProtectedZone(chick.position.x, chick.position.z, b.id)) {
             inZoneBuilding = b.id;
             break;
           }
@@ -587,8 +590,17 @@ export function useGameLogic({ players, broadcast, gameMode }: UseGameLogicProps
         gs.examState.timeRemaining -= delta;
         if (gs.examState.timeRemaining <= 0) {
           gs.examState.timeRemaining = 0;
-          // Time's up — eagle wins
-          endGame(gs, "eagle", currentBroadcast);
+          // Time's up — check alive chick count for result
+          const aliveChicksExam = Array.from<PlayerGameState>(gs.playerStates.values()).filter((p) => !p.isEagle && p.alive);
+          if (currentMode === "1v3") {
+            if (aliveChicksExam.length >= 2) endGame(gs, "chicks", currentBroadcast);
+            else if (aliveChicksExam.length === 1) endGame(gs, "draw", currentBroadcast);
+            else endGame(gs, "eagle", currentBroadcast);
+          } else {
+            if (aliveChicksExam.length >= 3) endGame(gs, "chicks", currentBroadcast);
+            else if (aliveChicksExam.length >= 1) endGame(gs, "draw", currentBroadcast);
+            else endGame(gs, "eagle", currentBroadcast);
+          }
         }
       }
     }
@@ -710,10 +722,11 @@ export function useGameLogic({ players, broadcast, gameMode }: UseGameLogicProps
             (p) => !p.isEagle && p.alive,
           );
           const avgChick = aliveChicks.length > 0 ? chickTotal / aliveChicks.length : 0;
+          // 1v3: raw eagle sum; 2v6: average of 2 eagles
           const eagles = Array.from<PlayerGameState>(gs.playerStates.values()).filter((p) => p.isEagle && p.alive);
-          const avgEagle = eagles.length > 0 ? eagleTotal / eagles.length : 0;
+          const eagleCompare = currentMode === "2v6" && eagles.length > 0 ? eagleTotal / eagles.length : eagleTotal;
 
-          if (avgChick >= avgEagle) {
+          if (avgChick >= eagleCompare) {
             ev.result = "chick";
             for (const [, p] of gs.playerStates) {
               if (p.alive) p.health = addSubGrades(p.health, 2);
@@ -725,12 +738,19 @@ export function useGameLogic({ players, broadcast, gameMode }: UseGameLogicProps
             }
           }
         } else if (ev.type === "mock-exam") {
-          // If nobody answered correctly → -2 sub-grades to all chicks (fail)
           const anyCorrect = (Object.values(ev.chickClicks) as number[]).some((v: number) => v > 0);
           if (!anyCorrect) {
             ev.result = "eagle";
             for (const [, p] of gs.playerStates) {
-              if (!p.isEagle && p.alive) p.health = addSubGrades(p.health, -2);
+              if (!p.isEagle && p.alive) {
+                p.health = addSubGrades(p.health, -2);
+                // F-grade elimination
+                if (isDead(p.health)) {
+                  p.alive = false;
+                  p.health = 0;
+                  currentBroadcast({ type: "you-died", connId: p.connId });
+                }
+              }
             }
           } else {
             ev.result = "chick";
@@ -761,26 +781,14 @@ export function useGameLogic({ players, broadcast, gameMode }: UseGameLogicProps
       }
     }
 
-    // ── Win condition check ──
+    // ── Win condition check: only auto-end when ALL chicks dead ──
     const aliveChicks = Array.from<PlayerGameState>(gs.playerStates.values()).filter((p) => !p.isEagle && p.alive);
-    const totalChicks = Array.from<PlayerGameState>(gs.playerStates.values()).filter((p) => !p.isEagle).length;
 
     if (!gs.winner) {
-      if (currentMode === "1v3") {
-        // 1v3: 3 chicks vs 1 eagle
-        // 2+ chicks alive = chicks win (only checked at exam completion)
-        // 1 chick left = draw
-        // 0 chicks left = eagle wins
-        if (aliveChicks.length === 0) endGame(gs, "eagle", currentBroadcast);
-        else if (aliveChicks.length === 1) endGame(gs, "draw", currentBroadcast);
-      } else {
-        // 2v6: 6 chicks vs 2 eagles
-        // 4+ chicks alive = chicks win (only at exam)
-        // 2-3 chicks = draw
-        // 0-1 chicks = eagle wins
-        if (aliveChicks.length <= 1) endGame(gs, "eagle", currentBroadcast);
-        else if (aliveChicks.length <= 3) endGame(gs, "draw", currentBroadcast);
+      if (aliveChicks.length === 0) {
+        endGame(gs, "eagle", currentBroadcast);
       }
+      // After exam: check for chicks-win vs draw (handled in endGame after exam completion)
     }
 
     doBroadcastState(gs, currentBroadcast);
@@ -1058,13 +1066,14 @@ export function useGameLogic({ players, broadcast, gameMode }: UseGameLogicProps
             break;
           case "fly":
             if (player.isEagle) {
-              // Unlimited fly — no count decrement, apply cooldown
               propItem.count++; // undo the decrement above — unlimited
-              if (now < player.speedMultiplierUntil && player.speedMultiplier >= FLY_SPEED_MULTIPLIER) return; // still flying / cooldown
+              if (now < player.flyCooldownUntil) return; // on cooldown
+              if (now < player.speedMultiplierUntil && player.speedMultiplier >= FLY_SPEED_MULTIPLIER) return; // still flying
               player.isAttacking = true;
               player.attackAnimUntil = now + FLY_DURATION + 200;
               player.speedMultiplier = FLY_SPEED_MULTIPLIER;
               player.speedMultiplierUntil = now + FLY_DURATION;
+              player.flyCooldownUntil = now + FLY_COOLDOWN;
             }
             break;
           case "invincible":
@@ -1083,8 +1092,10 @@ export function useGameLogic({ players, broadcast, gameMode }: UseGameLogicProps
             b.zoneHealth = Math.max(0, b.zoneHealth - 1);
             player.actionScore += 0.5;
             if (b.zoneHealth <= 0) {
+              // Zone broken: tips remain obtainable, just unprotected
               b.zoneActive = false;
               b.glowing = false;
+              // Don't set hasTip=false or tipObtained=true — tips persist
               gs.eagleZoneStates.delete(player.connId);
             }
             break;
@@ -1245,15 +1256,10 @@ export function useGameLogic({ players, broadcast, gameMode }: UseGameLogicProps
       }
     }
 
-    // Check win condition after damage applied
-    const mode = gameModeRef.current;
-    if (gs) {
-      const aliveChicks = Array.from<PlayerGameState>(gs.playerStates.values()).filter((p) => !p.isEagle && p.alive);
-      const totalChicks = Array.from<PlayerGameState>(gs.playerStates.values()).filter((p) => !p.isEagle).length;
-      const eliminated = totalChicks - aliveChicks.length;
-      if (mode === "1v3" && eliminated >= 3) endGame(gs, "eagle", broadcastRef.current);
-      else if (mode === "2v6" && eliminated > 4) endGame(gs, "eagle", broadcastRef.current);
-      else if (mode === "2v6" && eliminated === 4) endGame(gs, "draw", broadcastRef.current);
+    // Check win condition: only auto-end when ALL chicks dead
+    const aliveChicks = Array.from<PlayerGameState>(gs.playerStates.values()).filter((p) => !p.isEagle && p.alive);
+    if (aliveChicks.length === 0) {
+      endGame(gs, "eagle", broadcastRef.current);
     }
   }, []);
 

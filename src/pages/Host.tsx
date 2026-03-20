@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, Suspense, useRef } from 'react';
 import { Canvas, useFrame } from '@react-three/fiber';
-import type { GameEvent } from '@/lib/gameTypes';
+import type { GameEvent, GameStateSnapshot } from '@/lib/gameTypes';
 import { useHostRoom, useAdvertiseRoom, type ConnectionMode } from '@/hooks/useGameRoom';
 import { useGameLogic } from '@/hooks/useGameLogic';
 import LobbyArena from '@/components/LobbyArena';
@@ -23,13 +23,31 @@ import {
 import type { PlayerGameStateSerializable } from '@/lib/gameTypes';
 
 // ─── Event Overlay (shows during mystery box events) ─────────────────────────
-function EventOverlay({ event, players }: {event: GameEvent;players: Record<string, any>;}) {
+function EventOverlay({ event, players, gameMode }: {event: GameEvent;players: Record<string, any>; gameMode?: string;}) {
   const now = Date.now();
   const aliveChicks = Object.values(players).filter((p: any) => !p.isEagle && p.alive);
   const chickTotal = aliveChicks.reduce((sum: number, p: any) => sum + (event.chickClicks[p.connId] ?? 0), 0);
   const eagleTotal = Object.values(players).filter((p: any) => p.isEagle && p.alive).
   reduce((sum: number, p: any) => sum + (event.eagleClicks[p.connId] ?? 0), 0);
   const timeLeft = Math.max(0, Math.ceil((event.endAt - now) / 1000));
+
+  // Mock exam active: show layer 1 full-screen centered with white bg
+  if (event.phase === 'active' && event.type === 'mock-exam' && event.questionNum) {
+    return (
+      <div className="absolute inset-0 z-40 flex items-center justify-center bg-white">
+        <div className="flex flex-col items-center gap-4 max-w-2xl w-full px-6">
+          <div className="flex items-center justify-between w-full">
+            <h2 className="text-lg font-pixel text-gray-800">📝 MOCK EXAM</h2>
+            <span className="font-mono text-lg font-bold text-gray-800">{timeLeft}s</span>
+          </div>
+          <div className="w-full border-2 border-gray-300 rounded-xl overflow-hidden bg-white shadow-lg">
+            <img src={`/PW/PW_Mock_${event.questionNum}_layer-1.png`} alt="Layer 1" className="w-full" />
+          </div>
+          <p className="text-xs font-mono text-gray-500">Players check their phones for layer 2!</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="absolute inset-0 z-30 flex items-center justify-center bg-background/80 backdrop-blur-sm">
@@ -46,37 +64,18 @@ function EventOverlay({ event, players }: {event: GameEvent;players: Record<stri
           </>
         }
 
-        {event.phase === 'active' && event.type === 'mock-exam' && event.questionNum &&
-        <>
-            <h2 className="text-lg font-pixel text-accent">📝 MOCK EXAM — {timeLeft}s</h2>
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <p className="text-xs font-mono text-muted-foreground mb-1">HOST (Layer 1)</p>
-                <img src={`/PW/PW_Mock_${event.questionNum}_layer-1.png`} alt="Layer 1" className="w-full rounded border border-border" />
-              </div>
-              <div>
-                <p className="text-xs font-mono text-muted-foreground mb-1">Players (Layer 2)</p>
-                <div className="w-full h-full border border-border rounded bg-muted/20 flex items-center justify-center">
-                  <span className="text-xs font-mono text-muted-foreground">On phones</span>
-                </div>
-              </div>
-            </div>
-            <p className="text-xs font-mono text-muted-foreground">Players check their phones for layer 2!</p>
-          </>
-        }
-
         {event.phase === 'active' && event.type === 'hitbox' &&
         <>
             <h2 className="text-lg font-pixel text-accent">👊 HITBOX BATTLE — {timeLeft}s</h2>
             <div className="flex justify-around">
               <div className="text-center">
                 <div className="text-4xl font-pixel text-primary">{chickTotal}</div>
-                <div className="text-xs font-mono text-muted-foreground">🐤 Chicks</div>
+                <div className="text-xs font-mono text-muted-foreground">🐤 Chicks (avg: {aliveChicks.length > 0 ? (chickTotal / aliveChicks.length).toFixed(1) : 0})</div>
               </div>
               <div className="text-2xl text-muted-foreground">vs</div>
               <div className="text-center">
                 <div className="text-4xl font-pixel text-destructive">{eagleTotal}</div>
-                <div className="text-xs font-mono text-muted-foreground">🦅 Eagle</div>
+                <div className="text-xs font-mono text-muted-foreground">🦅 Eagle{gameMode === '2v6' ? 's' : ''}</div>
               </div>
             </div>
             <p className="text-xs font-mono text-muted-foreground">TAP HITBOX AS FAST AS POSSIBLE!</p>
@@ -355,19 +354,23 @@ export default function Host() {
           onHostDragEnd={hostDragEnd}
         />
 
-        {/* Tip obtain countdowns on map */}
-        {snapshot.tipObtainTimers && Object.entries(snapshot.tipObtainTimers).map(([connId, timer]) => {
-          const player = snapshot.players[connId];
-          if (!player) return null;
-          const color = PLAYER_COLORS[player.colorIndex];
-          const sec = Math.ceil(timer.remainingMs / 1000);
-          if (sec <= 0) return null;
-          return (
-            <div key={connId} className="absolute top-2 left-1/2 -translate-x-1/2 z-10 px-3 py-1 rounded bg-accent/20 border border-accent font-mono text-xs text-accent">
-              📖 {color?.name ?? '?'} obtaining tips... {sec}s
-            </div>
-          );
-        })}
+        {/* Tip obtain countdowns — stacked in flex column to avoid overlap */}
+        {snapshot.tipObtainTimers && Object.keys(snapshot.tipObtainTimers).length > 0 && (
+          <div className="absolute top-2 left-1/2 -translate-x-1/2 z-10 flex flex-col gap-1 items-center">
+            {Object.entries(snapshot.tipObtainTimers).map(([connId, timer]) => {
+              const player = snapshot.players[connId];
+              if (!player) return null;
+              const color = PLAYER_COLORS[player.colorIndex];
+              const sec = Math.ceil(timer.remainingMs / 1000);
+              if (sec <= 0) return null;
+              return (
+                <div key={connId} className="px-3 py-1 rounded bg-accent/20 border border-accent font-mono text-xs text-accent whitespace-nowrap">
+                  📖 {color?.name ?? '?'} obtaining tips... {sec}s
+                </div>
+              );
+            })}
+          </div>
+        )}
 
         {/* Health display top-right */}
         <HealthDisplay players={snapshot.players} />
@@ -416,127 +419,20 @@ export default function Host() {
 
         {/* Active event overlay */}
         {snapshot.activeEvent &&
-        <EventOverlay event={snapshot.activeEvent} players={snapshot.players} />
+        <EventOverlay event={snapshot.activeEvent} players={snapshot.players} gameMode={gameMode} />
         }
 
-        <VideoOverlay video={videoPlaying} onComplete={onVideoComplete} />
         <NetworkPerformancePanel players={players} />
+
+        {/* VideoOverlay LAST so it renders on top of everything */}
+        <VideoOverlay video={videoPlaying} onComplete={onVideoComplete} />
       </div>);
 
   }
 
   // ─── GAME OVER / TRANSCRIPT ──────────────────────────────────────────────────
   if (phase === 'gameover' && snapshot) {
-    const winner = snapshot.winner;
-    const sorted = Object.values(snapshot.players).sort((a, b) => {
-      const aWin = winner === 'eagle' && a.isEagle || winner === 'chicks' && !a.isEagle;
-      const bWin = winner === 'eagle' && b.isEagle || winner === 'chicks' && !b.isEagle;
-      if (aWin !== bWin) return aWin ? -1 : 1;
-      return b.actionScore - a.actionScore;
-    });
-    const mvp = sorted[0];
-
-    return (
-      <div className="flex flex-col h-screen bg-background overflow-auto">
-        {/* Win banner */}
-        <div className="py-4 text-center border-b border-border">
-          <h1 className="text-xl font-pixel text-accent text-glow-green mb-1">GAME OVER</h1>
-          <p
-            className="text-lg font-pixel"
-            style={{ color: winner === 'eagle' ? 'hsl(0 80% 55%)' : winner === 'chicks' ? 'hsl(145 80% 50%)' : 'hsl(45 100% 55%)' }}>
-            
-            {winner === 'eagle' ? '🦅 Eagle Wins!' : winner === 'chicks' ? '🐤 Chicks Win!' : '🤝 Draw!'}
-          </p>
-        </div>
-
-        {/* 3D Character stage */}
-        <div className="h-[35vh] relative flex-shrink-0">
-          <Canvas camera={{ position: [0, 3, sorted.length * 2.2 + 4], fov: 40 }}>
-            <ambientLight intensity={0.8} />
-            <directionalLight position={[5, 8, 5]} intensity={1.2} />
-            {sorted.map((p, i) => {
-              const isWin = winner === 'eagle' && p.isEagle || winner === 'chicks' && !p.isEagle;
-              const spacing = 2.2;
-              const x = (i - (sorted.length - 1) / 2) * spacing;
-              return (
-                <group key={p.connId} position={[x, 0, 0]}>
-                  <DancingChar chickColor={p.chickColor} isWinner={isWin} delay={i * 0.4} />
-                </group>);
-
-            })}
-          </Canvas>
-
-          {mvp &&
-          <div className="absolute top-3 left-1/2 -translate-x-1/2 flex items-center gap-2 px-4 py-1.5 rounded bg-accent/20 border border-accent">
-              <Trophy className="w-4 h-4 text-accent" />
-              <span className="text-xs font-pixel text-accent">
-                MVP: {PLAYER_COLORS[mvp.colorIndex]?.name ?? '?'}
-              </span>
-            </div>
-          }
-        </div>
-
-        {/* Transcript table */}
-        <div className="flex-1 p-4 overflow-auto">
-          <h2 className="text-center text-sm font-pixel text-foreground mb-4 tracking-widest">📋 TRANSCRIPT</h2>
-          <div className="max-w-3xl mx-auto">
-            <table className="w-full text-xs font-mono border-collapse">
-              <thead>
-                <tr className="text-muted-foreground border-b border-border">
-                  <th className="py-2 text-left pl-2">Player</th>
-                  <th className="py-2 text-center">Grade</th>
-                  <th className="py-2 text-center">Survival</th>
-                  <th className="py-2 text-center">Damage</th>
-                  <th className="py-2 text-center">Score</th>
-                  <th className="py-2 text-center">Result</th>
-                </tr>
-              </thead>
-              <tbody>
-                {sorted.map((p, i) => {
-                  const color = PLAYER_COLORS[p.colorIndex];
-                  const letter = gradeToLetter(p.health);
-                  const gradeColor = getGradeColor(p.health);
-                  const isWin = winner === 'eagle' && p.isEagle || winner === 'chicks' && !p.isEagle;
-
-                  return (
-                    <tr key={p.connId} className="border-b border-border/40 hover:bg-card/30">
-                      <td className="py-2 pl-2">
-                        <div className="flex items-center gap-1.5">
-                          <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: `hsl(${color?.hsl ?? '0 0% 50%'})` }} />
-                          <span style={{ color: `hsl(${color?.hsl ?? '0 0% 50%'})` }}>{color?.name}</span>
-                          {p.isEagle ? ' 🦅' : ' 🐤'}
-                          {p.isStarStudent && <Star className="w-3 h-3 text-accent fill-accent ml-0.5" />}
-                          {i === 0 && <Trophy className="w-3 h-3 text-accent ml-0.5" />}
-                        </div>
-                      </td>
-                      <td className="py-2 text-center">
-                        <span className="text-2xl font-bold" style={{ color: gradeColor }}>{letter}</span>
-                        <span className="text-[9px] text-muted-foreground block">{p.health.toFixed(1)}</span>
-                      </td>
-                      <td className="py-2 text-center text-muted-foreground">
-                        {Math.floor(p.survivalTime)}s
-                      </td>
-                      <td className="py-2 text-center text-muted-foreground">
-                        {p.isEagle ? `+${p.damageDealt.toFixed(1)}` : `-${p.damageTaken.toFixed(1)}`}
-                      </td>
-                      <td className="py-2 text-center text-foreground font-bold">
-                        {p.actionScore.toFixed(0)}
-                      </td>
-                      <td className="py-2 text-center">
-                        {isWin ?
-                        <span className="text-primary font-bold">WIN</span> :
-                        <span className="text-destructive">LOSE</span>
-                        }
-                      </td>
-                    </tr>);
-
-                })}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      </div>);
-
+    return <GameOverCeremony snapshot={snapshot} gameMode={gameMode} />;
   }
 
   return (
@@ -544,6 +440,213 @@ export default function Host() {
       Loading...
     </div>);
 
+}
+
+// ─── Game Over Ceremony Component ──────────────────────────────────────────────
+function GameOverCeremony({ snapshot, gameMode }: { snapshot: GameStateSnapshot; gameMode: string }) {
+  const [ceremonyPhase, setCeremonyPhase] = useState<'mvp' | 'team' | 'transcript'>('mvp');
+
+  const winner = snapshot.winner;
+  const sorted: PlayerGameStateSerializable[] = Object.values(snapshot.players).sort((a, b) => {
+    const aWin = (winner === 'eagle' && a.isEagle) || (winner === 'chicks' && !a.isEagle) || winner === 'draw';
+    const bWin = (winner === 'eagle' && b.isEagle) || (winner === 'chicks' && !b.isEagle) || winner === 'draw';
+    if (aWin !== bWin) return aWin ? -1 : 1;
+    return b.actionScore - a.actionScore;
+  });
+
+  // Determine MVP
+  const mvp = (() => {
+    if (winner === 'draw') {
+      // Compare eagle(s) vs last surviving chick(s) — highest score wins MVP
+      return sorted[0];
+    }
+    // MVP from winning team
+    const winningTeam = sorted.filter(p =>
+      (winner === 'eagle' && p.isEagle) || (winner === 'chicks' && !p.isEagle)
+    );
+    return winningTeam.length > 0 ? winningTeam.sort((a, b) => b.actionScore - a.actionScore)[0] : sorted[0];
+  })();
+
+  const winningTeamPlayers = sorted.filter(p =>
+    (winner === 'eagle' && p.isEagle) || (winner === 'chicks' && !p.isEagle)
+  ).filter(p => p.connId !== mvp?.connId);
+
+  // Skip team phase if draw, or 1v3 eagle (solo winner)
+  const skipTeamPhase = winner === 'draw' || (winner === 'eagle' && gameMode === '1v3') || winningTeamPlayers.length === 0;
+
+  useEffect(() => {
+    const t1 = setTimeout(() => {
+      if (skipTeamPhase) {
+        setCeremonyPhase('transcript');
+      } else {
+        setCeremonyPhase('team');
+      }
+    }, 5000);
+
+    const t2 = skipTeamPhase ? null : setTimeout(() => {
+      setCeremonyPhase('transcript');
+    }, 10000);
+
+    return () => {
+      clearTimeout(t1);
+      if (t2) clearTimeout(t2);
+    };
+  }, [skipTeamPhase]);
+
+  const mvpColor = mvp ? PLAYER_COLORS[mvp.colorIndex] : null;
+  const teamName = winner === 'eagle' ? '🦅 GAP Killers Win!' : winner === 'chicks' ? '🐤 Fire Chicks Win!' : '🤝 Draw!';
+
+  // Phase 1: MVP showcase
+  if (ceremonyPhase === 'mvp' && mvp) {
+    return (
+      <div className="flex flex-col items-center justify-center h-screen bg-background gap-6">
+        <h1 className="text-2xl font-pixel text-accent text-glow-green animate-pulse tracking-widest">🏆 MVP</h1>
+        <div className="h-[50vh] w-full max-w-md">
+          <Canvas camera={{ position: [0, 3, 5], fov: 35 }}>
+            <ambientLight intensity={0.8} />
+            <directionalLight position={[5, 8, 5]} intensity={1.2} />
+            <DancingChar chickColor={mvp.chickColor} isWinner={true} delay={0} />
+          </Canvas>
+        </div>
+        <div className="flex items-center gap-3 px-6 py-3 rounded-xl bg-accent/20 border-2 border-accent">
+          <Trophy className="w-6 h-6 text-accent" />
+          <span className="text-lg font-pixel" style={{ color: mvpColor ? `hsl(${mvpColor.hsl})` : undefined }}>
+            {mvpColor?.name ?? '?'}
+          </span>
+          <span className="text-sm font-mono text-muted-foreground">Score: {mvp.actionScore.toFixed(0)}</span>
+        </div>
+        <p className="text-sm font-mono text-muted-foreground">🎉 Congratulations!</p>
+      </div>
+    );
+  }
+
+  // Phase 2: Winning team
+  if (ceremonyPhase === 'team') {
+    return (
+      <div className="flex flex-col items-center justify-center h-screen bg-background gap-6">
+        <h1
+          className="text-2xl font-pixel tracking-widest"
+          style={{ color: winner === 'eagle' ? 'hsl(0 80% 55%)' : 'hsl(145 80% 50%)' }}
+        >
+          {teamName}
+        </h1>
+        <div className="h-[50vh] w-full max-w-2xl">
+          <Canvas camera={{ position: [0, 3, winningTeamPlayers.length * 2.5 + 3], fov: 40 }}>
+            <ambientLight intensity={0.8} />
+            <directionalLight position={[5, 8, 5]} intensity={1.2} />
+            {winningTeamPlayers.map((p, i) => {
+              const x = (i - (winningTeamPlayers.length - 1) / 2) * 2.5;
+              return (
+                <group key={p.connId} position={[x, 0, 0]}>
+                  <DancingChar chickColor={p.chickColor} isWinner={true} delay={i * 0.4} />
+                </group>
+              );
+            })}
+          </Canvas>
+        </div>
+        <p className="text-sm font-mono text-muted-foreground">🎉 Congratulations!</p>
+      </div>
+    );
+  }
+
+  // Phase 3: Full transcript
+  return (
+    <div className="flex flex-col h-screen bg-background overflow-auto">
+      <div className="py-4 text-center border-b border-border">
+        <h1 className="text-xl font-pixel text-accent text-glow-green mb-1">GAME OVER</h1>
+        <p
+          className="text-lg font-pixel"
+          style={{ color: winner === 'eagle' ? 'hsl(0 80% 55%)' : winner === 'chicks' ? 'hsl(145 80% 50%)' : 'hsl(45 100% 55%)' }}>
+          {teamName}
+        </p>
+      </div>
+
+      <div className="h-[35vh] relative flex-shrink-0">
+        <Canvas camera={{ position: [0, 3, sorted.length * 2.2 + 4], fov: 40 }}>
+          <ambientLight intensity={0.8} />
+          <directionalLight position={[5, 8, 5]} intensity={1.2} />
+          {sorted.map((p, i) => {
+            const isWin = (winner === 'eagle' && p.isEagle) || (winner === 'chicks' && !p.isEagle) || winner === 'draw';
+            const spacing = 2.2;
+            const x = (i - (sorted.length - 1) / 2) * spacing;
+            return (
+              <group key={p.connId} position={[x, 0, 0]}>
+                <DancingChar chickColor={p.chickColor} isWinner={isWin} delay={i * 0.4} />
+              </group>
+            );
+          })}
+        </Canvas>
+
+        {mvp &&
+          <div className="absolute top-3 left-1/2 -translate-x-1/2 flex items-center gap-2 px-4 py-1.5 rounded bg-accent/20 border border-accent">
+            <Trophy className="w-4 h-4 text-accent" />
+            <span className="text-xs font-pixel text-accent">
+              MVP: {PLAYER_COLORS[mvp.colorIndex]?.name ?? '?'}
+            </span>
+          </div>
+        }
+      </div>
+
+      <div className="flex-1 p-4 overflow-auto">
+        <h2 className="text-center text-sm font-pixel text-foreground mb-4 tracking-widest">📋 TRANSCRIPT</h2>
+        <div className="max-w-3xl mx-auto">
+          <table className="w-full text-xs font-mono border-collapse">
+            <thead>
+              <tr className="text-muted-foreground border-b border-border">
+                <th className="py-2 text-left pl-2">Player</th>
+                <th className="py-2 text-center">Grade</th>
+                <th className="py-2 text-center">Survival</th>
+                <th className="py-2 text-center">Damage</th>
+                <th className="py-2 text-center">Score</th>
+                <th className="py-2 text-center">Result</th>
+              </tr>
+            </thead>
+            <tbody>
+              {sorted.map((p, i) => {
+                const color = PLAYER_COLORS[p.colorIndex];
+                const letter = gradeToLetter(p.health);
+                const gradeColor = getGradeColor(p.health);
+                const isWin = (winner === 'eagle' && p.isEagle) || (winner === 'chicks' && !p.isEagle) || winner === 'draw';
+
+                return (
+                  <tr key={p.connId} className="border-b border-border/40 hover:bg-card/30">
+                    <td className="py-2 pl-2">
+                      <div className="flex items-center gap-1.5">
+                        <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: `hsl(${color?.hsl ?? '0 0% 50%'})` }} />
+                        <span style={{ color: `hsl(${color?.hsl ?? '0 0% 50%'})` }}>{color?.name}</span>
+                        {p.isEagle ? ' 🦅' : ' 🐤'}
+                        {p.isStarStudent && <Star className="w-3 h-3 text-accent fill-accent ml-0.5" />}
+                        {p.connId === mvp?.connId && <Trophy className="w-3 h-3 text-accent ml-0.5" />}
+                      </div>
+                    </td>
+                    <td className="py-2 text-center">
+                      <span className="text-2xl font-bold" style={{ color: gradeColor }}>{letter}</span>
+                      <span className="text-[9px] text-muted-foreground block">{p.health.toFixed(1)}</span>
+                    </td>
+                    <td className="py-2 text-center text-muted-foreground">
+                      {Math.floor(p.survivalTime)}s
+                    </td>
+                    <td className="py-2 text-center text-muted-foreground">
+                      {p.isEagle ? `+${p.damageDealt.toFixed(1)}` : `-${p.damageTaken.toFixed(1)}`}
+                    </td>
+                    <td className="py-2 text-center text-foreground font-bold">
+                      {p.actionScore.toFixed(0)}
+                    </td>
+                    <td className="py-2 text-center">
+                      {isWin ?
+                        <span className="text-primary font-bold">WIN</span> :
+                        <span className="text-destructive">LOSE</span>
+                      }
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  );
 }
 
 const COUNTDOWN_DURATION_DISPLAY = 3;
