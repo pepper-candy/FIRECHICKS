@@ -729,12 +729,19 @@ export function useGameLogic({ players, broadcast, gameMode }: UseGameLogicProps
             }
           }
         } else if (ev.type === "mock-exam") {
-          // If nobody answered correctly → -2 sub-grades to all chicks (fail)
           const anyCorrect = (Object.values(ev.chickClicks) as number[]).some((v: number) => v > 0);
           if (!anyCorrect) {
             ev.result = "eagle";
             for (const [, p] of gs.playerStates) {
-              if (!p.isEagle && p.alive) p.health = addSubGrades(p.health, -2);
+              if (!p.isEagle && p.alive) {
+                p.health = addSubGrades(p.health, -2);
+                // F-grade elimination
+                if (isDead(p.health)) {
+                  p.alive = false;
+                  p.health = 0;
+                  currentBroadcast({ type: "you-died", connId: p.connId });
+                }
+              }
             }
           } else {
             ev.result = "chick";
