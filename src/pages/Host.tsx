@@ -425,9 +425,9 @@ export default function Host() {
           </div>
         )}
 
-        {/* Tip obtain countdowns — stacked, pushed down when panel is open */}
+        {/* Tip obtain countdowns — stacked at top */}
         {snapshot.tipObtainTimers && Object.keys(snapshot.tipObtainTimers).length > 0 && (
-          <div className={`absolute left-1/2 -translate-x-1/2 z-10 flex flex-col gap-1 items-center ${focusPanelOpen ? 'top-[140px]' : 'top-2'}`}>
+          <div className="absolute left-1/2 -translate-x-1/2 z-10 flex flex-col gap-1 items-center top-10">
             {Object.entries(snapshot.tipObtainTimers).map(([connId, timer]) => {
               const player = snapshot.players[connId];
               if (!player) return null;
@@ -453,7 +453,7 @@ export default function Host() {
         <div className="absolute top-2 left-2 z-10 px-3 py-1 rounded bg-card/80 border border-border font-mono text-xs text-muted-foreground">
           ⏱ {Math.floor(snapshot.gameTime)}s
         </div>
-        <div className={`absolute left-2 z-10 px-2 py-2 rounded bg-card/85 border border-border w-44 ${focusPanelOpen ? 'top-[140px]' : 'top-12'}`}>
+        <div className="absolute left-2 top-12 z-10 px-2 py-2 rounded bg-card/85 border border-border w-44">
           <div className="flex items-center justify-between text-[10px] font-mono text-muted-foreground mb-1">
             <span>Zoom</span>
             <span>{zoomLevel.toFixed(2)}x</span>
@@ -471,15 +471,15 @@ export default function Host() {
 
         {/* Eagle awake countdown */}
         {!snapshot.eagleAwake &&
-        <div className={`absolute left-1/2 -translate-x-1/2 z-10 px-4 py-2 rounded bg-destructive/20 border border-destructive/50 font-mono text-xs text-destructive animate-pulse ${focusPanelOpen ? 'top-[140px]' : 'top-12'}`}>
+        <div className="absolute left-1/2 -translate-x-1/2 z-10 px-4 py-2 rounded bg-destructive/20 border border-destructive/50 font-mono text-xs text-destructive animate-pulse top-12">
             🦅 Eagle awakens in {Math.max(0, Math.ceil(5 - snapshot.gameTime))}s
           </div>
         }
 
-        {/* Exam layer 1 on screen when holder is dead */}
-        {snapshot.examState?.layer1Dead &&
-        <div className="absolute top-1/2 left-2 -translate-y-1/2 z-20 bg-card/95 border-2 border-accent rounded-lg p-3 max-w-[200px]">
-            <p className="text-[9px] font-mono text-accent mb-1">📜 EXAM LAYER 1</p>
+        {/* Exam layer 1 on screen when holder is dead or solo exam */}
+        {snapshot.examState?.layer1Dead && snapshot.examState.questionNum > 0 &&
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-30 bg-white border-2 border-accent rounded-xl p-4 max-w-md w-[90%] shadow-2xl">
+            <p className="text-xs font-mono text-accent mb-2 text-center">📜 EXAM LAYER 1</p>
             <img
             src={`/PW/PW_Final_${snapshot.examState.questionNum}_layer-1.png`}
             alt="Layer 1"

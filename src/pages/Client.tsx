@@ -94,6 +94,105 @@ function PropsBtn({ items, onUse, isEagle, flyCooldownUntil }: { items: PropItem
   );
 }
 
+// ─── Props Stacked Button (shows all props visible, stacked downward) ───────
+function PropsStackBtn({ items, onUse }: { items: PropItem[]; onUse: (t: PropType) => void }) {
+  const available = items.filter((i) => i.count > 0);
+  
+  if (available.length === 0) {
+    return (
+      <div className="w-16 h-16 rounded-full border-2 border-muted bg-muted/20 flex items-center justify-center opacity-40">
+        <Zap className="w-6 h-6 text-muted-foreground" />
+      </div>
+    );
+  }
+
+  return (
+    <div className="relative flex flex-col items-center" style={{ touchAction: 'manipulation' }}>
+      {/* Stack all props, first on top, rest peeking underneath */}
+      <div className="relative" style={{ height: `${64 + (available.length - 1) * 16}px`, width: '64px' }}>
+        {available.map((item, i) => (
+          <button
+            key={item.type}
+            onPointerDown={(e) => { e.stopPropagation(); e.preventDefault(); onUse(item.type); }}
+            className="absolute left-0 w-16 h-16 rounded-full border-2 flex items-center justify-center transition-all active:scale-90"
+            style={{
+              top: `${i * 16}px`,
+              zIndex: available.length - i,
+              borderColor: PROP_COLORS[item.type],
+              color: PROP_COLORS[item.type],
+              boxShadow: `0 0 12px ${PROP_COLORS[item.type]}55`,
+              touchAction: 'manipulation',
+              backgroundColor: 'hsl(var(--card))',
+            }}
+          >
+            {PROP_ICONS[item.type]}
+            <span
+              className="absolute -top-1 -right-1 w-5 h-5 rounded-full text-[10px] font-bold flex items-center justify-center bg-card border"
+              style={{ borderColor: PROP_COLORS[item.type], color: PROP_COLORS[item.type] }}
+            >
+              {item.count}
+            </span>
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ─── Mock Exam Camera (auto-starts camera for visual cryptography) ──────────
+function MockExamCamera() {
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const streamRef = useRef<MediaStream | null>(null);
+
+  useEffect(() => {
+    navigator.mediaDevices
+      .getUserMedia({ video: { facingMode: { ideal: "environment" } } })
+      .then((stream) => {
+        streamRef.current = stream;
+        if (videoRef.current) videoRef.current.srcObject = stream;
+      })
+      .catch(console.error);
+
+    return () => {
+      streamRef.current?.getTracks().forEach((t) => t.stop());
+      streamRef.current = null;
+    };
+  }, []);
+
+  return (
+    <video
+      ref={videoRef}
+      autoPlay
+      playsInline
+      muted
+      className="w-full h-full object-cover"
+    />
+  );
+}
+
+// ─── Invincible Ripple Effect ─────────────────────────────────────────────────
+function InvincibleRipple() {
+  return (
+    <div className="fixed inset-0 pointer-events-none z-40 flex items-center justify-center">
+      <div
+        className="w-[200vw] h-[200vw] rounded-full border-4 animate-ping"
+        style={{
+          borderColor: 'hsl(45 100% 55% / 0.4)',
+          animationDuration: '1.5s',
+        }}
+      />
+      <div
+        className="absolute w-[150vw] h-[150vw] rounded-full border-2 animate-ping"
+        style={{
+          borderColor: 'hsl(45 100% 55% / 0.3)',
+          animationDuration: '1s',
+          animationDelay: '0.3s',
+        }}
+      />
+    </div>
+  );
+}
+
 // ─── Hitbox button for eagle ───────────────────────────────────────────────────
 function HitboxBtn({ onHit, inZone }: { onHit: () => void; inZone: boolean }) {
   return (
@@ -799,7 +898,7 @@ export default function Client() {
           </div>
         )}
         {amWinner && <p className="text-lg font-pixel text-primary text-glow-green">🎉 YOU WIN!</p>}
-        <Button variant="outline" size="sm" onClick={disconnect} className="text-xs font-mono">
+        <Button variant="outline" size="sm" onClick={() => { disconnect(); }} className="text-xs font-mono">
           LEAVE
         </Button>
       </div>
@@ -864,12 +963,14 @@ export default function Client() {
             </div>
           ) : (
             <>
-              {/* Layer 2 image in scanner area */}
-              <div className="w-full overflow-hidden rounded border border-border bg-black" style={{ aspectRatio: "873/457" }}>
+              {/* Layer 2 overlaid on camera for visual cryptography */}
+              <div className="relative w-full overflow-hidden rounded border border-border bg-black" style={{ aspectRatio: "873/457" }}>
+                <MockExamCamera />
                 <img
                   src={`/PW/PW_Mock_${activeEvent.questionNum}_layer-2.png`}
                   alt="Mock exam layer 2"
-                  className="w-full h-full object-contain"
+                  className="absolute inset-0 w-full h-full object-contain pointer-events-none"
+                  style={{ opacity: 0.85, mixBlendMode: 'multiply' }}
                 />
               </div>
 
@@ -1045,6 +1146,8 @@ export default function Client() {
 
   return (
     <div className="flex flex-col h-dvh overflow-hidden p-2 gap-2 select-none">
+      {/* Invincible ripple effect */}
+      {invincibleRemainingSec > 0 && <InvincibleRipple />}
       {/* Status bar */}
       <div className="flex items-center justify-between">
         {/* Fullscreen toggle when not already fullscreen */}
@@ -1148,6 +1251,32 @@ export default function Client() {
             </div>
           )}
 
+          {/* Tips boxes right under scanner */}
+          {gamePhase === "playing" && myState && (
+            <div className="flex gap-2 w-full">
+              <TipsBox
+                tipIndex={0}
+                stage={stage}
+                socialMet={socialMet}
+                hasTip={myState.tips[0]}
+                isLoadingTip={loadingTip[0]}
+                tipShareCooldownUntil={Math.max(myState.tipShareCooldownUntil, tipExpiryCooldown[0])}
+                tipCopyingCountdown={loadingTip[0] && tipCopyStartedAt[0] > 0 ? Math.max(0, Math.ceil((tipCopyStartedAt[0] + 3000 - clockNow) / 1000)) : undefined}
+                onTap={() => handleTipTap(0)}
+              />
+              <TipsBox
+                tipIndex={1}
+                stage={stage}
+                socialMet={socialMet}
+                hasTip={myState.tips[1]}
+                isLoadingTip={loadingTip[1]}
+                tipShareCooldownUntil={Math.max(myState.tipShareCooldownUntil, tipExpiryCooldown[1])}
+                tipCopyingCountdown={loadingTip[1] && tipCopyStartedAt[1] > 0 ? Math.max(0, Math.ceil((tipCopyStartedAt[1] + 3000 - clockNow) / 1000)) : undefined}
+                onTap={() => handleTipTap(1)}
+              />
+            </div>
+          )}
+
           {/* Middle: Thumbstick */}
           <div className="flex-1 flex items-center justify-center">
             <Thumbstick
@@ -1170,36 +1299,10 @@ export default function Client() {
             </div>
           )}
 
+          {/* Props stacked downward at bottom */}
           {gamePhase === "playing" && myState && (
-            <div className="flex items-end gap-2 w-full">
-              {/* Tips box 0 */}
-              <TipsBox
-                tipIndex={0}
-                stage={stage}
-                socialMet={socialMet}
-                hasTip={myState.tips[0]}
-                isLoadingTip={loadingTip[0]}
-                tipShareCooldownUntil={Math.max(myState.tipShareCooldownUntil, tipExpiryCooldown[0])}
-                tipCopyingCountdown={loadingTip[0] && tipCopyStartedAt[0] > 0 ? Math.max(0, Math.ceil((tipCopyStartedAt[0] + 3000 - clockNow) / 1000)) : undefined}
-                onTap={() => handleTipTap(0)}
-              />
-
-              {/* Tips box 1 */}
-              <TipsBox
-                tipIndex={1}
-                stage={stage}
-                socialMet={socialMet}
-                hasTip={myState.tips[1]}
-                isLoadingTip={loadingTip[1]}
-                tipShareCooldownUntil={Math.max(myState.tipShareCooldownUntil, tipExpiryCooldown[1])}
-                tipCopyingCountdown={loadingTip[1] && tipCopyStartedAt[1] > 0 ? Math.max(0, Math.ceil((tipCopyStartedAt[1] + 3000 - clockNow) / 1000)) : undefined}
-                onTap={() => handleTipTap(1)}
-              />
-
-              {/* Props button */}
-              <div className="flex-shrink-0" style={{ touchAction: 'manipulation' }}>
-                <PropsBtn items={myState.props ?? []} onUse={handlePropUse} isEagle={false} />
-              </div>
+            <div className="flex items-center justify-center">
+              <PropsStackBtn items={myState.props ?? []} onUse={handlePropUse} />
             </div>
           )}
         </>
