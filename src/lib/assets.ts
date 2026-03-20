@@ -17,7 +17,7 @@ const getBaseUrl = (): string => {
     // Local mode: assets from your PC (same origin)
     return window.location.origin;
   }
-  // Production mode: assets from Cloudflare
+  // Production mode: assets from Cloudflare (must match `ASSET_ORIGIN` in public/asset-cache-sw.js)
   return 'https://firechick-assets.mongklhk.workers.dev';
 };
 
