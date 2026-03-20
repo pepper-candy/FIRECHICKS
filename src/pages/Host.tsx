@@ -434,17 +434,219 @@ export default function Host() {
   if (phase === 'gameover' && snapshot) {
     return <GameOverCeremony snapshot={snapshot} gameMode={gameMode} />;
   }
-          </div>
-        </div>
-      </div>);
-
-  }
 
   return (
     <div className="flex items-center justify-center h-screen text-muted-foreground font-mono">
       Loading...
     </div>);
 
+}
+
+// ─── Game Over Ceremony Component ──────────────────────────────────────────────
+function GameOverCeremony({ snapshot, gameMode }: { snapshot: GameStateSnapshot; gameMode: string }) {
+  const [ceremonyPhase, setCeremonyPhase] = useState<'mvp' | 'team' | 'transcript'>('mvp');
+
+  const winner = snapshot.winner;
+  const sorted = Object.values(snapshot.players).sort((a, b) => {
+    const aWin = (winner === 'eagle' && a.isEagle) || (winner === 'chicks' && !a.isEagle) || winner === 'draw';
+    const bWin = (winner === 'eagle' && b.isEagle) || (winner === 'chicks' && !b.isEagle) || winner === 'draw';
+    if (aWin !== bWin) return aWin ? -1 : 1;
+    return b.actionScore - a.actionScore;
+  });
+
+  // Determine MVP
+  const mvp = (() => {
+    if (winner === 'draw') {
+      // Compare eagle(s) vs last surviving chick(s) — highest score wins MVP
+      return sorted[0];
+    }
+    // MVP from winning team
+    const winningTeam = sorted.filter(p =>
+      (winner === 'eagle' && p.isEagle) || (winner === 'chicks' && !p.isEagle)
+    );
+    return winningTeam.length > 0 ? winningTeam.sort((a, b) => b.actionScore - a.actionScore)[0] : sorted[0];
+  })();
+
+  const winningTeamPlayers = sorted.filter(p =>
+    (winner === 'eagle' && p.isEagle) || (winner === 'chicks' && !p.isEagle)
+  ).filter(p => p.connId !== mvp?.connId);
+
+  // Skip team phase if draw, or 1v3 eagle (solo winner)
+  const skipTeamPhase = winner === 'draw' || (winner === 'eagle' && gameMode === '1v3') || winningTeamPlayers.length === 0;
+
+  useEffect(() => {
+    const t1 = setTimeout(() => {
+      if (skipTeamPhase) {
+        setCeremonyPhase('transcript');
+      } else {
+        setCeremonyPhase('team');
+      }
+    }, 5000);
+
+    const t2 = skipTeamPhase ? null : setTimeout(() => {
+      setCeremonyPhase('transcript');
+    }, 10000);
+
+    return () => {
+      clearTimeout(t1);
+      if (t2) clearTimeout(t2);
+    };
+  }, [skipTeamPhase]);
+
+  const mvpColor = mvp ? PLAYER_COLORS[mvp.colorIndex] : null;
+  const teamName = winner === 'eagle' ? '🦅 GAP Killers Win!' : winner === 'chicks' ? '🐤 Fire Chicks Win!' : '🤝 Draw!';
+
+  // Phase 1: MVP showcase
+  if (ceremonyPhase === 'mvp' && mvp) {
+    return (
+      <div className="flex flex-col items-center justify-center h-screen bg-background gap-6">
+        <h1 className="text-2xl font-pixel text-accent text-glow-green animate-pulse tracking-widest">🏆 MVP</h1>
+        <div className="h-[50vh] w-full max-w-md">
+          <Canvas camera={{ position: [0, 3, 5], fov: 35 }}>
+            <ambientLight intensity={0.8} />
+            <directionalLight position={[5, 8, 5]} intensity={1.2} />
+            <DancingChar chickColor={mvp.chickColor} isWinner={true} delay={0} />
+          </Canvas>
+        </div>
+        <div className="flex items-center gap-3 px-6 py-3 rounded-xl bg-accent/20 border-2 border-accent">
+          <Trophy className="w-6 h-6 text-accent" />
+          <span className="text-lg font-pixel" style={{ color: mvpColor ? `hsl(${mvpColor.hsl})` : undefined }}>
+            {mvpColor?.name ?? '?'}
+          </span>
+          <span className="text-sm font-mono text-muted-foreground">Score: {mvp.actionScore.toFixed(0)}</span>
+        </div>
+        <p className="text-sm font-mono text-muted-foreground">🎉 Congratulations!</p>
+      </div>
+    );
+  }
+
+  // Phase 2: Winning team
+  if (ceremonyPhase === 'team') {
+    return (
+      <div className="flex flex-col items-center justify-center h-screen bg-background gap-6">
+        <h1
+          className="text-2xl font-pixel tracking-widest"
+          style={{ color: winner === 'eagle' ? 'hsl(0 80% 55%)' : 'hsl(145 80% 50%)' }}
+        >
+          {teamName}
+        </h1>
+        <div className="h-[50vh] w-full max-w-2xl">
+          <Canvas camera={{ position: [0, 3, winningTeamPlayers.length * 2.5 + 3], fov: 40 }}>
+            <ambientLight intensity={0.8} />
+            <directionalLight position={[5, 8, 5]} intensity={1.2} />
+            {winningTeamPlayers.map((p, i) => {
+              const x = (i - (winningTeamPlayers.length - 1) / 2) * 2.5;
+              return (
+                <group key={p.connId} position={[x, 0, 0]}>
+                  <DancingChar chickColor={p.chickColor} isWinner={true} delay={i * 0.4} />
+                </group>
+              );
+            })}
+          </Canvas>
+        </div>
+        <p className="text-sm font-mono text-muted-foreground">🎉 Congratulations!</p>
+      </div>
+    );
+  }
+
+  // Phase 3: Full transcript
+  return (
+    <div className="flex flex-col h-screen bg-background overflow-auto">
+      <div className="py-4 text-center border-b border-border">
+        <h1 className="text-xl font-pixel text-accent text-glow-green mb-1">GAME OVER</h1>
+        <p
+          className="text-lg font-pixel"
+          style={{ color: winner === 'eagle' ? 'hsl(0 80% 55%)' : winner === 'chicks' ? 'hsl(145 80% 50%)' : 'hsl(45 100% 55%)' }}>
+          {teamName}
+        </p>
+      </div>
+
+      <div className="h-[35vh] relative flex-shrink-0">
+        <Canvas camera={{ position: [0, 3, sorted.length * 2.2 + 4], fov: 40 }}>
+          <ambientLight intensity={0.8} />
+          <directionalLight position={[5, 8, 5]} intensity={1.2} />
+          {sorted.map((p, i) => {
+            const isWin = (winner === 'eagle' && p.isEagle) || (winner === 'chicks' && !p.isEagle) || winner === 'draw';
+            const spacing = 2.2;
+            const x = (i - (sorted.length - 1) / 2) * spacing;
+            return (
+              <group key={p.connId} position={[x, 0, 0]}>
+                <DancingChar chickColor={p.chickColor} isWinner={isWin} delay={i * 0.4} />
+              </group>
+            );
+          })}
+        </Canvas>
+
+        {mvp &&
+          <div className="absolute top-3 left-1/2 -translate-x-1/2 flex items-center gap-2 px-4 py-1.5 rounded bg-accent/20 border border-accent">
+            <Trophy className="w-4 h-4 text-accent" />
+            <span className="text-xs font-pixel text-accent">
+              MVP: {PLAYER_COLORS[mvp.colorIndex]?.name ?? '?'}
+            </span>
+          </div>
+        }
+      </div>
+
+      <div className="flex-1 p-4 overflow-auto">
+        <h2 className="text-center text-sm font-pixel text-foreground mb-4 tracking-widest">📋 TRANSCRIPT</h2>
+        <div className="max-w-3xl mx-auto">
+          <table className="w-full text-xs font-mono border-collapse">
+            <thead>
+              <tr className="text-muted-foreground border-b border-border">
+                <th className="py-2 text-left pl-2">Player</th>
+                <th className="py-2 text-center">Grade</th>
+                <th className="py-2 text-center">Survival</th>
+                <th className="py-2 text-center">Damage</th>
+                <th className="py-2 text-center">Score</th>
+                <th className="py-2 text-center">Result</th>
+              </tr>
+            </thead>
+            <tbody>
+              {sorted.map((p, i) => {
+                const color = PLAYER_COLORS[p.colorIndex];
+                const letter = gradeToLetter(p.health);
+                const gradeColor = getGradeColor(p.health);
+                const isWin = (winner === 'eagle' && p.isEagle) || (winner === 'chicks' && !p.isEagle) || winner === 'draw';
+
+                return (
+                  <tr key={p.connId} className="border-b border-border/40 hover:bg-card/30">
+                    <td className="py-2 pl-2">
+                      <div className="flex items-center gap-1.5">
+                        <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: `hsl(${color?.hsl ?? '0 0% 50%'})` }} />
+                        <span style={{ color: `hsl(${color?.hsl ?? '0 0% 50%'})` }}>{color?.name}</span>
+                        {p.isEagle ? ' 🦅' : ' 🐤'}
+                        {p.isStarStudent && <Star className="w-3 h-3 text-accent fill-accent ml-0.5" />}
+                        {p.connId === mvp?.connId && <Trophy className="w-3 h-3 text-accent ml-0.5" />}
+                      </div>
+                    </td>
+                    <td className="py-2 text-center">
+                      <span className="text-2xl font-bold" style={{ color: gradeColor }}>{letter}</span>
+                      <span className="text-[9px] text-muted-foreground block">{p.health.toFixed(1)}</span>
+                    </td>
+                    <td className="py-2 text-center text-muted-foreground">
+                      {Math.floor(p.survivalTime)}s
+                    </td>
+                    <td className="py-2 text-center text-muted-foreground">
+                      {p.isEagle ? `+${p.damageDealt.toFixed(1)}` : `-${p.damageTaken.toFixed(1)}`}
+                    </td>
+                    <td className="py-2 text-center text-foreground font-bold">
+                      {p.actionScore.toFixed(0)}
+                    </td>
+                    <td className="py-2 text-center">
+                      {isWin ?
+                        <span className="text-primary font-bold">WIN</span> :
+                        <span className="text-destructive">LOSE</span>
+                      }
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  );
 }
 
 const COUNTDOWN_DURATION_DISPLAY = 3;
