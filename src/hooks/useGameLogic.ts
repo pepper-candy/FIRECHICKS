@@ -762,6 +762,14 @@ export function useGameLogic({ players, broadcast, gameMode }: UseGameLogicProps
             }
           } else {
             ev.result = "chick";
+            // F-grade elimination after mock exam chick-win too
+            for (const [, p] of gs.playerStates) {
+              if (!p.isEagle && p.alive && isDead(p.health)) {
+                p.alive = false;
+                p.health = 0;
+                currentBroadcast({ type: "you-died", connId: p.connId });
+              }
+            }
           }
         }
 
