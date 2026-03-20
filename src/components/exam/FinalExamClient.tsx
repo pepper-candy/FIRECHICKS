@@ -2,6 +2,7 @@ import { useRef, useEffect, useState } from 'react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Slider } from '@/components/ui/slider';
+import { assetUrl } from '@/lib/assets';
 
 interface Props {
   examLayer: '1' | '2';
@@ -56,7 +57,7 @@ export default function FinalExamClient({
       <div className="relative w-full overflow-hidden bg-black" style={{ aspectRatio: '873/457' }}>
         <video ref={videoRef} autoPlay playsInline muted className="absolute inset-0 w-full h-full object-cover" />
         <img
-          src={`/PW/PW_Final_${questionNum}_layer-${examLayer}.png`}
+          src={assetUrl(`/PW/PW_Final_${questionNum}_layer-${examLayer}.png`)}
           alt={`Layer ${examLayer}`}
           className="absolute inset-0 w-full h-full object-contain pointer-events-none"
           style={{ opacity, transform: `scale(${zoom})`, transformOrigin: 'center center' }}

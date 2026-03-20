@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { Check, Loader2 } from 'lucide-react';
+import { assetUrl } from '@/lib/assets';
 
 // All assets to track loading
 const GLB_COLORS = ['Black', 'Blue', 'Cyan', 'Gold', 'Green', 'Pink', 'Red', 'Yellow'] as const;
@@ -7,7 +8,7 @@ const GLB_ANIMS = ['Idle', 'Walking', 'Running', 'Victory'] as const;
 const ATTACK_COLORS = ['Black', 'Gold'] as const;
 
 function getGlbPath(anim: string, color: string) {
-  return `/FireChick/FireChick_Animation/FireChick_${anim}/${anim}_${color}.glb`;
+  return assetUrl(`/FireChick/FireChick_Animation/FireChick_${anim}/${anim}_${color}.glb`);
 }
 
 const ALL_ASSETS: string[] = [];
@@ -24,15 +25,15 @@ for (const color of ATTACK_COLORS) {
 
 // PW Exam PNGs
 for (let q = 1; q <= 4; q++) {
-  ALL_ASSETS.push(`/PW/PW_Final_${q}_layer-1.png`);
-  ALL_ASSETS.push(`/PW/PW_Final_${q}_layer-2.png`);
-  ALL_ASSETS.push(`/PW/PW_Mock_${q}_layer-1.png`);
-  ALL_ASSETS.push(`/PW/PW_Mock_${q}_layer-2.png`);
+  ALL_ASSETS.push(assetUrl(`/PW/PW_Final_${q}_layer-1.png`));
+  ALL_ASSETS.push(assetUrl(`/PW/PW_Final_${q}_layer-2.png`));
+  ALL_ASSETS.push(assetUrl(`/PW/PW_Mock_${q}_layer-1.png`));
+  ALL_ASSETS.push(assetUrl(`/PW/PW_Mock_${q}_layer-2.png`));
 }
 
 // Videos
-ALL_ASSETS.push('/Animations/Hurt.mp4');
-ALL_ASSETS.push('/Animations/Dead.mp4');
+ALL_ASSETS.push(assetUrl('/Animations/Hurt.mp4'));
+ALL_ASSETS.push(assetUrl('/Animations/Dead.mp4'));
 
 const TOTAL = ALL_ASSETS.length;
 

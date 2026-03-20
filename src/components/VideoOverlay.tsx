@@ -1,5 +1,6 @@
 import { useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
+import { assetUrl } from '@/lib/assets';
 
 interface Props {
   video: 'hurt' | 'dead' | null;
@@ -12,12 +13,16 @@ export default function VideoOverlay({ video, onComplete }: Props) {
   useEffect(() => {
     if (!video || !videoRef.current) return;
     videoRef.current.currentTime = 0;
-    videoRef.current.play().catch(() => {});
+    videoRef.current.play().catch((err) => {
+      console.error('Video playback failed:', err);
+    });
   }, [video]);
 
   if (!video) return null;
 
-  const src = video === 'dead' ? '/Animations/Dead.mp4' : '/Animations/Hurt.mp4';
+  const src = video === 'dead'
+    ? assetUrl('/Animations/Dead.mp4')
+    : assetUrl('/Animations/Hurt.mp4');
 
   return createPortal(
     <div className="fixed inset-0 flex items-center justify-center bg-background/90" style={{ zIndex: 2147483647 }}>
@@ -27,6 +32,10 @@ export default function VideoOverlay({ video, onComplete }: Props) {
           src={src}
           className="max-w-[80vw] max-h-[60vh] rounded-lg shadow-2xl"
           onEnded={onComplete}
+          onError={(e) => {
+            console.error('Video load failed:', e);
+            onComplete();
+          }}
           playsInline
           muted={false}
         />
@@ -46,7 +55,7 @@ export default function VideoOverlay({ video, onComplete }: Props) {
 
 /** Preload videos (call once on host) */
 export function preloadVideos() {
-  const vids = ['/Animations/Hurt.mp4', '/Animations/Dead.mp4'];
+  const vids = [assetUrl('/Animations/Hurt.mp4'), assetUrl('/Animations/Dead.mp4')];
   vids.forEach((src) => {
     const link = document.createElement('link');
     link.rel = 'preload';

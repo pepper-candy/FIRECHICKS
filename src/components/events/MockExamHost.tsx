@@ -1,4 +1,5 @@
 import { createPortal } from 'react-dom';
+import { assetUrl } from '@/lib/assets';
 
 interface Props {
   questionNum: number;
@@ -14,7 +15,7 @@ export default function MockExamHost({ questionNum, timeLeft }: Props) {
           <span className="font-mono text-lg font-bold text-gray-800">{timeLeft}s</span>
         </div>
         <div className="w-full border-2 border-gray-300 rounded-xl overflow-hidden bg-white shadow-lg">
-          <img src={`/PW/PW_Mock_${questionNum}_layer-1.png`} alt="Layer 1" className="w-full" />
+          <img src={assetUrl(`/PW/PW_Mock_${questionNum}_layer-1.png`)} alt="Layer 1" className="w-full" />
         </div>
         <p className="text-xs font-mono text-gray-500">Players check their phones for another layer!</p>
       </div>

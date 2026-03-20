@@ -2,6 +2,7 @@ import { Suspense, useState, useEffect, useMemo, useRef } from 'react';
 import { Canvas, useThree } from '@react-three/fiber';
 import { useGLTF } from '@react-three/drei';
 import { PLAYER_COLORS } from '@/lib/playerColors';
+import { assetUrl } from '@/lib/assets';
 
 interface Props {
   colorIndex: number;
@@ -58,7 +59,7 @@ export default function CharacterReveal({ colorIndex, isEagle }: Props) {
 
   if (!color) return null;
 
-  const modelPath = `/FireChick/FireChick_Models/FireChick_${color.name}.glb`;
+  const modelPath = assetUrl(`/FireChick/FireChick_Models/FireChick_${color.name}.glb`);
 
   return (
     <div className="flex flex-col items-center justify-start h-dvh overflow-hidden w-full">
@@ -121,11 +122,11 @@ export default function CharacterReveal({ colorIndex, isEagle }: Props) {
   );
 }
 
-useGLTF.preload('/FireChick/FireChick_Models/FireChick_Black.glb');
-useGLTF.preload('/FireChick/FireChick_Models/FireChick_Gold.glb');
-useGLTF.preload('/FireChick/FireChick_Models/FireChick_Red.glb');
-useGLTF.preload('/FireChick/FireChick_Models/FireChick_Yellow.glb');
-useGLTF.preload('/FireChick/FireChick_Models/FireChick_Blue.glb');
-useGLTF.preload('/FireChick/FireChick_Models/FireChick_Green.glb');
-useGLTF.preload('/FireChick/FireChick_Models/FireChick_Cyan.glb');
-useGLTF.preload('/FireChick/FireChick_Models/FireChick_Pink.glb');
+useGLTF.preload(assetUrl('/FireChick/FireChick_Models/FireChick_Black.glb'));
+useGLTF.preload(assetUrl('/FireChick/FireChick_Models/FireChick_Gold.glb'));
+useGLTF.preload(assetUrl('/FireChick/FireChick_Models/FireChick_Red.glb'));
+useGLTF.preload(assetUrl('/FireChick/FireChick_Models/FireChick_Yellow.glb'));
+useGLTF.preload(assetUrl('/FireChick/FireChick_Models/FireChick_Blue.glb'));
+useGLTF.preload(assetUrl('/FireChick/FireChick_Models/FireChick_Green.glb'));
+useGLTF.preload(assetUrl('/FireChick/FireChick_Models/FireChick_Cyan.glb'));
+useGLTF.preload(assetUrl('/FireChick/FireChick_Models/FireChick_Pink.glb'));

@@ -14,6 +14,7 @@ import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
 import { preloadAllAnimations } from "@/lib/preloadAssets";
+import { assetUrl } from "@/lib/assets";
 import type { GamePhase, GameStateSnapshot, PropType, GameMode, PropItem } from "@/lib/gameTypes";
 import type { ChickColor } from "@/components/CharacterViewer";
 import QRCode from "react-qr-code";
@@ -968,7 +969,7 @@ export default function Client() {
               <div className="relative w-full overflow-hidden rounded border border-border bg-black" style={{ aspectRatio: "873/457" }}>
                 <MockExamCamera />
                 <img
-                  src={`/PW/PW_Mock_${activeEvent.questionNum}_layer-2.png`}
+                  src={assetUrl(`/PW/PW_Mock_${activeEvent.questionNum}_layer-2.png`)}
                   alt="Mock exam layer 2"
                   className="absolute inset-0 w-full h-full object-contain pointer-events-none"
                   style={{ opacity: 0.85, mixBlendMode: 'multiply' }}
@@ -1086,7 +1087,7 @@ export default function Client() {
           />
 
           <img
-            src={`/PW/PW_Final_${examQuestionNum}_layer-${examLayer}.png`}
+            src={assetUrl(`/PW/PW_Final_${examQuestionNum}_layer-${examLayer}.png`)}
             alt={`Layer ${examLayer}`}
             className="absolute inset-0 w-full h-full object-contain pointer-events-none"
             style={{ opacity: examOpacity, transform: `scale(${examZoom})`, transformOrigin: "center center" }}

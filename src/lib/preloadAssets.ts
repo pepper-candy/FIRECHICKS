@@ -1,11 +1,12 @@
 import { useGLTF } from '@react-three/drei';
+import { assetUrl } from '@/lib/assets';
 
 const COLORS = ['Black', 'Blue', 'Cyan', 'Gold', 'Green', 'Pink', 'Red', 'Yellow'] as const;
 const ANIMS = ['Idle', 'Walking', 'Running', 'Victory'] as const;
 const ATTACK_COLORS = ['Black', 'Gold'] as const;
 
 function getPath(anim: string, color: string) {
-  return `/FireChick/FireChick_Animation/FireChick_${anim}/${anim}_${color}.glb`;
+  return assetUrl(`/FireChick/FireChick_Animation/FireChick_${anim}/${anim}_${color}.glb`);
 }
 
 // Build full list of GLB paths

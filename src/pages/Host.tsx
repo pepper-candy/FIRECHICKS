@@ -24,6 +24,7 @@ import {
   Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from
 '@/components/ui/tooltip';
 import type { PlayerGameStateSerializable } from '@/lib/gameTypes';
+import { assetUrl } from '@/lib/assets';
 
 // ─── Event Overlay (shows during mystery box events) ─────────────────────────
 function EventOverlay({ event, players, gameMode }: {event: GameEvent;players: Record<string, any>; gameMode?: string;}) {
@@ -44,7 +45,7 @@ function EventOverlay({ event, players, gameMode }: {event: GameEvent;players: R
             <span className="font-mono text-lg font-bold text-gray-800">{timeLeft}s</span>
           </div>
           <div className="w-full border-2 border-gray-300 rounded-xl overflow-hidden bg-white shadow-lg">
-            <img src={`/PW/PW_Mock_${event.questionNum}_layer-1.png`} alt="Layer 1" className="w-full" />
+            <img src={assetUrl(`/PW/PW_Mock_${event.questionNum}_layer-1.png`)} alt="Layer 1" className="w-full" />
           </div>
           <p className="text-xs font-mono text-gray-500">Players check their phones for layer 2!</p>
         </div>
@@ -483,7 +484,7 @@ export default function Host() {
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-30 bg-white border-2 border-accent rounded-xl p-4 max-w-md w-[90%] shadow-2xl">
             <p className="text-xs font-mono text-accent mb-2 text-center">📜 EXAM LAYER 1</p>
             <img
-            src={`/PW/PW_Final_${snapshot.examState.questionNum}_layer-1.png`}
+            src={assetUrl(`/PW/PW_Final_${snapshot.examState.questionNum}_layer-1.png`)}
             alt="Layer 1"
             className="w-full rounded" />
           

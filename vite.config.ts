@@ -7,10 +7,14 @@ import { componentTagger } from "lovable-tagger";
 export default defineConfig(({ mode }) => ({
   server: {
     host: "::",
-    port: 8080,
+    port: 2026,
     hmr: {
       overlay: false,
     },
+    allowedHosts: [
+      "disconcertedly-unctemplative-tammara.ngrok-free.dev",
+      ".ngrok-free.dev",  // This allows any ngrok subdomain
+    ],
   },
   plugins: [react(), mode === "development" && componentTagger()].filter(Boolean),
   resolve: {

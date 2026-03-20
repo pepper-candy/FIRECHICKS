@@ -3,6 +3,7 @@ import { useFrame } from '@react-three/fiber';
 import { useGLTF, useAnimations } from '@react-three/drei';
 import * as THREE from 'three';
 import * as SkeletonUtils from 'three/examples/jsm/utils/SkeletonUtils.js';
+import { assetUrl } from '@/lib/assets';
 
 const COLORS = ['Black', 'Blue', 'Cyan', 'Gold', 'Green', 'Pink', 'Red', 'Yellow'] as const;
 export type ChickColor = typeof COLORS[number];
@@ -18,7 +19,7 @@ interface Props {
 
 function getAnimPath(anim: AnimState, color: ChickColor) {
   const folder = `FireChick_${anim}`;
-  return `/FireChick/FireChick_Animation/${folder}/${anim}_${color}.glb`;
+  return assetUrl(`/FireChick/FireChick_Animation/${folder}/${anim}_${color}.glb`);
 }
 
 function CharacterModel({

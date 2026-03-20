@@ -6,6 +6,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { toast } from "sonner";
 import { CheckCircle2, ArrowLeft, Camera } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { assetUrl } from "@/lib/assets";
 
 const ANSWER_KEY: Record<string, Record<number, string>> = {
   Final: { 1: "A+", 2: "4.3", 3: "FIRE", 4: "RED" },
@@ -33,7 +34,7 @@ const PWExam = () => {
   const streamRef = useRef<MediaStream | null>(null);
 
   const prefix = category === "Final" ? "PW_Final" : "PW_Mock";
-  const overlayUrl = `/PW/${prefix}_${questionNum}_${layer}.png`;
+  const overlayUrl = assetUrl(`/PW/${prefix}_${questionNum}_${layer}.png`);
 
   const startCamera = useCallback(async () => {
     try {

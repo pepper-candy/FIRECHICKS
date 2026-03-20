@@ -1,6 +1,7 @@
 import { useRef, useEffect } from 'react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
+import { assetUrl } from '@/lib/assets';
 
 interface Props {
   questionNum: number;
@@ -71,7 +72,7 @@ export default function MockExamClient({
       <div className="relative w-full overflow-hidden rounded border border-border bg-black" style={{ aspectRatio: '873/457' }}>
         <MockExamCamera />
         <img
-          src={`/PW/PW_Mock_${questionNum}_layer-2.png`}
+          src={assetUrl(`/PW/PW_Mock_${questionNum}_layer-2.png`)}
           alt="Mock exam layer 2"
           className="absolute inset-0 w-full h-full object-contain pointer-events-none"
           style={{ opacity: 0.85, mixBlendMode: 'multiply' }}
