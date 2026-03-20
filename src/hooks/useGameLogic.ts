@@ -261,6 +261,7 @@ export function useGameLogic({ players, broadcast, gameMode }: UseGameLogicProps
         damageDealt: 0,
         speedMultiplier: 1,
         speedMultiplierUntil: 0,
+        flyCooldownUntil: 0,
         isMoving: false,
         isAttacking: false,
         attackAnimUntil: 0,
