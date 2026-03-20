@@ -530,6 +530,7 @@ export function useGameLogic({ players, broadcast, gameMode }: UseGameLogicProps
                   if (gs.stage === 1) {
                     gs.stage = 2;
                     gs.stageLabel = "Stage 2 & 3: Share Exam Tips with everyone!";
+                    gs.stageTransitionUntil = now + 5000;
                   }
                 }
               }
