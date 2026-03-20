@@ -485,7 +485,8 @@ export function useGameLogic({ players, broadcast, gameMode }: UseGameLogicProps
         const mode = gameModeRef.current;
         let inZoneBuilding = -1;
         for (const b of gs.buildings) {
-          if (b.hasTip && b.glowing && isInProtectedZone(chick.position.x, chick.position.z, b.id)) {
+          // Tips persist even after zone break — chick can obtain from any building with hasTip
+          if (b.hasTip && isInProtectedZone(chick.position.x, chick.position.z, b.id)) {
             inZoneBuilding = b.id;
             break;
           }
