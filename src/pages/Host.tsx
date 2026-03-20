@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, Suspense, useRef } from 'react';
 import { Canvas, useFrame } from '@react-three/fiber';
-import type { GameEvent } from '@/lib/gameTypes';
+import type { GameEvent, GameStateSnapshot } from '@/lib/gameTypes';
 import { useHostRoom, useAdvertiseRoom, type ConnectionMode } from '@/hooks/useGameRoom';
 import { useGameLogic } from '@/hooks/useGameLogic';
 import LobbyArena from '@/components/LobbyArena';
