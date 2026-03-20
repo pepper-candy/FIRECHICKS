@@ -244,9 +244,14 @@ export default function Client() {
   // Tips state — QR now displays in scanner box, not tip box
   const [tipQrCodes, setTipQrCodes] = useState<[string | null, string | null]>([null, null]);
   const [loadingTip, setLoadingTip] = useState<[boolean, boolean]>([false, false]);
+  const [tipCopyStartedAt, setTipCopyStartedAt] = useState<[number, number]>([0, 0]);
   // Active QR display in scanner area
   const [activeScannerQr, setActiveScannerQr] = useState<string | null>(null);
   const [scannerQrExpireAt, setScannerQrExpireAt] = useState(0);
+  // Local cooldown after QR expires (5s before re-click)
+  const [tipExpiryCooldown, setTipExpiryCooldown] = useState<[number, number]>([0, 0]);
+  // Track which tipIndex the current scanner QR is for
+  const [activeScannerTipIdx, setActiveScannerTipIdx] = useState<0 | 1>(0);
 
   // Exam state
   const [examLayer, setExamLayer] = useState<"1" | "2" | null>(null);
