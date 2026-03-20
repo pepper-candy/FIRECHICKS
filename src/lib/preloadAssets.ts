@@ -2,7 +2,8 @@ import { useGLTF } from '@react-three/drei';
 import { assetUrl } from '@/lib/assets';
 
 const COLORS = ['Black', 'Blue', 'Cyan', 'Gold', 'Green', 'Pink', 'Red', 'Yellow'] as const;
-const ANIMS = ['Idle', 'Walking', 'Running', 'Victory'] as const;
+// Walking_* glbs are not shipped — use Idle for slow movement in UI
+const ANIMS = ['Idle', 'Running', 'Victory'] as const;
 const ATTACK_COLORS = ['Black', 'Gold'] as const;
 
 function getPath(anim: string, color: string) {

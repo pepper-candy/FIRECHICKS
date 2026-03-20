@@ -34,14 +34,14 @@ interface BallState {
   vz: number;
 }
 
-type AnimState = "Idle" | "Walking" | "Running";
+type AnimState = "Idle" | "Running";
 
 function getAnimFromJoystick(jx: number, jy: number): { anim: AnimState; angle: number; magnitude: number } {
   const iy = -jy;
   const magnitude = Math.sqrt(jx * jx + iy * iy);
   if (magnitude < 0.05) return { anim: "Idle", angle: 0, magnitude: 0 };
   const angle = Math.atan2(-jx, iy);
-  const anim: AnimState = magnitude > 0.6 ? "Running" : "Walking";
+  const anim: AnimState = magnitude > 0.6 ? "Running" : "Idle";
   return { anim, angle, magnitude };
 }
 

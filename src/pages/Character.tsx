@@ -7,8 +7,7 @@ import Thumbstick from '@/components/Thumbstick';
 import { Button } from '@/components/ui/button';
 import * as THREE from 'three';
 import { preloadAllAnimations } from '@/lib/preloadAssets';
-
-type AnimState = 'Idle' | 'Walking' | 'Running' | 'Victory' | 'Attack';
+import type { AnimState } from '@/lib/gameTypes';
 
 const CAN_ATTACK: ChickColor[] = ['Black', 'Gold'];
 
@@ -49,11 +48,7 @@ export default function Character() {
     const angle = Math.atan2(-x, iy);
     setFacingAngle(angle);
 
-    if (magnitude > 0.6) {
-      setAnimState('Running');
-    } else {
-      setAnimState('Walking');
-    }
+    setAnimState(magnitude > 0.6 ? 'Running' : 'Idle');
   }, []);
 
   const handleIdleChange = useCallback((idle: boolean) => {

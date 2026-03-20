@@ -4,12 +4,11 @@ import { useGLTF, useAnimations } from '@react-three/drei';
 import * as THREE from 'three';
 import * as SkeletonUtils from 'three/examples/jsm/utils/SkeletonUtils.js';
 import { assetUrl } from '@/lib/assets';
+import type { AnimState } from '@/lib/gameTypes';
 
 const COLORS = ['Black', 'Blue', 'Cyan', 'Gold', 'Green', 'Pink', 'Red', 'Yellow'] as const;
 export type ChickColor = typeof COLORS[number];
 export { COLORS as CHICK_COLORS };
-
-type AnimState = 'Idle' | 'Walking' | 'Running' | 'Victory' | 'Attack';
 
 interface Props {
   color: ChickColor;
