@@ -1075,8 +1075,10 @@ export function useGameLogic({ players, broadcast, gameMode }: UseGameLogicProps
             b.zoneHealth = Math.max(0, b.zoneHealth - 1);
             player.actionScore += 0.5;
             if (b.zoneHealth <= 0) {
+              // Zone broken: tips remain obtainable, just unprotected
               b.zoneActive = false;
               b.glowing = false;
+              // Don't set hasTip=false or tipObtained=true — tips persist
               gs.eagleZoneStates.delete(player.connId);
             }
             break;
