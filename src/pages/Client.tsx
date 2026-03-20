@@ -139,6 +139,60 @@ function PropsStackBtn({ items, onUse }: { items: PropItem[]; onUse: (t: PropTyp
   );
 }
 
+// ─── Mock Exam Camera (auto-starts camera for visual cryptography) ──────────
+function MockExamCamera() {
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const streamRef = useRef<MediaStream | null>(null);
+
+  useEffect(() => {
+    navigator.mediaDevices
+      .getUserMedia({ video: { facingMode: { ideal: "environment" } } })
+      .then((stream) => {
+        streamRef.current = stream;
+        if (videoRef.current) videoRef.current.srcObject = stream;
+      })
+      .catch(console.error);
+
+    return () => {
+      streamRef.current?.getTracks().forEach((t) => t.stop());
+      streamRef.current = null;
+    };
+  }, []);
+
+  return (
+    <video
+      ref={videoRef}
+      autoPlay
+      playsInline
+      muted
+      className="w-full h-full object-cover"
+    />
+  );
+}
+
+// ─── Invincible Ripple Effect ─────────────────────────────────────────────────
+function InvincibleRipple() {
+  return (
+    <div className="fixed inset-0 pointer-events-none z-40 flex items-center justify-center">
+      <div
+        className="w-[200vw] h-[200vw] rounded-full border-4 animate-ping"
+        style={{
+          borderColor: 'hsl(45 100% 55% / 0.4)',
+          animationDuration: '1.5s',
+        }}
+      />
+      <div
+        className="absolute w-[150vw] h-[150vw] rounded-full border-2 animate-ping"
+        style={{
+          borderColor: 'hsl(45 100% 55% / 0.3)',
+          animationDuration: '1s',
+          animationDelay: '0.3s',
+        }}
+      />
+    </div>
+  );
+}
+
 // ─── Hitbox button for eagle ───────────────────────────────────────────────────
 function HitboxBtn({ onHit, inZone }: { onHit: () => void; inZone: boolean }) {
   return (
