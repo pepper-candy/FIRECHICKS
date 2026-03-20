@@ -131,6 +131,7 @@ interface GameStateRef {
   eagleZoneStates: Map<string, EagleZoneState>;
   activeEvent: GameEvent | null;
   eventCountdown: number;
+  stageTransitionUntil: number;
 }
 
 // ─── Hook ─────────────────────────────────────────────────────────────────────
