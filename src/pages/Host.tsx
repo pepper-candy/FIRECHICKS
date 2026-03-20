@@ -23,13 +23,31 @@ import {
 import type { PlayerGameStateSerializable } from '@/lib/gameTypes';
 
 // ─── Event Overlay (shows during mystery box events) ─────────────────────────
-function EventOverlay({ event, players }: {event: GameEvent;players: Record<string, any>;}) {
+function EventOverlay({ event, players, gameMode }: {event: GameEvent;players: Record<string, any>; gameMode?: string;}) {
   const now = Date.now();
   const aliveChicks = Object.values(players).filter((p: any) => !p.isEagle && p.alive);
   const chickTotal = aliveChicks.reduce((sum: number, p: any) => sum + (event.chickClicks[p.connId] ?? 0), 0);
   const eagleTotal = Object.values(players).filter((p: any) => p.isEagle && p.alive).
   reduce((sum: number, p: any) => sum + (event.eagleClicks[p.connId] ?? 0), 0);
   const timeLeft = Math.max(0, Math.ceil((event.endAt - now) / 1000));
+
+  // Mock exam active: show layer 1 full-screen centered with white bg
+  if (event.phase === 'active' && event.type === 'mock-exam' && event.questionNum) {
+    return (
+      <div className="absolute inset-0 z-40 flex items-center justify-center bg-white">
+        <div className="flex flex-col items-center gap-4 max-w-2xl w-full px-6">
+          <div className="flex items-center justify-between w-full">
+            <h2 className="text-lg font-pixel text-gray-800">📝 MOCK EXAM</h2>
+            <span className="font-mono text-lg font-bold text-gray-800">{timeLeft}s</span>
+          </div>
+          <div className="w-full border-2 border-gray-300 rounded-xl overflow-hidden bg-white shadow-lg">
+            <img src={`/PW/PW_Mock_${event.questionNum}_layer-1.png`} alt="Layer 1" className="w-full" />
+          </div>
+          <p className="text-xs font-mono text-gray-500">Players check their phones for layer 2!</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="absolute inset-0 z-30 flex items-center justify-center bg-background/80 backdrop-blur-sm">
@@ -46,37 +64,18 @@ function EventOverlay({ event, players }: {event: GameEvent;players: Record<stri
           </>
         }
 
-        {event.phase === 'active' && event.type === 'mock-exam' && event.questionNum &&
-        <>
-            <h2 className="text-lg font-pixel text-accent">📝 MOCK EXAM — {timeLeft}s</h2>
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <p className="text-xs font-mono text-muted-foreground mb-1">HOST (Layer 1)</p>
-                <img src={`/PW/PW_Mock_${event.questionNum}_layer-1.png`} alt="Layer 1" className="w-full rounded border border-border" />
-              </div>
-              <div>
-                <p className="text-xs font-mono text-muted-foreground mb-1">Players (Layer 2)</p>
-                <div className="w-full h-full border border-border rounded bg-muted/20 flex items-center justify-center">
-                  <span className="text-xs font-mono text-muted-foreground">On phones</span>
-                </div>
-              </div>
-            </div>
-            <p className="text-xs font-mono text-muted-foreground">Players check their phones for layer 2!</p>
-          </>
-        }
-
         {event.phase === 'active' && event.type === 'hitbox' &&
         <>
             <h2 className="text-lg font-pixel text-accent">👊 HITBOX BATTLE — {timeLeft}s</h2>
             <div className="flex justify-around">
               <div className="text-center">
                 <div className="text-4xl font-pixel text-primary">{chickTotal}</div>
-                <div className="text-xs font-mono text-muted-foreground">🐤 Chicks</div>
+                <div className="text-xs font-mono text-muted-foreground">🐤 Chicks (avg: {aliveChicks.length > 0 ? (chickTotal / aliveChicks.length).toFixed(1) : 0})</div>
               </div>
               <div className="text-2xl text-muted-foreground">vs</div>
               <div className="text-center">
                 <div className="text-4xl font-pixel text-destructive">{eagleTotal}</div>
-                <div className="text-xs font-mono text-muted-foreground">🦅 Eagle</div>
+                <div className="text-xs font-mono text-muted-foreground">🦅 Eagle{gameMode === '2v6' ? 's' : ''}</div>
               </div>
             </div>
             <p className="text-xs font-mono text-muted-foreground">TAP HITBOX AS FAST AS POSSIBLE!</p>
