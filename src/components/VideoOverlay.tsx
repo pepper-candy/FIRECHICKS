@@ -1,4 +1,5 @@
 import { useRef, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 
 interface Props {
   video: 'hurt' | 'dead' | null;
@@ -18,8 +19,8 @@ export default function VideoOverlay({ video, onComplete }: Props) {
 
   const src = video === 'dead' ? '/Animations/Dead.mp4' : '/Animations/Hurt.mp4';
 
-  return (
-    <div className="fixed inset-0 flex items-center justify-center bg-background/90" style={{ zIndex: 9999 }}>
+  return createPortal(
+    <div className="fixed inset-0 flex items-center justify-center bg-background/90" style={{ zIndex: 99999 }}>
       <video
         ref={videoRef}
         src={src}
@@ -28,7 +29,8 @@ export default function VideoOverlay({ video, onComplete }: Props) {
         playsInline
         muted={false}
       />
-    </div>
+    </div>,
+    document.body
   );
 }
 

@@ -1,4 +1,4 @@
-import { Suspense, useState, useEffect, useMemo, useRef, useCallback } from 'react';
+import { Suspense, useState, useEffect, useMemo, useRef } from 'react';
 import { Canvas, useThree } from '@react-three/fiber';
 import { useGLTF } from '@react-three/drei';
 import { PLAYER_COLORS } from '@/lib/playerColors';
@@ -19,8 +19,8 @@ function RotatingStaticCharacter({ modelPath, angle }: { modelPath: string; angl
 function CharacterCamera() {
   const { camera } = useThree();
   useEffect(() => {
-    camera.position.set(0, 2.8, 4.2);
-    camera.lookAt(0, 0.9, 0);
+    camera.position.set(0, 2.2, 3.8);
+    camera.lookAt(0, 0.6, 0);
     (camera as any).fov = 32;
     (camera as any).updateProjectionMatrix?.();
   }, [camera]);
@@ -31,14 +31,14 @@ export default function CharacterReveal({ colorIndex, isEagle }: Props) {
   const color = PLAYER_COLORS[colorIndex];
   const [angle, setAngle] = useState(0);
   const [progress, setProgress] = useState(0);
-  const [remaining, setRemaining] = useState(5);
+  const [remaining, setRemaining] = useState(7);
   const startRef = useRef(performance.now());
   const rafRef = useRef(0);
 
   useEffect(() => {
     startRef.current = performance.now();
     const totalRotation = Math.PI * 2 * 1.25;
-    const duration = 5000; // 5 seconds
+    const duration = 7000; // 7 seconds
 
     const tick = (time: number) => {
       const elapsed = time - startRef.current;
@@ -62,8 +62,9 @@ export default function CharacterReveal({ colorIndex, isEagle }: Props) {
 
   return (
     <div className="flex flex-col items-center justify-start h-dvh overflow-hidden w-full">
-      <div className="w-full flex-1" style={{ maxWidth: 380, minHeight: 0 }}>
-        <Canvas camera={{ position: [0, 2.8, 4.2], fov: 32 }}>
+      {/* Canvas takes 2/3 of screen height */}
+      <div className="w-full" style={{ maxWidth: 380, minHeight: 0, height: '66.67vh' }}>
+        <Canvas camera={{ position: [0, 2.2, 3.8], fov: 32 }}>
           <CharacterCamera />
           <ambientLight intensity={0.8} />
           <directionalLight position={[3, 6, 3]} intensity={1.2} />
@@ -74,6 +75,7 @@ export default function CharacterReveal({ colorIndex, isEagle }: Props) {
         </Canvas>
       </div>
 
+      {/* Info panel takes 1/3 */}
       <div className="flex flex-col items-center gap-1.5 px-4 pb-4 pt-1 w-full max-w-xs flex-shrink-0">
         <div
           className="w-full px-4 py-2 rounded-lg flex items-center gap-3 justify-center"

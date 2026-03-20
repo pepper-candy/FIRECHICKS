@@ -1268,6 +1268,8 @@ export function useGameLogic({ players, broadcast, gameMode }: UseGameLogicProps
           p.frozen = true;
           p.frozenUntil = now + FREEZE_DURATION;
           p.attackCooldownUntil = now + FREEZE_DURATION + ATTACK_COOLDOWN;
+          // Disable fly until attack is re-enabled (~18s total from hit)
+          p.flyCooldownUntil = Math.max(p.flyCooldownUntil, now + FREEZE_DURATION + ATTACK_COOLDOWN);
         }
       }
     }
