@@ -94,6 +94,51 @@ function PropsBtn({ items, onUse, isEagle, flyCooldownUntil }: { items: PropItem
   );
 }
 
+// ─── Props Stacked Button (shows all props visible, stacked downward) ───────
+function PropsStackBtn({ items, onUse }: { items: PropItem[]; onUse: (t: PropType) => void }) {
+  const available = items.filter((i) => i.count > 0);
+  
+  if (available.length === 0) {
+    return (
+      <div className="w-16 h-16 rounded-full border-2 border-muted bg-muted/20 flex items-center justify-center opacity-40">
+        <Zap className="w-6 h-6 text-muted-foreground" />
+      </div>
+    );
+  }
+
+  return (
+    <div className="relative flex flex-col items-center" style={{ touchAction: 'manipulation' }}>
+      {/* Stack all props, first on top, rest peeking underneath */}
+      <div className="relative" style={{ height: `${64 + (available.length - 1) * 16}px`, width: '64px' }}>
+        {available.map((item, i) => (
+          <button
+            key={item.type}
+            onPointerDown={(e) => { e.stopPropagation(); e.preventDefault(); onUse(item.type); }}
+            className="absolute left-0 w-16 h-16 rounded-full border-2 flex items-center justify-center transition-all active:scale-90"
+            style={{
+              top: `${i * 16}px`,
+              zIndex: available.length - i,
+              borderColor: PROP_COLORS[item.type],
+              color: PROP_COLORS[item.type],
+              boxShadow: `0 0 12px ${PROP_COLORS[item.type]}55`,
+              touchAction: 'manipulation',
+              backgroundColor: 'hsl(var(--card))',
+            }}
+          >
+            {PROP_ICONS[item.type]}
+            <span
+              className="absolute -top-1 -right-1 w-5 h-5 rounded-full text-[10px] font-bold flex items-center justify-center bg-card border"
+              style={{ borderColor: PROP_COLORS[item.type], color: PROP_COLORS[item.type] }}
+            >
+              {item.count}
+            </span>
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 // ─── Hitbox button for eagle ───────────────────────────────────────────────────
 function HitboxBtn({ onHit, inZone }: { onHit: () => void; inZone: boolean }) {
   return (
