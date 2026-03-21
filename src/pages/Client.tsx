@@ -1009,18 +1009,32 @@ export default function Client() {
     if (hasSubmittedMockExam) setHasSubmittedMockExam(false);
 
     if (activeEvent.phase === "result") {
+      const isHitbox = activeEvent.type === "hitbox";
+      // For mock exam, show individual result
+      const myMockCorrect = !isHitbox && activeEvent.chickClicks && myState ? (activeEvent.chickClicks[myState.connId] ?? 0) > 0 : false;
       return (
         <div className="flex flex-col items-center justify-center h-dvh overflow-hidden gap-4">
-          <h2 className="text-xl font-pixel text-accent">EVENT RESULT</h2>
-          <p
-            className="text-2xl font-pixel"
-            style={{ color: activeEvent.result === "chick" ? "hsl(145 80% 50%)" : "hsl(0 80% 55%)" }}
-          >
-            {activeEvent.result === "chick" ? "🐤 Chicks Win!" : "🦅 Eagle Wins!"}
-          </p>
-          <p className="text-xs font-mono text-muted-foreground">
-            {activeEvent.result === "chick" ? "+2 grades!" : "-2 grades for chicks"}
-          </p>
+          <h2 className="text-xl font-pixel text-accent">{isHitbox ? "👊 HITBOX" : "📝 MOCK EXAM"} RESULT</h2>
+          {isHitbox ? (
+            <>
+              <p className="text-2xl font-pixel" style={{ color: activeEvent.result === "chick" ? "hsl(145 80% 50%)" : "hsl(0 80% 55%)" }}>
+                {activeEvent.result === "chick" ? "🐤 Chicks Win!" : "🦅 Eagle Wins!"}
+              </p>
+              <p className="text-xs font-mono text-muted-foreground">
+                {activeEvent.result === "chick" ? "+2 grades!" : "-2 grades for chicks"}
+              </p>
+            </>
+          ) : (
+            <>
+              {isEagle ? (
+                <p className="text-lg font-pixel text-muted-foreground">Results announced</p>
+              ) : myMockCorrect ? (
+                <p className="text-2xl font-pixel" style={{ color: "hsl(145 80% 50%)" }}>✅ Correct! +1 grade</p>
+              ) : (
+                <p className="text-2xl font-pixel" style={{ color: "hsl(0 80% 55%)" }}>❌ Wrong! -2 grades</p>
+              )}
+            </>
+          )}
         </div>
       );
     }

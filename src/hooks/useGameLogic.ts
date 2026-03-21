@@ -774,29 +774,28 @@ export function useGameLogic({ players, broadcast, gameMode }: UseGameLogicProps
             }
           }
         } else if (ev.type === "mock-exam") {
-          const anyCorrect = (Object.values(ev.chickClicks) as number[]).some((v: number) => v > 0);
-          if (!anyCorrect) {
-            ev.result = "eagle";
-            for (const [, p] of gs.playerStates) {
-              if (!p.isEagle && p.alive) {
-                p.health = addSubGrades(p.health, -2);
-                // F-grade elimination
-                if (isDead(p.health)) {
-                  p.alive = false;
-                  p.health = 0;
-                  currentBroadcast({ type: "you-died", connId: p.connId });
-                }
-              }
+          // Individual scoring: each chick who didn't answer correctly gets -2
+          let correctCount = 0;
+          let totalChicks = 0;
+          for (const [, p] of gs.playerStates) {
+            if (p.isEagle || !p.alive) continue;
+            totalChicks++;
+            if (ev.chickClicks[p.connId] && ev.chickClicks[p.connId] > 0) {
+              correctCount++;
+              // +1 already applied in event-answer handler
+            } else {
+              // Wrong or didn't answer: -2 sub-grades
+              p.health = addSubGrades(p.health, -2);
             }
-          } else {
-            ev.result = "chick";
-            // F-grade elimination after mock exam chick-win too
-            for (const [, p] of gs.playerStates) {
-              if (!p.isEagle && p.alive && isDead(p.health)) {
-                p.alive = false;
-                p.health = 0;
-                currentBroadcast({ type: "you-died", connId: p.connId });
-              }
+          }
+          // Cosmetic result: majority correct = "chick", else "eagle"
+          ev.result = correctCount > totalChicks / 2 ? "chick" : "eagle";
+          // F-grade elimination after mock exam
+          for (const [, p] of gs.playerStates) {
+            if (!p.isEagle && p.alive && isDead(p.health)) {
+              p.alive = false;
+              p.health = 0;
+              currentBroadcast({ type: "you-died", connId: p.connId });
             }
           }
         }
