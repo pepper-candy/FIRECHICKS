@@ -725,6 +725,16 @@ function GameOverCeremony({ snapshot, gameMode }: { snapshot: GameStateSnapshot;
           </table>
         </div>
       </div>
+
+      {/* Play Again button */}
+      <div className="py-4 text-center">
+        <button
+          onClick={() => window.location.reload()}
+          className="px-8 py-3 rounded-lg border-2 border-primary bg-primary/10 text-primary font-pixel text-sm tracking-widest hover:bg-primary/20 transition-all"
+        >
+          ▶ PLAY AGAIN
+        </button>
+      </div>
     </div>
   );
 }
