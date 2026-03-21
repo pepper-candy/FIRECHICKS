@@ -1088,9 +1088,7 @@ export default function Client() {
       <div className="flex flex-col h-dvh overflow-hidden bg-background">
         {/* Header */}
         <div className="flex items-center justify-between p-3 border-b border-border">
-          <span className="text-xs font-pixel text-muted-foreground">
-            Layer {examLayer} {examLayer === "1" ? "(You have layer 1!)" : "(layer 2)"}
-          </span>
+          <span className="text-xs font-pixel text-accent">📝 FINAL EXAM</span>
           {gameState?.examState && (
             <span
               className={`text-sm font-bold font-mono ${gameState.examState.timeRemaining < 10 ? "text-destructive animate-pulse" : "text-accent"}`}
