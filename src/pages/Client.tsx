@@ -964,13 +964,27 @@ export default function Client() {
             <>
               {/* Layer 2 overlaid on camera for visual cryptography */}
               <div className="relative w-full overflow-hidden rounded border border-border bg-black" style={{ aspectRatio: "873/457" }}>
-                <MockExamCamera />
-                <img
-                  src={assetUrl(`/PW/PW_Mock_${activeEvent.questionNum}_layer-2.png`)}
-                  alt="Mock exam layer 2"
-                  className="absolute inset-0 w-full h-full object-contain pointer-events-none"
-                  style={{ opacity: 0.85, mixBlendMode: 'multiply' }}
-                />
+                <div style={{ transform: `scale(${mockExamZoom})`, transformOrigin: 'center center', width: '100%', height: '100%' }}>
+                  <MockExamCamera />
+                  <img
+                    src={assetUrl(`/PW/PW_Mock_${activeEvent.questionNum}_layer-2.png`)}
+                    alt="Mock exam layer 2"
+                    className="absolute inset-0 w-full h-full object-contain pointer-events-none"
+                    style={{ opacity: mockExamOpacity, mixBlendMode: 'multiply' }}
+                  />
+                </div>
+              </div>
+
+              {/* Zoom & Opacity sliders */}
+              <div className="flex gap-4 items-center">
+                <div className="flex-1 flex items-center gap-2">
+                  <span className="text-[10px] font-mono text-muted-foreground">🔍</span>
+                  <Slider value={[mockExamZoom]} min={0.5} max={1.25} step={0.05} onValueChange={([v]) => setMockExamZoom(v)} className="flex-1" />
+                </div>
+                <div className="flex-1 flex items-center gap-2">
+                  <span className="text-[10px] font-mono text-muted-foreground">👁</span>
+                  <Slider value={[mockExamOpacity]} min={0} max={1} step={0.05} onValueChange={([v]) => setMockExamOpacity(v)} className="flex-1" />
+                </div>
               </div>
 
               <div className="flex gap-2 mt-auto">
@@ -987,7 +1001,6 @@ export default function Client() {
                     }
                   }}
                 />
-
                 <Button
                   onClick={() => {
                     if (eventAnswer.trim()) {
