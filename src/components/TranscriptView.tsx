@@ -91,7 +91,8 @@ export default function Transcript({ players, winner }: Props) {
                 const color = PLAYER_COLORS[p.colorIndex];
                 const letter = gradeToLetter(p.health);
                 const gradeColor = getGradeColor(p.health);
-                const isWin = (winner === 'eagle' && p.isEagle) || (winner === 'chicks' && !p.isEagle);
+                const isDraw = winner === 'draw';
+                const isWin = !isDraw && ((winner === 'eagle' && p.isEagle) || (winner === 'chicks' && !p.isEagle));
 
                 return (
                   <tr key={p.connId} className="border-b border-border/50">
