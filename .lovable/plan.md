@@ -1,176 +1,94 @@
-# Separation & UI Enhancement Plan
 
-## Overview
 
-This plan addresses 7 major requests: (1) video overlay as a separate page, (2) minigames as separate pages, (3) final exam as separate page, (4) client controls separated by stage, (5) stage transitions with 5s pause, (6) props repositioned to left of thumbstick, (7) 2v6 room-full bug fix. The goal is to make each moment independently viewable and testable.
+# Fixes Plan — 7 Items
 
-## Architecture
+## 1. Mock Exam is Individual, Not Team Win
 
-```text
-NEW PREVIEW ROUTES (mock-data powered, for UI iteration):
-  /preview/video-hurt        — Hurt.mp4 playback page with skip
-  /preview/video-dead        — Dead.mp4 playback page with skip
-  /preview/mock-exam-host    — Mock exam host view
-  /preview/mock-exam-client  — Mock exam client view
-  /preview/hitbox-host       — Hitbox challenge host view
-  /preview/hitbox-client     — Hitbox challenge client view
-  /preview/final-exam-host   — Final exam host overlay
-  /preview/final-exam-client — Final exam client view
-  /preview/chick-stage1      — Chick controller stage 1 (social circle)
-  /preview/chick-stage23     — Chick controller stage 2-3 (exam tips)
-  /preview/eagle-control     — Eagle controller
-  /preview/stage-transition  — 5s stage transition screen
+**File: `src/hooks/useGameLogic.ts`** (lines 776-801)
 
-GAME FLOW CHANGES:
-  - Video plays on a full-page overlay (portaled) with skip button
-  - Stage transitions show a 5s interstitial on both host + client
-  - Props listed vertically to the left of thumbstick for chicks
-  - Bottom text shows current stage instructions for chicks
+Current logic: if any chick answers correctly → "chick" result with grade boost for all. If none → "eagle" result with -2 for all chicks.
+
+**Change to individual**: When mock exam time expires or all chicks submit:
+- Each chick who answered correctly: +1 sub-grade (already done in event-answer handler at line 1262-1268). No additional team reward.
+- Each chick who did NOT answer correctly: -2 sub-grades.
+- Eagles: no change.
+- `ev.result` becomes informational only — set to "chick" if majority got it right, "eagle" otherwise (cosmetic).
+- F-grade elimination still applies per-individual after grade changes.
+
+Also update the result display text on both host and client to show individual results ("Correct!" or "Wrong -2 grades") instead of team win/loss.
+
+## 2. Add Zoom & Opacity Controls to Mock Exam Client
+
+**File: `src/pages/Client.tsx`** (lines 949-1010, mock exam active section)
+
+Add `mockExamZoom` and `mockExamOpacity` state variables. Add `Slider` controls (same pattern as `/pw-exam` page lines 222-248) below the camera+layer view:
+- Zoom slider: min 0.5, max 1.25, step 0.05
+- Opacity slider: min 0, max 1, step 0.05
+- Apply zoom via `transform: scale(zoom)` and opacity to the layer-2 image overlay.
+
+Also update `MockExamClient.tsx` component to accept `zoom` and `opacity` props.
+
+## 3. Fix Mock Exam Timer on Client
+
+**File: `src/pages/Client.tsx`** (line 914)
+
+Current: `const timeLeft = Math.max(0, Math.ceil((activeEvent.endAt - now) / 1000));`
+
+The issue is that `activeEvent.endAt` is set during countdown phase as `now + 3000 + eventDuration`, but then reset in the game loop (line 741) to `now + EVENT_MOCK_DURATION` when transitioning to active. The client's `now` via `Date.now()` may be slightly offset from the host's `now`. This should work correctly — but the `endAt` in the serialized state might be stale if it was set during countdown and not updated after active phase begins.
+
+**Fix**: In `useGameLogic.ts` line 741, ensure `ev.endAt` is updated and broadcast. On client side, use `clockNow` (which is updated via interval) instead of inline `Date.now()` for consistency.
+
+## 4. Fix Props Button Overlap for Chicks
+
+**File: `src/pages/Client.tsx`** (`PropsStackBtn`, lines 98-141)
+
+Current: buttons are absolutely positioned with `top: i * 16px`, creating overlap. With 3 props, buttons overlap significantly.
+
+**Fix**: Change from overlapping stack to a simple vertical flex column with proper spacing:
 ```
+<div className="flex flex-col gap-2 items-center">
+  {available.map(item => (
+    <button key={item.type} ... className="w-14 h-14 rounded-full ..." />
+  ))}
+</div>
+```
+Remove the absolute positioning and calculated height. Each button gets its own space.
 
-## Detailed Plan
+## 5. Tip Copying Countdown After QR Scan (Stage 3)
 
-### 1. Video Overlay Page with Skip Button
+The copying countdown logic already exists (lines 488-508 in Client.tsx). The issue is likely that the tip state change isn't being detected on the receiver's side because the game state update for `tips[i]` isn't happening when a scan occurs.
 
-**File: `src/components/VideoOverlay.tsx**`
+**Verify in `useGameLogic.ts`**: When a `scan-result` message with a tip QR code is received, the receiver's `tips[i]` should be set to `true`. Check that this triggers the `prevTipsRef` diff in Client.tsx. If the scan handler doesn't update tips immediately but waits, add the state change. The `tipCopyStartedAt` and `loadingTip` states should then produce the "📋 Copying... 3s" countdown display in `TipsBox`.
 
-- Keep the portal approach but redesign: full-screen black background, video centered, skip button at bottom-right aligned with video's bottom edge.
-- Skip button: small "SKIP ▶" text button, calls `onComplete()`.
-- Ensure `z-index: 99999` on the portal container.
+## 6. Eagle Fly Button Shows Cooldown During Attack Cooldown
 
-### 2. Extract Minigame/Event Components
+**File: `src/pages/Client.tsx`** (eagle layout, lines 1233-1246)
 
-**New files:**
+Current: `PropsBtn` shows fly cooldown based on `flyCooldownUntil` only. But fly is also disabled during `attackCooldownUntil`.
 
-- `src/components/events/HitboxChallenge.tsx` — Host view (score display, countdown)
-- `src/components/events/HitboxClient.tsx` — Client hit button
-- `src/components/events/MockExamHost.tsx` — Host layer 1 display (portal)
-- `src/components/events/MockExamClient.tsx` — Client layer 2 + camera + submit
-- `src/components/events/EventCountdown.tsx` — 3-2-1 countdown shared component
-- `src/components/events/EventResult.tsx` — Result display shared component
+**Fix**: Pass `effectiveFlyCooldown = Math.max(myState.flyCooldownUntil, myState.attackCooldownUntil)` as the `flyCooldownUntil` prop to `PropsBtn`. This makes the fly button show the attack cooldown timer when it's longer than the fly cooldown.
 
-These are extracted from inline code in `Host.tsx` (lines 28-100) and `Client.tsx` (lines 908-1029). The main pages import and use these components; preview routes render them standalone with mock props.
+Also apply same fix in `EagleControls.tsx` (line 66-67): use `Math.max(flyCooldownUntil, attackCooldownUntil)` — add `attackCooldownUntil` as a prop.
 
-### 3. Extract Final Exam Components
+## 7. LEAVE Button Redirects to `/`
 
-**New files:**
+**File: `src/pages/Client.tsx`**
 
-- `src/components/exam/FinalExamHost.tsx` — Host exam overlay (layer 1 display when holder dies)
-- `src/components/exam/FinalExamClient.tsx` — Client exam view (camera + layer overlay + answer input)
-- `src/components/exam/EagleExamView.tsx` — Eagle "distract" message
+Multiple LEAVE/DISCONNECT buttons call `disconnect()` but don't navigate. Fix all disconnect buttons to also call `navigate("/")`:
 
-Extracted from `Client.tsx` lines 1032-1141 and `Host.tsx` lines 479-489.
-
-### 4. Extract Client Control Layouts by Stage
-
-**New files:**
-
-- `src/components/controls/ChickStage1Controls.tsx` — Social circle: scanner + 2 "Meet" boxes + thumbstick + props
-- `src/components/controls/ChickStage23Controls.tsx` — Exam tips: scanner (with QR display) + 2 tip boxes + thumbstick + props
-- `src/components/controls/EagleControls.tsx` — Hitbox + thumbstick + attack + fly prop
-
-Extracted from `Client.tsx` lines 1202-1308. The main `Client.tsx` switches between these based on `stage`.
-
-### 5. Stage Transition Interstitial
-
-**New file: `src/components/StageTransition.tsx**`
-
-- Full-screen overlay showing stage number, name, and brief instruction for chicks.
-- Displays for 5 seconds, then auto-dismisses.
-- Stage info:
-  - Stage 1: "Social Circle — Meet ALL other Chicks! 🐣"
-  - Stage 2-3: "Exam Tips — Get TIPS from glowing buildings, then SHARE!"
-  - Stage 4: "Final Exam — Run to any building and finish the EXAM!"
-
-**File: `src/hooks/useGameLogic.ts**`
-
-- When `stage` changes, set a `stageTransitionUntil = now + 5000` in game state.
-- Freeze all movement during transition.
-- Broadcast transition state so both host and client show it.
-
-**File: `src/lib/gameTypes.ts**`
-
-- Add `stageTransitionUntil: number` to `GameStateSnapshot`.
-
-### 6. Props Repositioned for Chicks
-
-**File: `src/components/controls/ChickStage1Controls.tsx` & `ChickStage23Controls.tsx**`
-
-- Layout: scanner at top, tip boxes under scanner, then a row with [props column on left | thumbstick centered-right].
-- Props listed vertically (each as a circle button with icon + count badge), spaced with `gap-2`.
-- Thumbstick positioned: `marginLeft = propsColumnWidth`, then centered in remaining width.
-- Eagle layout unchanged (attack + fly at bottom).
-
-### 7. Bottom Stage Instructions for Chicks
-
-**In each chick control component**, below the `<Color> Chick` indicator:
-
-- Small text showing current objective:
-  - Stage 0: "Walk to other chicks to meet them"
-  - Stage 1: "Enter glowing buildings for 7s to get tips"
-  - Stage 2: "Tap tips to share QR, scan others' tips"
-  - Stage 3: "Run to any building to start the exam"
-
-### 8. Fix 2v6 Room-Full Bug (Critical)
-
-**Root cause**: `allocateColor()` in both `useHostWebRTC` (line 157) and `useHostSupabase` (line 324) always passes `EAGLE_COLOR_INDICES` as excluded indices, so Black and Gold can never be assigned, limiting the room to 6 players max.
-
-**Fix in `src/hooks/useGameRoom.ts`:**
-
-- The host hooks need to know the current game mode. Add a `gameModeRef` that the Host page updates.
-- Export a `setGameMode` function from the hook, or accept it as a parameter.
-- Simpler approach: have `useHostRoom` accept a `gameMode` parameter. When `gameMode === '2v6'`, pass empty array `[]` as `excludeIndices` to `allocateColor()`. When `'1v3'`, pass `EAGLE_COLOR_INDICES`.
-- Apply same fix to both WebRTC and Supabase host implementations.
-- Also ensure the ColorPicker in 2v6 shows all 8 colors (4 top, 4 bottom) — this already works per `ColorPicker.tsx` logic, but verify the `usedColors` broadcast includes eagle indices.
-
-### 9. Preview Routes
-
-**File: `src/App.tsx**` — Add ~12 new preview routes:
-
-
-| Route                        | Component                           |
-| ---------------------------- | ----------------------------------- |
-| `/preview/video-hurt`        | VideoOverlay with `video="hurt"`    |
-| `/preview/video-dead`        | VideoOverlay with `video="dead"`    |
-| `/preview/mock-exam-host`    | MockExamHost with mock data         |
-| `/preview/mock-exam-client`  | MockExamClient with mock data       |
-| `/preview/hitbox-host`       | HitboxChallenge with mock data      |
-| `/preview/hitbox-client`     | HitboxClient with mock data         |
-| `/preview/final-exam-host`   | FinalExamHost with mock data        |
-| `/preview/final-exam-client` | FinalExamClient with mock data      |
-| `/preview/chick-stage1`      | ChickStage1Controls with mock data  |
-| `/preview/chick-stage23`     | ChickStage23Controls with mock data |
-| `/preview/eagle-control`     | EagleControls with mock data        |
-| `/preview/stage-transition`  | StageTransition with mock stage     |
-
-
-**New files in `src/pages/preview/**` — Thin wrappers that render each component with mock props.
+- Line 819 (color picker DISCONNECT): add `navigate("/")`
+- Line 849 (dead screen LEAVE): add `navigate("/")`
+- Line 903 (gameover LEAVE): replace current handler with `{ disconnect(); navigate("/"); }`
+- Line 1208 (gameplay ✕ button): add `navigate("/")`
 
 ---
 
-## Files Summary
+## Files Modified Summary
 
+| File | Changes |
+|------|---------|
+| `src/hooks/useGameLogic.ts` | Mock exam individual scoring, verify tip scan handler |
+| `src/pages/Client.tsx` | Mock exam zoom/opacity controls, timer fix, props layout fix, fly cooldown display, navigate on disconnect |
+| `src/components/controls/EagleControls.tsx` | Accept `attackCooldownUntil` prop for fly disable display |
+| `src/components/events/MockExamClient.tsx` | Accept zoom/opacity props |
 
-| File                                               | Action    | Changes                                |
-| -------------------------------------------------- | --------- | -------------------------------------- |
-| `src/components/VideoOverlay.tsx`                  | Modify    | Add skip button, keep portal           |
-| `src/components/events/HitboxChallenge.tsx`        | New       | Host hitbox view                       |
-| `src/components/events/HitboxClient.tsx`           | New       | Client hitbox button                   |
-| `src/components/events/MockExamHost.tsx`           | New       | Host mock exam layer 1                 |
-| `src/components/events/MockExamClient.tsx`         | New       | Client mock exam layer 2 + camera      |
-| `src/components/events/EventCountdown.tsx`         | New       | Shared 3-2-1 countdown                 |
-| `src/components/events/EventResult.tsx`            | New       | Shared result display                  |
-| `src/components/exam/FinalExamHost.tsx`            | New       | Host exam overlay                      |
-| `src/components/exam/FinalExamClient.tsx`          | New       | Client exam view                       |
-| `src/components/exam/EagleExamView.tsx`            | New       | Eagle distract view                    |
-| `src/components/controls/ChickStage1Controls.tsx`  | New       | Chick stage 1 controller               |
-| `src/components/controls/ChickStage23Controls.tsx` | New       | Chick stage 2-3 controller             |
-| `src/components/controls/EagleControls.tsx`        | New       | Eagle controller                       |
-| `src/components/StageTransition.tsx`               | New       | 5s stage interstitial                  |
-| `src/hooks/useGameRoom.ts`                         | Modify    | Accept gameMode, fix allocateColor     |
-| `src/hooks/useGameLogic.ts`                        | Modify    | Stage transition freeze                |
-| `src/lib/gameTypes.ts`                             | Modify    | Add stageTransitionUntil               |
-| `src/pages/Host.tsx`                               | Modify    | Use extracted components               |
-| `src/pages/Client.tsx`                             | Modify    | Use extracted components, props layout |
-| `src/pages/preview/*.tsx`                          | New (~12) | Preview wrappers                       |
-| `src/App.tsx`                                      | Modify    | Add preview routes                     |
