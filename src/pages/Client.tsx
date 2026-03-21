@@ -906,7 +906,7 @@ export default function Client() {
   const activeEvent = gameState?.activeEvent;
   if (activeEvent && gamePhase === "playing") {
     const now = Date.now();
-    const timeLeft = Math.max(0, Math.ceil((activeEvent.endAt - now) / 1000));
+    const timeLeft = Math.max(0, Math.ceil((activeEvent.endAt - clockNow) / 1000));
 
     if (activeEvent.phase === "countdown") {
       const cdSec = Math.max(1, 3 - Math.floor((now - activeEvent.startedAt) / 1000));
