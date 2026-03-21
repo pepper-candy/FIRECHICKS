@@ -134,7 +134,7 @@ export default function Host() {
   const [focusPanelOpen, setFocusPanelOpen] = useState(false);
   const { roomCode, players, kickPlayer, kickAllPlayers, broadcast, onClientMessage, gameModeRef } = useHostRoom(mode);
 
-  useAdvertiseRoom(roomCode, mode);
+  useAdvertiseRoom(phase === 'lobby' ? roomCode : '', mode);
 
   const {
     phase,
