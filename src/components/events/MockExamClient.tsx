@@ -1,6 +1,7 @@
 import { useRef, useEffect } from 'react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
+import { Slider } from '@/components/ui/slider';
 import { assetUrl } from '@/lib/assets';
 
 interface Props {
@@ -11,6 +12,10 @@ interface Props {
   answer: string;
   onAnswerChange: (v: string) => void;
   onSubmit: () => void;
+  zoom?: number;
+  opacity?: number;
+  onZoomChange?: (v: number) => void;
+  onOpacityChange?: (v: number) => void;
 }
 
 function MockExamCamera() {
@@ -43,6 +48,10 @@ export default function MockExamClient({
   answer,
   onAnswerChange,
   onSubmit,
+  zoom = 1,
+  opacity = 0.85,
+  onZoomChange,
+  onOpacityChange,
 }: Props) {
   if (isEagle) {
     return (
@@ -63,21 +72,55 @@ export default function MockExamClient({
   }
 
   return (
-    <div className="flex flex-col h-full p-4 gap-4">
+    <div className="flex flex-col h-full p-4 gap-3">
       <div className="flex justify-between items-center">
         <h2 className="text-sm font-pixel text-accent">MOCK EXAM</h2>
         <span className="font-mono text-sm text-accent">{timeLeft}s</span>
       </div>
 
       <div className="relative w-full overflow-hidden rounded border border-border bg-black" style={{ aspectRatio: '873/457' }}>
-        <MockExamCamera />
-        <img
-          src={assetUrl(`/PW/PW_Mock_${questionNum}_layer-2.png`)}
-          alt="Mock exam layer 2"
-          className="absolute inset-0 w-full h-full object-contain pointer-events-none"
-          style={{ opacity: 0.85, mixBlendMode: 'multiply' }}
-        />
+        <div style={{ transform: `scale(${zoom})`, transformOrigin: 'center center', width: '100%', height: '100%' }}>
+          <MockExamCamera />
+          <img
+            src={assetUrl(`/PW/PW_Mock_${questionNum}_layer-2.png`)}
+            alt="Mock exam layer 2"
+            className="absolute inset-0 w-full h-full object-contain pointer-events-none"
+            style={{ opacity, mixBlendMode: 'multiply' }}
+          />
+        </div>
       </div>
+
+      {/* Zoom & Opacity sliders */}
+      {(onZoomChange || onOpacityChange) && (
+        <div className="flex gap-4 items-center">
+          {onZoomChange && (
+            <div className="flex-1 flex items-center gap-2">
+              <span className="text-[10px] font-mono text-muted-foreground whitespace-nowrap">🔍</span>
+              <Slider
+                value={[zoom]}
+                min={0.5}
+                max={1.25}
+                step={0.05}
+                onValueChange={([v]) => onZoomChange(v)}
+                className="flex-1"
+              />
+            </div>
+          )}
+          {onOpacityChange && (
+            <div className="flex-1 flex items-center gap-2">
+              <span className="text-[10px] font-mono text-muted-foreground whitespace-nowrap">👁</span>
+              <Slider
+                value={[opacity]}
+                min={0}
+                max={1}
+                step={0.05}
+                onValueChange={([v]) => onOpacityChange(v)}
+                className="flex-1"
+              />
+            </div>
+          )}
+        </div>
+      )}
 
       <div className="flex gap-2 mt-auto">
         <Input
