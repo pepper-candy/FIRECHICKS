@@ -79,15 +79,13 @@ export default function MockExamClient({
       </div>
 
       <div className="relative w-full overflow-hidden rounded border border-border bg-black" style={{ aspectRatio: '873/457' }}>
-        <div style={{ transform: `scale(${zoom})`, transformOrigin: 'center center', width: '100%', height: '100%' }}>
-          <MockExamCamera />
-          <img
-            src={assetUrl(`/PW/PW_Mock_${questionNum}_layer-2.png`)}
-            alt="Mock exam layer 2"
-            className="absolute inset-0 w-full h-full object-contain pointer-events-none"
-            style={{ opacity, mixBlendMode: 'multiply' }}
-          />
-        </div>
+        <MockExamCamera />
+        <img
+          src={assetUrl(`/PW/PW_Mock_${questionNum}_layer-2.png`)}
+          alt="Mock exam layer 2"
+          className="absolute inset-0 w-full h-full object-contain pointer-events-none"
+          style={{ opacity, mixBlendMode: 'multiply', transform: `scale(${zoom})`, transformOrigin: 'center center' }}
+        />
       </div>
 
       {/* Zoom & Opacity sliders */}
