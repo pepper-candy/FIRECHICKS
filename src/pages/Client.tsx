@@ -1200,7 +1200,7 @@ export default function Client() {
         <Button
           variant="ghost"
           size="sm"
-          onClick={disconnect}
+          onClick={() => { disconnect(); navigate("/"); }}
           className="text-[10px] font-mono text-muted-foreground/60 h-6 px-2"
         >
           ✕
