@@ -811,7 +811,7 @@ export default function Client() {
         <Button
           variant="outline"
           size="sm"
-          onClick={disconnect}
+          onClick={() => { disconnect(); navigate("/"); }}
           className="text-xs font-mono text-destructive border-destructive/30"
         >
           DISCONNECT
