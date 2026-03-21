@@ -95,47 +95,42 @@ function PropsBtn({ items, onUse, isEagle, flyCooldownUntil }: { items: PropItem
   );
 }
 
-// ─── Props Stacked Button (shows all props visible, stacked downward) ───────
+// ─── Props Stacked Button (shows all props visible, vertical flex) ──────────
 function PropsStackBtn({ items, onUse }: { items: PropItem[]; onUse: (t: PropType) => void }) {
   const available = items.filter((i) => i.count > 0);
   
   if (available.length === 0) {
     return (
-      <div className="w-16 h-16 rounded-full border-2 border-muted bg-muted/20 flex items-center justify-center opacity-40">
-        <Zap className="w-6 h-6 text-muted-foreground" />
+      <div className="w-14 h-14 rounded-full border-2 border-muted bg-muted/20 flex items-center justify-center opacity-40">
+        <Zap className="w-5 h-5 text-muted-foreground" />
       </div>
     );
   }
 
   return (
-    <div className="relative flex flex-col items-center" style={{ touchAction: 'manipulation' }}>
-      {/* Stack all props, first on top, rest peeking underneath */}
-      <div className="relative" style={{ height: `${64 + (available.length - 1) * 16}px`, width: '64px' }}>
-        {available.map((item, i) => (
-          <button
-            key={item.type}
-            onPointerDown={(e) => { e.stopPropagation(); e.preventDefault(); onUse(item.type); }}
-            className="absolute left-0 w-16 h-16 rounded-full border-2 flex items-center justify-center transition-all active:scale-90"
-            style={{
-              top: `${i * 16}px`,
-              zIndex: available.length - i,
-              borderColor: PROP_COLORS[item.type],
-              color: PROP_COLORS[item.type],
-              boxShadow: `0 0 12px ${PROP_COLORS[item.type]}55`,
-              touchAction: 'manipulation',
-              backgroundColor: 'hsl(var(--card))',
-            }}
+    <div className="flex flex-col gap-2 items-center" style={{ touchAction: 'manipulation' }}>
+      {available.map((item) => (
+        <button
+          key={item.type}
+          onPointerDown={(e) => { e.stopPropagation(); e.preventDefault(); onUse(item.type); }}
+          className="relative w-14 h-14 rounded-full border-2 flex items-center justify-center transition-all active:scale-90"
+          style={{
+            borderColor: PROP_COLORS[item.type],
+            color: PROP_COLORS[item.type],
+            boxShadow: `0 0 12px ${PROP_COLORS[item.type]}55`,
+            touchAction: 'manipulation',
+            backgroundColor: 'hsl(var(--card))',
+          }}
+        >
+          {PROP_ICONS[item.type]}
+          <span
+            className="absolute -top-1 -right-1 w-5 h-5 rounded-full text-[10px] font-bold flex items-center justify-center bg-card border"
+            style={{ borderColor: PROP_COLORS[item.type], color: PROP_COLORS[item.type] }}
           >
-            {PROP_ICONS[item.type]}
-            <span
-              className="absolute -top-1 -right-1 w-5 h-5 rounded-full text-[10px] font-bold flex items-center justify-center bg-card border"
-              style={{ borderColor: PROP_COLORS[item.type], color: PROP_COLORS[item.type] }}
-            >
-              {item.count}
-            </span>
-          </button>
-        ))}
-      </div>
+            {item.count}
+          </span>
+        </button>
+      ))}
     </div>
   );
 }
@@ -330,6 +325,8 @@ export default function Client() {
   const [isDead, setIsDead] = useState(false);
   const [colorChosen, setColorChosen] = useState(false);
   const [hasSubmittedMockExam, setHasSubmittedMockExam] = useState(false);
+  const [mockExamZoom, setMockExamZoom] = useState(1);
+  const [mockExamOpacity, setMockExamOpacity] = useState(0.85);
   const connIdRef = useRef<string>("");
 
   // Event state
@@ -816,7 +813,7 @@ export default function Client() {
         <Button
           variant="outline"
           size="sm"
-          onClick={disconnect}
+          onClick={() => { disconnect(); navigate("/"); }}
           className="text-xs font-mono text-destructive border-destructive/30"
         >
           DISCONNECT
@@ -846,7 +843,7 @@ export default function Client() {
         <Button
           variant="outline"
           size="sm"
-          onClick={disconnect}
+          onClick={() => { disconnect(); navigate("/"); }}
           className="mt-4 text-xs font-mono text-destructive border-destructive/30"
         >
           LEAVE
@@ -900,7 +897,7 @@ export default function Client() {
         )}
         {winner === 'draw' && <p className="text-lg font-pixel" style={{ color: 'hsl(45 100% 55%)' }}>🤝 It's a Draw!</p>}
         {amWinner && <p className="text-lg font-pixel text-primary text-glow-green">🎉 YOU WIN!</p>}
-        <Button variant="outline" size="sm" onClick={() => { disconnect(); setGamePhase("lobby"); setGameState(null); setIsDead(false); }} className="text-xs font-mono">
+        <Button variant="outline" size="sm" onClick={() => { disconnect(); navigate("/"); }} className="text-xs font-mono">
           LEAVE
         </Button>
       </div>
@@ -911,7 +908,7 @@ export default function Client() {
   const activeEvent = gameState?.activeEvent;
   if (activeEvent && gamePhase === "playing") {
     const now = Date.now();
-    const timeLeft = Math.max(0, Math.ceil((activeEvent.endAt - now) / 1000));
+    const timeLeft = Math.max(0, Math.ceil((activeEvent.endAt - clockNow) / 1000));
 
     if (activeEvent.phase === "countdown") {
       const cdSec = Math.max(1, 3 - Math.floor((now - activeEvent.startedAt) / 1000));
@@ -967,13 +964,27 @@ export default function Client() {
             <>
               {/* Layer 2 overlaid on camera for visual cryptography */}
               <div className="relative w-full overflow-hidden rounded border border-border bg-black" style={{ aspectRatio: "873/457" }}>
-                <MockExamCamera />
-                <img
-                  src={assetUrl(`/PW/PW_Mock_${activeEvent.questionNum}_layer-2.png`)}
-                  alt="Mock exam layer 2"
-                  className="absolute inset-0 w-full h-full object-contain pointer-events-none"
-                  style={{ opacity: 0.85, mixBlendMode: 'multiply' }}
-                />
+                <div style={{ transform: `scale(${mockExamZoom})`, transformOrigin: 'center center', width: '100%', height: '100%' }}>
+                  <MockExamCamera />
+                  <img
+                    src={assetUrl(`/PW/PW_Mock_${activeEvent.questionNum}_layer-2.png`)}
+                    alt="Mock exam layer 2"
+                    className="absolute inset-0 w-full h-full object-contain pointer-events-none"
+                    style={{ opacity: mockExamOpacity, mixBlendMode: 'multiply' }}
+                  />
+                </div>
+              </div>
+
+              {/* Zoom & Opacity sliders */}
+              <div className="flex gap-4 items-center">
+                <div className="flex-1 flex items-center gap-2">
+                  <span className="text-[10px] font-mono text-muted-foreground">🔍</span>
+                  <Slider value={[mockExamZoom]} min={0.5} max={1.25} step={0.05} onValueChange={([v]) => setMockExamZoom(v)} className="flex-1" />
+                </div>
+                <div className="flex-1 flex items-center gap-2">
+                  <span className="text-[10px] font-mono text-muted-foreground">👁</span>
+                  <Slider value={[mockExamOpacity]} min={0} max={1} step={0.05} onValueChange={([v]) => setMockExamOpacity(v)} className="flex-1" />
+                </div>
               </div>
 
               <div className="flex gap-2 mt-auto">
@@ -990,7 +1001,6 @@ export default function Client() {
                     }
                   }}
                 />
-
                 <Button
                   onClick={() => {
                     if (eventAnswer.trim()) {
@@ -1014,18 +1024,32 @@ export default function Client() {
     if (hasSubmittedMockExam) setHasSubmittedMockExam(false);
 
     if (activeEvent.phase === "result") {
+      const isHitbox = activeEvent.type === "hitbox";
+      // For mock exam, show individual result
+      const myMockCorrect = !isHitbox && activeEvent.chickClicks && myState ? (activeEvent.chickClicks[myState.connId] ?? 0) > 0 : false;
       return (
         <div className="flex flex-col items-center justify-center h-dvh overflow-hidden gap-4">
-          <h2 className="text-xl font-pixel text-accent">EVENT RESULT</h2>
-          <p
-            className="text-2xl font-pixel"
-            style={{ color: activeEvent.result === "chick" ? "hsl(145 80% 50%)" : "hsl(0 80% 55%)" }}
-          >
-            {activeEvent.result === "chick" ? "🐤 Chicks Win!" : "🦅 Eagle Wins!"}
-          </p>
-          <p className="text-xs font-mono text-muted-foreground">
-            {activeEvent.result === "chick" ? "+2 grades!" : "-2 grades for chicks"}
-          </p>
+          <h2 className="text-xl font-pixel text-accent">{isHitbox ? "👊 HITBOX" : "📝 MOCK EXAM"} RESULT</h2>
+          {isHitbox ? (
+            <>
+              <p className="text-2xl font-pixel" style={{ color: activeEvent.result === "chick" ? "hsl(145 80% 50%)" : "hsl(0 80% 55%)" }}>
+                {activeEvent.result === "chick" ? "🐤 Chicks Win!" : "🦅 Eagle Wins!"}
+              </p>
+              <p className="text-xs font-mono text-muted-foreground">
+                {activeEvent.result === "chick" ? "+2 grades!" : "-2 grades for chicks"}
+              </p>
+            </>
+          ) : (
+            <>
+              {isEagle ? (
+                <p className="text-lg font-pixel text-muted-foreground">Results announced</p>
+              ) : myMockCorrect ? (
+                <p className="text-2xl font-pixel" style={{ color: "hsl(145 80% 50%)" }}>✅ Correct! +1 grade</p>
+              ) : (
+                <p className="text-2xl font-pixel" style={{ color: "hsl(0 80% 55%)" }}>❌ Wrong! -2 grades</p>
+              )}
+            </>
+          )}
         </div>
       );
     }
@@ -1205,7 +1229,7 @@ export default function Client() {
         <Button
           variant="ghost"
           size="sm"
-          onClick={disconnect}
+          onClick={() => { disconnect(); navigate("/"); }}
           className="text-[10px] font-mono text-muted-foreground/60 h-6 px-2"
         >
           ✕
@@ -1240,7 +1264,7 @@ export default function Client() {
                   disabled={myState.frozen || !!gameState?.videoPlaying}
                 />
 
-                <PropsBtn items={myState.props ?? []} onUse={handlePropUse} isEagle={true} flyCooldownUntil={myState.flyCooldownUntil} />
+                <PropsBtn items={myState.props ?? []} onUse={handlePropUse} isEagle={true} flyCooldownUntil={Math.max(myState.flyCooldownUntil ?? 0, myState.attackCooldownUntil ?? 0)} />
               </>
             )}
           </div>
