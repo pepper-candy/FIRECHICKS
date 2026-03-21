@@ -6,7 +6,7 @@ import CharacterViewer, { CHICK_COLORS, type ChickColor } from '@/components/Cha
 import Thumbstick from '@/components/Thumbstick';
 import { Button } from '@/components/ui/button';
 import * as THREE from 'three';
-import { preloadAllAnimations } from '@/lib/preloadAssets';
+import { useAssetLoading } from '@/context/AssetLoadingContext';
 import type { AnimState } from '@/lib/gameTypes';
 
 const CAN_ATTACK: ChickColor[] = ['Black', 'Gold'];
@@ -31,8 +31,13 @@ export default function Character() {
   const [isPanning, setIsPanning] = useState(false);
   const panStartRef = useRef<{ x: number; y: number; pos: [number, number, number] } | null>(null);
 
+  // Ensure character animation GLBs are loaded if user lands here directly (e.g. bookmark)
+  const { characterAnimationsReady, startCharacterAnimationPreload } = useAssetLoading();
   useEffect(() => {
-    preloadAllAnimations();
+    if (!characterAnimationsReady) {
+      startCharacterAnimationPreload();
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const handleMove = useCallback((x: number, y: number) => {

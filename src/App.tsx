@@ -3,6 +3,7 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { AssetLoadingProvider } from "@/context/AssetLoadingContext";
 import PWExam from "./pages/PWExam";
 import GameIndex from "./pages/GameIndex";
 import Host from "./pages/Host";
@@ -36,11 +37,12 @@ const queryClient = new QueryClient();
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <Toaster />
-      <Sonner />
-      <BrowserRouter>
-        <Routes>
+    <AssetLoadingProvider>
+      <TooltipProvider>
+        <Toaster />
+        <Sonner />
+        <BrowserRouter>
+          <Routes>
           <Route path="/" element={<GameIndex />} />
           <Route path="/pw-exam" element={<PWExam />} />
           <Route path="/pw" element={<PWExam />} />
@@ -70,9 +72,10 @@ const App = () => (
           <Route path="/preview/eagle-control" element={<PreviewEagleControl />} />
           <Route path="/preview/stage-transition" element={<PreviewStageTransition />} />
           <Route path="*" element={<NotFound />} />
-        </Routes>
-      </BrowserRouter>
-    </TooltipProvider>
+          </Routes>
+        </BrowserRouter>
+      </TooltipProvider>
+    </AssetLoadingProvider>
   </QueryClientProvider>
 );
 
