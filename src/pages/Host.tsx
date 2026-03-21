@@ -134,8 +134,6 @@ export default function Host() {
   const [focusPanelOpen, setFocusPanelOpen] = useState(false);
   const { roomCode, players, kickPlayer, kickAllPlayers, broadcast, onClientMessage, gameModeRef } = useHostRoom(mode);
 
-  useAdvertiseRoom(phase === 'lobby' ? roomCode : '', mode);
-
   const {
     phase,
     snapshot,
@@ -148,6 +146,8 @@ export default function Host() {
     hostDragUpdate,
     hostDragEnd,
   } = useGameLogic({ players, broadcast, gameMode });
+
+  useAdvertiseRoom(phase === 'lobby' ? roomCode : '', mode);
 
   // Register client message handler
   useEffect(() => {
