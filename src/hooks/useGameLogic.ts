@@ -938,14 +938,19 @@ export function useGameLogic({ players, broadcast, gameMode }: UseGameLogicProps
   // Decide winner after exam timeout based on alive counts
   function resolveExamWinner(gs: GameStateRef, mode: "1v3" | "2v6", bcast: (msg: any) => void) {
     const aliveChicks = Array.from<PlayerGameState>(gs.playerStates.values()).filter((p) => !p.isEagle && p.alive);
-    const aliveEagles = Array.from<PlayerGameState>(gs.playerStates.values()).filter((p) => p.isEagle && p.alive);
     const C = aliveChicks.length;
-    const E = aliveEagles.length;
-    const threshold = mode === "1v3" ? 1 : 2;
-    if (C >= threshold) {
-      endGame(gs, C === E ? "draw" : "chicks", bcast);
-    } else {
+
+    if (C === 0) {
       endGame(gs, "eagle", bcast);
+      return;
+    }
+
+    if (mode === "1v3") {
+      // 2+ chicks alive → chicks win; exactly 1 chick → draw
+      endGame(gs, C >= 2 ? "chicks" : "draw", bcast);
+    } else {
+      // 2v6: 3+ chicks alive → chicks win; 1-2 chicks → draw
+      endGame(gs, C >= 3 ? "chicks" : "draw", bcast);
     }
   }
 

@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { Swords } from 'lucide-react';
 
 interface Props {
@@ -9,6 +9,7 @@ interface Props {
 
 export default function AttackButton({ onAttack, cooldownUntil, disabled }: Props) {
   const [now, setNow] = useState(Date.now());
+  const totalCdRef = useRef(5000);
 
   useEffect(() => {
     const id = setInterval(() => setNow(Date.now()), 100);
@@ -19,34 +20,52 @@ export default function AttackButton({ onAttack, cooldownUntil, disabled }: Prop
   const onCooldown = remainingMs > 0;
   const remainingSec = Math.ceil(remainingMs / 1000);
 
+  // Track total cooldown duration for SVG ring
+  useEffect(() => {
+    if (cooldownUntil > 0) {
+      const total = cooldownUntil - Date.now();
+      if (total > 0 && total > totalCdRef.current * 0.8) {
+        totalCdRef.current = total;
+      }
+    }
+    if (!onCooldown) {
+      totalCdRef.current = 5000;
+    }
+  }, [cooldownUntil, onCooldown]);
+
   const handlePress = useCallback(() => {
     if (!onCooldown && !disabled) onAttack();
   }, [onAttack, onCooldown, disabled]);
 
+  const progress = Math.max(0, Math.min(1, 1 - remainingMs / totalCdRef.current));
+
   return (
     <button
       onClick={handlePress}
+      onPointerDown={(e) => { e.stopPropagation(); if (!onCooldown && !disabled) onAttack(); }}
       disabled={onCooldown || disabled}
-      className={`relative w-20 h-20 sm:w-24 sm:h-24 rounded-full border-4 flex items-center justify-center transition-all select-none flex-shrink-0 ${
+      className={`relative w-20 h-20 rounded-full border-4 flex items-center justify-center transition-all select-none flex-shrink-0 ${
         onCooldown || disabled
-          ? 'border-muted bg-muted/30 opacity-50'
+          ? 'border-muted bg-muted/30'
           : 'border-destructive bg-destructive/20 hover:bg-destructive/30 active:scale-95'
       }`}
       style={{
         boxShadow: onCooldown || disabled ? 'none' : '0 0 20px hsl(0 80% 55% / 0.4)',
+        touchAction: 'manipulation',
+        opacity: onCooldown || disabled ? 0.7 : 1,
       }}
     >
       {onCooldown ? (
-        <span className="text-2xl font-bold font-mono text-muted-foreground">{remainingSec}</span>
+        <span className="text-lg font-bold font-mono text-foreground">{remainingSec}</span>
       ) : (
-        <Swords className="w-10 h-10 text-destructive" />
+        <Swords className="w-8 h-8 text-destructive" />
       )}
       {onCooldown && (
         <svg className="absolute inset-0 w-full h-full -rotate-90" viewBox="0 0 100 100">
           <circle
             cx="50" cy="50" r="44"
-            fill="none" stroke="hsl(0 80% 55% / 0.3)" strokeWidth="4"
-            strokeDasharray={`${(1 - remainingMs / 5000) * 276.5} 276.5`}
+            fill="none" stroke="hsl(0 80% 55% / 0.5)" strokeWidth="5"
+            strokeDasharray={`${progress * 276.5} 276.5`}
           />
         </svg>
       )}

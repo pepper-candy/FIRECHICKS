@@ -108,7 +108,12 @@ export default function Transcript({ players, winner }: Props) {
                     <td className="py-3 text-center">{p.isEagle ? '🦅' : '🐤'}</td>
                     <td className="py-3 text-center text-foreground">{p.actionScore.toFixed(0)}</td>
                     <td className="py-3 text-center">
-                      {isWin ? <span className="text-primary">WIN</span> : <span className="text-destructive">LOSE</span>}
+                      {isDraw
+                        ? <span style={{ color: 'hsl(45 100% 55%)' }} className="font-bold">DRAW</span>
+                        : isWin
+                          ? <span className="text-primary font-bold">WIN</span>
+                          : <span className="text-destructive">LOSE</span>
+                      }
                     </td>
                   </tr>
                 );
