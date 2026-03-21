@@ -78,8 +78,9 @@ export default function PreviewHostGameover() {
                 const color = PLAYER_COLORS[p.colorIndex];
                 const letter = gradeToLetter(p.health);
                 const gradeColor = getGradeColor(p.health);
-                const isWin = (winner === 'chicks' && !p.isEagle);
-                return (
+                    const isDraw = winner === 'draw';
+                    const isWin = !isDraw && ((winner === 'chicks' && !p.isEagle));
+                    return (
                   <tr key={p.connId} className="border-b border-border/40">
                     <td className="py-2 pl-2">
                       <div className="flex items-center gap-1.5">
@@ -94,7 +95,12 @@ export default function PreviewHostGameover() {
                     </td>
                     <td className="py-2 text-center text-foreground font-bold">{p.actionScore.toFixed(0)}</td>
                     <td className="py-2 text-center">
-                      {isWin ? <span className="text-primary font-bold">WIN</span> : <span className="text-destructive">LOSE</span>}
+                      {isDraw
+                        ? <span style={{ color: 'hsl(45 100% 55%)' }} className="font-bold">DRAW</span>
+                        : isWin
+                          ? <span className="text-primary font-bold">WIN</span>
+                          : <span className="text-destructive">LOSE</span>
+                      }
                     </td>
                   </tr>
                 );

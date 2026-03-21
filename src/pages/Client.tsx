@@ -873,6 +873,7 @@ export default function Client() {
   if (gamePhase === "gameover") {
     const winner = gameState?.winner;
     const amWinner = (winner === "eagle" && isEagle) || (winner === "chicks" && !isEagle);
+    const isDraw = winner === "draw";
     return (
       <div className="flex flex-col items-center justify-center h-dvh overflow-hidden gap-6 p-4">
         <h1 className="text-2xl font-pixel text-accent">GAME OVER</h1>
@@ -895,8 +896,8 @@ export default function Client() {
             <span className="text-sm font-mono text-muted-foreground">Your final grade</span>
           </div>
         )}
-        {winner === 'draw' && <p className="text-lg font-pixel" style={{ color: 'hsl(45 100% 55%)' }}>🤝 It's a Draw!</p>}
-        {amWinner && <p className="text-lg font-pixel text-primary text-glow-green">🎉 YOU WIN!</p>}
+        {isDraw && <p className="text-lg font-pixel" style={{ color: 'hsl(45 100% 55%)' }}>🤝 It's a Draw!</p>}
+        {amWinner && !isDraw && <p className="text-lg font-pixel text-primary text-glow-green">🎉 YOU WIN!</p>}
         <Button variant="outline" size="sm" onClick={() => { disconnect(); navigate("/"); }} className="text-xs font-mono">
           LEAVE
         </Button>
