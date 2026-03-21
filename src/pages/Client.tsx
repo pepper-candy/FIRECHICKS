@@ -325,6 +325,8 @@ export default function Client() {
   const [isDead, setIsDead] = useState(false);
   const [colorChosen, setColorChosen] = useState(false);
   const [hasSubmittedMockExam, setHasSubmittedMockExam] = useState(false);
+  const [mockExamZoom, setMockExamZoom] = useState(1);
+  const [mockExamOpacity, setMockExamOpacity] = useState(0.85);
   const connIdRef = useRef<string>("");
 
   // Event state
