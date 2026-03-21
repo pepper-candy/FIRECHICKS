@@ -79,23 +79,21 @@ export default function MockExamClient({
       </div>
 
       <div className="relative w-full overflow-hidden rounded border border-border bg-black" style={{ aspectRatio: '873/457' }}>
-        <div style={{ transform: `scale(${zoom})`, transformOrigin: 'center center', width: '100%', height: '100%' }}>
-          <MockExamCamera />
-          <img
-            src={assetUrl(`/PW/PW_Mock_${questionNum}_layer-2.png`)}
-            alt="Mock exam layer 2"
-            className="absolute inset-0 w-full h-full object-contain pointer-events-none"
-            style={{ opacity, mixBlendMode: 'multiply' }}
-          />
-        </div>
+        <MockExamCamera />
+        <img
+          src={assetUrl(`/PW/PW_Mock_${questionNum}_layer-2.png`)}
+          alt="Mock exam layer 2"
+          className="absolute inset-0 w-full h-full object-contain pointer-events-none"
+          style={{ opacity, mixBlendMode: 'multiply', transform: `scale(${zoom})`, transformOrigin: 'center center' }}
+        />
       </div>
 
-      {/* Zoom & Opacity sliders */}
+      {/* Zoom & Opacity sliders — 2 separate lines */}
       {(onZoomChange || onOpacityChange) && (
-        <div className="flex gap-4 items-center">
+        <div className="flex flex-col gap-2">
           {onZoomChange && (
-            <div className="flex-1 flex items-center gap-2">
-              <span className="text-[10px] font-mono text-muted-foreground whitespace-nowrap">🔍</span>
+            <div className="flex items-center gap-2">
+              <span className="text-[10px] font-mono text-muted-foreground w-12 shrink-0">🔍 Zoom</span>
               <Slider
                 value={[zoom]}
                 min={0.5}
@@ -104,11 +102,12 @@ export default function MockExamClient({
                 onValueChange={([v]) => onZoomChange(v)}
                 className="flex-1"
               />
+              <span className="text-[10px] text-muted-foreground w-10 text-right">{zoom.toFixed(2)}×</span>
             </div>
           )}
           {onOpacityChange && (
-            <div className="flex-1 flex items-center gap-2">
-              <span className="text-[10px] font-mono text-muted-foreground whitespace-nowrap">👁</span>
+            <div className="flex items-center gap-2">
+              <span className="text-[10px] font-mono text-muted-foreground w-12 shrink-0">👁 Layer</span>
               <Slider
                 value={[opacity]}
                 min={0}
@@ -117,6 +116,7 @@ export default function MockExamClient({
                 onValueChange={([v]) => onOpacityChange(v)}
                 className="flex-1"
               />
+              <span className="text-[10px] text-muted-foreground w-10 text-right">{Math.round(opacity * 100)}%</span>
             </div>
           )}
         </div>
