@@ -964,26 +964,26 @@ export default function Client() {
             <>
               {/* Layer 2 overlaid on camera for visual cryptography */}
               <div className="relative w-full overflow-hidden rounded border border-border bg-black" style={{ aspectRatio: "873/457" }}>
-                <div style={{ transform: `scale(${mockExamZoom})`, transformOrigin: 'center center', width: '100%', height: '100%' }}>
-                  <MockExamCamera />
-                  <img
-                    src={assetUrl(`/PW/PW_Mock_${activeEvent.questionNum}_layer-2.png`)}
-                    alt="Mock exam layer 2"
-                    className="absolute inset-0 w-full h-full object-contain pointer-events-none"
-                    style={{ opacity: mockExamOpacity, mixBlendMode: 'multiply' }}
-                  />
-                </div>
+                <MockExamCamera />
+                <img
+                  src={assetUrl(`/PW/PW_Mock_${activeEvent.questionNum}_layer-2.png`)}
+                  alt="Mock exam layer 2"
+                  className="absolute inset-0 w-full h-full object-contain pointer-events-none"
+                  style={{ opacity: mockExamOpacity, mixBlendMode: 'multiply', transform: `scale(${mockExamZoom})`, transformOrigin: 'center center' }}
+                />
               </div>
 
-              {/* Zoom & Opacity sliders */}
-              <div className="flex gap-4 items-center">
-                <div className="flex-1 flex items-center gap-2">
-                  <span className="text-[10px] font-mono text-muted-foreground">🔍</span>
+              {/* Zoom & Opacity sliders — 2 separate lines */}
+              <div className="flex flex-col gap-2">
+                <div className="flex items-center gap-2">
+                  <span className="text-[10px] font-mono text-muted-foreground w-12 shrink-0">🔍 Zoom</span>
                   <Slider value={[mockExamZoom]} min={0.5} max={1.25} step={0.05} onValueChange={([v]) => setMockExamZoom(v)} className="flex-1" />
+                  <span className="text-[10px] text-muted-foreground w-10 text-right">{mockExamZoom.toFixed(2)}×</span>
                 </div>
-                <div className="flex-1 flex items-center gap-2">
-                  <span className="text-[10px] font-mono text-muted-foreground">👁</span>
+                <div className="flex items-center gap-2">
+                  <span className="text-[10px] font-mono text-muted-foreground w-12 shrink-0">👁 Layer</span>
                   <Slider value={[mockExamOpacity]} min={0} max={1} step={0.05} onValueChange={([v]) => setMockExamOpacity(v)} className="flex-1" />
+                  <span className="text-[10px] text-muted-foreground w-10 text-right">{Math.round(mockExamOpacity * 100)}%</span>
                 </div>
               </div>
 

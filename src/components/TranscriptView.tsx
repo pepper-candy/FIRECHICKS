@@ -9,7 +9,7 @@ import { Star, Trophy } from 'lucide-react';
 
 interface Props {
   players: Record<string, PlayerGameStateSerializable>;
-  winner: 'eagle' | 'chicks' | null;
+  winner: 'eagle' | 'chicks' | 'draw' | null;
 }
 
 function DancingCharacter({ chickColor, isWinner, delay }: {
