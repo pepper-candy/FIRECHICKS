@@ -1235,7 +1235,7 @@ export default function Client() {
                   disabled={myState.frozen || !!gameState?.videoPlaying}
                 />
 
-                <PropsBtn items={myState.props ?? []} onUse={handlePropUse} isEagle={true} flyCooldownUntil={myState.flyCooldownUntil} />
+                <PropsBtn items={myState.props ?? []} onUse={handlePropUse} isEagle={true} flyCooldownUntil={Math.max(myState.flyCooldownUntil ?? 0, myState.attackCooldownUntil ?? 0)} />
               </>
             )}
           </div>
