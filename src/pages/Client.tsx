@@ -895,7 +895,7 @@ export default function Client() {
         )}
         {winner === 'draw' && <p className="text-lg font-pixel" style={{ color: 'hsl(45 100% 55%)' }}>🤝 It's a Draw!</p>}
         {amWinner && <p className="text-lg font-pixel text-primary text-glow-green">🎉 YOU WIN!</p>}
-        <Button variant="outline" size="sm" onClick={() => { disconnect(); setGamePhase("lobby"); setGameState(null); setIsDead(false); }} className="text-xs font-mono">
+        <Button variant="outline" size="sm" onClick={() => { disconnect(); navigate("/"); }} className="text-xs font-mono">
           LEAVE
         </Button>
       </div>
