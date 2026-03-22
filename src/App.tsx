@@ -67,6 +67,8 @@ const App = () => (
           <Route path="/preview/mock-exam-client" element={<PreviewMockExamClient />} />
           <Route path="/preview/hitbox-host" element={<PreviewHitboxHost />} />
           <Route path="/preview/hitbox-client" element={<PreviewHitboxClient />} />
+          <Route path="/preview/crossy-road-host" element={<PreviewCrossyRoadHost />} />
+          <Route path="/preview/crossy-road-client" element={<PreviewCrossyRoadClient />} />
           <Route path="/preview/final-exam-host" element={<PreviewFinalExamHost />} />
           <Route path="/preview/final-exam-client" element={<PreviewFinalExamClient />} />
           <Route path="/preview/chick-stage1" element={<PreviewChickStage1 />} />
