@@ -784,7 +784,7 @@ export function useGameLogic({ players, broadcast, gameMode }: UseGameLogicProps
         const boost = ev.eagleSpeedBoost ?? 1;
         for (const lane of ev.crossyLanes) {
           for (const obs of lane.obstacles) {
-            const move = lane.speed * boost * dt * (lane.direction === "left" ? -1 : 1);
+            const move = lane.speed * boost * delta * (lane.direction === "left" ? -1 : 1);
             obs.x = ((obs.x + move) % CROSSY_FIELD_WIDTH + CROSSY_FIELD_WIDTH) % CROSSY_FIELD_WIDTH;
           }
         }
