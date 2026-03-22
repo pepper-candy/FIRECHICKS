@@ -88,6 +88,10 @@ function EventOverlay({ event, players, gameMode }: {event: GameEvent;players: R
           </>
         }
 
+        {event.phase === 'active' && event.type === 'crossy-road' &&
+          <CrossyRoadHost event={event} players={players} gameMode={gameMode} />
+        }
+
         {event.phase === 'result' &&
         <>
             <h2 className="text-xl font-pixel text-accent">RESULT</h2>

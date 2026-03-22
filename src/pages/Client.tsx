@@ -971,7 +971,7 @@ export default function Client() {
       return (
         <div className="flex flex-col items-center justify-center h-dvh overflow-hidden gap-4">
           <h2 className="text-lg font-pixel text-accent">
-            {activeEvent.type === "mock-exam" ? "📝 MOCK EXAM" : "👊 HITBOX CHALLENGE"}
+            {activeEvent.type === "mock-exam" ? "📝 MOCK EXAM" : activeEvent.type === "hitbox" ? "👊 HITBOX CHALLENGE" : "🐔 CROSSY ROAD"}
           </h2>
           <div className="text-7xl font-pixel text-primary animate-pulse">{cdSec}</div>
         </div>
