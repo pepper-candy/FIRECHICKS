@@ -1384,6 +1384,45 @@ export function useGameLogic({ players, broadcast, gameMode }: UseGameLogicProps
         break;
       }
 
+      // ── Crossy Road: chick hop ──
+      case "crossy-hop": {
+        if (!gs.activeEvent || gs.activeEvent.type !== "crossy-road" || gs.activeEvent.phase !== "active") return;
+        if (player.isEagle) return;
+        const csHop = gs.activeEvent.crossyPlayerStates?.[connId];
+        if (!csHop) return;
+        if (msg.direction === "up") {
+          csHop.laneIndex = Math.min(csHop.laneIndex + 1, 6); // 6 = past finish
+          if (csHop.laneIndex >= 6) {
+            csHop.crossings++;
+            csHop.laneIndex = 0;
+            csHop.xPosition = CROSSY_FIELD_WIDTH / 2;
+          }
+        } else {
+          csHop.laneIndex = Math.max(csHop.laneIndex - 1, 0);
+        }
+        player.actionScore += 0.2;
+        break;
+      }
+
+      // ── Crossy Road: eagle action ──
+      case "crossy-eagle-action": {
+        if (!gs.activeEvent || gs.activeEvent.type !== "crossy-road" || gs.activeEvent.phase !== "active") return;
+        if (!player.isEagle) return;
+        if (msg.action === "speed-up") {
+          gs.activeEvent.eagleSpeedBoost = Math.min((gs.activeEvent.eagleSpeedBoost ?? 1) + 0.2, 2.0);
+        } else if (msg.action === "add-obstacle") {
+          if (gs.activeEvent.crossyLanes && gs.activeEvent.crossyLanes.length > 0) {
+            const randomLane = gs.activeEvent.crossyLanes[Math.floor(Math.random() * gs.activeEvent.crossyLanes.length)];
+            randomLane.obstacles.push({
+              x: Math.random() * CROSSY_FIELD_WIDTH,
+              width: 5 + Math.random() * 5,
+            });
+          }
+        }
+        player.actionScore += 1;
+        break;
+      }
+
       // ── Answer submit (exam) ──
       case "answer-submit": {
         if (player.isEagle) return;
