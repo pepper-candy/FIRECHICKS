@@ -84,6 +84,10 @@ export interface GameEvent {
   chickClicks: Record<string, number>;
   eagleClicks: Record<string, number>;
   result: 'chick' | 'eagle' | 'pending';
+  // Crossy Road
+  crossyLanes?: CrossyLane[];
+  crossyPlayerStates?: Record<string, CrossyPlayerState>;
+  eagleSpeedBoost?: number;
 }
 
 export interface PlayerGameState {
