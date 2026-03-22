@@ -776,8 +776,44 @@ export function useGameLogic({ players, broadcast, gameMode }: UseGameLogicProps
 
       if (ev.phase === "countdown" && elapsed >= 3000) {
         ev.phase = "active";
-        ev.endAt = now + (ev.type === "hitbox" ? EVENT_HITBOX_DURATION : EVENT_MOCK_DURATION);
-      } else if (ev.phase === "active" && now >= ev.endAt) {
+        ev.endAt = now + (ev.type === "hitbox" ? EVENT_HITBOX_DURATION : ev.type === "crossy-road" ? EVENT_CROSSY_DURATION : EVENT_MOCK_DURATION);
+      }
+
+      // Crossy Road: simulate lanes each frame during active phase
+      if (ev.phase === "active" && ev.type === "crossy-road" && ev.crossyLanes && ev.crossyPlayerStates) {
+        const boost = ev.eagleSpeedBoost ?? 1;
+        for (const lane of ev.crossyLanes) {
+          for (const obs of lane.obstacles) {
+            const move = lane.speed * boost * dt * (lane.direction === "left" ? -1 : 1);
+            obs.x = ((obs.x + move) % CROSSY_FIELD_WIDTH + CROSSY_FIELD_WIDTH) % CROSSY_FIELD_WIDTH;
+          }
+        }
+        // Collision detection
+        for (const [connId, cs] of Object.entries(ev.crossyPlayerStates)) {
+          if (cs.laneIndex >= 1 && cs.laneIndex <= 5) {
+            const lane = ev.crossyLanes[cs.laneIndex - 1];
+            if (lane) {
+              for (const obs of lane.obstacles) {
+                const obsLeft = obs.x;
+                const obsRight = obs.x + obs.width;
+                const px = cs.xPosition;
+                // Check collision (player is ~3 units wide)
+                const playerLeft = px - 1.5;
+                const playerRight = px + 1.5;
+                if (playerRight > obsLeft && playerLeft < obsRight) {
+                  // Hit! Reset to start
+                  cs.laneIndex = 0;
+                  cs.xPosition = CROSSY_FIELD_WIDTH / 2;
+                  cs.hitCount++;
+                  break;
+                }
+              }
+            }
+          }
+        }
+      }
+
+      if (ev.phase === "active" && now >= ev.endAt) {
         // Event over — evaluate results
         ev.phase = "result";
 
