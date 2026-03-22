@@ -1,94 +1,124 @@
 
 
-# Fixes Plan — 7 Items
+# Crossy Road Minigame — Design Plan
 
-## 1. Mock Exam is Individual, Not Team Win
+## Concept
 
-**File: `src/hooks/useGameLogic.ts`** (lines 776-801)
+A 30-second event where chicks dodge lanes of obstacles on their phone screen. Eagles control obstacle speed. Chicks that survive get +2 sub-grades; chicks that get hit lose -2 sub-grades. Triggered from mystery boxes alongside hitbox and mock-exam.
 
-Current logic: if any chick answers correctly → "chick" result with grade boost for all. If none → "eagle" result with -2 for all chicks.
+## Architecture
 
-**Change to individual**: When mock exam time expires or all chicks submit:
-- Each chick who answered correctly: +1 sub-grade (already done in event-answer handler at line 1262-1268). No additional team reward.
-- Each chick who did NOT answer correctly: -2 sub-grades.
-- Eagles: no change.
-- `ev.result` becomes informational only — set to "chick" if majority got it right, "eagle" otherwise (cosmetic).
-- F-grade elimination still applies per-individual after grade changes.
+```text
+HOST SCREEN (/host):
+  ┌─────────────────────────────────┐
+  │  🐔 CROSSY ROAD — 25s          │
+  │                                 │
+  │  Top-down view of lanes         │
+  │  ← ← ← obstacles moving ← ← ← │  Lane 1
+  │  → → → obstacles moving → → →  │  Lane 2
+  │  ← ← ← obstacles moving ← ← ← │  Lane 3
+  │  → → → obstacles moving → → →  │  Lane 4
+  │  ← ← ← obstacles moving ← ← ← │  Lane 5
+  │                                 │
+  │  Chick dots shown on their lane │
+  │  Eagle: "Speed: 1.2x ▲"        │
+  └─────────────────────────────────┘
 
-Also update the result display text on both host and client to show individual results ("Correct!" or "Wrong -2 grades") instead of team win/loss.
+CLIENT SCREEN (Chick /client):
+  ┌───────────────────┐
+  │  CROSSY ROAD 25s  │
+  │                   │
+  │  Side-scroll view │
+  │  of YOUR lane     │
+  │  ← obstacles →    │
+  │  🐤 (you)         │
+  │                   │
+  │  [⬆] [⬇] [⬆HOP] │
+  │  Move between     │
+  │  safe zones       │
+  └───────────────────┘
 
-## 2. Add Zoom & Opacity Controls to Mock Exam Client
-
-**File: `src/pages/Client.tsx`** (lines 949-1010, mock exam active section)
-
-Add `mockExamZoom` and `mockExamOpacity` state variables. Add `Slider` controls (same pattern as `/pw-exam` page lines 222-248) below the camera+layer view:
-- Zoom slider: min 0.5, max 1.25, step 0.05
-- Opacity slider: min 0, max 1, step 0.05
-- Apply zoom via `transform: scale(zoom)` and opacity to the layer-2 image overlay.
-
-Also update `MockExamClient.tsx` component to accept `zoom` and `opacity` props.
-
-## 3. Fix Mock Exam Timer on Client
-
-**File: `src/pages/Client.tsx`** (line 914)
-
-Current: `const timeLeft = Math.max(0, Math.ceil((activeEvent.endAt - now) / 1000));`
-
-The issue is that `activeEvent.endAt` is set during countdown phase as `now + 3000 + eventDuration`, but then reset in the game loop (line 741) to `now + EVENT_MOCK_DURATION` when transitioning to active. The client's `now` via `Date.now()` may be slightly offset from the host's `now`. This should work correctly — but the `endAt` in the serialized state might be stale if it was set during countdown and not updated after active phase begins.
-
-**Fix**: In `useGameLogic.ts` line 741, ensure `ev.endAt` is updated and broadcast. On client side, use `clockNow` (which is updated via interval) instead of inline `Date.now()` for consistency.
-
-## 4. Fix Props Button Overlap for Chicks
-
-**File: `src/pages/Client.tsx`** (`PropsStackBtn`, lines 98-141)
-
-Current: buttons are absolutely positioned with `top: i * 16px`, creating overlap. With 3 props, buttons overlap significantly.
-
-**Fix**: Change from overlapping stack to a simple vertical flex column with proper spacing:
+CLIENT SCREEN (Eagle /client):
+  ┌───────────────────┐
+  │  CROSSY ROAD 25s  │
+  │                   │
+  │  [SPEED UP]       │
+  │  Current: 1.2x    │
+  │  Cooldown: 3s     │
+  │                   │
+  │  [ADD OBSTACLE]   │
+  │  Adds one extra   │
+  │  obstacle to a    │
+  │  random lane      │
+  └───────────────────┘
 ```
-<div className="flex flex-col gap-2 items-center">
-  {available.map(item => (
-    <button key={item.type} ... className="w-14 h-14 rounded-full ..." />
-  ))}
-</div>
+
+## Gameplay Rules
+
+- **5 horizontal lanes** with obstacles (fire/cars) moving left or right at varying speeds.
+- **Chicks** start at bottom, must hop forward through lanes to reach the top (safe zone). Each successful crossing = 1 point. They keep crossing back and forth for 30s.
+- **Getting hit** resets the chick to the start of that crossing attempt (no immediate grade loss — counted at end).
+- **Eagles** can press "Speed Up" (boosts all lane speeds by 0.2x, cooldown 5s) and "Add Obstacle" (adds an extra obstacle to a random lane, cooldown 8s).
+- **At end**: Chicks with 3+ successful crossings get +2 sub-grades. Chicks with 0-1 crossings get -2 sub-grades. 2 crossings = no change.
+- F-grade elimination check runs after.
+
+## Data Model Changes
+
+**`src/lib/gameTypes.ts`**:
+- Add `'crossy-road'` to `EventType` union.
+- Add to `GameEvent`:
+  ```
+  crossyLanes?: CrossyLane[];
+  crossyPlayerStates?: Record<string, CrossyPlayerState>;
+  eagleSpeedBoost?: number;
+  ```
+- New types:
+  ```
+  interface CrossyLane {
+    id: number;
+    direction: 'left' | 'right';
+    speed: number;
+    obstacles: { x: number; width: number }[];
+  }
+  interface CrossyPlayerState {
+    laneIndex: number;   // 0=start, 5=finish
+    xPosition: number;
+    crossings: number;
+    hitCount: number;
+  }
+  ```
+
+**`src/lib/gameTypes.ts`** — Add `'crossy-hop'` to `ClientMessage`:
 ```
-Remove the absolute positioning and calculated height. Each button gets its own space.
+| { type: 'crossy-hop'; direction: 'up' | 'down' }
+| { type: 'crossy-eagle-action'; action: 'speed-up' | 'add-obstacle' }
+```
 
-## 5. Tip Copying Countdown After QR Scan (Stage 3)
+## New Files
 
-The copying countdown logic already exists (lines 488-508 in Client.tsx). The issue is likely that the tip state change isn't being detected on the receiver's side because the game state update for `tips[i]` isn't happening when a scan occurs.
+| File | Purpose |
+|------|---------|
+| `src/components/events/CrossyRoadHost.tsx` | Host view: top-down lane visualization with chick positions |
+| `src/components/events/CrossyRoadClient.tsx` | Client view: chick controls (hop up/down) or eagle controls (speed/obstacle) |
+| `src/pages/preview/CrossyRoadHost.tsx` | Preview wrapper with mock data |
+| `src/pages/preview/CrossyRoadClient.tsx` | Preview wrapper with mock data |
 
-**Verify in `useGameLogic.ts`**: When a `scan-result` message with a tip QR code is received, the receiver's `tips[i]` should be set to `true`. Check that this triggers the `prevTipsRef` diff in Client.tsx. If the scan handler doesn't update tips immediately but waits, add the state change. The `tipCopyStartedAt` and `loadingTip` states should then produce the "📋 Copying... 3s" countdown display in `TipsBox`.
-
-## 6. Eagle Fly Button Shows Cooldown During Attack Cooldown
-
-**File: `src/pages/Client.tsx`** (eagle layout, lines 1233-1246)
-
-Current: `PropsBtn` shows fly cooldown based on `flyCooldownUntil` only. But fly is also disabled during `attackCooldownUntil`.
-
-**Fix**: Pass `effectiveFlyCooldown = Math.max(myState.flyCooldownUntil, myState.attackCooldownUntil)` as the `flyCooldownUntil` prop to `PropsBtn`. This makes the fly button show the attack cooldown timer when it's longer than the fly cooldown.
-
-Also apply same fix in `EagleControls.tsx` (line 66-67): use `Math.max(flyCooldownUntil, attackCooldownUntil)` — add `attackCooldownUntil` as a prop.
-
-## 7. LEAVE Button Redirects to `/`
-
-**File: `src/pages/Client.tsx`**
-
-Multiple LEAVE/DISCONNECT buttons call `disconnect()` but don't navigate. Fix all disconnect buttons to also call `navigate("/")`:
-
-- Line 819 (color picker DISCONNECT): add `navigate("/")`
-- Line 849 (dead screen LEAVE): add `navigate("/")`
-- Line 903 (gameover LEAVE): replace current handler with `{ disconnect(); navigate("/"); }`
-- Line 1208 (gameplay ✕ button): add `navigate("/")`
-
----
-
-## Files Modified Summary
+## Modified Files
 
 | File | Changes |
 |------|---------|
-| `src/hooks/useGameLogic.ts` | Mock exam individual scoring, verify tip scan handler |
-| `src/pages/Client.tsx` | Mock exam zoom/opacity controls, timer fix, props layout fix, fly cooldown display, navigate on disconnect |
-| `src/components/controls/EagleControls.tsx` | Accept `attackCooldownUntil` prop for fly disable display |
-| `src/components/events/MockExamClient.tsx` | Accept zoom/opacity props |
+| `src/lib/gameTypes.ts` | Add `crossy-road` event type, lane/player types, client messages |
+| `src/hooks/useGameLogic.ts` | Lane simulation in game loop, collision detection, eagle actions, scoring |
+| `src/pages/Host.tsx` | Render `CrossyRoadHost` when event active |
+| `src/pages/Client.tsx` | Render `CrossyRoadClient` when event active |
+| `src/App.tsx` | Add 2 preview routes |
+
+## Game Logic (in `useGameLogic.ts`)
+
+- **Mystery box**: 1/3 chance each of `hitbox`, `mock-exam`, `crossy-road`.
+- **Lane init**: Generate 5 lanes with 2-4 obstacles each, alternating directions, random speeds (2-5 units/s).
+- **Game loop**: Each frame, move obstacles by `speed * dt * eagleSpeedBoost`. Wrap obstacles that go off-screen. Check collision between chick hitbox and obstacles in their lane.
+- **Hop handler**: On `crossy-hop` message, move chick up/down one lane (clamped 0-5). If reaching lane 5, increment crossings, reset to lane 0.
+- **Eagle actions**: `speed-up` adds 0.2 to global multiplier (max 2.0x), `add-obstacle` pushes a new obstacle into a random lane.
+- **Scoring at end**: iterate chicks, apply +2 or -2 based on crossing count, then F-grade elimination.
 
