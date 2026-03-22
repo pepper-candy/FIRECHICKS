@@ -872,6 +872,33 @@ export function useGameLogic({ players, broadcast, gameMode }: UseGameLogicProps
               currentBroadcast({ type: "you-died", connId: p.connId });
             }
           }
+        } else if (ev.type === "crossy-road" && ev.crossyPlayerStates) {
+          // Crossy Road scoring: 3+ crossings = +2, 0-1 = -2, 2 = no change
+          let goodCount = 0;
+          let totalChicks = 0;
+          for (const [, p] of gs.playerStates) {
+            if (p.isEagle || !p.alive) continue;
+            totalChicks++;
+            const cs = ev.crossyPlayerStates[p.connId];
+            const crossings = cs?.crossings ?? 0;
+            if (crossings >= 3) {
+              p.health = addSubGrades(p.health, 2);
+              goodCount++;
+              p.actionScore += crossings * 2;
+            } else if (crossings <= 1) {
+              p.health = addSubGrades(p.health, -2);
+            }
+            // crossings === 2 = no change
+          }
+          ev.result = goodCount > totalChicks / 2 ? "chick" : "eagle";
+          // F-grade elimination
+          for (const [, p] of gs.playerStates) {
+            if (!p.isEagle && p.alive && isDead(p.health)) {
+              p.alive = false;
+              p.health = 0;
+              currentBroadcast({ type: "you-died", connId: p.connId });
+            }
+          }
         }
 
         // Post-event: freeze all eagles for 5 seconds (buffer for chicks)
