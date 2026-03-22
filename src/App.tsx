@@ -26,6 +26,8 @@ import PreviewMockExamHost from "./pages/preview/MockExamHost";
 import PreviewMockExamClient from "./pages/preview/MockExamClient";
 import PreviewHitboxHost from "./pages/preview/HitboxHost";
 import PreviewHitboxClient from "./pages/preview/HitboxClient";
+import PreviewCrossyRoadHost from "./pages/preview/CrossyRoadHost";
+import PreviewCrossyRoadClient from "./pages/preview/CrossyRoadClient";
 import PreviewFinalExamHost from "./pages/preview/FinalExamHost";
 import PreviewFinalExamClient from "./pages/preview/FinalExamClient";
 import PreviewChickStage1 from "./pages/preview/ChickStage1";
