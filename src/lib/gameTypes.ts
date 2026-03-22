@@ -196,7 +196,9 @@ export type ClientMessage =
   | { type: 'answer-submit'; answer: string }
   | { type: 'tip-request'; tipIndex: 0 | 1 }
   | { type: 'event-hitbox-click' }
-  | { type: 'event-answer'; answer: string };
+  | { type: 'event-answer'; answer: string }
+  | { type: 'crossy-hop'; direction: 'up' | 'down' }
+  | { type: 'crossy-eagle-action'; action: 'speed-up' | 'add-obstacle' };
 
 export function serializePlayerState(p: PlayerGameState): PlayerGameStateSerializable {
   return {
