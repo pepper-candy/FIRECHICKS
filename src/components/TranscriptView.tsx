@@ -33,9 +33,8 @@ function DancingCharacter({ chickColor, isWinner, delay }: {
 
 export default function Transcript({ players, winner }: Props) {
   const sorted = Object.values(players).sort((a, b) => {
-    // Winners first, then by action score
-    const aWin = (winner === 'eagle' && a.isEagle) || (winner === 'chicks' && !a.isEagle);
-    const bWin = (winner === 'eagle' && b.isEagle) || (winner === 'chicks' && !b.isEagle);
+    const aWin = winner === 'draw' || (winner === 'eagle' && a.isEagle) || (winner === 'chicks' && !a.isEagle);
+    const bWin = winner === 'draw' || (winner === 'eagle' && b.isEagle) || (winner === 'chicks' && !b.isEagle);
     if (aWin !== bWin) return aWin ? -1 : 1;
     return b.actionScore - a.actionScore;
   });

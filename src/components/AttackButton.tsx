@@ -39,33 +39,33 @@ export default function AttackButton({ onAttack, cooldownUntil, disabled }: Prop
 
   const progress = Math.max(0, Math.min(1, 1 - remainingMs / totalCdRef.current));
 
+  const inactive = onCooldown || !!disabled;
+
   return (
     <button
-      onClick={handlePress}
-      onPointerDown={(e) => { e.stopPropagation(); if (!onCooldown && !disabled) onAttack(); }}
-      disabled={onCooldown || disabled}
+      onPointerDown={(e) => { e.stopPropagation(); if (!inactive) onAttack(); }}
       className={`relative w-20 h-20 rounded-full border-4 flex items-center justify-center transition-all select-none flex-shrink-0 ${
-        onCooldown || disabled
+        inactive
           ? 'border-muted bg-muted/30'
-          : 'border-destructive bg-destructive/20 hover:bg-destructive/30 active:scale-95'
+          : 'border-destructive bg-destructive/20 active:scale-95'
       }`}
       style={{
-        boxShadow: onCooldown || disabled ? 'none' : '0 0 20px hsl(0 80% 55% / 0.4)',
+        boxShadow: inactive ? 'none' : '0 0 20px hsl(0 80% 55% / 0.4)',
         touchAction: 'manipulation',
-        opacity: onCooldown || disabled ? 0.7 : 1,
       }}
     >
       {onCooldown ? (
-        <span className="text-lg font-bold font-mono text-foreground">{remainingSec}</span>
+        <span className="text-lg font-bold font-mono" style={{ color: 'hsl(0 80% 75%)' }}>{remainingSec}</span>
       ) : (
-        <Swords className="w-8 h-8 text-destructive" />
+        <Swords className={`w-8 h-8 ${disabled ? 'text-muted-foreground' : 'text-destructive'}`} />
       )}
       {onCooldown && (
-        <svg className="absolute inset-0 w-full h-full -rotate-90" viewBox="0 0 100 100">
+        <svg className="absolute inset-0 w-full h-full -rotate-90" viewBox="0 0 100 100" style={{ pointerEvents: 'none' }}>
           <circle
             cx="50" cy="50" r="44"
-            fill="none" stroke="hsl(0 80% 55% / 0.5)" strokeWidth="5"
+            fill="none" stroke="hsl(0 80% 55% / 0.6)" strokeWidth="6"
             strokeDasharray={`${progress * 276.5} 276.5`}
+            strokeLinecap="round"
           />
         </svg>
       )}

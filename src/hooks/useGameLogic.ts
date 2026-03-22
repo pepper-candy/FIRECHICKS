@@ -1185,15 +1185,24 @@ export function useGameLogic({ players, broadcast, gameMode }: UseGameLogicProps
         const tipShare = Array.from<TipShare>(gs.activeTipShares.values()).find((ts: TipShare) => ts.code === data);
         if (tipShare) {
           if (tipShare.connId === connId) return; // can't scan own tip
-          if (player.tips[tipShare.tipIndex]) return; // already have it
           if (now < tipShare.cooldownUntil) return; // on cooldown
 
-          player.tips[tipShare.tipIndex] = true;
-          player.actionScore += 5;
+          const alreadyHasTip = player.tips[tipShare.tipIndex];
+          if (!alreadyHasTip) {
+            player.tips[tipShare.tipIndex] = true;
+            player.actionScore += 5;
+          }
           tipShare.cooldownUntil = now + TIP_QR_COOLDOWN;
 
+          // Notify both scanner and sharer to show 3s copying countdown
+          currentBroadcast({
+            type: "tip-copy-notify",
+            connIds: [connId, tipShare.connId],
+            tipIndex: tipShare.tipIndex,
+          });
+
           // Check if all alive chicks now have both tips
-          if (gs.stage === 2) {
+          if (!alreadyHasTip && gs.stage === 2) {
             const aliveChicks = Array.from<PlayerGameState>(gs.playerStates.values()).filter(
               (p) => !p.isEagle && p.alive,
             );

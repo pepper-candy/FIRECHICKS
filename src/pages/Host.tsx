@@ -132,7 +132,11 @@ export default function Host() {
   const [zoomLevel, setZoomLevel] = useState(1);
   const [revealNow, setRevealNow] = useState(Date.now());
   const [focusPanelOpen, setFocusPanelOpen] = useState(false);
-  const { roomCode, players, kickPlayer, kickAllPlayers, broadcast, onClientMessage, gameModeRef } = useHostRoom(mode);
+  // Stage transition toast notification
+  const [stageToast, setStageToast] = useState<{ stage: number; key: number } | null>(null);
+  const prevStageRef = useRef<number | null>(null);
+  const { roomCode, players, kickPlayer, kickAllPlayers, broadcast, onClientMessage, gameModeRef, takeoverCodes } = useHostRoom(mode);
+  const [revealedCodes, setRevealedCodes] = useState<Set<string>>(new Set());
 
   const {
     phase,
@@ -162,6 +166,16 @@ export default function Host() {
     broadcast({ type: 'game-mode', gameMode });
     if (gameModeRef) gameModeRef.current = gameMode;
   }, [gameMode, broadcast, gameModeRef]);
+
+  // Fire toast when stage advances during gameplay
+  useEffect(() => {
+    if (!snapshot || (phase !== 'playing' && phase !== 'exam')) return;
+    const currentStage = snapshot.stage;
+    if (prevStageRef.current !== null && prevStageRef.current !== currentStage) {
+      setStageToast({ stage: currentStage, key: Date.now() });
+    }
+    prevStageRef.current = currentStage;
+  }, [snapshot?.stage, phase]);
   useEffect(() => {
     if (phase !== 'reveal') return;
     const id = setInterval(() => setRevealNow(Date.now()), 100);
@@ -386,41 +400,65 @@ export default function Host() {
         {focusPanelOpen && (
           <div className="absolute top-10 left-0 right-0 z-20 bg-card/95 border-b border-border p-2">
             <div className="flex gap-2 overflow-x-auto">
-              {alivePlayers.map(p => {
+              {Object.values(snapshot.players).map(p => {
                 const color = PLAYER_COLORS[p.colorIndex];
+                const code = takeoverCodes[p.connId];
+                const isRevealed = revealedCodes.has(p.connId);
+                const isDisconnected = !players.has(p.connId);
                 return (
                   <div key={p.connId} className="flex-shrink-0 flex flex-col items-center gap-1">
-                    <div
-                      className="w-[140px] h-[100px] rounded border overflow-hidden"
-                      style={{ borderColor: `hsl(${color?.hsl ?? '0 0% 50%'})` }}
-                    >
-                      <Canvas camera={{ position: [p.position.x, 8, p.position.z + 6], fov: 40 }}>
-                        <ambientLight intensity={0.7} />
-                        <directionalLight position={[5, 8, 5]} intensity={1} />
-                        <PlayerFocusCamera target={p.position} />
-                        <OrbitControls
-                          target={[p.position.x, 0, p.position.z]}
-                          enablePan={false}
-                          enableZoom={true}
-                          enableRotate={true}
-                          minDistance={3}
-                          maxDistance={15}
-                        />
-                        <gridHelper args={[40, 40, 'hsl(0 0% 20%)', 'hsl(0 0% 15%)']} />
-                        <Suspense fallback={null}>
-                          <group position={[p.position.x, 0, p.position.z]}>
-                            <CharacterViewer
-                              color={p.chickColor as any}
-                              animState={p.isMoving ? 'Running' : 'Idle'}
-                              facingAngle={p.facingAngle}
-                            />
-                          </group>
-                        </Suspense>
-                      </Canvas>
-                    </div>
+                    {p.alive ? (
+                      <div
+                        className="w-[140px] h-[100px] rounded border overflow-hidden"
+                        style={{ borderColor: `hsl(${color?.hsl ?? '0 0% 50%'})`, opacity: isDisconnected ? 0.5 : 1 }}
+                      >
+                        <Canvas camera={{ position: [p.position.x, 8, p.position.z + 6], fov: 40 }}>
+                          <ambientLight intensity={0.7} />
+                          <directionalLight position={[5, 8, 5]} intensity={1} />
+                          <PlayerFocusCamera target={p.position} />
+                          <OrbitControls
+                            target={[p.position.x, 0, p.position.z]}
+                            enablePan={false}
+                            enableZoom={true}
+                            enableRotate={true}
+                            minDistance={3}
+                            maxDistance={15}
+                          />
+                          <gridHelper args={[40, 40, 'hsl(0 0% 20%)', 'hsl(0 0% 15%)']} />
+                          <Suspense fallback={null}>
+                            <group position={[p.position.x, 0, p.position.z]}>
+                              <CharacterViewer
+                                color={p.chickColor as any}
+                                animState={p.isMoving ? 'Running' : 'Idle'}
+                                facingAngle={p.facingAngle}
+                              />
+                            </group>
+                          </Suspense>
+                        </Canvas>
+                      </div>
+                    ) : (
+                      <div className="w-[140px] h-[100px] rounded border border-muted bg-muted/10 flex items-center justify-center">
+                        <span className="text-[10px] font-mono text-muted-foreground">eliminated</span>
+                      </div>
+                    )}
                     <span className="text-[9px] font-mono" style={{ color: `hsl(${color?.hsl ?? '0 0% 50%'})` }}>
-                      {color?.name} {p.isEagle ? '🦅' : '🐤'}
+                      {color?.name} {p.isEagle ? '🦅' : '🐤'}{isDisconnected ? ' ⚡' : ''}
                     </span>
+                    {/* Takeover code — blurred until host clicks */}
+                    {code && (
+                      <button
+                        onClick={() => setRevealedCodes(prev => {
+                          const next = new Set(prev);
+                          if (next.has(p.connId)) next.delete(p.connId); else next.add(p.connId);
+                          return next;
+                        })}
+                        className="text-[9px] font-mono tracking-widest px-1.5 py-0.5 rounded bg-muted/20 border border-muted/30 transition-all"
+                        style={{ filter: isRevealed ? 'none' : 'blur(4px)', color: 'hsl(var(--accent))' }}
+                        title={isRevealed ? 'Click to hide' : 'Click to reveal rejoin code'}
+                      >
+                        {code}
+                      </button>
+                    )}
                   </div>
                 );
               })}
@@ -479,12 +517,13 @@ export default function Host() {
           </div>
         }
 
-        {/* Exam layer 1 on screen when holder is dead or solo exam */}
-        {snapshot.examState?.layer1Dead && snapshot.examState.questionNum > 0 &&
+        {/* Exam layer 1 — always visible on host during exam phase */}
+        {snapshot.examState && snapshot.examState.questionNum > 0 && phase === 'exam' &&
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-30 bg-white border-2 border-accent rounded-xl p-4 max-w-md w-[90%] shadow-2xl">
+            <p className="text-[10px] font-mono text-gray-500 mb-1 text-center">LAYER 1 — PROJECT ON SCREEN</p>
             <img
             src={assetUrl(`/PW/PW_Final_${snapshot.examState.questionNum}_layer-1.png`)}
-            alt="Exam"
+            alt="Final exam"
             className="w-full rounded" />
           </div>
         }
@@ -496,9 +535,13 @@ export default function Host() {
 
         <NetworkPerformancePanel players={players} />
 
-        {/* Stage transition overlay */}
-        {snapshot.stageTransitionUntil > 0 && Date.now() < snapshot.stageTransitionUntil && (
-          <StageTransition stage={snapshot.stage} remainingMs={snapshot.stageTransitionUntil - Date.now()} />
+        {/* Stage transition toast — slides in from right under game timer */}
+        {stageToast && (
+          <StageTransition
+            key={stageToast.key}
+            stage={stageToast.stage}
+            onDismiss={() => setStageToast(null)}
+          />
         )}
 
         {/* VideoOverlay LAST so it renders on top of everything */}

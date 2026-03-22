@@ -58,6 +58,10 @@ function PropsBtn({ items, onUse, isEagle, flyCooldownUntil }: { items: PropItem
   const showBadge = !(isEagle && current.type === 'fly');
   const flyOnCooldown = isEagle && current.type === 'fly' && flyCooldownUntil && now < flyCooldownUntil;
   const flyCdSec = flyOnCooldown ? Math.ceil((flyCooldownUntil! - now) / 1000) : 0;
+  const totalCd = 5000;
+  const flyRemainingMs = flyOnCooldown ? Math.max(0, flyCooldownUntil! - now) : 0;
+  const flyProgress = Math.max(0, Math.min(1, 1 - flyRemainingMs / totalCd));
+  const flyCircumference = 2 * Math.PI * 24; // r=24 in 56x56 viewBox
 
   return (
     <div className="relative flex flex-col items-center" style={{ touchAction: 'manipulation' }}>
@@ -67,22 +71,28 @@ function PropsBtn({ items, onUse, isEagle, flyCooldownUntil }: { items: PropItem
         </button>
       )}
       <button
-        onPointerDown={(e) => { e.stopPropagation(); e.preventDefault(); onUse(current.type); }}
+        onPointerDown={(e) => { e.stopPropagation(); e.preventDefault(); if (!flyOnCooldown) onUse(current.type); }}
         className="relative w-16 h-16 rounded-full border-2 flex items-center justify-center transition-all active:scale-90"
         style={{
-          borderColor: PROP_COLORS[current.type],
-          color: PROP_COLORS[current.type],
-          boxShadow: `0 0 12px ${PROP_COLORS[current.type]}55`,
+          borderColor: flyOnCooldown ? 'hsl(var(--muted))' : PROP_COLORS[current.type],
+          color: flyOnCooldown ? 'hsl(220 80% 75%)' : PROP_COLORS[current.type],
+          boxShadow: flyOnCooldown ? 'none' : `0 0 12px ${PROP_COLORS[current.type]}55`,
           touchAction: 'manipulation',
-          opacity: flyOnCooldown ? 0.5 : 1,
+          backgroundColor: 'hsl(var(--card))',
         }}
       >
         {flyOnCooldown ? (
-          <span className="text-xs font-mono font-bold">{flyCdSec}s</span>
+          <span className="text-sm font-bold font-mono" style={{ color: 'hsl(220 80% 75%)' }}>{flyCdSec}s</span>
         ) : (
           PROP_ICONS[current.type]
         )}
-        {showBadge && (
+        {flyOnCooldown && (
+          <svg className="absolute inset-0 w-full h-full -rotate-90" viewBox="0 0 56 56" style={{ pointerEvents: 'none' }}>
+            <circle cx="28" cy="28" r="24" fill="none" stroke="hsl(220 80% 55% / 0.6)" strokeWidth="3"
+              strokeDasharray={`${flyProgress * flyCircumference} ${flyCircumference}`} strokeLinecap="round" />
+          </svg>
+        )}
+        {showBadge && !flyOnCooldown && (
           <span
             className="absolute -top-1 -right-1 w-5 h-5 rounded-full text-[10px] font-bold flex items-center justify-center bg-card border"
             style={{ borderColor: PROP_COLORS[current.type], color: PROP_COLORS[current.type] }}
@@ -312,6 +322,8 @@ export default function Client() {
 
   const [wasKicked, setWasKicked] = useState(false);
   const [roomFullDismissed, setRoomFullDismissed] = useState(false);
+  const [rejoinCode, setRejoinCode] = useState("");
+  const [showRejoinInput, setShowRejoinInput] = useState(false);
 
   // Game state
   const [gamePhase, setGamePhase] = useState<GamePhase>("lobby");
@@ -461,6 +473,33 @@ export default function Client() {
               return cur;
             });
           }, 5000);
+        }
+      } else if (msg.type === "takeover-accepted") {
+        // Bind this connection to the original player's connId
+        if (msg.connId) connIdRef.current = msg.connId;
+      } else if (msg.type === "tip-copy-notify") {
+        // Fired when a tip QR scan succeeds — notify both scanner and sharer
+        const connIds = msg.connIds as string[];
+        if (connIds.includes(connIdRef.current)) {
+          const tipIdx = msg.tipIndex as 0 | 1;
+          const copyStart = Date.now();
+          setTipCopyStartedAt((prev) => {
+            const n: [number, number] = [...prev] as [number, number];
+            n[tipIdx] = copyStart;
+            return n;
+          });
+          setLoadingTip((prev) => {
+            const n: [boolean, boolean] = [...prev] as [boolean, boolean];
+            n[tipIdx] = true;
+            return n;
+          });
+          setTimeout(() => {
+            setLoadingTip((prev) => {
+              const n: [boolean, boolean] = [...prev] as [boolean, boolean];
+              n[tipIdx] = false;
+              return n;
+            });
+          }, 3000);
         }
       } else if (msg.type === "exam-start") {
         const myExam = msg.assignments?.[connIdRef.current];
@@ -620,10 +659,10 @@ export default function Client() {
         setWasKicked(false);
         setRoomFullDismissed(false);
         setColorChosen(false);
-        connect(roomCode);
+        connect(roomCode, rejoinCode.trim().toUpperCase() || undefined);
       }
     },
-    [code, connect],
+    [code, connect, rejoinCode],
   );
 
   // ── Eagle-in-zone detection (for hitbox visual cue)
@@ -727,6 +766,23 @@ export default function Client() {
           >
             CONNECT
           </Button>
+
+          {/* Rejoin code section */}
+          <button
+            onClick={() => setShowRejoinInput(v => !v)}
+            className="text-[11px] font-mono text-muted-foreground hover:text-foreground text-center"
+          >
+            {showRejoinInput ? "▲ Hide rejoin code" : "▼ Reconnect with code"}
+          </button>
+          {showRejoinInput && (
+            <Input
+              value={rejoinCode}
+              onChange={(e) => setRejoinCode(e.target.value.toUpperCase())}
+              placeholder="REJOIN CODE (from host)"
+              maxLength={5}
+              className="text-center text-sm tracking-[0.2em] font-mono bg-card border-border uppercase"
+            />
+          )}
 
           <div className="flex items-center justify-between px-2 py-3 rounded border border-border bg-card">
             <Label className="text-xs font-mono text-muted-foreground cursor-pointer">
@@ -908,11 +964,10 @@ export default function Client() {
   // ─── ACTIVE EVENT PHASE ──────────────────────────────────────────────────────
   const activeEvent = gameState?.activeEvent;
   if (activeEvent && gamePhase === "playing") {
-    const now = Date.now();
     const timeLeft = Math.max(0, Math.ceil((activeEvent.endAt - clockNow) / 1000));
 
     if (activeEvent.phase === "countdown") {
-      const cdSec = Math.max(1, 3 - Math.floor((now - activeEvent.startedAt) / 1000));
+      const cdSec = Math.max(1, 3 - Math.floor((clockNow - activeEvent.startedAt) / 1000));
       return (
         <div className="flex flex-col items-center justify-center h-dvh overflow-hidden gap-4">
           <h2 className="text-lg font-pixel text-accent">
@@ -1111,7 +1166,7 @@ export default function Client() {
 
           <img
             src={assetUrl(`/PW/PW_Final_${examQuestionNum}_layer-${examLayer}.png`)}
-            alt={`Layer ${examLayer}`}
+            alt="Final exam"
             className="absolute inset-0 w-full h-full object-contain pointer-events-none"
             style={{ opacity: examOpacity, transform: `scale(${examZoom})`, transformOrigin: "center center" }}
           />

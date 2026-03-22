@@ -63,6 +63,21 @@ function useHostWebRTC() {
   const connColorMapRef = useRef<Map<string, number>>(new Map());
   const clientMsgCallbackRef = useRef<((connId: string, msg: any) => void) | null>(null);
   const gameModeRef = useRef<'1v3' | '2v6'>('1v3');
+  // Persistent slot data for reconnection: keyed by original connId, survives disconnect
+  const slotDataRef = useRef<Map<string, { colorIndex: number; code: string }>>(new Map());
+  const [takeoverCodes, setTakeoverCodes] = useState<Record<string, string>>({});
+
+  const recordSlot = (connId: string, colorIndex: number): string => {
+    const code = Math.random().toString(36).substring(2, 7).toUpperCase();
+    slotDataRef.current.set(connId, { colorIndex, code });
+    setTakeoverCodes(prev => ({ ...prev, [connId]: code }));
+    return code;
+  };
+
+  const sendToClient = useCallback((connId: string, msg: any) => {
+    const conn = connsRef.current.get(connId);
+    if (conn) try { conn.send(JSON.stringify(msg)); } catch {}
+  }, []);
 
   const removePlayer = useCallback((connId: string) => {
     const colorIdx = connColorMapRef.current.get(connId);
@@ -152,36 +167,70 @@ function useHostWebRTC() {
     peerRef.current = peer;
 
     peer.on('connection', (conn) => {
-      const connId = conn.peer;
+      const newConnId = conn.peer;
+      const takeoverCode = (conn.metadata as any)?.takeoverCode as string | undefined;
+
+      // Resolve effective connId and validate takeover before 'open'
+      let effectiveConnId = newConnId;
+      let isValidTakeover = false;
+      if (takeoverCode) {
+        for (const [oldId, slotData] of slotDataRef.current.entries()) {
+          if (slotData.code === takeoverCode) {
+            effectiveConnId = oldId;
+            isValidTakeover = true;
+            break;
+          }
+        }
+      }
 
       conn.on('open', () => {
-        const mode = gameModeRef.current;
-        const maxSlots = mode === '2v6' ? MAX_PLAYERS_2V6 : MAX_PLAYERS_1V3;
-        // Hard capacity check — prevents exceeding player limit even if colors remain
-        if (usedColorsRef.current.size >= maxSlots) {
-          conn.send(JSON.stringify({ type: 'room-full' }));
-          setTimeout(() => conn.close(), 200);
-          return;
-        }
-        const excludeIndices = mode === '2v6' ? [] : (EAGLE_COLOR_INDICES as unknown as number[]);
-        const colorIndex = allocateColor(usedColorsRef.current, excludeIndices);
-        if (colorIndex === null) {
-          conn.send(JSON.stringify({ type: 'room-full' }));
-          setTimeout(() => conn.close(), 200);
-          return;
-        }
+        if (isValidTakeover) {
+          // Reconnect: rebind new connection to old slot
+          connsRef.current.get(effectiveConnId)?.close();
+          connsRef.current.set(effectiveConnId, conn);
+          const slotData = slotDataRef.current.get(effectiveConnId)!;
+          // Restore color (was freed on disconnect)
+          usedColorsRef.current.add(slotData.colorIndex);
+          connColorMapRef.current.set(effectiveConnId, slotData.colorIndex);
+          setPlayers((prev) => {
+            const next = new Map(prev);
+            next.set(effectiveConnId, { joystick: { x: 0, y: 0 }, colorIndex: slotData.colorIndex, ping: 0, lastPongAt: Date.now() });
+            return next;
+          });
+          // Invalidate old code, issue fresh one
+          const newCode = recordSlot(effectiveConnId, slotData.colorIndex);
+          conn.send(JSON.stringify({ type: 'takeover-accepted', colorIndex: slotData.colorIndex, connId: effectiveConnId }));
+          conn.send(JSON.stringify({ type: 'used-colors', colors: Array.from(usedColorsRef.current) }));
+          void newCode; // used via slotDataRef side-effect
+        } else {
+          const mode = gameModeRef.current;
+          const maxSlots = mode === '2v6' ? MAX_PLAYERS_2V6 : MAX_PLAYERS_1V3;
+          if (usedColorsRef.current.size >= maxSlots) {
+            conn.send(JSON.stringify({ type: 'room-full' }));
+            setTimeout(() => conn.close(), 200);
+            return;
+          }
+          const excludeIndices = mode === '2v6' ? [] : (EAGLE_COLOR_INDICES as unknown as number[]);
+          const colorIndex = allocateColor(usedColorsRef.current, excludeIndices);
+          if (colorIndex === null) {
+            conn.send(JSON.stringify({ type: 'room-full' }));
+            setTimeout(() => conn.close(), 200);
+            return;
+          }
 
-        usedColorsRef.current.add(colorIndex);
-        connColorMapRef.current.set(connId, colorIndex);
-        connsRef.current.set(connId, conn);
+          usedColorsRef.current.add(colorIndex);
+          connColorMapRef.current.set(effectiveConnId, colorIndex);
+          connsRef.current.set(effectiveConnId, conn);
 
-        conn.send(JSON.stringify({ type: 'assign-color', colorIndex }));
-        conn.send(JSON.stringify({ type: 'used-colors', colors: Array.from(usedColorsRef.current) }));
-        setPlayers((prev) => {
-          const next = new Map(prev);
-          next.set(connId, { joystick: { x: 0, y: 0 }, colorIndex, ping: 0, lastPongAt: Date.now() });
-          return next;
-        });
+          conn.send(JSON.stringify({ type: 'assign-color', colorIndex }));
+          conn.send(JSON.stringify({ type: 'used-colors', colors: Array.from(usedColorsRef.current) }));
+          setPlayers((prev) => {
+            const next = new Map(prev);
+            next.set(effectiveConnId, { joystick: { x: 0, y: 0 }, colorIndex, ping: 0, lastPongAt: Date.now() });
+            return next;
+          });
+          recordSlot(effectiveConnId, colorIndex);
+        }
       });
 
       conn.on('data', (data) => {
@@ -189,9 +238,9 @@ function useHostWebRTC() {
           const decoded = decodeJoystick(data);
           setPlayers((prev) => {
             const next = new Map(prev);
-            const existing = next.get(connId);
+            const existing = next.get(effectiveConnId);
             if (existing) {
-              next.set(connId, { ...existing, joystick: { x: decoded.x, y: decoded.y } });
+              next.set(effectiveConnId, { ...existing, joystick: { x: decoded.x, y: decoded.y } });
             }
             return next;
           });
@@ -205,24 +254,26 @@ function useHostWebRTC() {
               const rtt = Date.now() - msg.ts;
               setPlayers((prev) => {
                 const next = new Map(prev);
-                const existing = next.get(connId);
+                const existing = next.get(effectiveConnId);
                 if (existing) {
-                  next.set(connId, { ...existing, ping: rtt, lastPongAt: Date.now() });
+                  next.set(effectiveConnId, { ...existing, ping: rtt, lastPongAt: Date.now() });
                 }
                 return next;
               });
             } else if (msg.type === 'color-swap') {
-              handleColorSwap(connId, msg.requestedColor);
+              handleColorSwap(effectiveConnId, msg.requestedColor);
+              // Keep slotData color in sync after swap
+              const newColor = connColorMapRef.current.get(effectiveConnId);
+              if (newColor !== undefined) recordSlot(effectiveConnId, newColor);
             } else {
-              // Forward to game logic
-              clientMsgCallbackRef.current?.(connId, msg);
+              clientMsgCallbackRef.current?.(effectiveConnId, msg);
             }
           }
         }
       });
 
-      conn.on('close', () => removePlayer(connId));
-      conn.on('error', () => removePlayer(connId));
+      conn.on('close', () => removePlayer(effectiveConnId));
+      conn.on('error', () => removePlayer(effectiveConnId));
     });
 
     const pingInterval = window.setInterval(() => {
@@ -240,7 +291,7 @@ function useHostWebRTC() {
     };
   }, [removePlayer, handleColorSwap]);
 
-  return { roomCode, players, kickPlayer, kickAllPlayers, broadcast, onClientMessage, usedColors: usedColorsRef, gameModeRef };
+  return { roomCode, players, kickPlayer, kickAllPlayers, broadcast, onClientMessage, usedColors: usedColorsRef, gameModeRef, takeoverCodes, sendToClient };
 }
 
 // ─── HOST: Supabase ─────────────────────────────────────────
@@ -252,6 +303,22 @@ function useHostSupabase() {
   const clientColorMapRef = useRef<Map<string, number>>(new Map());
   const clientMsgCallbackRef = useRef<((connId: string, msg: any) => void) | null>(null);
   const gameModeRef = useRef<'1v3' | '2v6'>('1v3');
+  const slotDataRef = useRef<Map<string, { colorIndex: number; code: string }>>(new Map());
+  const clientAliasRef = useRef<Map<string, string>>(new Map()); // newClientId → oldClientId
+  const currentClientRef = useRef<Map<string, string>>(new Map()); // oldClientId → currentClientId
+  const [takeoverCodes, setTakeoverCodes] = useState<Record<string, string>>({});
+
+  const recordSlot = (connId: string, colorIndex: number): string => {
+    const code = Math.random().toString(36).substring(2, 7).toUpperCase();
+    slotDataRef.current.set(connId, { colorIndex, code });
+    setTakeoverCodes(prev => ({ ...prev, [connId]: code }));
+    return code;
+  };
+
+  const sendToClient = useCallback((connId: string, msg: any) => {
+    const currentId = currentClientRef.current.get(connId) ?? connId;
+    channelRef.current?.send({ type: 'broadcast', event: 'host-direct', payload: { targetId: currentId, ...msg } });
+  }, []);
 
   const removePlayer = useCallback((clientId: string) => {
     const colorIdx = clientColorMapRef.current.get(clientId);
@@ -323,15 +390,42 @@ function useHostSupabase() {
     channel
       .on('broadcast', { event: 'joystick' }, (payload) => {
         const { clientId, x, y } = payload.payload as { clientId: string; x: number; y: number };
+        const resolvedId = clientAliasRef.current.get(clientId) ?? clientId;
         setPlayers((prev) => {
           const next = new Map(prev);
-          const existing = next.get(clientId);
-          if (existing) next.set(clientId, { ...existing, joystick: { x, y } });
+          const existing = next.get(resolvedId);
+          if (existing) next.set(resolvedId, { ...existing, joystick: { x, y } });
           return next;
         });
       })
       .on('broadcast', { event: 'client-join' }, (payload) => {
-        const { clientId } = payload.payload as { clientId: string };
+        const { clientId, takeoverCode } = payload.payload as { clientId: string; takeoverCode?: string };
+
+        // Validate takeover
+        if (takeoverCode) {
+          for (const [oldId, slotData] of slotDataRef.current.entries()) {
+            if (slotData.code === takeoverCode) {
+              // Reconnect: remap new clientId to old slot
+              clientAliasRef.current.set(clientId, oldId);
+              currentClientRef.current.set(oldId, clientId);
+              usedColorsRef.current.add(slotData.colorIndex);
+              clientColorMapRef.current.set(oldId, slotData.colorIndex);
+              setPlayers((prev) => {
+                const next = new Map(prev);
+                next.set(oldId, { joystick: { x: 0, y: 0 }, colorIndex: slotData.colorIndex, ping: 0, lastPongAt: Date.now() });
+                return next;
+              });
+              // Invalidate old code
+              const newCode = recordSlot(oldId, slotData.colorIndex);
+              void newCode;
+              channel.send({ type: 'broadcast', event: 'host-direct', payload: { targetId: clientId, type: 'takeover-accepted', colorIndex: slotData.colorIndex, connId: oldId } });
+              channel.send({ type: 'broadcast', event: 'used-colors', payload: { colors: Array.from(usedColorsRef.current) } });
+              return;
+            }
+          }
+          // Invalid code — fall through to normal join
+        }
+
         const mode = gameModeRef.current;
         const maxSlots = mode === '2v6' ? MAX_PLAYERS_2V6 : MAX_PLAYERS_1V3;
         if (usedColorsRef.current.size >= maxSlots) {
@@ -346,11 +440,13 @@ function useHostSupabase() {
         }
         usedColorsRef.current.add(colorIndex);
         clientColorMapRef.current.set(clientId, colorIndex);
+        currentClientRef.current.set(clientId, clientId);
         setPlayers((prev) => {
           const next = new Map(prev);
           next.set(clientId, { joystick: { x: 0, y: 0 }, colorIndex, ping: 0, lastPongAt: Date.now() });
           return next;
         });
+        recordSlot(clientId, colorIndex);
         channel.send({ type: 'broadcast', event: 'assign-color', payload: { clientId, colorIndex } });
         channel.send({ type: 'broadcast', event: 'used-colors', payload: { colors: Array.from(usedColorsRef.current) } });
       })
@@ -364,7 +460,9 @@ function useHostSupabase() {
       })
       .on('broadcast', { event: 'client-action' }, (payload) => {
         const { clientId, ...msg } = payload.payload as { clientId: string; [key: string]: any };
-        clientMsgCallbackRef.current?.(clientId, msg);
+        // Resolve alias: new clientId may map to old connId for game logic
+        const resolvedId = clientAliasRef.current.get(clientId) ?? clientId;
+        clientMsgCallbackRef.current?.(resolvedId, msg);
       })
       .on('broadcast', { event: 'pong' }, (payload) => {
         const { clientId, ts } = payload.payload as { clientId: string; ts: number };
@@ -390,7 +488,7 @@ function useHostSupabase() {
     };
   }, [removePlayer, handleColorSwap]);
 
-  return { roomCode, players, kickPlayer, kickAllPlayers, broadcast, onClientMessage, usedColors: usedColorsRef, gameModeRef };
+  return { roomCode, players, kickPlayer, kickAllPlayers, broadcast, onClientMessage, usedColors: usedColorsRef, gameModeRef, takeoverCodes, sendToClient };
 }
 
 // ─── CLIENT: WebRTC ─────────────────────────────────────────
@@ -409,7 +507,7 @@ function useClientWebRTC(roomCode: string) {
   const colorIndexRef = useRef(-1);
   const hostMsgCallbackRef = useRef<((msg: any) => void) | null>(null);
 
-  const connect = useCallback((overrideCode?: string) => {
+  const connect = useCallback((overrideCode?: string, takeoverCode?: string) => {
     const targetCode = overrideCode || roomCode;
     if (!targetCode) return;
     const code = targetCode.toUpperCase();
@@ -432,6 +530,7 @@ function useClientWebRTC(roomCode: string) {
       const conn = peer.connect(`${PEER_PREFIX}${code}`, {
         serialization: 'binary',
         reliable: false,
+        metadata: takeoverCode ? { takeoverCode } : undefined,
       });
       connRef.current = conn;
 
@@ -459,6 +558,10 @@ function useClientWebRTC(roomCode: string) {
           } else if (msg.type === 'color-update') {
             colorIndexRef.current = msg.colorIndex;
             setColorIndex(msg.colorIndex);
+          } else if (msg.type === 'takeover-accepted') {
+            colorIndexRef.current = msg.colorIndex;
+            setColorIndex(msg.colorIndex);
+            hostMsgCallbackRef.current?.(msg); // forward for connIdRef update in Client.tsx
           } else if (msg.type === 'used-colors') {
             setUsedColors(new Set(msg.colors));
           } else if (msg.type === 'room-full') {
@@ -471,7 +574,6 @@ function useClientWebRTC(roomCode: string) {
               try { conn.send(JSON.stringify({ type: 'pong', ts: msg.ts })); } catch {}
             }
           } else {
-            // Forward to game logic
             hostMsgCallbackRef.current?.(msg);
           }
         }
@@ -545,7 +647,7 @@ function useClientSupabase(roomCode: string) {
   const idleRef = useRef(true);
   const hostMsgCallbackRef = useRef<((msg: any) => void) | null>(null);
 
-  const connect = useCallback((overrideCode?: string) => {
+  const connect = useCallback((overrideCode?: string, takeoverCode?: string) => {
     const targetCode = overrideCode || roomCode;
     if (!targetCode) return;
     const code = targetCode.toUpperCase();
@@ -595,6 +697,14 @@ function useClientSupabase(roomCode: string) {
       .on('broadcast', { event: 'host-message' }, (payload) => {
         hostMsgCallbackRef.current?.(payload.payload);
       })
+      .on('broadcast', { event: 'host-direct' }, (payload) => {
+        const { targetId, ...msg } = payload.payload as { targetId: string; [key: string]: any };
+        if (targetId !== clientIdRef.current) return;
+        if (msg.type === 'takeover-accepted') {
+          setColorIndex(msg.colorIndex);
+        }
+        hostMsgCallbackRef.current?.(msg);
+      })
       .on('broadcast', { event: 'ping' }, (payload) => {
         if (idleRef.current) return;
         const { ts } = payload.payload as { ts: number };
@@ -603,7 +713,7 @@ function useClientSupabase(roomCode: string) {
       .subscribe((status) => {
         if (status === 'SUBSCRIBED') {
           setConnected(true);
-          channel.send({ type: 'broadcast', event: 'client-join', payload: { clientId: clientIdRef.current } });
+          channel.send({ type: 'broadcast', event: 'client-join', payload: { clientId: clientIdRef.current, ...(takeoverCode ? { takeoverCode } : {}) } });
         }
       });
 
