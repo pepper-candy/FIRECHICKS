@@ -57,7 +57,21 @@ export interface ExamState {
   anyAnswerSubmitted: boolean;
 }
 
-export type EventType = 'mock-exam' | 'hitbox';
+export type EventType = 'mock-exam' | 'hitbox' | 'crossy-road';
+
+export interface CrossyLane {
+  id: number;
+  direction: 'left' | 'right';
+  speed: number;
+  obstacles: { x: number; width: number }[];
+}
+
+export interface CrossyPlayerState {
+  laneIndex: number;   // 0=start zone, 5=finish zone
+  xPosition: number;
+  crossings: number;
+  hitCount: number;
+}
 
 export interface GameEvent {
   type: EventType;
