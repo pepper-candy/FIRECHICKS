@@ -12,6 +12,7 @@ import StageProgressBar from '@/components/StageProgressBar';
 import VideoOverlay, { preloadVideos } from '@/components/VideoOverlay';
 import StageTransition from '@/components/StageTransition';
 import NetworkPerformancePanel from '@/components/NetworkPerformancePanel';
+import CrossyRoadHost from '@/components/events/CrossyRoadHost';
 import { PLAYER_COLORS, MAX_PLAYERS_1V3, MAX_PLAYERS_2V6 } from '@/lib/playerColors';
 import { gradeToLetter, getGradeColor } from '@/lib/gradeSystem';
 import { X, Flame, Zap, Trophy, Star, ChevronDown } from 'lucide-react';
