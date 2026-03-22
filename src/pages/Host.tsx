@@ -61,7 +61,7 @@ function EventOverlay({ event, players, gameMode }: {event: GameEvent;players: R
         {event.phase === 'countdown' &&
         <>
             <h2 className="text-2xl font-pixel text-accent">
-              {event.type === 'mock-exam' ? '📝 MOCK EXAM' : '👊 HITBOX CHALLENGE'}
+              {event.type === 'mock-exam' ? '📝 MOCK EXAM' : event.type === 'hitbox' ? '👊 HITBOX CHALLENGE' : '🐔 CROSSY ROAD'}
             </h2>
             <div className="text-6xl font-pixel text-primary animate-pulse">
               {Math.max(1, 3 - Math.floor((now - event.startedAt) / 1000))}
