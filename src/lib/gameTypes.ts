@@ -57,7 +57,21 @@ export interface ExamState {
   anyAnswerSubmitted: boolean;
 }
 
-export type EventType = 'mock-exam' | 'hitbox';
+export type EventType = 'mock-exam' | 'hitbox' | 'crossy-road';
+
+export interface CrossyLane {
+  id: number;
+  direction: 'left' | 'right';
+  speed: number;
+  obstacles: { x: number; width: number }[];
+}
+
+export interface CrossyPlayerState {
+  laneIndex: number;   // 0=start zone, 5=finish zone
+  xPosition: number;
+  crossings: number;
+  hitCount: number;
+}
 
 export interface GameEvent {
   type: EventType;
@@ -70,6 +84,10 @@ export interface GameEvent {
   chickClicks: Record<string, number>;
   eagleClicks: Record<string, number>;
   result: 'chick' | 'eagle' | 'pending';
+  // Crossy Road
+  crossyLanes?: CrossyLane[];
+  crossyPlayerStates?: Record<string, CrossyPlayerState>;
+  eagleSpeedBoost?: number;
 }
 
 export interface PlayerGameState {
@@ -178,7 +196,9 @@ export type ClientMessage =
   | { type: 'answer-submit'; answer: string }
   | { type: 'tip-request'; tipIndex: 0 | 1 }
   | { type: 'event-hitbox-click' }
-  | { type: 'event-answer'; answer: string };
+  | { type: 'event-answer'; answer: string }
+  | { type: 'crossy-hop'; direction: 'up' | 'down' }
+  | { type: 'crossy-eagle-action'; action: 'speed-up' | 'add-obstacle' };
 
 export function serializePlayerState(p: PlayerGameState): PlayerGameStateSerializable {
   return {

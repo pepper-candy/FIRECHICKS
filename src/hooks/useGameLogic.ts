@@ -58,6 +58,8 @@ const MYSTERY_BOX_ACTIVE_MIN = 10000;
 const MYSTERY_BOX_ACTIVE_MAX = 15000;
 const EVENT_HITBOX_DURATION = 10000; // 10s hitbox challenge
 const EVENT_MOCK_DURATION = 30000; // 30s mock exam
+const EVENT_CROSSY_DURATION = 30000; // 30s crossy road
+const CROSSY_FIELD_WIDTH = 100;
 const STAR_STUDENT_GRADE_BONUS = 5;
 const REVEAL_DURATION = 7000;
 const COUNTDOWN_DURATION = 3;
@@ -707,9 +709,42 @@ export function useGameLogic({ players, broadcast, gameMode }: UseGameLogicProps
               gs.lastMysteryBoxSpawn = now; // restart after claim
               gs.frozenAll = true;
               gs.frozenAllUntil = now + 60000; // lifted when event ends
-              const eventType = Math.random() < 0.5 ? "mock-exam" : "hitbox";
+              const rand = Math.random();
+              const eventType = rand < 0.33 ? "mock-exam" : rand < 0.66 ? "hitbox" : "crossy-road";
               const questionNum = Math.floor(Math.random() * 4) + 1;
-              const eventDuration = eventType === "hitbox" ? EVENT_HITBOX_DURATION : EVENT_MOCK_DURATION;
+              const eventDuration = eventType === "hitbox" ? EVENT_HITBOX_DURATION : eventType === "mock-exam" ? EVENT_MOCK_DURATION : EVENT_CROSSY_DURATION;
+
+              // Generate crossy lanes if needed
+              let crossyLanes: any[] | undefined;
+              let crossyPlayerStates: Record<string, any> | undefined;
+              if (eventType === "crossy-road") {
+                crossyLanes = [];
+                for (let li = 0; li < 5; li++) {
+                  const dir = li % 2 === 0 ? "left" as const : "right" as const;
+                  const speed = 2 + Math.random() * 3; // 2-5 units/s
+                  const obstacleCount = 2 + Math.floor(Math.random() * 3); // 2-4
+                  const obstacles: { x: number; width: number }[] = [];
+                  for (let oi = 0; oi < obstacleCount; oi++) {
+                    obstacles.push({
+                      x: Math.random() * CROSSY_FIELD_WIDTH,
+                      width: 5 + Math.random() * 7, // 5-12 units wide
+                    });
+                  }
+                  crossyLanes.push({ id: li + 1, direction: dir, speed, obstacles });
+                }
+                crossyPlayerStates = {};
+                for (const [, p] of gs.playerStates) {
+                  if (!p.isEagle && p.alive) {
+                    crossyPlayerStates[p.connId] = {
+                      laneIndex: 0,
+                      xPosition: CROSSY_FIELD_WIDTH / 2,
+                      crossings: 0,
+                      hitCount: 0,
+                    };
+                  }
+                }
+              }
+
               gs.activeEvent = {
                 type: eventType,
                 phase: "countdown",
@@ -719,9 +754,12 @@ export function useGameLogic({ players, broadcast, gameMode }: UseGameLogicProps
                 chickClicks: {},
                 eagleClicks: {},
                 result: "pending",
+                crossyLanes,
+                crossyPlayerStates,
+                eagleSpeedBoost: eventType === "crossy-road" ? 1.0 : undefined,
               };
               gs.eventCountdown = 3;
-              gs.stageLabel = eventType === "mock-exam" ? "🎲 Event: Mock Exam!" : "🎲 Event: Hitbox Challenge!";
+              gs.stageLabel = eventType === "mock-exam" ? "🎲 Event: Mock Exam!" : eventType === "hitbox" ? "🎲 Event: Hitbox Challenge!" : "🎲 Event: Crossy Road!";
               currentBroadcast({ type: "phase-change", phase: gs.phase });
             }
             break;
@@ -738,8 +776,44 @@ export function useGameLogic({ players, broadcast, gameMode }: UseGameLogicProps
 
       if (ev.phase === "countdown" && elapsed >= 3000) {
         ev.phase = "active";
-        ev.endAt = now + (ev.type === "hitbox" ? EVENT_HITBOX_DURATION : EVENT_MOCK_DURATION);
-      } else if (ev.phase === "active" && now >= ev.endAt) {
+        ev.endAt = now + (ev.type === "hitbox" ? EVENT_HITBOX_DURATION : ev.type === "crossy-road" ? EVENT_CROSSY_DURATION : EVENT_MOCK_DURATION);
+      }
+
+      // Crossy Road: simulate lanes each frame during active phase
+      if (ev.phase === "active" && ev.type === "crossy-road" && ev.crossyLanes && ev.crossyPlayerStates) {
+        const boost = ev.eagleSpeedBoost ?? 1;
+        for (const lane of ev.crossyLanes) {
+          for (const obs of lane.obstacles) {
+            const move = lane.speed * boost * delta * (lane.direction === "left" ? -1 : 1);
+            obs.x = ((obs.x + move) % CROSSY_FIELD_WIDTH + CROSSY_FIELD_WIDTH) % CROSSY_FIELD_WIDTH;
+          }
+        }
+        // Collision detection
+        for (const [connId, cs] of Object.entries(ev.crossyPlayerStates)) {
+          if (cs.laneIndex >= 1 && cs.laneIndex <= 5) {
+            const lane = ev.crossyLanes[cs.laneIndex - 1];
+            if (lane) {
+              for (const obs of lane.obstacles) {
+                const obsLeft = obs.x;
+                const obsRight = obs.x + obs.width;
+                const px = cs.xPosition;
+                // Check collision (player is ~3 units wide)
+                const playerLeft = px - 1.5;
+                const playerRight = px + 1.5;
+                if (playerRight > obsLeft && playerLeft < obsRight) {
+                  // Hit! Reset to start
+                  cs.laneIndex = 0;
+                  cs.xPosition = CROSSY_FIELD_WIDTH / 2;
+                  cs.hitCount++;
+                  break;
+                }
+              }
+            }
+          }
+        }
+      }
+
+      if (ev.phase === "active" && now >= ev.endAt) {
         // Event over — evaluate results
         ev.phase = "result";
 
@@ -791,6 +865,33 @@ export function useGameLogic({ players, broadcast, gameMode }: UseGameLogicProps
           // Cosmetic result: majority correct = "chick", else "eagle"
           ev.result = correctCount > totalChicks / 2 ? "chick" : "eagle";
           // F-grade elimination after mock exam
+          for (const [, p] of gs.playerStates) {
+            if (!p.isEagle && p.alive && isDead(p.health)) {
+              p.alive = false;
+              p.health = 0;
+              currentBroadcast({ type: "you-died", connId: p.connId });
+            }
+          }
+        } else if (ev.type === "crossy-road" && ev.crossyPlayerStates) {
+          // Crossy Road scoring: 3+ crossings = +2, 0-1 = -2, 2 = no change
+          let goodCount = 0;
+          let totalChicks = 0;
+          for (const [, p] of gs.playerStates) {
+            if (p.isEagle || !p.alive) continue;
+            totalChicks++;
+            const cs = ev.crossyPlayerStates[p.connId];
+            const crossings = cs?.crossings ?? 0;
+            if (crossings >= 3) {
+              p.health = addSubGrades(p.health, 2);
+              goodCount++;
+              p.actionScore += crossings * 2;
+            } else if (crossings <= 1) {
+              p.health = addSubGrades(p.health, -2);
+            }
+            // crossings === 2 = no change
+          }
+          ev.result = goodCount > totalChicks / 2 ? "chick" : "eagle";
+          // F-grade elimination
           for (const [, p] of gs.playerStates) {
             if (!p.isEagle && p.alive && isDead(p.health)) {
               p.alive = false;
@@ -1280,6 +1381,45 @@ export function useGameLogic({ players, broadcast, gameMode }: UseGameLogicProps
             player.actionScore += 5;
           }
         }
+        break;
+      }
+
+      // ── Crossy Road: chick hop ──
+      case "crossy-hop": {
+        if (!gs.activeEvent || gs.activeEvent.type !== "crossy-road" || gs.activeEvent.phase !== "active") return;
+        if (player.isEagle) return;
+        const csHop = gs.activeEvent.crossyPlayerStates?.[connId];
+        if (!csHop) return;
+        if (msg.direction === "up") {
+          csHop.laneIndex = Math.min(csHop.laneIndex + 1, 6); // 6 = past finish
+          if (csHop.laneIndex >= 6) {
+            csHop.crossings++;
+            csHop.laneIndex = 0;
+            csHop.xPosition = CROSSY_FIELD_WIDTH / 2;
+          }
+        } else {
+          csHop.laneIndex = Math.max(csHop.laneIndex - 1, 0);
+        }
+        player.actionScore += 0.2;
+        break;
+      }
+
+      // ── Crossy Road: eagle action ──
+      case "crossy-eagle-action": {
+        if (!gs.activeEvent || gs.activeEvent.type !== "crossy-road" || gs.activeEvent.phase !== "active") return;
+        if (!player.isEagle) return;
+        if (msg.action === "speed-up") {
+          gs.activeEvent.eagleSpeedBoost = Math.min((gs.activeEvent.eagleSpeedBoost ?? 1) + 0.2, 2.0);
+        } else if (msg.action === "add-obstacle") {
+          if (gs.activeEvent.crossyLanes && gs.activeEvent.crossyLanes.length > 0) {
+            const randomLane = gs.activeEvent.crossyLanes[Math.floor(Math.random() * gs.activeEvent.crossyLanes.length)];
+            randomLane.obstacles.push({
+              x: Math.random() * CROSSY_FIELD_WIDTH,
+              width: 5 + Math.random() * 5,
+            });
+          }
+        }
+        player.actionScore += 1;
         break;
       }
 

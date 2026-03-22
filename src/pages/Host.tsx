@@ -12,6 +12,7 @@ import StageProgressBar from '@/components/StageProgressBar';
 import VideoOverlay, { preloadVideos } from '@/components/VideoOverlay';
 import StageTransition from '@/components/StageTransition';
 import NetworkPerformancePanel from '@/components/NetworkPerformancePanel';
+import CrossyRoadHost from '@/components/events/CrossyRoadHost';
 import { PLAYER_COLORS, MAX_PLAYERS_1V3, MAX_PLAYERS_2V6 } from '@/lib/playerColors';
 import { gradeToLetter, getGradeColor } from '@/lib/gradeSystem';
 import { X, Flame, Zap, Trophy, Star, ChevronDown } from 'lucide-react';
@@ -60,7 +61,7 @@ function EventOverlay({ event, players, gameMode }: {event: GameEvent;players: R
         {event.phase === 'countdown' &&
         <>
             <h2 className="text-2xl font-pixel text-accent">
-              {event.type === 'mock-exam' ? '📝 MOCK EXAM' : '👊 HITBOX CHALLENGE'}
+              {event.type === 'mock-exam' ? '📝 MOCK EXAM' : event.type === 'hitbox' ? '👊 HITBOX CHALLENGE' : '🐔 CROSSY ROAD'}
             </h2>
             <div className="text-6xl font-pixel text-primary animate-pulse">
               {Math.max(1, 3 - Math.floor((now - event.startedAt) / 1000))}
@@ -85,6 +86,10 @@ function EventOverlay({ event, players, gameMode }: {event: GameEvent;players: R
             </div>
             <p className="text-xs font-mono text-muted-foreground">TAP HITBOX AS FAST AS POSSIBLE!</p>
           </>
+        }
+
+        {event.phase === 'active' && event.type === 'crossy-road' &&
+          <CrossyRoadHost event={event} players={players} gameMode={gameMode} />
         }
 
         {event.phase === 'result' &&
