@@ -1076,16 +1076,36 @@ export default function Client() {
       );
     }
 
+    if (activeEvent.phase === "active" && activeEvent.type === "crossy-road") {
+      return (
+        <div className="h-dvh overflow-hidden">
+          <CrossyRoadClient
+            event={activeEvent}
+            isEagle={!!isEagle}
+            connId={myState?.connId ?? ""}
+            onHop={(dir) => sendToHost({ type: "crossy-hop", direction: dir })}
+            onEagleAction={(action) => sendToHost({ type: "crossy-eagle-action", action })}
+          />
+        </div>
+      );
+    }
+
     // Reset mock exam submission for next event
     if (hasSubmittedMockExam) setHasSubmittedMockExam(false);
 
     if (activeEvent.phase === "result") {
       const isHitbox = activeEvent.type === "hitbox";
+      const isCrossy = activeEvent.type === "crossy-road";
       // For mock exam, show individual result
-      const myMockCorrect = !isHitbox && activeEvent.chickClicks && myState ? (activeEvent.chickClicks[myState.connId] ?? 0) > 0 : false;
+      const myMockCorrect = !isHitbox && !isCrossy && activeEvent.chickClicks && myState ? (activeEvent.chickClicks[myState.connId] ?? 0) > 0 : false;
+      // For crossy road, show individual crossing count
+      const myCrossings = isCrossy && myState ? (activeEvent.crossyPlayerStates?.[myState.connId]?.crossings ?? 0) : 0;
+
       return (
         <div className="flex flex-col items-center justify-center h-dvh overflow-hidden gap-4">
-          <h2 className="text-xl font-pixel text-accent">{isHitbox ? "👊 HITBOX" : "📝 MOCK EXAM"} RESULT</h2>
+          <h2 className="text-xl font-pixel text-accent">
+            {isHitbox ? "👊 HITBOX" : isCrossy ? "🐔 CROSSY ROAD" : "📝 MOCK EXAM"} RESULT
+          </h2>
           {isHitbox ? (
             <>
               <p className="text-2xl font-pixel" style={{ color: activeEvent.result === "chick" ? "hsl(145 80% 50%)" : "hsl(0 80% 55%)" }}>
@@ -1094,6 +1114,18 @@ export default function Client() {
               <p className="text-xs font-mono text-muted-foreground">
                 {activeEvent.result === "chick" ? "+2 grades!" : "-2 grades for chicks"}
               </p>
+            </>
+          ) : isCrossy ? (
+            <>
+              {isEagle ? (
+                <p className="text-lg font-pixel text-muted-foreground">Results announced</p>
+              ) : myCrossings >= 3 ? (
+                <p className="text-2xl font-pixel" style={{ color: "hsl(145 80% 50%)" }}>🏁 {myCrossings} crossings! +2 grades</p>
+              ) : myCrossings <= 1 ? (
+                <p className="text-2xl font-pixel" style={{ color: "hsl(0 80% 55%)" }}>💥 {myCrossings} crossing{myCrossings !== 1 ? 's' : ''} — -2 grades</p>
+              ) : (
+                <p className="text-2xl font-pixel" style={{ color: "hsl(45 100% 55%)" }}>🐔 {myCrossings} crossings — no change</p>
+              )}
             </>
           ) : (
             <>
