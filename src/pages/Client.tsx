@@ -19,6 +19,7 @@ import type { GamePhase, GameStateSnapshot, PropType, GameMode, PropItem } from 
 import type { ChickColor } from "@/components/CharacterViewer";
 import QRCode from "react-qr-code";
 import { Zap, Heart, Wind, Shield, ChevronUp } from "lucide-react";
+import CrossyRoadClient from "@/components/events/CrossyRoadClient";
 import { useNavigate } from "react-router-dom";
 
 // ─── Props Button (inline for compact layout) ──────────────────────────────────
