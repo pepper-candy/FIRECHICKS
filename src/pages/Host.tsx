@@ -539,7 +539,7 @@ export default function Host() {
         {stageToast && (
           <StageTransition
             key={stageToast.key}
-            stage={stageToast.stage}
+            stage={stageToast.stage as 0 | 1 | 2 | 3}
             onDismiss={() => setStageToast(null)}
           />
         )}

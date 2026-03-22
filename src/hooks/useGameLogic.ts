@@ -1195,7 +1195,7 @@ export function useGameLogic({ players, broadcast, gameMode }: UseGameLogicProps
           tipShare.cooldownUntil = now + TIP_QR_COOLDOWN;
 
           // Notify both scanner and sharer to show 3s copying countdown
-          currentBroadcast({
+          broadcastRef.current({
             type: "tip-copy-notify",
             connIds: [connId, tipShare.connId],
             tipIndex: tipShare.tipIndex,
