@@ -3,7 +3,7 @@ import type { ChickColor } from '@/components/CharacterViewer';
 export type GameMode = '1v3' | '2v6';
 export type GamePhase = 'lobby' | 'reveal' | 'countdown' | 'playing' | 'exam' | 'gameover';
 export type GameStage = 0 | 1 | 2 | 3;
-export type PropType = 'speed' | 'heal' | 'fly' | 'invincible';
+export type PropType = 'speed' | 'heal' | 'fly' | 'invincible' | 'teleport' | 'cage';
 export type AnimState = 'Idle' | 'Running' | 'Victory' | 'Attack';
 
 export const STAGE_LABELS = [
