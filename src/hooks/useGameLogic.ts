@@ -429,6 +429,24 @@ export function useGameLogic({ players, broadcast, gameMode }: UseGameLogicProps
         if (p.frozen && now < p.frozenUntil) continue;
         if (p.frozen && now >= p.frozenUntil) p.frozen = false;
 
+        // Cage unlock check
+        if (p.cagedUntil > 0 && now >= p.cagedUntil) {
+          p.cagedUntil = 0;
+          // Invincible continues for CAGE_POST_INVINCIBLE (already set on cage start)
+        }
+        // Caged: allow rotation but no movement
+        if (p.cagedUntil > 0 && now < p.cagedUntil) {
+          const lobbyPlayer = currentPlayers.get(connId);
+          if (lobbyPlayer) {
+            const jx = lobbyPlayer.joystick.x;
+            const jy = -lobbyPlayer.joystick.y;
+            const mag = Math.sqrt(jx * jx + jy * jy);
+            if (mag > 0.05) p.facingAngle = Math.atan2(-jx, jy);
+          }
+          p.isMoving = false;
+          continue;
+        }
+
         const flyingActive = p.isEagle && p.speedMultiplier >= FLY_SPEED_MULTIPLIER;
         const flyingJustEnded = flyingActive && p.speedMultiplierUntil > 0 && now >= p.speedMultiplierUntil;
         if (flyingJustEnded) {
