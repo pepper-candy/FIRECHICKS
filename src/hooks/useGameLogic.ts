@@ -1359,6 +1359,12 @@ export function useGameLogic({ players, broadcast, gameMode }: UseGameLogicProps
           if (tipShare.connId === connId) return; // can't scan own tip
           if (now < tipShare.cooldownUntil) return; // on cooldown
 
+          // Proximity check: scanner must be near sharer
+          const sharer = gs.playerStates.get(tipShare.connId);
+          if (sharer && !checkOverlap(player.position.x, player.position.z, sharer.position.x, sharer.position.z, TIP_SHARE_RADIUS)) {
+            return; // too far
+          }
+
           const alreadyHasTip = player.tips[tipShare.tipIndex];
           if (!alreadyHasTip) {
             player.tips[tipShare.tipIndex] = true;
