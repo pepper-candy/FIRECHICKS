@@ -158,6 +158,10 @@ export interface PlayerGameStateSerializable {
   isAttacking: boolean;
   attackAnimUntil: number;
   tipShareCooldownUntil: number;
+  teleportPending: boolean;
+  teleportTarget: { x: number; z: number };
+  cagedUntil: number;
+  cageCooldownUntil: number;
 }
 
 export interface GameStateSnapshot {
