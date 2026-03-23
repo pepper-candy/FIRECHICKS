@@ -70,6 +70,8 @@ export default function EagleControls({
   const effectiveFlyCooldown = Math.max(flyCooldownUntil, attackCooldownUntil);
   const flyOnCooldown = effectiveFlyCooldown > now;
   const flyCdSec = flyOnCooldown ? Math.ceil((effectiveFlyCooldown - now) / 1000) : 0;
+  const cageOnCooldown = cageCooldownUntil > now;
+  const cageCdSec = cageOnCooldown ? Math.ceil((cageCooldownUntil - now) / 1000) : 0;
 
   return (
     <div className="flex flex-col h-full gap-2">
