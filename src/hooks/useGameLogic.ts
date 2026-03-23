@@ -270,7 +270,9 @@ export function useGameLogic({ players, broadcast, gameMode }: UseGameLogicProps
         alive: true,
         isStarStudent: false,
         tips: [false, false],
-        props: assign.isEagle ? [{ type: "fly", count: 3 }] : [],
+        props: assign.isEagle
+          ? [{ type: "fly", count: 3 }, { type: "cage", count: 99 }]
+          : [{ type: "speed", count: 2 }, { type: "teleport", count: 1 }],
         position: { ...spawn },
         facingAngle: 0,
         frozen: assign.isEagle,
@@ -289,6 +291,10 @@ export function useGameLogic({ players, broadcast, gameMode }: UseGameLogicProps
         isAttacking: false,
         attackAnimUntil: 0,
         tipShareCooldownUntil: 0,
+        teleportPending: false,
+        teleportTarget: { x: spawn.x, z: spawn.z },
+        cagedUntil: 0,
+        cageCooldownUntil: assign.isEagle ? Date.now() + totalRevealAndCountdown + EAGLE_AWAKE_DELAY + CAGE_COOLDOWN : 0,
       });
     }
 
