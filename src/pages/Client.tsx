@@ -644,7 +644,6 @@ export default function Client() {
   const handleCageUse = useCallback(() => {
     sendToHost({ type: "cage-use" } as any);
   }, [sendToHost]);
-  );
   const handleHitboxClick = useCallback(() => {
     sendToHost({ type: "hitbox-click" });
   }, [sendToHost]);
