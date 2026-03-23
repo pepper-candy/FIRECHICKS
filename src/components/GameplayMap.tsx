@@ -3,7 +3,7 @@ import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import { Grid, Html } from '@react-three/drei';
 import * as THREE from 'three';
 import CharacterViewer from '@/components/CharacterViewer';
-import { BUILDINGS, OBSTACLES, MAP_SIZE, MAP_HALF, ZONE_RADIUS } from '@/lib/gameplayMapData';
+import { BUILDINGS, OBSTACLES, MAP_SIZE, MAP_HALF, ZONE_RADIUS, TIP_SHARE_RADIUS } from '@/lib/gameplayMapData';
 import { PLAYER_COLORS } from '@/lib/playerColors';
 import type { PlayerGameStateSerializable, BuildingState, PropSpawn, MysteryBox, ExamState } from '@/lib/gameTypes';
 
