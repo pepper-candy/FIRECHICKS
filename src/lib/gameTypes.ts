@@ -183,6 +183,7 @@ export interface GameStateSnapshot {
   activeEvent: GameEvent | null;
   tipObtainTimers?: Record<string, { buildingId: number; remainingMs: number }>;
   stageTransitionUntil: number;
+  activeTipShareConnIds: string[];
 }
 
 // Messages host → client
