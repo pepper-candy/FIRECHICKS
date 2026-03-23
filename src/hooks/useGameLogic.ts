@@ -30,6 +30,7 @@ import {
   SOCIAL_CIRCLE_THRESHOLD,
   PROP_PICKUP_RADIUS,
   MAP_HALF,
+  TIP_SHARE_RADIUS,
 } from "@/lib/gameplayMapData";
 import type { PlayerState } from "@/hooks/useGameRoom";
 import type { ChickColor } from "@/components/CharacterViewer";
