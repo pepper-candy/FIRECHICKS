@@ -122,6 +122,12 @@ export interface PlayerGameState {
   attackAnimUntil: number;
   // Tips
   tipShareCooldownUntil: number;
+  // Teleport
+  teleportPending: boolean;
+  teleportTarget: { x: number; z: number };
+  // Cage
+  cagedUntil: number;
+  cageCooldownUntil: number;
 }
 
 export interface PlayerGameStateSerializable {
