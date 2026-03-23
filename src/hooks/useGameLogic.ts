@@ -512,6 +512,27 @@ export function useGameLogic({ players, broadcast, gameMode }: UseGameLogicProps
       }
     }
 
+    // ── Tip share validity: sharer must stay near other chicks ──
+    if (gs.activeTipShares.size > 0) {
+      for (const [key, ts] of gs.activeTipShares.entries()) {
+        const sharer = gs.playerStates.get(ts.connId);
+        if (!sharer || !sharer.alive || sharer.isEagle) {
+          gs.activeTipShares.delete(key);
+          continue;
+        }
+        const nearbyChick = Array.from<PlayerGameState>(gs.playerStates.values()).some(
+          (p) =>
+            !p.isEagle &&
+            p.alive &&
+            p.connId !== sharer.connId &&
+            checkOverlap(sharer.position.x, sharer.position.z, p.position.x, p.position.z, TIP_SHARE_RADIUS),
+        );
+        if (!nearbyChick) {
+          gs.activeTipShares.delete(key);
+        }
+      }
+    }
+
     // ── Stage 0: Social Circle ──
     if (gs.stage === 0) {
       const chicks = Array.from<PlayerGameState>(gs.playerStates.values()).filter((p) => !p.isEagle && p.alive);
@@ -1108,6 +1129,7 @@ export function useGameLogic({ players, broadcast, gameMode }: UseGameLogicProps
     setPhase("gameover");
     cancelAnimationFrame(frameRef.current);
     bcast({ type: "game-over", winner });
+    doBroadcastState(gs, bcast);
   }
 
   // Decide winner after exam timeout based on alive counts

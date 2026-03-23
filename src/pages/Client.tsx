@@ -39,8 +39,22 @@ const PROP_ICONS: Record<PropType, React.ReactNode> = {
   teleport: <Crosshair className="w-6 h-6" />,
   cage: <Lock className="w-6 h-6" />,
 };
+const FLY_COOLDOWN_MS = 15000;
+const CAGE_COOLDOWN_MS = 60000;
 
-function PropsBtn({ items, onUse, isEagle, flyCooldownUntil }: { items: PropItem[]; onUse: (t: PropType) => void; isEagle?: boolean; flyCooldownUntil?: number }) {
+function PropsBtn({
+  items,
+  onUse,
+  isEagle,
+  flyCooldownUntil,
+  cageCooldownUntil,
+}: {
+  items: PropItem[];
+  onUse: (t: PropType) => void;
+  isEagle?: boolean;
+  flyCooldownUntil?: number;
+  cageCooldownUntil?: number;
+}) {
   const [selIdx, setSelIdx] = useState(0);
   const [now, setNow] = useState(Date.now());
   const available = items.filter((i) => i.count > 0 || (isEagle && i.type === 'fly'));
@@ -61,11 +75,15 @@ function PropsBtn({ items, onUse, isEagle, flyCooldownUntil }: { items: PropItem
   }
 
   const showBadge = !(isEagle && current.type === 'fly');
-  const flyOnCooldown = isEagle && current.type === 'fly' && flyCooldownUntil && now < flyCooldownUntil;
-  const flyCdSec = flyOnCooldown ? Math.ceil((flyCooldownUntil! - now) / 1000) : 0;
-  const totalCd = 5000;
-  const flyRemainingMs = flyOnCooldown ? Math.max(0, flyCooldownUntil! - now) : 0;
-  const flyProgress = Math.max(0, Math.min(1, 1 - flyRemainingMs / totalCd));
+  const isFlyBtn = isEagle && current.type === 'fly';
+  const isCageBtn = isEagle && current.type === 'cage';
+  const cooldownUntil = isFlyBtn ? (flyCooldownUntil ?? 0) : isCageBtn ? (cageCooldownUntil ?? 0) : 0;
+  const onCooldown = cooldownUntil > now;
+  const cooldownSec = onCooldown ? Math.ceil((cooldownUntil - now) / 1000) : 0;
+  const totalCd = isFlyBtn ? FLY_COOLDOWN_MS : isCageBtn ? CAGE_COOLDOWN_MS : 0;
+  const remainingMs = onCooldown ? Math.max(0, cooldownUntil - now) : 0;
+  const cooldownProgress = totalCd > 0 ? Math.max(0, Math.min(1, 1 - remainingMs / totalCd)) : 0;
+  const cooldownColor = isFlyBtn ? 'hsl(220 80% 55% / 0.6)' : 'hsl(0 70% 50% / 0.6)';
   const flyCircumference = 2 * Math.PI * 24; // r=24 in 56x56 viewBox
 
   return (
@@ -76,28 +94,29 @@ function PropsBtn({ items, onUse, isEagle, flyCooldownUntil }: { items: PropItem
         </button>
       )}
       <button
-        onPointerDown={(e) => { e.stopPropagation(); e.preventDefault(); if (!flyOnCooldown) onUse(current.type); }}
+        onPointerDown={(e) => { e.stopPropagation(); e.preventDefault(); if (!onCooldown) onUse(current.type); }}
         className="relative w-16 h-16 rounded-full border-2 flex items-center justify-center transition-all active:scale-90"
         style={{
-          borderColor: flyOnCooldown ? 'hsl(var(--muted))' : PROP_COLORS[current.type],
-          color: flyOnCooldown ? 'hsl(220 80% 75%)' : PROP_COLORS[current.type],
-          boxShadow: flyOnCooldown ? 'none' : `0 0 12px ${PROP_COLORS[current.type]}55`,
+          borderColor: onCooldown ? 'hsl(var(--muted))' : PROP_COLORS[current.type],
+          color: onCooldown ? (isCageBtn ? 'hsl(0 70% 70%)' : 'hsl(220 80% 75%)') : PROP_COLORS[current.type],
+          boxShadow: onCooldown ? 'none' : `0 0 12px ${PROP_COLORS[current.type]}55`,
           touchAction: 'manipulation',
           backgroundColor: 'hsl(var(--card))',
+          opacity: onCooldown ? 0.5 : 1,
         }}
       >
-        {flyOnCooldown ? (
-          <span className="text-sm font-bold font-mono" style={{ color: 'hsl(220 80% 75%)' }}>{flyCdSec}s</span>
+        {onCooldown ? (
+          <span className="text-sm font-bold font-mono" style={{ color: isCageBtn ? 'hsl(0 70% 70%)' : 'hsl(220 80% 75%)' }}>{cooldownSec}s</span>
         ) : (
           PROP_ICONS[current.type]
         )}
-        {flyOnCooldown && (
+        {onCooldown && totalCd > 0 && (
           <svg className="absolute inset-0 w-full h-full -rotate-90" viewBox="0 0 56 56" style={{ pointerEvents: 'none' }}>
-            <circle cx="28" cy="28" r="24" fill="none" stroke="hsl(220 80% 55% / 0.6)" strokeWidth="3"
-              strokeDasharray={`${flyProgress * flyCircumference} ${flyCircumference}`} strokeLinecap="round" />
+            <circle cx="28" cy="28" r="24" fill="none" stroke={cooldownColor} strokeWidth="3"
+              strokeDasharray={`${cooldownProgress * flyCircumference} ${flyCircumference}`} strokeLinecap="round" />
           </svg>
         )}
-        {showBadge && !flyOnCooldown && (
+        {showBadge && !onCooldown && (
           <span
             className="absolute -top-1 -right-1 w-5 h-5 rounded-full text-[10px] font-bold flex items-center justify-center bg-card border"
             style={{ borderColor: PROP_COLORS[current.type], color: PROP_COLORS[current.type] }}
@@ -111,7 +130,15 @@ function PropsBtn({ items, onUse, isEagle, flyCooldownUntil }: { items: PropItem
 }
 
 // ─── Props Stacked Button (shows all props visible, vertical flex) ──────────
-function PropsStackBtn({ items, onUse }: { items: PropItem[]; onUse: (t: PropType) => void }) {
+function PropsStackBtn({
+  items,
+  onUse,
+  teleportPending,
+}: {
+  items: PropItem[];
+  onUse: (t: PropType) => void;
+  teleportPending?: boolean;
+}) {
   const available = items.filter((i) => i.count > 0);
   
   if (available.length === 0) {
@@ -137,7 +164,11 @@ function PropsStackBtn({ items, onUse }: { items: PropItem[]; onUse: (t: PropTyp
             backgroundColor: 'hsl(var(--card))',
           }}
         >
-          {PROP_ICONS[item.type]}
+          {item.type === "teleport" && teleportPending ? (
+            <span className="text-xl font-bold">✕</span>
+          ) : (
+            PROP_ICONS[item.type]
+          )}
           <span
             className="absolute -top-1 -right-1 w-5 h-5 rounded-full text-[10px] font-bold flex items-center justify-center bg-card border"
             style={{ borderColor: PROP_COLORS[item.type], color: PROP_COLORS[item.type] }}
@@ -378,6 +409,7 @@ export default function Client() {
   const [scannerQrExpireAt, setScannerQrExpireAt] = useState(0);
   // Local cooldown after QR expires (5s before re-click)
   const [tipExpiryCooldown, setTipExpiryCooldown] = useState<[number, number]>([0, 0]);
+  const [tipRejectUntil, setTipRejectUntil] = useState(0);
   // Track which tipIndex the current scanner QR is for
   const [activeScannerTipIdx, setActiveScannerTipIdx] = useState<0 | 1>(0);
 
@@ -513,6 +545,10 @@ export default function Client() {
             });
           }, 5000);
         }
+      } else if (msg.type === "tip-reject") {
+        if (msg.forConnId === connIdRef.current && msg.reason === "too-far") {
+          setTipRejectUntil(Date.now() + 2500);
+        }
       } else if (msg.type === "takeover-accepted") {
         // Bind this connection to the original player's connId
         if (msg.connId) connIdRef.current = msg.connId;
@@ -619,6 +655,7 @@ export default function Client() {
       : 0;
   const speedRemainingSec = myState?.speedMultiplierUntil ? Math.ceil(Math.max(0, myState.speedMultiplierUntil - nowTs) / 1000) : 0;
   const invincibleRemainingSec = myState?.invincibleUntil ? Math.ceil(Math.max(0, myState.invincibleUntil - nowTs) / 1000) : 0;
+  const cagedRemainingSec = myState?.cagedUntil ? Math.ceil(Math.max(0, myState.cagedUntil - nowTs) / 1000) : 0;
 
   const handleMove = useCallback(
     (x: number, y: number) => {
@@ -641,9 +678,6 @@ export default function Client() {
     },
     [sendToHost],
   );
-  const handleCageUse = useCallback(() => {
-    sendToHost({ type: "cage-use" } as any);
-  }, [sendToHost]);
   const handleHitboxClick = useCallback(() => {
     sendToHost({ type: "hitbox-click" });
   }, [sendToHost]);
@@ -1409,7 +1443,13 @@ export default function Client() {
                   disabled={myState.frozen || !!gameState?.videoPlaying}
                 />
 
-                <PropsBtn items={myState.props ?? []} onUse={handlePropUse} isEagle={true} flyCooldownUntil={Math.max(myState.flyCooldownUntil ?? 0, myState.attackCooldownUntil ?? 0)} />
+                <PropsBtn
+                  items={myState.props ?? []}
+                  onUse={handlePropUse}
+                  isEagle={true}
+                  flyCooldownUntil={Math.max(myState.flyCooldownUntil ?? 0, myState.attackCooldownUntil ?? 0)}
+                  cageCooldownUntil={myState.cageCooldownUntil ?? 0}
+                />
               </>
             )}
           </div>
@@ -1435,27 +1475,32 @@ export default function Client() {
 
           {/* Tips boxes right under scanner */}
           {gamePhase === "playing" && myState && (
-            <div className="flex gap-2 w-full">
-              <TipsBox
-                tipIndex={0}
-                stage={stage}
-                socialMet={socialMet}
-                hasTip={myState.tips[0]}
-                isLoadingTip={loadingTip[0]}
-                tipShareCooldownUntil={Math.max(myState.tipShareCooldownUntil, tipExpiryCooldown[0])}
-                tipCopyingCountdown={loadingTip[0] && tipCopyStartedAt[0] > 0 ? Math.max(0, Math.ceil((tipCopyStartedAt[0] + 5000 - clockNow) / 1000)) : undefined}
-                onTap={() => handleTipTap(0)}
-              />
-              <TipsBox
-                tipIndex={1}
-                stage={stage}
-                socialMet={socialMet}
-                hasTip={myState.tips[1]}
-                isLoadingTip={loadingTip[1]}
-                tipShareCooldownUntil={Math.max(myState.tipShareCooldownUntil, tipExpiryCooldown[1])}
-                tipCopyingCountdown={loadingTip[1] && tipCopyStartedAt[1] > 0 ? Math.max(0, Math.ceil((tipCopyStartedAt[1] + 5000 - clockNow) / 1000)) : undefined}
-                onTap={() => handleTipTap(1)}
-              />
+            <div className="w-full">
+              <div className="flex gap-2 w-full">
+                <TipsBox
+                  tipIndex={0}
+                  stage={stage}
+                  socialMet={socialMet}
+                  hasTip={myState.tips[0]}
+                  isLoadingTip={loadingTip[0]}
+                  tipShareCooldownUntil={Math.max(myState.tipShareCooldownUntil, tipExpiryCooldown[0])}
+                  tipCopyingCountdown={loadingTip[0] && tipCopyStartedAt[0] > 0 ? Math.max(0, Math.ceil((tipCopyStartedAt[0] + 5000 - clockNow) / 1000)) : undefined}
+                  onTap={() => handleTipTap(0)}
+                />
+                <TipsBox
+                  tipIndex={1}
+                  stage={stage}
+                  socialMet={socialMet}
+                  hasTip={myState.tips[1]}
+                  isLoadingTip={loadingTip[1]}
+                  tipShareCooldownUntil={Math.max(myState.tipShareCooldownUntil, tipExpiryCooldown[1])}
+                  tipCopyingCountdown={loadingTip[1] && tipCopyStartedAt[1] > 0 ? Math.max(0, Math.ceil((tipCopyStartedAt[1] + 5000 - clockNow) / 1000)) : undefined}
+                  onTap={() => handleTipTap(1)}
+                />
+              </div>
+              {clockNow < tipRejectUntil && (
+                <p className="mt-1 text-[10px] font-mono text-center text-destructive">Move closer to share tips!</p>
+              )}
             </div>
           )}
 
@@ -1464,12 +1509,17 @@ export default function Client() {
             <div className="flex-1 flex items-center w-full">
               {/* Left column: props stacked vertically, aligned under left tip box */}
               <div className="flex items-center justify-center" style={{ width: 80 }}>
-                <PropsStackBtn items={myState.props ?? []} onUse={handlePropUse} />
+                <PropsStackBtn items={myState.props ?? []} onUse={handlePropUse} teleportPending={myState.teleportPending} />
               </div>
               {/* Right column: thumbstick centered in remaining space */}
-              <div className="flex-1 flex items-center justify-center">
+              <div className="flex-1 flex flex-col items-center justify-center">
+                {cagedRemainingSec > 0 && (
+                  <div className="mb-2 px-3 py-1 rounded border border-destructive/60 bg-destructive/10 text-destructive text-[10px] font-mono">
+                    DETAINED {cagedRemainingSec}s
+                  </div>
+                )}
                 <Thumbstick
-                  onMove={handleMove}
+                  onMove={cagedRemainingSec > 0 ? () => {} : handleMove}
                   onIdleChange={handleIdleChange}
                   size={200}
                   color={displayColor ? `hsl(${displayColor.hsl})` : undefined}

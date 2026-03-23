@@ -8,7 +8,7 @@ const STAGE_INFO: Record<number, { title: string; instruction: string; icon: str
   3: { title: 'Final Exam',     instruction: 'Run to any building and finish the EXAM!',             icon: '📝' },
 };
 
-const DISPLAY_MS = 10_000;
+const DISPLAY_MS = 15_000;
 
 interface Props {
   stage: GameStage;

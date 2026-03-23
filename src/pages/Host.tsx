@@ -580,9 +580,14 @@ function GameOverCeremony({ snapshot, gameMode }: { snapshot: GameStateSnapshot;
   const [ceremonyPhase, setCeremonyPhase] = useState<'mvp' | 'team' | 'transcript'>('mvp');
 
   const winner = snapshot.winner;
+  const getMatchResult = (p: PlayerGameStateSerializable): 'draw' | 'win' | 'lose' => {
+    if (winner === 'draw' || winner === null) return 'draw';
+    if ((winner === 'eagle' && p.isEagle) || (winner === 'chicks' && !p.isEagle)) return 'win';
+    return 'lose';
+  };
   const sorted: PlayerGameStateSerializable[] = Object.values(snapshot.players).sort((a, b) => {
-    const aWin = (winner === 'eagle' && a.isEagle) || (winner === 'chicks' && !a.isEagle) || winner === 'draw';
-    const bWin = (winner === 'eagle' && b.isEagle) || (winner === 'chicks' && !b.isEagle) || winner === 'draw';
+    const aWin = getMatchResult(a) !== 'lose';
+    const bWin = getMatchResult(b) !== 'lose';
     if (aWin !== bWin) return aWin ? -1 : 1;
     return b.actionScore - a.actionScore;
   });
@@ -698,7 +703,7 @@ function GameOverCeremony({ snapshot, gameMode }: { snapshot: GameStateSnapshot;
           <ambientLight intensity={0.8} />
           <directionalLight position={[5, 8, 5]} intensity={1.2} />
           {sorted.map((p, i) => {
-            const isWin = (winner === 'eagle' && p.isEagle) || (winner === 'chicks' && !p.isEagle) || winner === 'draw';
+            const isWin = getMatchResult(p) !== 'lose';
             const spacing = 2.2;
             const x = (i - (sorted.length - 1) / 2) * spacing;
             return (
@@ -738,7 +743,7 @@ function GameOverCeremony({ snapshot, gameMode }: { snapshot: GameStateSnapshot;
                 const color = PLAYER_COLORS[p.colorIndex];
                 const letter = gradeToLetter(p.health);
                 const gradeColor = getGradeColor(p.health);
-                const isWin = (winner === 'eagle' && p.isEagle) || (winner === 'chicks' && !p.isEagle);
+                const result = getMatchResult(p);
 
                 return (
                   <tr key={p.connId} className="border-b border-border/40 hover:bg-card/30">
@@ -765,9 +770,9 @@ function GameOverCeremony({ snapshot, gameMode }: { snapshot: GameStateSnapshot;
                       {p.actionScore.toFixed(0)}
                     </td>
                     <td className="py-2 text-center">
-                      {winner === 'draw'
+                      {result === 'draw'
                         ? <span className="text-yellow-400 font-bold">DRAW</span>
-                        : isWin
+                        : result === 'win'
                           ? <span className="text-primary font-bold">WIN</span>
                           : <span className="text-destructive">LOSE</span>
                       }

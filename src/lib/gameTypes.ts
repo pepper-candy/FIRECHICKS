@@ -196,6 +196,7 @@ export type HostMessage =
   | { type: 'you-died'; connId: string }
   | { type: 'game-mode'; gameMode: GameMode }
   | { type: 'tip-qr'; forConnId: string; code: string; tipIndex: 0 | 1 }
+  | { type: 'tip-reject'; forConnId: string; reason: 'too-far' }
   | { type: 'exam-start'; assignments: Record<string, { layer: '1' | '2'; questionNum: number; category: 'Final' }> }
   | { type: 'lobby-prop-granted'; colorIndex: number; propType: 'speed' | 'heal' };
 
@@ -213,8 +214,7 @@ export type ClientMessage =
   | { type: 'crossy-hop'; direction: 'up' | 'down' }
   | { type: 'crossy-eagle-action'; action: 'speed-up' | 'add-obstacle' }
   | { type: 'teleport-set'; x: number; z: number }
-  | { type: 'teleport-confirm' }
-  | { type: 'cage-use' };
+  | { type: 'teleport-confirm' };
 
 export function serializePlayerState(p: PlayerGameState): PlayerGameStateSerializable {
   return {
