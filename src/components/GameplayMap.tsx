@@ -558,6 +558,18 @@ export default function GameplayMap({
           />
         ))}
 
+        {/* Teleport target dots */}
+        {playerList.filter((p) => p.teleportPending && p.alive).map((p) => {
+          const color = PLAYER_COLORS[p.colorIndex];
+          return color ? <TeleportDot key={`tp-${p.connId}`} position={p.teleportTarget} hsl={color.hsl} /> : null;
+        })}
+
+        {/* Tip share radius circles */}
+        {activeTipShareConnIds?.map((connId) => {
+          const p = players[connId];
+          return p ? <TipShareRadiusCircle key={`tsr-${connId}`} position={p.position} /> : null;
+        })}
+
         {/* Eagle awake countdown */}
         {eagleAwake === false && (
           <mesh position={[0, 0.5, 0]}>
