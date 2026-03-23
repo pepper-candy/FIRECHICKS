@@ -228,6 +228,122 @@ function MysteryBoxMarker({ box }: { box: MysteryBox }) {
   );
 }
 
+// ─── Invincible Ripple (3D animated) ──────────────────────────────────────────
+function InvincibleRipple3D() {
+  const ring1 = useRef<THREE.Mesh>(null!);
+  const ring2 = useRef<THREE.Mesh>(null!);
+  const ring3 = useRef<THREE.Mesh>(null!);
+
+  useFrame(() => {
+    const t = (Date.now() % 1500) / 1500; // 0-1 over 1.5s
+    const t2 = ((Date.now() + 500) % 1500) / 1500;
+    const t3 = ((Date.now() + 1000) % 1500) / 1500;
+    const update = (ref: THREE.Mesh | null, phase: number) => {
+      if (!ref) return;
+      const s = 0.6 + phase * 2.0;
+      ref.scale.set(s, s, 1);
+      (ref.material as THREE.MeshStandardMaterial).opacity = 0.6 * (1 - phase);
+    };
+    update(ring1.current, t);
+    update(ring2.current, t2);
+    update(ring3.current, t3);
+  });
+
+  return (
+    <group>
+      {[ring1, ring2, ring3].map((ref, i) => (
+        <mesh key={i} ref={ref} rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.05, 0]}>
+          <ringGeometry args={[0.8, 1.0, 32]} />
+          <meshStandardMaterial color="#ffd700" emissive="#ffd700" emissiveIntensity={1.5} transparent opacity={0.6} side={THREE.DoubleSide} />
+        </mesh>
+      ))}
+    </group>
+  );
+}
+
+// ─── Cage Mesh ───────────────────────────────────────────────────────────────
+function CageMesh({ countdown }: { countdown: number }) {
+  const groupRef = useRef<THREE.Group>(null!);
+  const barColor = '#8b4513';
+  const BAR_H = 3;
+  const BAR_R = 0.06;
+  const CAGE_R = 0.8;
+  const bars = 8;
+
+  return (
+    <group ref={groupRef}>
+      {/* Vertical bars */}
+      {Array.from({ length: bars }).map((_, i) => {
+        const angle = (i / bars) * Math.PI * 2;
+        const x = Math.cos(angle) * CAGE_R;
+        const z = Math.sin(angle) * CAGE_R;
+        return (
+          <mesh key={i} position={[x, BAR_H / 2, z]}>
+            <cylinderGeometry args={[BAR_R, BAR_R, BAR_H, 6]} />
+            <meshStandardMaterial color={barColor} emissive={barColor} emissiveIntensity={0.3} />
+          </mesh>
+        );
+      })}
+      {/* Top plate */}
+      <mesh position={[0, BAR_H, 0]}>
+        <cylinderGeometry args={[CAGE_R + 0.1, CAGE_R + 0.1, 0.1, 16]} />
+        <meshStandardMaterial color={barColor} emissive={barColor} emissiveIntensity={0.3} />
+      </mesh>
+      {/* Label */}
+      <Html position={[0, BAR_H + 0.8, 0]} center zIndexRange={[100, 0]}>
+        <div style={{
+          background: 'rgba(0,0,0,0.8)',
+          border: '1px solid #ff4444',
+          borderRadius: 4,
+          padding: '2px 6px',
+          color: '#ff4444',
+          fontSize: 10,
+          fontFamily: 'monospace',
+          fontWeight: 'bold',
+          whiteSpace: 'nowrap',
+          pointerEvents: 'none',
+        }}>
+          🔒 DETENTION {countdown}s
+        </div>
+      </Html>
+    </group>
+  );
+}
+
+// ─── Teleport Target Dot ─────────────────────────────────────────────────────
+function TeleportDot({ position, hsl }: { position: { x: number; z: number }; hsl: string }) {
+  const meshRef = useRef<THREE.Mesh>(null!);
+  useFrame(() => {
+    if (meshRef.current) {
+      const s = 0.8 + Math.sin(Date.now() * 0.005) * 0.2;
+      meshRef.current.scale.set(s, 1, s);
+    }
+  });
+  return (
+    <group position={[position.x, 0.1, position.z]}>
+      <mesh ref={meshRef} rotation={[-Math.PI / 2, 0, 0]}>
+        <circleGeometry args={[0.5, 24]} />
+        <meshStandardMaterial color={`hsl(${hsl})`} emissive={`hsl(${hsl})`} emissiveIntensity={1} transparent opacity={0.7} side={THREE.DoubleSide} />
+      </mesh>
+      <Html position={[0, 1.5, 0]} center zIndexRange={[100, 0]}>
+        <div style={{ color: `hsl(${hsl})`, fontSize: 10, fontFamily: 'monospace', pointerEvents: 'none', textShadow: '0 0 4px #000' }}>
+          ✕ TELEPORT
+        </div>
+      </Html>
+    </group>
+  );
+}
+
+// ─── Tip Share Radius Circle ─────────────────────────────────────────────────
+function TipShareRadiusCircle({ position }: { position: { x: number; z: number } }) {
+  return (
+    <mesh rotation={[-Math.PI / 2, 0, 0]} position={[position.x, 0.03, position.z]}>
+      <ringGeometry args={[TIP_SHARE_RADIUS - 0.15, TIP_SHARE_RADIUS, 48]} />
+      <meshStandardMaterial color="#22c55e" emissive="#22c55e" emissiveIntensity={0.5} transparent opacity={0.25} side={THREE.DoubleSide} />
+    </mesh>
+  );
+}
+
 // ─── Game Character ────────────────────────────────────────────────────────────
 function GameCharacter({
   player,
