@@ -1323,9 +1323,41 @@ export function useGameLogic({ players, broadcast, gameMode }: UseGameLogicProps
           case "invincible":
             player.invincibleUntil = now + 3000;
             break;
-        }
-        break;
-      }
+          case "teleport":
+            if (player.isEagle) return;
+            if (!player.teleportPending) {
+              // Phase 1: enter targeting mode
+              player.teleportPending = true;
+              player.teleportTarget = { x: player.position.x, z: player.position.z };
+              propItem.count++; // don't consume yet
+            } else {
+              // Phase 2: execute teleport
+              player.position.x = player.teleportTarget.x;
+              player.position.z = player.teleportTarget.z;
+              player.invincibleUntil = now + 500;
+              player.teleportPending = false;
+              // propItem already decremented above
+            }
+            break;
+          case "cage":
+            if (!player.isEagle) return;
+            propItem.count++; // unlimited — undo decrement
+            if (now < player.cageCooldownUntil) return;
+            // Pick random alive chick
+            {
+              const aliveChicksCage = Array.from<PlayerGameState>(gs.playerStates.values()).filter(
+                (cp) => !cp.isEagle && cp.alive && cp.cagedUntil <= 0,
+              );
+              if (aliveChicksCage.length === 0) return;
+              const target = aliveChicksCage[Math.floor(Math.random() * aliveChicksCage.length)];
+              target.cagedUntil = now + CAGE_LOCK_DURATION;
+              target.frozen = true;
+              target.frozenUntil = now + CAGE_LOCK_DURATION;
+              target.invincibleUntil = now + CAGE_LOCK_DURATION + CAGE_POST_INVINCIBLE;
+              player.cageCooldownUntil = now + CAGE_COOLDOWN;
+              player.actionScore += 5;
+            }
+            break;
 
       // ── Hitbox click (eagle attacking building zone) ──
       case "hitbox-click": {
