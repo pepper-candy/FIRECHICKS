@@ -3,7 +3,7 @@ import type { ChickColor } from '@/components/CharacterViewer';
 export type GameMode = '1v3' | '2v6';
 export type GamePhase = 'lobby' | 'reveal' | 'countdown' | 'playing' | 'exam' | 'gameover';
 export type GameStage = 0 | 1 | 2 | 3;
-export type PropType = 'speed' | 'heal' | 'fly' | 'invincible';
+export type PropType = 'speed' | 'heal' | 'fly' | 'invincible' | 'teleport' | 'cage';
 export type AnimState = 'Idle' | 'Running' | 'Victory' | 'Attack';
 
 export const STAGE_LABELS = [
@@ -122,6 +122,12 @@ export interface PlayerGameState {
   attackAnimUntil: number;
   // Tips
   tipShareCooldownUntil: number;
+  // Teleport
+  teleportPending: boolean;
+  teleportTarget: { x: number; z: number };
+  // Cage
+  cagedUntil: number;
+  cageCooldownUntil: number;
 }
 
 export interface PlayerGameStateSerializable {
@@ -152,6 +158,10 @@ export interface PlayerGameStateSerializable {
   isAttacking: boolean;
   attackAnimUntil: number;
   tipShareCooldownUntil: number;
+  teleportPending: boolean;
+  teleportTarget: { x: number; z: number };
+  cagedUntil: number;
+  cageCooldownUntil: number;
 }
 
 export interface GameStateSnapshot {
@@ -173,6 +183,7 @@ export interface GameStateSnapshot {
   activeEvent: GameEvent | null;
   tipObtainTimers?: Record<string, { buildingId: number; remainingMs: number }>;
   stageTransitionUntil: number;
+  activeTipShareConnIds: string[];
 }
 
 // Messages host → client
@@ -200,7 +211,10 @@ export type ClientMessage =
   | { type: 'event-hitbox-click' }
   | { type: 'event-answer'; answer: string }
   | { type: 'crossy-hop'; direction: 'up' | 'down' }
-  | { type: 'crossy-eagle-action'; action: 'speed-up' | 'add-obstacle' };
+  | { type: 'crossy-eagle-action'; action: 'speed-up' | 'add-obstacle' }
+  | { type: 'teleport-set'; x: number; z: number }
+  | { type: 'teleport-confirm' }
+  | { type: 'cage-use' };
 
 export function serializePlayerState(p: PlayerGameState): PlayerGameStateSerializable {
   return {

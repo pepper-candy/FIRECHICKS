@@ -89,6 +89,8 @@ export const SOCIAL_CIRCLE_THRESHOLD = 1.8;
 export const PROP_PICKUP_RADIUS = 1.8;
 // Exam venue entry radius
 export const EXAM_ENTRY_RADIUS = 4.5;
+// Tip sharing proximity radius (3 blocks × 2 units = 6)
+export const TIP_SHARE_RADIUS = 6;
 
 /** Returns true if position collides with map boundaries, buildings, or obstacles */
 export function checkCollision(

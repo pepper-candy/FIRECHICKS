@@ -1,18 +1,20 @@
 import Thumbstick from '@/components/Thumbstick';
 import ScannerBox from '@/components/ScannerBox';
 import type { PropItem, PropType } from '@/lib/gameTypes';
-import { Zap, Heart, Shield } from 'lucide-react';
+import { Zap, Heart, Shield, Crosshair } from 'lucide-react';
 import { useState, useEffect } from 'react';
 
 const PROP_COLORS: Record<string, string> = {
   speed: 'hsl(48 96% 53%)',
   heal: 'hsl(145 80% 50%)',
   invincible: 'hsl(45 100% 55%)',
+  teleport: 'hsl(280 80% 60%)',
 };
 const PROP_ICONS: Record<string, React.ReactNode> = {
   speed: <Zap className="w-5 h-5" />,
   heal: <Heart className="w-5 h-5" />,
   invincible: <Shield className="w-5 h-5" />,
+  teleport: <Crosshair className="w-5 h-5" />,
 };
 
 interface TipsBoxProps {

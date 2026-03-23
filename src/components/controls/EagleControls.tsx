@@ -1,7 +1,7 @@
 import Thumbstick from '@/components/Thumbstick';
 import AttackButton from '@/components/AttackButton';
 import type { PropItem, PropType } from '@/lib/gameTypes';
-import { Wind } from 'lucide-react';
+import { Wind, Lock } from 'lucide-react';
 import { useState, useEffect } from 'react';
 
 interface HitboxBtnProps {
@@ -36,10 +36,12 @@ interface Props {
   onAttack: () => void;
   onHitboxClick: () => void;
   onPropUse: (t: PropType) => void;
+  onCageUse?: () => void;
   props: PropItem[];
   attackCooldownUntil: number;
   attackDisabled: boolean;
   flyCooldownUntil: number;
+  cageCooldownUntil?: number;
   isInZone: boolean;
   thumbstickColor?: string;
 }
@@ -50,10 +52,12 @@ export default function EagleControls({
   onAttack,
   onHitboxClick,
   onPropUse,
+  onCageUse,
   props,
   attackCooldownUntil,
   attackDisabled,
   flyCooldownUntil,
+  cageCooldownUntil = 0,
   isInZone,
   thumbstickColor,
 }: Props) {
@@ -66,6 +70,8 @@ export default function EagleControls({
   const effectiveFlyCooldown = Math.max(flyCooldownUntil, attackCooldownUntil);
   const flyOnCooldown = effectiveFlyCooldown > now;
   const flyCdSec = flyOnCooldown ? Math.ceil((effectiveFlyCooldown - now) / 1000) : 0;
+  const cageOnCooldown = cageCooldownUntil > now;
+  const cageCdSec = cageOnCooldown ? Math.ceil((cageCooldownUntil - now) / 1000) : 0;
 
   return (
     <div className="flex flex-col h-full gap-2">
@@ -79,13 +85,13 @@ export default function EagleControls({
         <Thumbstick onMove={onMove} onIdleChange={onIdleChange} size={200} color={thumbstickColor} />
       </div>
 
-      {/* Attack + Fly */}
-      <div className="flex items-center justify-center gap-6">
+      {/* Attack + Fly + Cage */}
+      <div className="flex items-center justify-center gap-4">
         <AttackButton onAttack={onAttack} cooldownUntil={attackCooldownUntil} disabled={attackDisabled} />
 
         <button
           onPointerDown={(e) => { e.stopPropagation(); e.preventDefault(); onPropUse('fly'); }}
-          className="relative w-16 h-16 rounded-full border-2 flex items-center justify-center transition-all active:scale-90"
+          className="relative w-14 h-14 rounded-full border-2 flex items-center justify-center transition-all active:scale-90"
           style={{
             borderColor: 'hsl(220 80% 55%)',
             color: 'hsl(220 80% 55%)',
@@ -98,6 +104,24 @@ export default function EagleControls({
             <span className="text-xs font-mono font-bold">{flyCdSec}s</span>
           ) : (
             <Wind className="w-6 h-6" />
+          )}
+        </button>
+
+        <button
+          onPointerDown={(e) => { e.stopPropagation(); e.preventDefault(); if (!cageOnCooldown && onCageUse) onCageUse(); }}
+          className="relative w-14 h-14 rounded-full border-2 flex items-center justify-center transition-all active:scale-90"
+          style={{
+            borderColor: 'hsl(0 70% 50%)',
+            color: 'hsl(0 70% 50%)',
+            boxShadow: '0 0 12px hsl(0 70% 50% / 0.35)',
+            touchAction: 'manipulation',
+            opacity: cageOnCooldown ? 0.5 : 1,
+          }}
+        >
+          {cageOnCooldown ? (
+            <span className="text-xs font-mono font-bold">{cageCdSec}s</span>
+          ) : (
+            <Lock className="w-6 h-6" />
           )}
         </button>
       </div>

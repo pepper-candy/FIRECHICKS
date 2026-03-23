@@ -30,6 +30,7 @@ import {
   SOCIAL_CIRCLE_THRESHOLD,
   PROP_PICKUP_RADIUS,
   MAP_HALF,
+  TIP_SHARE_RADIUS,
 } from "@/lib/gameplayMapData";
 import type { PlayerState } from "@/hooks/useGameRoom";
 import type { ChickColor } from "@/components/CharacterViewer";
@@ -63,6 +64,9 @@ const CROSSY_FIELD_WIDTH = 100;
 const STAR_STUDENT_GRADE_BONUS = 5;
 const REVEAL_DURATION = 7000;
 const COUNTDOWN_DURATION = 3;
+const CAGE_COOLDOWN = 60000;
+const CAGE_LOCK_DURATION = 20000;
+const CAGE_POST_INVINCIBLE = 5000;
 
 // Answer keys
 const FINAL_ANSWER_KEY: Record<number, string> = {
@@ -266,7 +270,9 @@ export function useGameLogic({ players, broadcast, gameMode }: UseGameLogicProps
         alive: true,
         isStarStudent: false,
         tips: [false, false],
-        props: assign.isEagle ? [{ type: "fly", count: 3 }] : [],
+        props: assign.isEagle
+          ? [{ type: "fly", count: 3 }, { type: "cage", count: 99 }]
+          : [{ type: "speed", count: 2 }, { type: "teleport", count: 1 }],
         position: { ...spawn },
         facingAngle: 0,
         frozen: assign.isEagle,
@@ -285,6 +291,10 @@ export function useGameLogic({ players, broadcast, gameMode }: UseGameLogicProps
         isAttacking: false,
         attackAnimUntil: 0,
         tipShareCooldownUntil: 0,
+        teleportPending: false,
+        teleportTarget: { x: spawn.x, z: spawn.z },
+        cagedUntil: 0,
+        cageCooldownUntil: assign.isEagle ? Date.now() + totalRevealAndCountdown + EAGLE_AWAKE_DELAY + CAGE_COOLDOWN : 0,
       });
     }
 
@@ -419,6 +429,24 @@ export function useGameLogic({ players, broadcast, gameMode }: UseGameLogicProps
         if (p.frozen && now < p.frozenUntil) continue;
         if (p.frozen && now >= p.frozenUntil) p.frozen = false;
 
+        // Cage unlock check
+        if (p.cagedUntil > 0 && now >= p.cagedUntil) {
+          p.cagedUntil = 0;
+          // Invincible continues for CAGE_POST_INVINCIBLE (already set on cage start)
+        }
+        // Caged: allow rotation but no movement
+        if (p.cagedUntil > 0 && now < p.cagedUntil) {
+          const lobbyPlayer = currentPlayers.get(connId);
+          if (lobbyPlayer) {
+            const jx = lobbyPlayer.joystick.x;
+            const jy = -lobbyPlayer.joystick.y;
+            const mag = Math.sqrt(jx * jx + jy * jy);
+            if (mag > 0.05) p.facingAngle = Math.atan2(-jx, jy);
+          }
+          p.isMoving = false;
+          continue;
+        }
+
         const flyingActive = p.isEagle && p.speedMultiplier >= FLY_SPEED_MULTIPLIER;
         const flyingJustEnded = flyingActive && p.speedMultiplierUntil > 0 && now >= p.speedMultiplierUntil;
         if (flyingJustEnded) {
@@ -440,6 +468,25 @@ export function useGameLogic({ players, broadcast, gameMode }: UseGameLogicProps
         const jy = -lobbyPlayer.joystick.y;
         const magnitude = Math.sqrt(jx * jx + jy * jy);
         const isFlyingNow = p.isEagle && p.speedMultiplier >= FLY_SPEED_MULTIPLIER;
+
+        // Teleport targeting mode: joystick moves the target dot, not the player
+        if (p.teleportPending && !p.isEagle) {
+          p.isMoving = false;
+          if (magnitude > 0.05) {
+            const moveAngle = Math.atan2(-jx, jy);
+            const dotSpeed = SPEED * 1.5 * delta;
+            const dx = Math.sin(moveAngle) * dotSpeed * -1;
+            const dz = Math.cos(moveAngle) * dotSpeed * -1;
+            const newX = p.teleportTarget.x + dx;
+            const newZ = p.teleportTarget.z + dz;
+            const resolved = resolvePosition(newX, newZ, p.teleportTarget.x, p.teleportTarget.z, 0.5, false);
+            p.teleportTarget.x = resolved.x;
+            p.teleportTarget.z = resolved.z;
+            p.facingAngle = moveAngle;
+          }
+          continue;
+        }
+
         p.isMoving = magnitude > 0.05 || isFlyingNow;
 
         if (magnitude > 0.05 || isFlyingNow) {
@@ -1111,6 +1158,7 @@ export function useGameLogic({ players, broadcast, gameMode }: UseGameLogicProps
       activeEvent: gs.activeEvent,
       tipObtainTimers,
       stageTransitionUntil: gs.stageTransitionUntil ?? 0,
+      activeTipShareConnIds: Array.from(gs.activeTipShares.values()).map((ts: TipShare) => ts.connId),
     };
 
     setSnapshot(snap);
@@ -1275,6 +1323,41 @@ export function useGameLogic({ players, broadcast, gameMode }: UseGameLogicProps
           case "invincible":
             player.invincibleUntil = now + 3000;
             break;
+          case "teleport":
+            if (player.isEagle) return;
+            if (!player.teleportPending) {
+              // Phase 1: enter targeting mode
+              player.teleportPending = true;
+              player.teleportTarget = { x: player.position.x, z: player.position.z };
+              propItem.count++; // don't consume yet
+            } else {
+              // Phase 2: execute teleport
+              player.position.x = player.teleportTarget.x;
+              player.position.z = player.teleportTarget.z;
+              player.invincibleUntil = now + 500;
+              player.teleportPending = false;
+              // propItem already decremented above
+            }
+            break;
+          case "cage":
+            if (!player.isEagle) return;
+            propItem.count++; // unlimited — undo decrement
+            if (now < player.cageCooldownUntil) return;
+            // Pick random alive chick
+            {
+              const aliveChicksCage = Array.from<PlayerGameState>(gs.playerStates.values()).filter(
+                (cp) => !cp.isEagle && cp.alive && cp.cagedUntil <= 0,
+              );
+              if (aliveChicksCage.length === 0) return;
+              const target = aliveChicksCage[Math.floor(Math.random() * aliveChicksCage.length)];
+              target.cagedUntil = now + CAGE_LOCK_DURATION;
+              target.frozen = true;
+              target.frozenUntil = now + CAGE_LOCK_DURATION;
+              target.invincibleUntil = now + CAGE_LOCK_DURATION + CAGE_POST_INVINCIBLE;
+              player.cageCooldownUntil = now + CAGE_COOLDOWN;
+              player.actionScore += 5;
+            }
+            break;
         }
         break;
       }
@@ -1310,6 +1393,12 @@ export function useGameLogic({ players, broadcast, gameMode }: UseGameLogicProps
         if (tipShare) {
           if (tipShare.connId === connId) return; // can't scan own tip
           if (now < tipShare.cooldownUntil) return; // on cooldown
+
+          // Proximity check: scanner must be near sharer
+          const sharer = gs.playerStates.get(tipShare.connId);
+          if (sharer && !checkOverlap(player.position.x, player.position.z, sharer.position.x, sharer.position.z, TIP_SHARE_RADIUS)) {
+            return; // too far
+          }
 
           const alreadyHasTip = player.tips[tipShare.tipIndex];
           if (!alreadyHasTip) {
@@ -1362,6 +1451,19 @@ export function useGameLogic({ players, broadcast, gameMode }: UseGameLogicProps
         const tipIndex = msg.tipIndex as 0 | 1;
         if (!player.tips[tipIndex]) return;
         if (now < player.tipShareCooldownUntil) return;
+
+        // Proximity check: must be near at least one other alive chick
+        const otherChicks = Array.from<PlayerGameState>(gs.playerStates.values()).filter(
+          (p) => !p.isEagle && p.alive && p.connId !== connId,
+        );
+        const nearbyChick = otherChicks.some((c) =>
+          checkOverlap(player.position.x, player.position.z, c.position.x, c.position.z, TIP_SHARE_RADIUS),
+        );
+        if (!nearbyChick) {
+          // Reject — notify client
+          broadcastRef.current({ type: "tip-reject", forConnId: connId, reason: "too-far" });
+          return;
+        }
 
         // Generate a unique tip share code
         const code = `FIRETIP-${tipIndex}-${Math.random().toString(36).slice(2, 8).toUpperCase()}`;

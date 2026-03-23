@@ -28,6 +28,10 @@ const mockChickPlayer = (connId: string, colorIndex: number, chickColor: string,
   isAttacking: false,
   attackAnimUntil: 0,
   tipShareCooldownUntil: 0,
+  teleportPending: false,
+  teleportTarget: { x: 0, z: 0 },
+  cagedUntil: 0,
+  cageCooldownUntil: 0,
   ...overrides,
 });
 
@@ -73,6 +77,7 @@ export function createMockSnapshot(overrides?: Partial<GameStateSnapshot>): Game
     mysteryBoxes: [],
     activeEvent: null,
     stageTransitionUntil: 0,
+    activeTipShareConnIds: [],
     ...overrides,
   };
 }
