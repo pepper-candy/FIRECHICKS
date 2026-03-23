@@ -220,6 +220,15 @@ const Index = () => {
         >
           🔐 PW EXAM
         </Button>
+
+        {/* CROSSY ROAD LAB */}
+        <Button
+          onClick={() => navigate('/test-crossy-road')}
+          variant="outline"
+          className="h-14 text-sm font-pixel border-accent text-accent hover:bg-accent/10"
+        >
+          🐔 TEST CROSSY ROAD
+        </Button>
       </div>
 
       <div className="text-xs text-muted-foreground font-mono text-center space-y-1 mt-8">

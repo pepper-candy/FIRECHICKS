@@ -34,6 +34,7 @@ import PreviewChickStage1 from "./pages/preview/ChickStage1";
 import PreviewChickStage23 from "./pages/preview/ChickStage23";
 import PreviewEagleControl from "./pages/preview/EagleControl";
 import PreviewStageTransition from "./pages/preview/StageTransitionPreview";
+import CrossyRoadLab from "./pages/CrossyRoadLab";
 
 const queryClient = new QueryClient();
 
@@ -75,6 +76,7 @@ const App = () => (
           <Route path="/preview/chick-stage23" element={<PreviewChickStage23 />} />
           <Route path="/preview/eagle-control" element={<PreviewEagleControl />} />
           <Route path="/preview/stage-transition" element={<PreviewStageTransition />} />
+          <Route path="/test-crossy-road" element={<CrossyRoadLab />} />
           <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>
