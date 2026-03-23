@@ -64,6 +64,9 @@ const CROSSY_FIELD_WIDTH = 100;
 const STAR_STUDENT_GRADE_BONUS = 5;
 const REVEAL_DURATION = 7000;
 const COUNTDOWN_DURATION = 3;
+const CAGE_COOLDOWN = 60000;
+const CAGE_LOCK_DURATION = 20000;
+const CAGE_POST_INVINCIBLE = 5000;
 
 // Answer keys
 const FINAL_ANSWER_KEY: Record<number, string> = {
