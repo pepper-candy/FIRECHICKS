@@ -258,17 +258,16 @@ function GameCharacter({
     player.isMoving ? 'Running' :
     'Idle';
 
-  // Invincible shimmer ring
+  // Invincible animated ripple
   const isInvincible = player.invincibleUntil > Date.now();
+  // Cage
+  const isCaged = player.cagedUntil > Date.now();
+  const cageRemaining = isCaged ? Math.ceil((player.cagedUntil - Date.now()) / 1000) : 0;
 
   return (
     <group position={[player.position.x, 0, player.position.z]}>
-      {isInvincible && (
-        <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.05, 0]}>
-          <ringGeometry args={[0.6, 0.9, 24]} />
-          <meshStandardMaterial color="#ffd700" emissive="#ffd700" emissiveIntensity={1} transparent opacity={0.6} side={THREE.DoubleSide} />
-        </mesh>
-      )}
+      {isInvincible && <InvincibleRipple3D />}
+      {isCaged && <CageMesh countdown={cageRemaining} />}
       <Suspense fallback={null}>
         <CharacterViewer
           color={color.chickColor}
