@@ -52,10 +52,12 @@ export default function EagleControls({
   onAttack,
   onHitboxClick,
   onPropUse,
+  onCageUse,
   props,
   attackCooldownUntil,
   attackDisabled,
   flyCooldownUntil,
+  cageCooldownUntil = 0,
   isInZone,
   thumbstickColor,
 }: Props) {
