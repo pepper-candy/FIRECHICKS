@@ -95,7 +95,7 @@ function PropsBtn({
       )}
       <button
         onPointerDown={(e) => { e.stopPropagation(); e.preventDefault(); if (!onCooldown) onUse(current.type); }}
-        className="relative w-16 h-16 rounded-full border-2 flex items-center justify-center transition-all active:scale-90"
+        className="relative overflow-visible w-16 h-16 rounded-full border-2 flex items-center justify-center transition-all active:scale-90"
         style={{
           borderColor: onCooldown ? 'hsl(var(--muted))' : PROP_COLORS[current.type],
           color: onCooldown ? (isCageBtn ? 'hsl(0 70% 70%)' : 'hsl(220 80% 75%)') : PROP_COLORS[current.type],
