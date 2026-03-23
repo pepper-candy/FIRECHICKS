@@ -1,7 +1,7 @@
 import Thumbstick from '@/components/Thumbstick';
 import AttackButton from '@/components/AttackButton';
 import type { PropItem, PropType } from '@/lib/gameTypes';
-import { Wind } from 'lucide-react';
+import { Wind, Lock } from 'lucide-react';
 import { useState, useEffect } from 'react';
 
 interface HitboxBtnProps {

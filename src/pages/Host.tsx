@@ -397,6 +397,7 @@ export default function Host() {
           onHostDragBegin={hostDragBegin}
           onHostDragUpdate={hostDragUpdate}
           onHostDragEnd={hostDragEnd}
+          activeTipShareConnIds={snapshot.activeTipShareConnIds}
         />
 
         {/* Focus camera panel toggle button */}
