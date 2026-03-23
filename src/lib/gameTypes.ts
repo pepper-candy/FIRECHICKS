@@ -211,7 +211,10 @@ export type ClientMessage =
   | { type: 'event-hitbox-click' }
   | { type: 'event-answer'; answer: string }
   | { type: 'crossy-hop'; direction: 'up' | 'down' }
-  | { type: 'crossy-eagle-action'; action: 'speed-up' | 'add-obstacle' };
+  | { type: 'crossy-eagle-action'; action: 'speed-up' | 'add-obstacle' }
+  | { type: 'teleport-set'; x: number; z: number }
+  | { type: 'teleport-confirm' }
+  | { type: 'cage-use' };
 
 export function serializePlayerState(p: PlayerGameState): PlayerGameStateSerializable {
   return {
