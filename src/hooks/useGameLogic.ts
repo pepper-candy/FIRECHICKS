@@ -1358,6 +1358,9 @@ export function useGameLogic({ players, broadcast, gameMode }: UseGameLogicProps
               player.actionScore += 5;
             }
             break;
+        }
+        break;
+      }
 
       // ── Hitbox click (eagle attacking building zone) ──
       case "hitbox-click": {
