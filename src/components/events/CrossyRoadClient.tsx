@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import type { GameEvent, CrossyPlayerState } from '@/lib/gameTypes';
 import { ChevronUp, ChevronDown, Zap, Plus } from 'lucide-react';
 
@@ -6,23 +6,18 @@ interface Props {
   event: GameEvent;
   isEagle: boolean;
   connId: string;
+  nowTs: number;
   onHop: (direction: 'up' | 'down') => void;
   onEagleAction: (action: 'speed-up' | 'add-obstacle') => void;
 }
 
 const FIELD_WIDTH = 100;
 
-export default function CrossyRoadClient({ event, isEagle, connId, onHop, onEagleAction }: Props) {
-  const [now, setNow] = useState(Date.now());
+export default function CrossyRoadClient({ event, isEagle, connId, nowTs, onHop, onEagleAction }: Props) {
   const [speedCd, setSpeedCd] = useState(0);
   const [obstacleCd, setObstacleCd] = useState(0);
-
-  useEffect(() => {
-    const id = setInterval(() => setNow(Date.now()), 100);
-    return () => clearInterval(id);
-  }, []);
-
-  const timeLeft = Math.max(0, Math.ceil((event.endAt - now) / 1000));
+  const now = nowTs;
+  const timeLeft = Math.max(0, Math.ceil((event.endAt - nowTs) / 1000));
   const myState: CrossyPlayerState | undefined = event.crossyPlayerStates?.[connId];
   const lanes = event.crossyLanes ?? [];
   const speedBoost = event.eagleSpeedBoost ?? 1;

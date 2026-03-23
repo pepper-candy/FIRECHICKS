@@ -266,6 +266,17 @@ function TipsBox({
   const onCooldown = now < tipShareCooldownUntil;
   const cooldownSec = Math.ceil(Math.max(0, tipShareCooldownUntil - now) / 1000);
 
+  // Receiving tip loading (highest priority so we don't mask with hasTip state)
+  if (isLoadingTip) {
+    return (
+      <div className="flex-1 h-14 rounded border border-secondary bg-secondary/10 flex items-center justify-center text-xs font-mono text-secondary animate-pulse">
+        {tipCopyingCountdown !== undefined && tipCopyingCountdown > 0
+          ? `📋 Copying... ${tipCopyingCountdown}s`
+          : '📋 Copying...'}
+      </div>
+    );
+  }
+
   if (hasTip) {
     return (
       <button
@@ -281,17 +292,6 @@ function TipsBox({
     );
   }
 
-  // Receiving tip loading
-  if (isLoadingTip) {
-    return (
-      <div className="flex-1 h-14 rounded border border-secondary bg-secondary/10 flex items-center justify-center text-xs font-mono text-secondary animate-pulse">
-        {tipCopyingCountdown !== undefined && tipCopyingCountdown > 0
-          ? `📋 Copying... ${tipCopyingCountdown}s`
-          : '📋 Copying...'}
-      </div>
-    );
-  }
-
   return (
     <div className="flex-1 h-14 rounded border border-border bg-card flex items-center justify-center text-xs font-mono text-muted-foreground">
       Tips {tipIndex + 1}
@@ -302,7 +302,13 @@ function TipsBox({
 // ─── Main Client Component ────────────────────────────────────────────────────
 export default function Client() {
   const navigate = useNavigate();
-  const [code, setCode] = useState("");
+  const [code, setCode] = useState(() => {
+    try {
+      return localStorage.getItem("firechick:lastRoomCode") ?? "";
+    } catch {
+      return "";
+    }
+  });
   const [mode, setMode] = useState<ConnectionMode>("webrtc");
   const {
     connected,
@@ -345,6 +351,13 @@ export default function Client() {
   // Event state
   const [eventAnswer, setEventAnswer] = useState("");
   const [clockNow, setClockNow] = useState(Date.now());
+  const rememberedRoomCode = (() => {
+    try {
+      return localStorage.getItem("firechick:lastRoomCode") ?? "";
+    } catch {
+      return "";
+    }
+  })();
 
   // Fullscreen splash — false = not yet dismissed by user
   const [fsSplashDone, setFsSplashDone] = useState(false);
@@ -399,6 +412,17 @@ export default function Client() {
   useEffect(() => {
     if (kicked) setWasKicked(true);
   }, [kicked]);
+  useEffect(() => {
+    if (!connected) return;
+    const room = code.trim().toUpperCase();
+    if (room.length === 6) {
+      try {
+        localStorage.setItem("firechick:lastRoomCode", room);
+      } catch {
+        // ignore storage errors
+      }
+    }
+  }, [connected, code]);
 
   // Auto-mark color chosen for 2v6 when all 8 slots taken
   useEffect(() => {
@@ -439,6 +463,16 @@ export default function Client() {
       } else if (msg.type === "game-state") {
         setGameState(msg.state);
         if (msg.state?.phase) setGamePhase(msg.state.phase);
+        const currentConnId = connIdRef.current || clientId;
+        const self = currentConnId ? msg.state?.players?.[currentConnId] : null;
+        if (self) {
+          setMyAssignment({
+            colorIndex: self.colorIndex,
+            isEagle: self.isEagle,
+            chickColor: self.chickColor as ChickColor,
+          });
+          setColorChosen(true);
+        }
       } else if (msg.type === "game-over") {
         setGamePhase("gameover");
       } else if (msg.type === "you-died") {
@@ -478,6 +512,7 @@ export default function Client() {
       } else if (msg.type === "takeover-accepted") {
         // Bind this connection to the original player's connId
         if (msg.connId) connIdRef.current = msg.connId;
+        setColorChosen(true);
       } else if (msg.type === "tip-copy-notify") {
         // Fired when a tip QR scan succeeds — notify both scanner and sharer
         const connIds = msg.connIds as string[];
@@ -500,7 +535,7 @@ export default function Client() {
               n[tipIdx] = false;
               return n;
             });
-          }, 3000);
+          }, 5000);
         }
       } else if (msg.type === "exam-start") {
         const myExam = msg.assignments?.[connIdRef.current];
@@ -542,7 +577,7 @@ export default function Client() {
             n[i] = false;
             return n;
           });
-        }, 3000);
+        }, 5000);
       }
     }
     prevTipsRef.current = [...myState.tips] as [boolean, boolean];
@@ -613,6 +648,7 @@ export default function Client() {
   );
   const handleTipTap = useCallback(
     (tipIndex: 0 | 1) => {
+      if (loadingTip[0] || loadingTip[1]) return;
       // Check local expiry cooldown
       if (Date.now() < tipExpiryCooldown[tipIndex]) return;
       // If QR is already showing in scanner, dismiss it + set cooldown
@@ -633,7 +669,7 @@ export default function Client() {
       }
       sendToHost({ type: "tip-request", tipIndex });
     },
-    [sendToHost, tipQrCodes, activeScannerQr, tipExpiryCooldown],
+    [sendToHost, tipQrCodes, activeScannerQr, tipExpiryCooldown, loadingTip],
   );
   const handleDismissScannerQr = useCallback(() => {
     setActiveScannerQr(null);
@@ -654,17 +690,24 @@ export default function Client() {
   }, [sendToHost, examAnswer]);
   const handleJoin = useCallback(
     (roomCode?: string) => {
-      const target = roomCode || code;
-      if (target.length >= 4) {
-        if (roomCode) setCode(roomCode);
+      const providedRoom = (roomCode || code).trim().toUpperCase();
+      const fallbackRoom = rememberedRoomCode.trim().toUpperCase();
+      const hasTakeover = rejoinCode.trim().length >= 5;
+      const targetRoom = providedRoom || (hasTakeover ? fallbackRoom : "");
+      if (targetRoom.length >= 6) {
+        if (roomCode || !code) setCode(targetRoom);
         setWasKicked(false);
         setRoomFullDismissed(false);
         setColorChosen(false);
-        connect(roomCode, rejoinCode.trim().toUpperCase() || undefined);
+        connect(targetRoom, hasTakeover ? rejoinCode.trim().toUpperCase() : undefined);
       }
     },
-    [code, connect, rejoinCode],
+    [code, connect, rejoinCode, rememberedRoomCode],
   );
+  const hasRejoinCode = rejoinCode.trim().length >= 5;
+  const hasRoomCode = code.trim().length >= 6;
+  const hasFallbackRoom = rememberedRoomCode.trim().length >= 6;
+  const canConnect = hasRoomCode || (hasRejoinCode && hasFallbackRoom);
 
   // ── Eagle-in-zone detection (for hitbox visual cue)
   const isInZone =
@@ -762,7 +805,7 @@ export default function Client() {
 
           <Button
             onClick={() => handleJoin()}
-            disabled={code.length < 4}
+            disabled={!canConnect}
             className="h-12 text-sm font-pixel bg-secondary hover:bg-secondary/80 text-secondary-foreground"
           >
             CONNECT
@@ -776,13 +819,20 @@ export default function Client() {
             {showRejoinInput ? "▲ Hide rejoin code" : "▼ Reconnect with code"}
           </button>
           {showRejoinInput && (
-            <Input
-              value={rejoinCode}
-              onChange={(e) => setRejoinCode(e.target.value.toUpperCase())}
-              placeholder="REJOIN CODE (from host)"
-              maxLength={5}
-              className="text-center text-sm tracking-[0.2em] font-mono bg-card border-border uppercase"
-            />
+            <>
+              <Input
+                value={rejoinCode}
+                onChange={(e) => setRejoinCode(e.target.value.toUpperCase())}
+                placeholder="REJOIN CODE (from host)"
+                maxLength={5}
+                className="text-center text-sm tracking-[0.2em] font-mono bg-card border-border uppercase"
+              />
+              {hasRejoinCode && !hasRoomCode && !hasFallbackRoom && (
+                <p className="text-[10px] font-mono text-muted-foreground text-center">
+                  Enter room code once first. Next reconnect can use rejoin code only.
+                </p>
+              )}
+            </>
           )}
 
           <div className="flex items-center justify-between px-2 py-3 rounded border border-border bg-card">
@@ -1084,6 +1134,7 @@ export default function Client() {
             event={activeEvent}
             isEagle={!!isEagle}
             connId={myState?.connId ?? ""}
+            nowTs={clockNow}
             onHop={(dir) => sendToHost({ type: "crossy-hop", direction: dir })}
             onEagleAction={(action) => sendToHost({ type: "crossy-eagle-action", action })}
           />
@@ -1260,7 +1311,7 @@ export default function Client() {
   return (
     <div className="flex flex-col h-dvh overflow-hidden p-2 gap-2 select-none">
       {/* Stage transition overlay */}
-      {gameState?.stageTransitionUntil && gameState.stageTransitionUntil > 0 && clockNow < gameState.stageTransitionUntil && (
+      {(gameState?.stageTransitionUntil ?? 0) > 0 && clockNow < (gameState?.stageTransitionUntil ?? 0) && (
         <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-background/95 backdrop-blur-sm">
           <div className="text-4xl mb-4">{gameState.stage === 0 ? '🤝' : gameState.stage === 1 ? '📍' : gameState.stage === 2 ? '🔗' : '📝'}</div>
           <h1 className="text-xl font-pixel text-accent tracking-widest mb-2">STAGE {(gameState.stage ?? 0) + 1}</h1>
@@ -1385,7 +1436,7 @@ export default function Client() {
                 hasTip={myState.tips[0]}
                 isLoadingTip={loadingTip[0]}
                 tipShareCooldownUntil={Math.max(myState.tipShareCooldownUntil, tipExpiryCooldown[0])}
-                tipCopyingCountdown={loadingTip[0] && tipCopyStartedAt[0] > 0 ? Math.max(0, Math.ceil((tipCopyStartedAt[0] + 3000 - clockNow) / 1000)) : undefined}
+                tipCopyingCountdown={loadingTip[0] && tipCopyStartedAt[0] > 0 ? Math.max(0, Math.ceil((tipCopyStartedAt[0] + 5000 - clockNow) / 1000)) : undefined}
                 onTap={() => handleTipTap(0)}
               />
               <TipsBox
@@ -1395,7 +1446,7 @@ export default function Client() {
                 hasTip={myState.tips[1]}
                 isLoadingTip={loadingTip[1]}
                 tipShareCooldownUntil={Math.max(myState.tipShareCooldownUntil, tipExpiryCooldown[1])}
-                tipCopyingCountdown={loadingTip[1] && tipCopyStartedAt[1] > 0 ? Math.max(0, Math.ceil((tipCopyStartedAt[1] + 3000 - clockNow) / 1000)) : undefined}
+                tipCopyingCountdown={loadingTip[1] && tipCopyStartedAt[1] > 0 ? Math.max(0, Math.ceil((tipCopyStartedAt[1] + 5000 - clockNow) / 1000)) : undefined}
                 onTap={() => handleTipTap(1)}
               />
             </div>

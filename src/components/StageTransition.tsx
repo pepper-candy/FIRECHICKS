@@ -19,6 +19,10 @@ export default function StageTransition({ stage, onDismiss }: Props) {
   const [visible, setVisible] = useState(false);
   const [elapsed, setElapsed] = useState(0);
   const mountedAtRef = useRef(Date.now());
+  const onDismissRef = useRef(onDismiss);
+  useEffect(() => {
+    onDismissRef.current = onDismiss;
+  }, [onDismiss]);
 
   // Slide in shortly after mount
   useEffect(() => {
@@ -31,10 +35,10 @@ export default function StageTransition({ stage, onDismiss }: Props) {
     const id = setInterval(() => {
       const ms = Date.now() - mountedAtRef.current;
       setElapsed(ms);
-      if (ms >= DISPLAY_MS) onDismiss();
+      if (ms >= DISPLAY_MS) onDismissRef.current();
     }, 100);
     return () => clearInterval(id);
-  }, [onDismiss]);
+  }, []);
 
   const info = STAGE_INFO[stage as number] ?? STAGE_INFO[0];
   const remainingMs = Math.max(0, DISPLAY_MS - elapsed);
@@ -43,9 +47,9 @@ export default function StageTransition({ stage, onDismiss }: Props) {
 
   return (
     <div
-      className="absolute top-10 right-3 z-50 w-64 cursor-pointer select-none"
+      className="absolute left-2 top-36 z-50 w-64 cursor-pointer select-none"
       style={{
-        transform: visible ? 'translateX(0)' : 'translateX(110%)',
+        transform: visible ? 'translateX(0)' : 'translateX(-110%)',
         transition: 'transform 0.45s cubic-bezier(0.22, 1, 0.36, 1)',
       }}
       onClick={onDismiss}

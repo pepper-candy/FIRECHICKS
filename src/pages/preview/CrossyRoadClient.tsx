@@ -29,6 +29,7 @@ export default function PreviewCrossyRoadClient() {
         }}
         isEagle={false}
         connId="chick-1"
+        nowTs={Date.now()}
         onHop={(dir) => console.log('HOP', dir)}
         onEagleAction={(action) => console.log('EAGLE', action)}
       />

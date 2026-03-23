@@ -29,7 +29,11 @@ import { assetUrl } from '@/lib/assets';
 
 // ─── Event Overlay (shows during mystery box events) ─────────────────────────
 function EventOverlay({ event, players, gameMode }: {event: GameEvent;players: Record<string, any>; gameMode?: string;}) {
-  const now = Date.now();
+  const [now, setNow] = useState(Date.now());
+  useEffect(() => {
+    const id = setInterval(() => setNow(Date.now()), 100);
+    return () => clearInterval(id);
+  }, []);
   const aliveChicks = Object.values(players).filter((p: any) => !p.isEagle && p.alive);
   const chickTotal = aliveChicks.reduce((sum: number, p: any) => sum + (event.chickClicks[p.connId] ?? 0), 0);
   const eagleTotal = Object.values(players).filter((p: any) => p.isEagle && p.alive).
@@ -139,6 +143,7 @@ export default function Host() {
   const [focusPanelOpen, setFocusPanelOpen] = useState(false);
   // Stage transition toast notification
   const [stageToast, setStageToast] = useState<{ stage: number; key: number } | null>(null);
+  const dismissStageToast = useCallback(() => setStageToast(null), []);
   const prevStageRef = useRef<number | null>(null);
   const { roomCode, players, kickPlayer, kickAllPlayers, broadcast, onClientMessage, gameModeRef, takeoverCodes } = useHostRoom(mode);
   const [revealedCodes, setRevealedCodes] = useState<Set<string>>(new Set());
@@ -176,7 +181,9 @@ export default function Host() {
   useEffect(() => {
     if (!snapshot || (phase !== 'playing' && phase !== 'exam')) return;
     const currentStage = snapshot.stage;
-    if (prevStageRef.current !== null && prevStageRef.current !== currentStage) {
+    if (prevStageRef.current === null) {
+      setStageToast({ stage: currentStage, key: Date.now() });
+    } else if (prevStageRef.current !== currentStage) {
       setStageToast({ stage: currentStage, key: Date.now() });
     }
     prevStageRef.current = currentStage;
@@ -522,12 +529,12 @@ export default function Host() {
           </div>
         }
 
-        {/* Exam layer 1 — always visible on host during exam phase */}
-        {snapshot.examState && snapshot.examState.questionNum > 0 && phase === 'exam' &&
+        {/* Exam helper layer on host (rule-based visibility) */}
+        {snapshot.examState && snapshot.examState.questionNum > 0 && phase === 'exam' && snapshot.examState.hostDisplayLayer !== 'none' &&
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-30 bg-white border-2 border-accent rounded-xl p-4 max-w-md w-[90%] shadow-2xl">
-            <p className="text-[10px] font-mono text-gray-500 mb-1 text-center">LAYER 1 — PROJECT ON SCREEN</p>
+            <p className="text-[10px] font-mono text-gray-500 mb-1 text-center">HOST EXAM LAYER</p>
             <img
-            src={assetUrl(`/PW/PW_Final_${snapshot.examState.questionNum}_layer-1.png`)}
+            src={assetUrl(`/PW/PW_Final_${snapshot.examState.questionNum}_layer-${snapshot.examState.hostDisplayLayer}.png`)}
             alt="Final exam"
             className="w-full rounded" />
           </div>
@@ -545,7 +552,7 @@ export default function Host() {
           <StageTransition
             key={stageToast.key}
             stage={stageToast.stage as 0 | 1 | 2 | 3}
-            onDismiss={() => setStageToast(null)}
+            onDismiss={dismissStageToast}
           />
         )}
 
@@ -775,7 +782,7 @@ function GameOverCeremony({ snapshot, gameMode }: { snapshot: GameStateSnapshot;
       {/* Play Again button */}
       <div className="py-4 text-center">
         <button
-          onClick={() => window.location.reload()}
+          onClick={() => { window.location.href = '/'; }}
           className="px-8 py-3 rounded-lg border-2 border-primary bg-primary/10 text-primary font-pixel text-sm tracking-widest hover:bg-primary/20 transition-all"
         >
           ▶ PLAY AGAIN

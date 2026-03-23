@@ -55,6 +55,7 @@ export interface ExamState {
   answered: boolean;
   layer1Dead: boolean;
   anyAnswerSubmitted: boolean;
+  hostDisplayLayer?: 'none' | '1' | '2';
 }
 
 export type EventType = 'mock-exam' | 'hitbox' | 'crossy-road';
@@ -80,6 +81,7 @@ export interface GameEvent {
   endAt: number;
   // Mock exam
   questionNum?: number;
+  mockExamSubmitted?: Record<string, true>;
   // Hitbox challenge
   chickClicks: Record<string, number>;
   eagleClicks: Record<string, number>;

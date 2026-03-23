@@ -137,6 +137,20 @@ interface GameStateRef {
   stageTransitionUntil: number;
 }
 
+function updateHostExamDisplay(gs: GameStateRef) {
+  const exam = gs.examState;
+  if (!exam) return;
+  const layer1Alive = !!gs.playerStates.get(exam.layer1ConnId)?.alive;
+  const aliveLayer2Count = exam.layer2ConnIds.filter((id) => gs.playerStates.get(id)?.alive).length;
+  if (!layer1Alive) {
+    exam.hostDisplayLayer = "1";
+  } else if (aliveLayer2Count === 0) {
+    exam.hostDisplayLayer = "2";
+  } else {
+    exam.hostDisplayLayer = "none";
+  }
+}
+
 // ─── Hook ─────────────────────────────────────────────────────────────────────
 export function useGameLogic({ players, broadcast, gameMode }: UseGameLogicProps) {
   const [phase, setPhase] = useState<GamePhase>("lobby");
@@ -619,6 +633,7 @@ export function useGameLogic({ players, broadcast, gameMode }: UseGameLogicProps
               currentBroadcast({ type: "you-died", connId: p.connId });
             }
           }
+          updateHostExamDisplay(gs);
 
           if (!gs.examState.anyAnswerSubmitted) {
             // Nobody tried — play the video, defer winner resolution to onVideoComplete
@@ -751,6 +766,7 @@ export function useGameLogic({ players, broadcast, gameMode }: UseGameLogicProps
                 startedAt: now,
                 endAt: now + 3000 + eventDuration,
                 questionNum: eventType === "mock-exam" ? questionNum : undefined,
+                mockExamSubmitted: eventType === "mock-exam" ? {} : undefined,
                 chickClicks: {},
                 eagleClicks: {},
                 result: "pending",
@@ -777,6 +793,16 @@ export function useGameLogic({ players, broadcast, gameMode }: UseGameLogicProps
       if (ev.phase === "countdown" && elapsed >= 3000) {
         ev.phase = "active";
         ev.endAt = now + (ev.type === "hitbox" ? EVENT_HITBOX_DURATION : ev.type === "crossy-road" ? EVENT_CROSSY_DURATION : EVENT_MOCK_DURATION);
+      }
+
+      if (ev.phase === "active" && ev.type === "mock-exam") {
+        const aliveChickIds = Array.from<PlayerGameState>(gs.playerStates.values())
+          .filter((p) => !p.isEagle && p.alive)
+          .map((p) => p.connId);
+        const allSubmitted =
+          aliveChickIds.length > 0 &&
+          aliveChickIds.every((id) => !!ev.mockExamSubmitted?.[id]);
+        if (allSubmitted) ev.endAt = now;
       }
 
       // Crossy Road: simulate lanes each frame during active phase
@@ -1005,6 +1031,7 @@ export function useGameLogic({ players, broadcast, gameMode }: UseGameLogicProps
       answered: false,
       layer1Dead: soloExam, // If solo, show layer 1 on host screen
       anyAnswerSubmitted: false,
+      hostDisplayLayer: soloExam ? "2" : "none",
     };
     gs.stageLabel = "FINAL EXAM — Solve together!";
 
@@ -1045,14 +1072,8 @@ export function useGameLogic({ players, broadcast, gameMode }: UseGameLogicProps
       endGame(gs, "eagle", bcast);
       return;
     }
-
-    if (mode === "1v3") {
-      // 2+ chicks alive → chicks win; exactly 1 chick → draw
-      endGame(gs, C >= 2 ? "chicks" : "draw", bcast);
-    } else {
-      // 2v6: 3+ chicks alive → chicks win; 1-2 chicks → draw
-      endGame(gs, C >= 3 ? "chicks" : "draw", bcast);
-    }
+    void mode;
+    endGame(gs, "chicks", bcast);
   }
 
   // ─── Broadcast state ────────────────────────────────────────────────────────
@@ -1206,10 +1227,12 @@ export function useGameLogic({ players, broadcast, gameMode }: UseGameLogicProps
                   if (pp.alive) pp.health = addSubGrades(pp.health, -1);
                 }
               }
+              updateHostExamDisplay(gs);
 
               broadcastRef.current({ type: "you-died", connId: chick.connId });
             }
           }
+          updateHostExamDisplay(gs);
 
           gs.frozenAll = true;
           gs.frozenAllUntil = now + 60000; // lifted by video completion
@@ -1371,6 +1394,8 @@ export function useGameLogic({ players, broadcast, gameMode }: UseGameLogicProps
       case "event-answer": {
         if (!gs.activeEvent || gs.activeEvent.type !== "mock-exam" || gs.activeEvent.phase !== "active") return;
         if (player.isEagle) return;
+        gs.activeEvent.mockExamSubmitted = gs.activeEvent.mockExamSubmitted ?? {};
+        gs.activeEvent.mockExamSubmitted[connId] = true;
         const questionNum = gs.activeEvent.questionNum ?? 1;
         const correct = MOCK_ANSWER_KEY[questionNum];
         if (msg.answer.toUpperCase().trim() === correct) {
@@ -1463,6 +1488,7 @@ export function useGameLogic({ players, broadcast, gameMode }: UseGameLogicProps
                     }
                   }
                 }
+                updateHostExamDisplay(gs);
               }
             }
           }
@@ -1471,6 +1497,7 @@ export function useGameLogic({ players, broadcast, gameMode }: UseGameLogicProps
           if (aliveAfter.length === 0) {
             endGame(gs, "eagle", broadcastRef.current);
           }
+          updateHostExamDisplay(gs);
         }
         break;
       }
