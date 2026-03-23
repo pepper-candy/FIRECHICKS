@@ -36,10 +36,12 @@ interface Props {
   onAttack: () => void;
   onHitboxClick: () => void;
   onPropUse: (t: PropType) => void;
+  onCageUse?: () => void;
   props: PropItem[];
   attackCooldownUntil: number;
   attackDisabled: boolean;
   flyCooldownUntil: number;
+  cageCooldownUntil?: number;
   isInZone: boolean;
   thumbstickColor?: string;
 }
