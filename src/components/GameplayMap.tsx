@@ -469,6 +469,7 @@ export default function GameplayMap({
   onHostDragBegin,
   onHostDragUpdate,
   onHostDragEnd,
+  activeTipShareConnIds,
 }: Props) {
   const playerList = Object.values(players);
 
