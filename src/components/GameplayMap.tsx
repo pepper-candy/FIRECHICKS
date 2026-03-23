@@ -40,6 +40,7 @@ interface Props {
   onHostDragBegin?: (connId: string) => void;
   onHostDragUpdate?: (connId: string, x: number, z: number) => void;
   onHostDragEnd?: (connId: string, valid: boolean) => void;
+  activeTipShareConnIds?: string[];
 }
 
 // ─── Building ──────────────────────────────────────────────────────────────────
