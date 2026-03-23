@@ -468,6 +468,25 @@ export function useGameLogic({ players, broadcast, gameMode }: UseGameLogicProps
         const jy = -lobbyPlayer.joystick.y;
         const magnitude = Math.sqrt(jx * jx + jy * jy);
         const isFlyingNow = p.isEagle && p.speedMultiplier >= FLY_SPEED_MULTIPLIER;
+
+        // Teleport targeting mode: joystick moves the target dot, not the player
+        if (p.teleportPending && !p.isEagle) {
+          p.isMoving = false;
+          if (magnitude > 0.05) {
+            const moveAngle = Math.atan2(-jx, jy);
+            const dotSpeed = SPEED * 1.5 * delta;
+            const dx = Math.sin(moveAngle) * dotSpeed * -1;
+            const dz = Math.cos(moveAngle) * dotSpeed * -1;
+            const newX = p.teleportTarget.x + dx;
+            const newZ = p.teleportTarget.z + dz;
+            const resolved = resolvePosition(newX, newZ, p.teleportTarget.x, p.teleportTarget.z, 0.5, false);
+            p.teleportTarget.x = resolved.x;
+            p.teleportTarget.z = resolved.z;
+            p.facingAngle = moveAngle;
+          }
+          continue;
+        }
+
         p.isMoving = magnitude > 0.05 || isFlyingNow;
 
         if (magnitude > 0.05 || isFlyingNow) {
