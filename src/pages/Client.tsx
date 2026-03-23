@@ -18,7 +18,7 @@ import { assetUrl } from "@/lib/assets";
 import type { GamePhase, GameStateSnapshot, PropType, GameMode, PropItem } from "@/lib/gameTypes";
 import type { ChickColor } from "@/components/CharacterViewer";
 import QRCode from "react-qr-code";
-import { Zap, Heart, Wind, Shield, ChevronUp } from "lucide-react";
+import { Zap, Heart, Wind, Shield, ChevronUp, Crosshair, Lock } from "lucide-react";
 import CrossyRoadClient from "@/components/events/CrossyRoadClient";
 import { useNavigate } from "react-router-dom";
 
@@ -28,12 +28,16 @@ const PROP_COLORS: Record<PropType, string> = {
   heal: "hsl(145 80% 50%)",
   fly: "hsl(220 80% 55%)",
   invincible: "hsl(45 100% 55%)",
+  teleport: "hsl(280 80% 60%)",
+  cage: "hsl(0 70% 50%)",
 };
 const PROP_ICONS: Record<PropType, React.ReactNode> = {
   speed: <Zap className="w-6 h-6" />,
   heal: <Heart className="w-6 h-6" />,
   fly: <Wind className="w-6 h-6" />,
   invincible: <Shield className="w-6 h-6" />,
+  teleport: <Crosshair className="w-6 h-6" />,
+  cage: <Lock className="w-6 h-6" />,
 };
 
 function PropsBtn({ items, onUse, isEagle, flyCooldownUntil }: { items: PropItem[]; onUse: (t: PropType) => void; isEagle?: boolean; flyCooldownUntil?: number }) {

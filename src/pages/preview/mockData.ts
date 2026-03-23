@@ -77,6 +77,7 @@ export function createMockSnapshot(overrides?: Partial<GameStateSnapshot>): Game
     mysteryBoxes: [],
     activeEvent: null,
     stageTransitionUntil: 0,
+    activeTipShareConnIds: [],
     ...overrides,
   };
 }

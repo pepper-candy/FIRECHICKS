@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Zap, Heart, Wind, Shield, ChevronUp } from 'lucide-react';
+import { Zap, Heart, Wind, Shield, ChevronUp, Crosshair, Lock } from 'lucide-react';
 import type { PropItem, PropType } from '@/lib/gameTypes';
 
 interface Props {
@@ -12,6 +12,8 @@ const PROP_ICONS: Record<PropType, React.ReactNode> = {
   heal: <Heart className="w-6 h-6" />,
   fly: <Wind className="w-6 h-6" />,
   invincible: <Shield className="w-6 h-6" />,
+  teleport: <Crosshair className="w-6 h-6" />,
+  cage: <Lock className="w-6 h-6" />,
 };
 
 const PROP_COLORS: Record<PropType, string> = {
@@ -19,6 +21,8 @@ const PROP_COLORS: Record<PropType, string> = {
   heal: 'hsl(145 80% 50%)',
   fly: 'hsl(220 80% 55%)',
   invincible: 'hsl(45 100% 55%)',
+  teleport: 'hsl(280 80% 60%)',
+  cage: 'hsl(0 70% 50%)',
 };
 
 export default function PropsButton({ items, onUse }: Props) {
