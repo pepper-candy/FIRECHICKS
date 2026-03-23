@@ -1411,6 +1411,19 @@ export function useGameLogic({ players, broadcast, gameMode }: UseGameLogicProps
         if (!player.tips[tipIndex]) return;
         if (now < player.tipShareCooldownUntil) return;
 
+        // Proximity check: must be near at least one other alive chick
+        const otherChicks = Array.from<PlayerGameState>(gs.playerStates.values()).filter(
+          (p) => !p.isEagle && p.alive && p.connId !== connId,
+        );
+        const nearbyChick = otherChicks.some((c) =>
+          checkOverlap(player.position.x, player.position.z, c.position.x, c.position.z, TIP_SHARE_RADIUS),
+        );
+        if (!nearbyChick) {
+          // Reject — notify client
+          broadcastRef.current({ type: "tip-reject", forConnId: connId, reason: "too-far" });
+          return;
+        }
+
         // Generate a unique tip share code
         const code = `FIRETIP-${tipIndex}-${Math.random().toString(36).slice(2, 8).toUpperCase()}`;
         const tipKey = `${connId}-${tipIndex}`;
