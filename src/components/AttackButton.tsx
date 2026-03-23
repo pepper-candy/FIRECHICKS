@@ -44,7 +44,7 @@ export default function AttackButton({ onAttack, cooldownUntil, disabled }: Prop
   return (
     <button
       onPointerDown={(e) => { e.stopPropagation(); if (!inactive) onAttack(); }}
-      className={`relative w-20 h-20 rounded-full border-4 flex items-center justify-center transition-all select-none flex-shrink-0 ${
+      className={`relative overflow-visible w-20 h-20 rounded-full border-4 flex items-center justify-center transition-all select-none flex-shrink-0 ${
         inactive
           ? 'border-muted bg-muted/30'
           : 'border-destructive bg-destructive/20 active:scale-95'
