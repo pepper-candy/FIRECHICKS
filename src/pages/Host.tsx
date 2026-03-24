@@ -215,8 +215,8 @@ export default function Host() {
     return (
       <div className="flex flex-col h-screen p-3 gap-3">
         {/* Cyber START button — top center absolute */}
-        {isFull &&
-        <div className="absolute top-4 left-1/2 -translate-x-1/2 z-20">
+        {(isFull || botsAdded) &&
+        <div className="absolute top-4 left-1/2 -translate-x-1/2 z-20 flex gap-3">
             <button
             onClick={() => {
               setStartClickAt(Date.now());
@@ -232,6 +232,25 @@ export default function Host() {
             
               <Zap className="inline w-5 h-5 mr-2 -mt-0.5 text-primary" />
               ▶ START GAME
+            </button>
+          </div>
+        }
+
+        {/* Fill bots button — only when not full */}
+        {!isFull &&
+        <div className="absolute top-4 left-1/2 -translate-x-1/2 z-20">
+            <button
+            onClick={() => {
+              fillBots?.();
+              setBotsAdded(true);
+            }}
+            className="px-6 py-2.5 font-pixel text-sm tracking-widest uppercase
+                text-accent border-2 border-accent bg-accent/10
+                hover:bg-accent/25 transition-all duration-200
+                shadow-[0_0_15px_hsl(var(--accent)/0.3)]
+                hover:shadow-[0_0_25px_hsl(var(--accent)/0.5)]">
+            
+              🤖 FILL BOTS
             </button>
           </div>
         }
