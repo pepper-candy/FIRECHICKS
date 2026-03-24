@@ -23,6 +23,7 @@ export interface PlayerState {
   colorIndex: number;
   ping: number;
   lastPongAt: number;
+  isBot?: boolean;
 }
 
 // Binary encoding for joystick data
