@@ -404,6 +404,7 @@ function useHostSupabase() {
   const clientAliasRef = useRef<Map<string, string>>(new Map()); // newClientId → oldClientId
   const currentClientRef = useRef<Map<string, string>>(new Map()); // oldClientId → currentClientId
   const [takeoverCodes, setTakeoverCodes] = useState<Record<string, string>>({});
+  const resolveClientId = useCallback((clientId: string) => clientAliasRef.current.get(clientId) ?? clientId, []);
 
   const recordSlot = (connId: string, colorIndex: number): string => {
     const code = Math.random().toString(36).substring(2, 7).toUpperCase();
