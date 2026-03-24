@@ -80,7 +80,7 @@ function CharAnimCircle({
 
 const Index = () => {
   const navigate = useNavigate();
-  const { isFullscreen, isSupported: fsSupported, enter } = useFullscreen();
+  const { isFullscreen, showImmersiveControl, enter } = useFullscreen();
   const {
     isMobile,
     fullReady,
@@ -147,7 +147,7 @@ const Index = () => {
 
   return (
     <div className="flex flex-col items-center justify-center min-h-screen p-6 gap-10 relative">
-      {fsSupported && !isFullscreen && (
+      {showImmersiveControl && !isFullscreen && (
         <button
           onClick={enter}
           className="absolute top-4 right-4 px-3 py-1 rounded border border-primary/40 text-primary text-xs font-mono hover:bg-primary/10"

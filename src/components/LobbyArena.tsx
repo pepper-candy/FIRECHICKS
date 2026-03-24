@@ -270,6 +270,7 @@ const INITIAL_BALLS: BallState[] = [
 export default function LobbyArena({ players }: Props) {
   const [positions, setPositions] = useState<Map<string, PlayerPos>>(new Map());
   const [balls, setBalls] = useState<BallState[]>(INITIAL_BALLS);
+  const isMobile = typeof window !== 'undefined' && /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
 
   useEffect(() => {
     setPositions((prev) => {
@@ -291,7 +292,11 @@ export default function LobbyArena({ players }: Props) {
 
   return (
     <div className="w-full h-full rounded-lg border border-border overflow-hidden bg-background relative">
-      <Canvas camera={{ position: [0, 8, 10], fov: 40 }}>
+      <Canvas
+        camera={{ position: [0, 8, 10], fov: 40 }}
+        dpr={isMobile ? [1, 1.5] : [1, 2]}
+        gl={{ antialias: !isMobile, powerPreference: 'default', preserveDrawingBuffer: false }}
+      >
         <ambientLight intensity={0.6} />
         <directionalLight position={[5, 10, 5]} intensity={1} />
         <directionalLight position={[-3, 6, -3]} intensity={0.3} />

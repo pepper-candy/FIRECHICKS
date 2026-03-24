@@ -32,7 +32,7 @@ import {
   MAP_HALF,
   TIP_SHARE_RADIUS,
 } from "@/lib/gameplayMapData";
-import type { PlayerState } from "@/hooks/useGameRoom";
+import type { PlayerState, ConnectionMode } from "@/hooks/useGameRoom";
 import type { ChickColor } from "@/components/CharacterViewer";
 import { updateBot, isBot } from "@/lib/botAI";
 
@@ -106,6 +106,7 @@ interface UseGameLogicProps {
   players: Map<string, PlayerState>;
   broadcast: (msg: any) => void;
   gameMode: "1v3" | "2v6";
+  connectionMode: ConnectionMode;
 }
 
 // Named type for the full game state reference — avoids TypeScript `unknown` inference issues
@@ -158,7 +159,7 @@ function updateHostExamDisplay(gs: GameStateRef) {
 }
 
 // ─── Hook ─────────────────────────────────────────────────────────────────────
-export function useGameLogic({ players, broadcast, gameMode }: UseGameLogicProps) {
+export function useGameLogic({ players, broadcast, gameMode, connectionMode }: UseGameLogicProps) {
   const [phase, setPhase] = useState<GamePhase>("lobby");
   const [assignments, setAssignments] = useState<
     Record<string, { colorIndex: number; isEagle: boolean; chickColor: ChickColor }>
@@ -178,6 +179,12 @@ export function useGameLogic({ players, broadcast, gameMode }: UseGameLogicProps
   useEffect(() => {
     gameModeRef.current = gameMode;
   }, [gameMode]);
+
+  const connectionModeRef = useRef(connectionMode);
+  useEffect(() => {
+    connectionModeRef.current = connectionMode;
+  }, [connectionMode]);
+  const lastNetworkStateBroadcastAtRef = useRef(0);
 
   const gameStateRef = useRef<GameStateRef | null>(null);
 
@@ -205,6 +212,7 @@ export function useGameLogic({ players, broadcast, gameMode }: UseGameLogicProps
       const shuffled = [...playerIds].sort(() => Math.random() - 0.5);
       const eagleId = shuffled[0];
       const eagleColorIdx = EAGLE_COLOR_INDICES[Math.floor(Math.random() * EAGLE_COLOR_INDICES.length)];
+      const usedChickColors = new Set<number>();
 
       for (const id of playerIds) {
         if (id === eagleId) {
@@ -215,7 +223,16 @@ export function useGameLogic({ players, broadcast, gameMode }: UseGameLogicProps
           };
         } else {
           const pickedColor = currentPlayers.get(id)?.colorIndex ?? 2;
-          const ci = EAGLE_COLOR_INDICES.includes(pickedColor) ? 2 : pickedColor;
+          let ci = EAGLE_COLOR_INDICES.includes(pickedColor) ? 2 : pickedColor;
+          if (usedChickColors.has(ci)) {
+            for (let idx = 0; idx < PLAYER_COLORS.length; idx++) {
+              if (EAGLE_COLOR_INDICES.includes(idx)) continue;
+              if (usedChickColors.has(idx)) continue;
+              ci = idx;
+              break;
+            }
+          }
+          usedChickColors.add(ci);
           assigns[id] = { colorIndex: ci, isEagle: false, chickColor: PLAYER_COLORS[ci].chickColor };
         }
       }
@@ -1229,7 +1246,12 @@ export function useGameLogic({ players, broadcast, gameMode }: UseGameLogicProps
     };
 
     setSnapshot(snap);
-    bcast({ type: "game-state", state: snap });
+    const nowMs = Date.now();
+    const minIntervalMs = connectionModeRef.current === "supabase" ? 66 : 0;
+    if (minIntervalMs === 0 || nowMs - lastNetworkStateBroadcastAtRef.current >= minIntervalMs) {
+      lastNetworkStateBroadcastAtRef.current = nowMs;
+      bcast({ type: "game-state", state: snap });
+    }
   }, []);
 
   // ─── Host Drag Helpers (teleport during gameplay) ──────────────────────

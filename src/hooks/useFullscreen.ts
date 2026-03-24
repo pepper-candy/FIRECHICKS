@@ -7,14 +7,16 @@ import { useState, useEffect, useCallback } from 'react';
  */
 export function useFullscreen() {
   const [isFullscreen, setIsFullscreen] = useState(false);
-  const [isSupported, setIsSupported] = useState(false);
+  const [canNativeFullscreen, setCanNativeFullscreen] = useState(false);
+  const [isTouchDevice, setIsTouchDevice] = useState(false);
 
   useEffect(() => {
     const el = document.documentElement;
-    setIsSupported(
+    setCanNativeFullscreen(
       typeof el.requestFullscreen === 'function' ||
       typeof (el as any).webkitRequestFullscreen === 'function',
     );
+    setIsTouchDevice(('ontouchstart' in window) || navigator.maxTouchPoints > 0);
 
     const onChange = () => {
       setIsFullscreen(
@@ -30,15 +32,21 @@ export function useFullscreen() {
   }, []);
 
   const enter = useCallback(async () => {
+    const tryMobileImmersive = () => {
+      window.scrollTo(0, 1);
+      setTimeout(() => window.scrollTo(0, 1), 50);
+    };
     try {
       const el = document.documentElement;
       if (el.requestFullscreen) {
         await el.requestFullscreen({ navigationUI: 'hide' });
       } else if ((el as any).webkitRequestFullscreen) {
         await (el as any).webkitRequestFullscreen();
+      } else {
+        tryMobileImmersive();
       }
     } catch {
-      // User denied or browser disallows — silently ignore
+      tryMobileImmersive();
     }
   }, []);
 
@@ -51,5 +59,7 @@ export function useFullscreen() {
     }
   }, []);
 
-  return { isFullscreen, isSupported, enter, exit };
+  const showImmersiveControl = canNativeFullscreen || isTouchDevice;
+
+  return { isFullscreen, isSupported: canNativeFullscreen, canNativeFullscreen, showImmersiveControl, enter, exit };
 }

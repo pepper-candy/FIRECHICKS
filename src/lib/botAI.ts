@@ -134,7 +134,8 @@ function avoidObstacles(
   const rz = from.z + (-(right.y / len)) * stepSize;
   if (!checkCollision(rx, rz, 0.6)) return right;
 
-  return { x: -targetJoy.x, y: -targetJoy.y };
+  // Let core movement resolver handle sliding instead of hard-reversing/jittering.
+  return targetJoy;
 }
 
 // ─── Eagle Bot ──────────────────────────────────────────────

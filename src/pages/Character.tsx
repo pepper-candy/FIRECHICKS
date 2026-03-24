@@ -25,6 +25,7 @@ const COLOR_HEX: Record<ChickColor, string> = {
 export default function Character() {
   const [color, setColor] = useState<ChickColor>('Gold');
   const [animState, setAnimState] = useState<AnimState>('Idle');
+  const isMobile = typeof window !== 'undefined' && /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
   const [facingAngle, setFacingAngle] = useState(0);
   const [stickActive, setStickActive] = useState(false);
   const [charPos, setCharPos] = useState<[number, number, number]>([0, 0, 0]);
@@ -118,7 +119,11 @@ export default function Character() {
     <div className="w-screen h-screen bg-background relative flex flex-col">
       {/* 3D Canvas */}
       <div className="flex-1 relative">
-        <Canvas camera={{ position: [0, 1.8, 3.5], fov: 45 }}>
+        <Canvas
+          camera={{ position: [0, 1.8, 3.5], fov: 45 }}
+          dpr={isMobile ? [1, 1.5] : [1, 2]}
+          gl={{ antialias: !isMobile, powerPreference: 'default', preserveDrawingBuffer: false }}
+        >
           <ambientLight intensity={0.5} />
           <directionalLight position={[5, 8, 5]} intensity={1} />
           <directionalLight position={[-3, 4, -3]} intensity={0.3} />

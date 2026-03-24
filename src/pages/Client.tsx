@@ -422,7 +422,7 @@ export default function Client() {
   const examVideoRef = useRef<HTMLVideoElement>(null);
   const examStreamRef = useRef<MediaStream | null>(null);
 
-  const { isFullscreen, isSupported: fsSupported, enter: enterFullscreen } = useFullscreen();
+  const { isFullscreen, canNativeFullscreen, showImmersiveControl, enter: enterFullscreen } = useFullscreen();
 
   // ── Prevent body scroll / overscroll bounce on mobile ──────────────────────
   useEffect(() => {
@@ -736,6 +736,7 @@ export default function Client() {
       const hasTakeover = rejoinCode.trim().length >= 5;
       const targetRoom = providedRoom || (hasTakeover ? fallbackRoom : "");
       if (targetRoom.length >= 6) {
+        void enterFullscreen();
         if (roomCode || !code) setCode(targetRoom);
         setWasKicked(false);
         setRoomFullDismissed(false);
@@ -743,7 +744,7 @@ export default function Client() {
         connect(targetRoom, hasTakeover ? rejoinCode.trim().toUpperCase() : undefined);
       }
     },
-    [code, connect, rejoinCode, rememberedRoomCode],
+    [code, connect, enterFullscreen, rejoinCode, rememberedRoomCode],
   );
   const hasRejoinCode = rejoinCode.trim().length >= 5;
   const hasRoomCode = code.trim().length >= 6;
@@ -766,7 +767,7 @@ export default function Client() {
       : false;
 
   // ─── FULLSCREEN SPLASH — shown before join if FS is supported and not yet entered ──
-  if (fsSupported && !isFullscreen && !fsSplashDone) {
+  if (canNativeFullscreen && !isFullscreen && !fsSplashDone) {
     return (
       <div
         className="flex flex-col items-center justify-center h-dvh overflow-hidden gap-8 bg-background"
@@ -1365,7 +1366,7 @@ export default function Client() {
       {/* Status bar */}
       <div className="flex items-center justify-between">
         {/* Fullscreen toggle when not already fullscreen */}
-        {fsSupported && !isFullscreen && (
+        {showImmersiveControl && !isFullscreen && (
           <button
             onClick={enterFullscreen}
             className="text-[10px] font-mono text-primary/60 hover:text-primary px-1.5 py-0.5 rounded border border-primary/20 hover:border-primary/40 transition-all"

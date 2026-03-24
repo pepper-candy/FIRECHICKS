@@ -12,6 +12,20 @@ function generateRoomCode(): string {
 
 const PEER_PREFIX = 'evsc-';
 const JOYSTICK_SEND_INTERVAL = 33;
+const DEFAULT_ICE_SERVERS = [
+  { urls: 'stun:stun.l.google.com:19302' },
+  { urls: 'stun:stun1.l.google.com:19302' },
+];
+
+function getIceServers() {
+  const raw = import.meta.env.VITE_ICE_SERVERS as string | undefined;
+  if (!raw) return DEFAULT_ICE_SERVERS;
+  try {
+    const parsed = JSON.parse(raw);
+    if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+  } catch {}
+  return DEFAULT_ICE_SERVERS;
+}
 
 export interface JoystickData {
   x: number;
@@ -24,16 +38,6 @@ export interface PlayerState {
   ping: number;
   lastPongAt: number;
   isBot?: boolean;
-}
-
-// Binary encoding for joystick data
-function encodeJoystick(colorIndex: number, x: number, y: number): ArrayBuffer {
-  const buf = new ArrayBuffer(5);
-  const view = new DataView(buf);
-  view.setUint8(0, colorIndex);
-  view.setInt16(1, Math.round(x * 32767), true);
-  view.setInt16(3, Math.round(y * 32767), true);
-  return buf;
 }
 
 function decodeJoystick(buf: ArrayBuffer): { colorIndex: number; x: number; y: number } {
@@ -67,6 +71,7 @@ function useHostWebRTC() {
   // Persistent slot data for reconnection: keyed by original connId, survives disconnect
   const slotDataRef = useRef<Map<string, { colorIndex: number; code: string }>>(new Map());
   const [takeoverCodes, setTakeoverCodes] = useState<Record<string, string>>({});
+  const resolveClientId = useCallback((clientId: string) => clientAliasRef.current.get(clientId) ?? clientId, []);
 
   const recordSlot = (connId: string, colorIndex: number): string => {
     const code = Math.random().toString(36).substring(2, 7).toUpperCase();
@@ -158,10 +163,7 @@ function useHostWebRTC() {
 
     const peer = new Peer(`${PEER_PREFIX}${code}`, {
       config: {
-        iceServers: [
-          { urls: 'stun:stun.l.google.com:19302' },
-          { urls: 'stun:stun1.l.google.com:19302' },
-        ],
+        iceServers: getIceServers(),
         iceCandidatePoolSize: 4,
       },
     });
@@ -261,10 +263,22 @@ function useHostWebRTC() {
             }
             return next;
           });
+        } else if (typeof data === 'object' && data !== null && (data as any).type === 'joystick') {
+          const msgData = data as { x: number; y: number };
+          setPlayers((prev) => {
+            const next = new Map(prev);
+            const existing = next.get(effectiveConnId);
+            if (existing) {
+              next.set(effectiveConnId, { ...existing, joystick: { x: msgData.x, y: msgData.y } });
+            }
+            return next;
+          });
         } else {
           let msg: any = null;
           if (typeof data === 'string') {
             try { msg = JSON.parse(data); } catch {}
+          } else if (typeof data === 'object' && data !== null) {
+            msg = data;
           }
           if (msg) {
             if (msg.type === 'pong') {
@@ -403,17 +417,29 @@ function useHostSupabase() {
   }, []);
 
   const removePlayer = useCallback((clientId: string) => {
-    const colorIdx = clientColorMapRef.current.get(clientId);
+    const resolvedId = resolveClientId(clientId);
+    const colorIdx = clientColorMapRef.current.get(resolvedId);
     if (colorIdx !== undefined) {
       usedColorsRef.current.delete(colorIdx);
-      clientColorMapRef.current.delete(clientId);
+      clientColorMapRef.current.delete(resolvedId);
+    }
+    // Remove current-client mapping for the disconnected id.
+    for (const [slotId, currentId] of currentClientRef.current.entries()) {
+      if (slotId === resolvedId || currentId === clientId) {
+        currentClientRef.current.delete(slotId);
+      }
+    }
+    // Clear alias entries for this connected client and slot id.
+    clientAliasRef.current.delete(clientId);
+    for (const [newId, oldId] of clientAliasRef.current.entries()) {
+      if (oldId === resolvedId) clientAliasRef.current.delete(newId);
     }
     setPlayers((prev) => {
       const next = new Map(prev);
-      next.delete(clientId);
+      next.delete(resolvedId);
       return next;
     });
-  }, []);
+  }, [resolveClientId]);
 
   const kickPlayer = useCallback((clientId: string) => {
     channelRef.current?.send({ type: 'broadcast', event: 'kicked', payload: { clientId } });
@@ -426,6 +452,8 @@ function useHostSupabase() {
     }
     usedColorsRef.current.clear();
     clientColorMapRef.current.clear();
+    currentClientRef.current.clear();
+    clientAliasRef.current.clear();
     setPlayers(new Map());
   }, []);
 
@@ -550,11 +578,11 @@ function useHostSupabase() {
       })
       .on('broadcast', { event: 'client-leave' }, (payload) => {
         const { clientId } = payload.payload as { clientId: string };
-        removePlayer(clientId);
+        removePlayer(resolveClientId(clientId));
       })
       .on('broadcast', { event: 'color-swap' }, (payload) => {
         const { clientId, requestedColor } = payload.payload as { clientId: string; requestedColor: number };
-        handleColorSwap(clientId, requestedColor);
+        handleColorSwap(resolveClientId(clientId), requestedColor);
       })
       .on('broadcast', { event: 'client-action' }, (payload) => {
         const { clientId, ...msg } = payload.payload as { clientId: string; [key: string]: any };
@@ -564,11 +592,12 @@ function useHostSupabase() {
       })
       .on('broadcast', { event: 'pong' }, (payload) => {
         const { clientId, ts } = payload.payload as { clientId: string; ts: number };
+        const resolvedId = resolveClientId(clientId);
         const rtt = Date.now() - ts;
         setPlayers((prev) => {
           const next = new Map(prev);
-          const existing = next.get(clientId);
-          if (existing) next.set(clientId, { ...existing, ping: rtt, lastPongAt: Date.now() });
+          const existing = next.get(resolvedId);
+          if (existing) next.set(resolvedId, { ...existing, ping: rtt, lastPongAt: Date.now() });
           return next;
         });
       })
@@ -584,7 +613,7 @@ function useHostSupabase() {
       clearInterval(pingInterval);
       channel.unsubscribe();
     };
-  }, [removePlayer, handleColorSwap]);
+  }, [removePlayer, handleColorSwap, resolveClientId]);
 
   const addBot = useCallback((connId: string, colorIndex: number) => {
     usedColorsRef.current.add(colorIndex);
@@ -677,10 +706,7 @@ function useClientWebRTC(roomCode: string) {
 
     const peer = new Peer(undefined as any, {
       config: {
-        iceServers: [
-          { urls: 'stun:stun.l.google.com:19302' },
-          { urls: 'stun:stun1.l.google.com:19302' },
-        ],
+        iceServers: getIceServers(),
         iceCandidatePoolSize: 4,
       },
     });
@@ -689,7 +715,7 @@ function useClientWebRTC(roomCode: string) {
     peer.on('open', () => {
       setClientId(peer.id);
       const conn = peer.connect(`${PEER_PREFIX}${code}`, {
-        serialization: 'binary',
+        serialization: 'json',
         reliable: false,
         metadata: takeoverCode ? { takeoverCode } : undefined,
       });
@@ -699,8 +725,7 @@ function useClientWebRTC(roomCode: string) {
         setConnected(true);
         intervalRef.current = window.setInterval(() => {
           if (colorIndexRef.current >= 0 && !idleRef.current) {
-            const buf = encodeJoystick(colorIndexRef.current, joystickRef.current.x, joystickRef.current.y);
-            try { conn.send(buf); } catch {}
+            try { conn.send({ type: 'joystick', colorIndex: colorIndexRef.current, x: joystickRef.current.x, y: joystickRef.current.y }); } catch {}
           }
         }, JOYSTICK_SEND_INTERVAL);
       });
@@ -711,6 +736,8 @@ function useClientWebRTC(roomCode: string) {
           try { msg = JSON.parse(data); } catch {}
         } else if (data instanceof ArrayBuffer) {
           try { msg = JSON.parse(new TextDecoder().decode(data)); } catch {}
+        } else if (typeof data === 'object' && data !== null) {
+          msg = data;
         }
         if (msg) {
           if (msg.type === 'assign-color') {
@@ -731,9 +758,7 @@ function useClientWebRTC(roomCode: string) {
             setKicked(true);
             doDisconnect();
           } else if (msg.type === 'ping') {
-            if (!idleRef.current) {
-              try { conn.send(JSON.stringify({ type: 'pong', ts: msg.ts })); } catch {}
-            }
+            try { conn.send({ type: 'pong', ts: msg.ts }); } catch {}
           } else {
             hostMsgCallbackRef.current?.(msg);
           }
@@ -764,7 +789,7 @@ function useClientWebRTC(roomCode: string) {
   const sendJoystick = useCallback((data: JoystickData) => {
     joystickRef.current = data;
     if (!idleRef.current && connRef.current && colorIndexRef.current >= 0) {
-      try { connRef.current.send(encodeJoystick(colorIndexRef.current, data.x, data.y)); } catch {}
+      try { connRef.current.send({ type: 'joystick', colorIndex: colorIndexRef.current, x: data.x, y: data.y }); } catch {}
     }
   }, []);
 

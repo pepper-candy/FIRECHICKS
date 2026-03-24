@@ -33,8 +33,11 @@ export default function CharacterReveal({ colorIndex, isEagle }: Props) {
   const [angle, setAngle] = useState(0);
   const [progress, setProgress] = useState(0);
   const [remaining, setRemaining] = useState(7);
+  const [contextLost, setContextLost] = useState(false);
+  const [canvasKey, setCanvasKey] = useState(0);
   const startRef = useRef(performance.now());
   const rafRef = useRef(0);
+  const isMobile = typeof window !== 'undefined' && /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
 
   useEffect(() => {
     startRef.current = performance.now();
@@ -65,15 +68,41 @@ export default function CharacterReveal({ colorIndex, isEagle }: Props) {
     <div className="flex flex-col items-center justify-start h-dvh overflow-hidden w-full">
       {/* Canvas takes 2/3 of screen height */}
       <div className="w-full" style={{ maxWidth: 380, minHeight: 0, height: '66.67vh' }}>
-        <Canvas camera={{ position: [0, 2.2, 3.8], fov: 32 }}>
-          <CharacterCamera />
-          <ambientLight intensity={0.8} />
-          <directionalLight position={[3, 6, 3]} intensity={1.2} />
-          <directionalLight position={[-2, 4, -2]} intensity={0.4} />
-          <Suspense fallback={null}>
-            <RotatingStaticCharacter modelPath={modelPath} angle={angle} />
-          </Suspense>
-        </Canvas>
+        {contextLost ? (
+          <div className="w-full h-full flex items-center justify-center px-4">
+            <button
+              onClick={() => {
+                setContextLost(false);
+                setCanvasKey((v) => v + 1);
+              }}
+              className="px-4 py-2 rounded-md border border-primary/50 text-primary font-mono text-xs hover:bg-primary/10"
+            >
+              3D viewer paused. Tap to reload.
+            </button>
+          </div>
+        ) : (
+          <Canvas
+            key={canvasKey}
+            camera={{ position: [0, 2.2, 3.8], fov: 32 }}
+            dpr={isMobile ? [1, 1.5] : [1, 2]}
+            gl={{ antialias: !isMobile, powerPreference: 'default', preserveDrawingBuffer: false }}
+            onCreated={({ gl }) => {
+              const onContextLost = (ev: Event) => {
+                ev.preventDefault();
+                setContextLost(true);
+              };
+              gl.domElement.addEventListener('webglcontextlost', onContextLost, false);
+            }}
+          >
+            <CharacterCamera />
+            <ambientLight intensity={0.8} />
+            <directionalLight position={[3, 6, 3]} intensity={1.2} />
+            <directionalLight position={[-2, 4, -2]} intensity={0.4} />
+            <Suspense fallback={null}>
+              <RotatingStaticCharacter modelPath={modelPath} angle={angle} />
+            </Suspense>
+          </Canvas>
+        )}
       </div>
 
       {/* Info panel takes 1/3 */}

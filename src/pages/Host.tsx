@@ -170,7 +170,7 @@ export default function Host() {
     hostDragBegin,
     hostDragUpdate,
     hostDragEnd,
-  } = useGameLogic({ players, broadcast, gameMode });
+  } = useGameLogic({ players, broadcast, gameMode, connectionMode: mode });
 
   useAdvertiseRoom(phase === 'lobby' ? roomCode : '', mode);
 
@@ -575,6 +575,13 @@ export default function Host() {
         <div className="absolute top-2 left-2 z-10 px-3 py-1 rounded bg-card/80 border border-border font-mono text-xs text-muted-foreground">
           ⏱ {Math.floor(snapshot.gameTime)}s
         </div>
+        <button
+          onClick={exportDebugLog}
+          className="absolute top-2 left-28 z-10 px-2 py-1 rounded border border-border bg-card/90 hover:bg-card text-[11px] font-mono text-muted-foreground"
+          title="Download host debug log"
+        >
+          ⬇ LOG
+        </button>
         <div className="absolute left-2 top-12 z-10 px-2 py-2 rounded bg-card/85 border border-border w-44">
           <div className="flex items-center justify-between text-[10px] font-mono text-muted-foreground mb-1">
             <span>Zoom</span>
