@@ -207,9 +207,18 @@ function useHostWebRTC() {
           const mode = gameModeRef.current;
           const maxSlots = mode === '2v6' ? MAX_PLAYERS_2V6 : MAX_PLAYERS_1V3;
           if (usedColorsRef.current.size >= maxSlots) {
-            conn.send(JSON.stringify({ type: 'room-full' }));
-            setTimeout(() => conn.close(), 200);
-            return;
+            // Try to replace a bot
+            const botEntry = Array.from(connColorMapRef.current.entries()).find(([id]) => id.startsWith('bot-'));
+            if (botEntry) {
+              const [botId, botColor] = botEntry;
+              usedColorsRef.current.delete(botColor);
+              connColorMapRef.current.delete(botId);
+              setPlayers((prev) => { const next = new Map(prev); next.delete(botId); return next; });
+            } else {
+              conn.send(JSON.stringify({ type: 'room-full' }));
+              setTimeout(() => conn.close(), 200);
+              return;
+            }
           }
           const excludeIndices = mode === '2v6' ? [] : (EAGLE_COLOR_INDICES as unknown as number[]);
           const colorIndex = allocateColor(usedColorsRef.current, excludeIndices);
