@@ -1651,7 +1651,10 @@ export function useGameLogic({ players, broadcast, gameMode }: UseGameLogicProps
     }
   }, []);
 
-  // ─── Video complete → post-video eagle freeze ──────────────────────────────
+  // Keep ref in sync for bot AI access
+  handleClientMessageRef.current = handleClientMessage;
+
+
   const onVideoComplete = useCallback(() => {
     const gs = gameStateRef.current as GameStateRef | null;
     if (!gs) return;
