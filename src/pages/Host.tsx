@@ -145,8 +145,9 @@ export default function Host() {
   const [stageToast, setStageToast] = useState<{ stage: number; key: number } | null>(null);
   const dismissStageToast = useCallback(() => setStageToast(null), []);
   const prevStageRef = useRef<number | null>(null);
-  const { roomCode, players, kickPlayer, kickAllPlayers, broadcast, onClientMessage, gameModeRef, takeoverCodes } = useHostRoom(mode);
+  const { roomCode, players, kickPlayer, kickAllPlayers, broadcast, onClientMessage, gameModeRef, takeoverCodes, fillBots, removeBots } = useHostRoom(mode);
   const [revealedCodes, setRevealedCodes] = useState<Set<string>>(new Set());
+  const [botsAdded, setBotsAdded] = useState(false);
 
   const {
     phase,
