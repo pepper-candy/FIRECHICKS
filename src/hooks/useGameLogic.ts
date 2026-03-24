@@ -34,6 +34,7 @@ import {
 } from "@/lib/gameplayMapData";
 import type { PlayerState } from "@/hooks/useGameRoom";
 import type { ChickColor } from "@/components/CharacterViewer";
+import { updateBot, isBot } from "@/lib/botAI";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 const SPEED = 10;
