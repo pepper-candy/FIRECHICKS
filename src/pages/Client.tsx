@@ -21,6 +21,7 @@ import QRCode from "react-qr-code";
 import { Zap, Heart, Wind, Shield, ChevronUp, Crosshair, Lock } from "lucide-react";
 import CrossyRoadClient from "@/components/events/CrossyRoadClient";
 import { useNavigate } from "react-router-dom";
+import { ZONE_RADIUS } from "@/lib/gameplayMapData";
 
 // ─── Props Button (inline for compact layout) ──────────────────────────────────
 const PROP_COLORS: Record<PropType, string> = {
@@ -761,7 +762,7 @@ export default function Client() {
             (() => {
               const dx = myState.position.x - b.position.x;
               const dz = myState.position.z - b.position.z;
-              return Math.sqrt(dx * dx + dz * dz) < 4.0;
+              return Math.sqrt(dx * dx + dz * dz) < ZONE_RADIUS;
             })(),
         )
       : false;

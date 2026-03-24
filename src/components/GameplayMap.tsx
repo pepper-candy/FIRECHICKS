@@ -44,15 +44,18 @@ interface Props {
 }
 
 // ─── Building ──────────────────────────────────────────────────────────────────
-function Building({ position, size, glowing, zoneActive, zoneHealth }: {
+function Building({ position, size, tipSiteActive, zoneActive, zoneHealth }: {
   position: { x: number; z: number };
   size: { w: number; h: number; d: number };
-  glowing?: boolean;
+  /** Yellow “exam tip” building while tips can still be obtained from this site */
+  tipSiteActive?: boolean;
   zoneActive?: boolean;
   zoneHealth?: number;
 }) {
   const pulseRef = useRef(0);
   useFrame((_, delta) => { pulseRef.current += delta * 2; });
+
+  const gold = !!tipSiteActive;
 
   return (
     <group position={[position.x, 0, position.z]}>
@@ -60,18 +63,18 @@ function Building({ position, size, glowing, zoneActive, zoneHealth }: {
       <mesh position={[0, size.h / 2, 0]}>
         <boxGeometry args={[size.w, size.h, size.d]} />
         <meshStandardMaterial
-          color={glowing ? '#ffd700' : '#2a2a4a'}
-          emissive={glowing ? '#ffd700' : '#1a1a3a'}
-          emissiveIntensity={glowing ? 0.6 : 0.2}
+          color={gold ? '#ffd700' : '#2a2a4a'}
+          emissive={gold ? '#ffd700' : '#1a1a3a'}
+          emissiveIntensity={gold ? 0.6 : 0.2}
         />
       </mesh>
       {/* Roof */}
       <mesh position={[0, size.h + 0.2, 0]}>
         <boxGeometry args={[size.w + 0.5, 0.4, size.d + 0.5]} />
         <meshStandardMaterial
-          color={glowing ? '#ffaa00' : '#3a3a5a'}
-          emissive={glowing ? '#ffaa00' : '#2a2a4a'}
-          emissiveIntensity={glowing ? 0.5 : 0.1}
+          color={gold ? '#ffaa00' : '#3a3a5a'}
+          emissive={gold ? '#ffaa00' : '#2a2a4a'}
+          emissiveIntensity={gold ? 0.5 : 0.1}
         />
       </mesh>
       {/* Protected zone sphere */}
@@ -524,7 +527,7 @@ export default function GameplayMap({
               key={b.id}
               position={b.position}
               size={b.size}
-              glowing={bState?.glowing}
+              tipSiteActive={!!bState?.hasTip && !bState?.tipObtained}
               zoneActive={bState?.zoneActive}
               zoneHealth={bState?.zoneHealth}
             />
@@ -591,6 +594,7 @@ export default function GameplayMap({
               fontFamily: 'monospace',
               fontWeight: 'bold',
               pointerEvents: 'none',
+              whiteSpace: 'nowrap',
             }}>
               📝 EXAM — {Math.ceil(examState.timeRemaining)}s
             </div>

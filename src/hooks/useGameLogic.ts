@@ -538,11 +538,6 @@ export function useGameLogic({ players, broadcast, gameMode, connectionMode }: U
       const lobbyPlayer = currentPlayers.get(connId);
       const activelyBotControlled = !!lobbyPlayer?.isBot;
       if (!activelyBotControlled || !isBot(connId) || !p.alive) continue;
-      if (gs.phase === "exam") {
-        // During final exam, bots must not move or act.
-        (lobbyPlayer as any).joystick = { x: 0, y: 0 };
-        continue;
-      }
       const decision = updateBot(
         p,
         gs.playerStates,
@@ -552,6 +547,7 @@ export function useGameLogic({ players, broadcast, gameMode, connectionMode }: U
         gs.activeEvent,
         gs.gameTime,
         gs.mysteryBoxes,
+        gs.phase === "exam" ? { examMode: true } : undefined,
       );
 
       // Inject bot joystick into players map so movement code picks it up next frame
@@ -646,6 +642,20 @@ export function useGameLogic({ players, broadcast, gameMode, connectionMode }: U
     // ── Stage 1: Exam Tips building timers ──
     if (gs.stage === 1 || gs.stage === 2) {
       const chicks = Array.from<PlayerGameState>(gs.playerStates.values()).filter((p) => !p.isEagle && p.alive);
+
+      // If every chick who held this building's tip is gone, reopen the site for new star students.
+      for (const b of gs.buildings) {
+        if (!b.hasTip) continue;
+        const anyAliveHasTip = chicks.some((c) => c.tips[b.tipIndex]);
+        if (anyAliveHasTip) continue;
+        if (b.tipObtained || b.tipObtainedCount > 0) {
+          b.tipObtained = false;
+          b.tipObtainedCount = 0;
+          b.zoneActive = true;
+          b.zoneHealth = 50;
+          b.glowing = true;
+        }
+      }
 
       for (const chick of chicks) {
         const mode = gameModeRef.current;
@@ -1331,6 +1341,7 @@ export function useGameLogic({ players, broadcast, gameMode, connectionMode }: U
       // ── Attack ──
       case "attack-press": {
         if (!player.isEagle) return;
+        if (gs.phase === "exam") return;
         if (now < player.attackCooldownUntil) return;
         if (player.frozen) return;
 
@@ -1397,6 +1408,7 @@ export function useGameLogic({ players, broadcast, gameMode, connectionMode }: U
       // ── Prop use ──
       case "prop-use": {
         // Props can be used while moving — no frozen check
+        if (gs.phase === "exam" && player.isEagle && msg.propType === "cage") return;
         const propItem = player.props.find((p) => p.type === msg.propType && p.count > 0);
         if (!propItem) return;
         propItem.count--;
@@ -1492,15 +1504,15 @@ export function useGameLogic({ players, broadcast, gameMode, connectionMode }: U
       // ── Hitbox click (eagle attacking building zone) ──
       case "hitbox-click": {
         if (!player.isEagle) return;
+        if (gs.phase === "exam") return;
         for (const b of gs.buildings) {
           if (!b.zoneActive || b.tipObtained) continue;
           if (isInProtectedZone(player.position.x, player.position.z, b.id)) {
             b.zoneHealth = Math.max(0, b.zoneHealth - 1);
             player.actionScore += 0.5;
             if (b.zoneHealth <= 0) {
-              // Zone broken: tips remain obtainable, just unprotected
+              // Zone broken: tips remain obtainable, just unprotected (building stays gold via hasTip && !tipObtained)
               b.zoneActive = false;
-              b.glowing = false;
               // Don't set hasTip=false or tipObtained=true — tips persist
               gs.eagleZoneStates.delete(player.connId);
             }

@@ -80,7 +80,7 @@ export const EAGLE_SPAWN_CANDIDATES: { x: number; z: number }[] = [
 ];
 
 // Protected zone radius (around buildings)
-export const ZONE_RADIUS = 4.0;
+export const ZONE_RADIUS = 6.0;
 // Eagle attack overlap threshold
 export const ATTACK_OVERLAP_THRESHOLD = 2.2;
 // Social circle overlap threshold

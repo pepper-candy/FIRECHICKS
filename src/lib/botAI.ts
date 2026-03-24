@@ -19,8 +19,6 @@ import {
 // ─── Constants ──────────────────────────────────────────────
 const BOT_REACTION_DELAY = 200; // ms between decisions
 const EAGLE_SPEED_FACTOR = 0.9; // 90% speed nerf
-const CHASE_TIMEOUT = 5000; // switch target after 5s
-const CHASE_COOLDOWN = 3000; // avoid target for 3s after timeout
 const FLEE_RADIUS = 12;
 const DANGER_RADIUS = 7;
 const JUKE_RADIUS = 6;
@@ -142,6 +140,77 @@ function avoidObstacles(
   return targetJoy;
 }
 
+/** Chick is inside a shielded exam-tip bubble (eagle can't score hits there). */
+function inActiveTipZone(x: number, z: number, buildings: BuildingState[]): boolean {
+  return buildings.some(
+    (b) => b.zoneActive && !b.tipObtained && isInProtectedZone(x, z, b.id),
+  );
+}
+
+// Final exam: chicks panic-flee from eagles (attacks are disabled server-side).
+function updateChickExamFlee(
+  bot: PlayerGameState,
+  allPlayers: Map<string, PlayerGameState>,
+  now: number,
+  s: BotState,
+): BotDecision {
+  const messages: ClientMessage[] = [];
+  if (now - s.lastDecisionTime < BOT_REACTION_DELAY) {
+    return { joystick: smoothJoystick(s), messages };
+  }
+  s.lastDecisionTime = now;
+
+  const eagles = Array.from(allPlayers.values()).filter((p) => p.isEagle && p.alive);
+  let nearestEagle: PlayerGameState | null = null;
+  let eagleDist = Infinity;
+  for (const e of eagles) {
+    const d = dist(bot.position, e.position);
+    if (d < eagleDist) {
+      eagleDist = d;
+      nearestEagle = e;
+    }
+  }
+
+  if (nearestEagle && now - s.lastPropUseTime > PROP_USE_DELAY) {
+    if (eagleDist < 8) {
+      const speedProp = bot.props.find((p) => p.type === 'speed' && p.count > 0);
+      if (speedProp) {
+        messages.push({ type: 'prop-use', propType: 'speed' });
+        s.lastPropUseTime = now;
+      }
+    }
+    if (eagleDist < 5 && !bot.teleportPending) {
+      const teleProp = bot.props.find((p) => p.type === 'teleport' && p.count > 0);
+      if (teleProp) {
+        messages.push({ type: 'prop-use', propType: 'teleport' });
+        const minAbs = 10;
+        const maxAbs = MAP_HALF - TELEPORT_MARGIN;
+        const targetX = -Math.sign(bot.position.x || 1) * (minAbs + Math.random() * Math.max(0, maxAbs - minAbs));
+        const targetZ = -Math.sign(bot.position.z || 1) * (minAbs + Math.random() * Math.max(0, maxAbs - minAbs));
+        messages.push({ type: 'teleport-set', x: targetX, z: targetZ });
+        messages.push({ type: 'teleport-confirm' });
+        s.lastPropUseTime = now;
+      }
+    }
+    if (eagleDist < 4) {
+      const invProp = bot.props.find((p) => p.type === 'invincible' && p.count > 0);
+      if (invProp) {
+        messages.push({ type: 'prop-use', propType: 'invincible' });
+        s.lastPropUseTime = now;
+      }
+    }
+  }
+
+  if (!nearestEagle) {
+    s.targetJoystick = { x: 0, y: 0 };
+    return { joystick: smoothJoystick(s), messages };
+  }
+
+  const fleeJoy = joystickToTarget(nearestEagle.position, bot.position, 1);
+  s.targetJoystick = avoidObstacles(bot.position, fleeJoy);
+  return { joystick: smoothJoystick(s), messages };
+}
+
 // ─── Eagle Bot ──────────────────────────────────────────────
 function updateEagleBot(
   bot: PlayerGameState,
@@ -151,6 +220,7 @@ function updateEagleBot(
   buildings: BuildingState[],
   activeEvent: GameEvent | null,
   mysteryBoxes: MysteryBox[],
+  examSafeMode: boolean,
 ): BotDecision {
   const s = getOrCreateState(bot.connId);
   const messages: ClientMessage[] = [];
@@ -181,19 +251,59 @@ function updateEagleBot(
     return { joystick: { x: 0, y: 0 }, messages };
   }
 
+  // Final exam: move for spectacle only — no attacks, cage, or zone damage (server-enforced).
+  if (examSafeMode) {
+    if (now - s.lastDecisionTime < BOT_REACTION_DELAY) {
+      return { joystick: smoothJoystick(s), messages };
+    }
+    s.lastDecisionTime = now;
+
+    const chicks = Array.from(allPlayers.values()).filter((p) => !p.isEagle && p.alive);
+    if (chicks.length === 0) {
+      const patrolAngle = (now / 3000) * Math.PI * 2;
+      const px = Math.cos(patrolAngle) * 8;
+      const pz = Math.sin(patrolAngle) * 8;
+      const joy = joystickToTarget(bot.position, { x: px, z: pz }, EAGLE_SPEED_FACTOR);
+      s.targetJoystick = avoidObstacles(bot.position, joy);
+      return { joystick: smoothJoystick(s), messages };
+    }
+    chicks.sort((a, b) => dist(bot.position, a.position) - dist(bot.position, b.position));
+    const target = chicks[0];
+    const d = dist(bot.position, target.position);
+    if (d > 15 && now >= bot.flyCooldownUntil && now >= bot.attackCooldownUntil) {
+      const flyProp = bot.props.find((p) => p.type === 'fly' && p.count > 0);
+      if (flyProp) {
+        messages.push({ type: 'prop-use', propType: 'fly' });
+      }
+    }
+    const chaseJoy = joystickToTarget(bot.position, target.position, EAGLE_SPEED_FACTOR);
+    s.targetJoystick = avoidObstacles(bot.position, chaseJoy);
+    return { joystick: smoothJoystick(s), messages };
+  }
+
   // Reaction delay check
   if (now - s.lastDecisionTime < BOT_REACTION_DELAY) {
     return { joystick: smoothJoystick(s), messages };
   }
   s.lastDecisionTime = now;
 
-  // Prioritize active mystery boxes to trigger challenges.
+  // Prioritize armed mystery boxes, then stake out boxes that are not yet active, then chicks.
   const activeBoxes = mysteryBoxes.filter((b) => !b.collected && !b.triggered && now >= b.activeAt);
   if (activeBoxes.length > 0) {
     activeBoxes.sort((a, b) => dist(bot.position, a.position) - dist(bot.position, b.position));
     const targetBox = activeBoxes[0];
     const boxDist = dist(bot.position, targetBox.position);
     const boxJoy = joystickToTarget(bot.position, targetBox.position, Math.min(1, Math.max(0.55, boxDist / 20)));
+    s.targetJoystick = avoidObstacles(bot.position, boxJoy);
+    return { joystick: smoothJoystick(s), messages };
+  }
+
+  const pendingBoxes = mysteryBoxes.filter((b) => !b.collected && !b.triggered && now < b.activeAt);
+  if (pendingBoxes.length > 0) {
+    pendingBoxes.sort((a, b) => dist(bot.position, a.position) - dist(bot.position, b.position));
+    const targetBox = pendingBoxes[0];
+    const boxDist = dist(bot.position, targetBox.position);
+    const boxJoy = joystickToTarget(bot.position, targetBox.position, Math.min(1, Math.max(0.45, boxDist / 25)));
     s.targetJoystick = avoidObstacles(bot.position, boxJoy);
     return { joystick: smoothJoystick(s), messages };
   }
@@ -256,12 +366,12 @@ function updateEagleBot(
   const chaseJoy = joystickToTarget(bot.position, target.position, EAGLE_SPEED_FACTOR);
   s.targetJoystick = avoidObstacles(bot.position, chaseJoy);
 
-  // Hitbox clicking (zone building)
+  // Hitbox clicking (main-game building shield — not the random hitbox event)
   if (stage >= 1) {
     for (const b of buildings) {
       if (b.zoneActive && !b.tipObtained && isInProtectedZone(bot.position.x, bot.position.z, b.id)) {
         if (now - s.lastPropUseTime > 200) {
-          messages.push({ type: 'event-hitbox-click' });
+          messages.push({ type: 'hitbox-click' });
           s.lastPropUseTime = now;
         }
       }
@@ -280,6 +390,7 @@ function updateChickBot(
   buildings: BuildingState[],
   activeEvent: GameEvent | null,
   gameTime: number,
+  examMode: boolean,
 ): BotDecision {
   const s = getOrCreateState(bot.connId);
   const messages: ClientMessage[] = [];
@@ -307,6 +418,10 @@ function updateChickBot(
     return { joystick: { x: 0, y: 0 }, messages };
   }
 
+  if (examMode) {
+    return updateChickExamFlee(bot, allPlayers, now, s);
+  }
+
   // Reaction delay
   if (now - s.lastDecisionTime < BOT_REACTION_DELAY) {
     return { joystick: smoothJoystick(s), messages };
@@ -326,9 +441,10 @@ function updateChickBot(
   }
 
   const isFleeing = nearestEagle && eagleDist < FLEE_RADIUS;
+  const safeInTipZone = inActiveTipZone(bot.position.x, bot.position.z, buildings);
 
   // ── Prop usage (threat-based) ──
-  if (nearestEagle && now - s.lastPropUseTime > PROP_USE_DELAY) {
+  if (!safeInTipZone && nearestEagle && now - s.lastPropUseTime > PROP_USE_DELAY) {
     // Speed when fleeing and eagle < 8
     if (eagleDist < 8) {
       const speedProp = bot.props.find((p) => p.type === 'speed' && p.count > 0);
@@ -371,7 +487,7 @@ function updateChickBot(
   }
 
   // ── Flee mode ──
-  if (isFleeing && nearestEagle && eagleDist < DANGER_RADIUS) {
+  if (!safeInTipZone && isFleeing && nearestEagle && eagleDist < DANGER_RADIUS) {
     const fleeJoy = joystickToTarget(nearestEagle.position, bot.position, 1);
 
     // Juke when very close
@@ -436,20 +552,23 @@ function updateChickBot(
       }
     }
 
-    // Find building to go to
+    // Find building to go to (yellow site = tips still available from this building)
     const targetBuilding = buildings
-      .filter((b) => b.hasTip && b.glowing && !bot.tips[b.tipIndex])
+      .filter((b) => b.hasTip && !b.tipObtained && !bot.tips[b.tipIndex])
       .sort((a, b) => dist(bot.position, a.position) - dist(bot.position, b.position))[0];
 
     if (targetBuilding) {
       const approach = buildingApproachPoint(targetBuilding.position);
+      const inDisk = isInProtectedZone(bot.position.x, bot.position.z, targetBuilding.id);
       const d = dist(bot.position, approach);
-      if (d < 4) {
-        // Stay in zone (patience)
+      if (inDisk || d < 0.75) {
         s.targetJoystick = { x: 0, y: 0 };
       } else {
         const targetJoy = joystickToTarget(bot.position, approach, 0.8);
-        const fleeWeight = nearestEagle && eagleDist < FLEE_RADIUS ? Math.max(0, Math.min(0.35, (FLEE_RADIUS - eagleDist) / FLEE_RADIUS * 0.35)) : 0;
+        const fleeWeight =
+          !safeInTipZone && nearestEagle && eagleDist < FLEE_RADIUS
+            ? Math.max(0, Math.min(0.35, ((FLEE_RADIUS - eagleDist) / FLEE_RADIUS) * 0.35))
+            : 0;
         const fleeJoy = nearestEagle ? joystickToTarget(nearestEagle.position, bot.position, 0.8) : targetJoy;
         const mixedJoy = {
           x: targetJoy.x * (1 - fleeWeight) + fleeJoy.x * fleeWeight,
@@ -513,6 +632,10 @@ function smoothJoystick(s: BotState): { x: number; y: number } {
 }
 
 // ─── Public API ─────────────────────────────────────────────
+export interface UpdateBotOptions {
+  examMode?: boolean;
+}
+
 export function updateBot(
   bot: PlayerGameState,
   allPlayers: Map<string, PlayerGameState>,
@@ -522,11 +645,13 @@ export function updateBot(
   activeEvent: GameEvent | null,
   gameTime: number,
   mysteryBoxes: MysteryBox[],
+  options?: UpdateBotOptions,
 ): BotDecision {
+  const exam = !!options?.examMode;
   if (bot.isEagle) {
-    return updateEagleBot(bot, allPlayers, now, stage, buildings, activeEvent, mysteryBoxes);
+    return updateEagleBot(bot, allPlayers, now, stage, buildings, activeEvent, mysteryBoxes, exam);
   }
-  return updateChickBot(bot, allPlayers, now, stage, buildings, activeEvent, gameTime);
+  return updateChickBot(bot, allPlayers, now, stage, buildings, activeEvent, gameTime, exam);
 }
 
 export function isBot(connId: string): boolean {
