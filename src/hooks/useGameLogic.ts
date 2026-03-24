@@ -184,6 +184,7 @@ export function useGameLogic({ players, broadcast, gameMode }: UseGameLogicProps
   const [videoPlaying, setVideoPlaying] = useState<"hurt" | "dead" | null>(null);
   const frameRef = useRef<number>(0);
   const lastTickRef = useRef<number>(0);
+  const handleClientMessageRef = useRef<((connId: string, msg: any) => void) | null>(null);
   // Used by the host to drag/teleport players by their name tags.
   const hostDragBackupRef = useRef<
     Map<string, { position: { x: number; z: number }; frozen: boolean; frozenUntil: number }>
