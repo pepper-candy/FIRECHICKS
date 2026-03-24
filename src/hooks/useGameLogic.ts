@@ -538,7 +538,21 @@ export function useGameLogic({ players, broadcast, gameMode, connectionMode }: U
       const lobbyPlayer = currentPlayers.get(connId);
       const activelyBotControlled = !!lobbyPlayer?.isBot;
       if (!activelyBotControlled || !isBot(connId) || !p.alive) continue;
-      const decision = updateBot(p, gs.playerStates, now, gs.stage, gs.buildings, gs.activeEvent, gs.gameTime);
+      if (gs.phase === "exam") {
+        // During final exam, bots must not move or act.
+        (lobbyPlayer as any).joystick = { x: 0, y: 0 };
+        continue;
+      }
+      const decision = updateBot(
+        p,
+        gs.playerStates,
+        now,
+        gs.stage,
+        gs.buildings,
+        gs.activeEvent,
+        gs.gameTime,
+        gs.mysteryBoxes,
+      );
 
       // Inject bot joystick into players map so movement code picks it up next frame
       if (lobbyPlayer) {

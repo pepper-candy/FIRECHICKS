@@ -3,14 +3,14 @@
  * Called from useGameLogic game loop. Produces synthetic joystick + action messages.
  */
 
-import type { PlayerGameState, ClientMessage, GameEvent } from '@/lib/gameTypes';
+import type { PlayerGameState, ClientMessage, GameEvent, MysteryBox } from '@/lib/gameTypes';
 import type { BuildingState } from '@/lib/gameTypes';
 import {
   BUILDINGS,
   ATTACK_OVERLAP_THRESHOLD,
   SOCIAL_CIRCLE_THRESHOLD,
   checkCollision,
-  resolvePosition,
+  getAdjacentBuilding,
   isInProtectedZone,
   MAP_HALF,
   TIP_SHARE_RADIUS,
@@ -150,6 +150,7 @@ function updateEagleBot(
   stage: number,
   buildings: BuildingState[],
   activeEvent: GameEvent | null,
+  mysteryBoxes: MysteryBox[],
 ): BotDecision {
   const s = getOrCreateState(bot.connId);
   const messages: ClientMessage[] = [];
@@ -185,6 +186,17 @@ function updateEagleBot(
     return { joystick: smoothJoystick(s), messages };
   }
   s.lastDecisionTime = now;
+
+  // Prioritize active mystery boxes to trigger challenges.
+  const activeBoxes = mysteryBoxes.filter((b) => !b.collected && !b.triggered && now >= b.activeAt);
+  if (activeBoxes.length > 0) {
+    activeBoxes.sort((a, b) => dist(bot.position, a.position) - dist(bot.position, b.position));
+    const targetBox = activeBoxes[0];
+    const boxDist = dist(bot.position, targetBox.position);
+    const boxJoy = joystickToTarget(bot.position, targetBox.position, Math.min(1, Math.max(0.55, boxDist / 20)));
+    s.targetJoystick = avoidObstacles(bot.position, boxJoy);
+    return { joystick: smoothJoystick(s), messages };
+  }
 
   // Find valid targets
   const chicks = Array.from(allPlayers.values()).filter(
@@ -471,18 +483,18 @@ function updateChickBot(
 
   // Stage 3: Move toward nearest building (exam entry)
   if (stage === 3) {
+    // Only stop once truly inside exam entry radius.
+    if (getAdjacentBuilding(bot.position.x, bot.position.z) >= 0) {
+      s.targetJoystick = { x: 0, y: 0 };
+      return { joystick: smoothJoystick(s), messages };
+    }
     const nearest = [...BUILDINGS].sort(
       (a, b) => dist(bot.position, a.position) - dist(bot.position, b.position),
     )[0];
     if (nearest) {
-      const approach = buildingApproachPoint(nearest.position);
-      const d = dist(bot.position, approach);
-      if (d < 4) {
-        s.targetJoystick = { x: 0, y: 0 };
-      } else {
-        const joy = joystickToTarget(bot.position, approach, 0.9);
-        s.targetJoystick = avoidObstacles(bot.position, joy);
-      }
+      // For final exam, drive into building center so bot actually touches entry zone.
+      const joy = joystickToTarget(bot.position, nearest.position, 0.9);
+      s.targetJoystick = avoidObstacles(bot.position, joy);
     }
     return { joystick: smoothJoystick(s), messages };
   }
@@ -509,9 +521,10 @@ export function updateBot(
   buildings: BuildingState[],
   activeEvent: GameEvent | null,
   gameTime: number,
+  mysteryBoxes: MysteryBox[],
 ): BotDecision {
   if (bot.isEagle) {
-    return updateEagleBot(bot, allPlayers, now, stage, buildings, activeEvent);
+    return updateEagleBot(bot, allPlayers, now, stage, buildings, activeEvent, mysteryBoxes);
   }
   return updateChickBot(bot, allPlayers, now, stage, buildings, activeEvent, gameTime);
 }
