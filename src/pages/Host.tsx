@@ -313,7 +313,11 @@ export default function Host() {
                           className="group relative w-5 h-5 rounded-full flex items-center justify-center transition-transform hover:scale-125"
                           style={{ backgroundColor: `hsl(${color.hsl})`, boxShadow: `0 0 6px hsl(${color.hsl} / 0.5)` }}>
                           
-                            <X className="w-3 h-3 text-black/70 opacity-0 group-hover:opacity-100 transition-opacity" strokeWidth={3} />
+                            {connId.startsWith('bot-') ? (
+                              <span className="text-[8px]">🤖</span>
+                            ) : (
+                              <X className="w-3 h-3 text-black/70 opacity-0 group-hover:opacity-100 transition-opacity" strokeWidth={3} />
+                            )}
                           </button>
                         </TooltipTrigger>
                         <TooltipContent side="bottom" className="text-xs font-mono">Kick {color.name}</TooltipContent>
