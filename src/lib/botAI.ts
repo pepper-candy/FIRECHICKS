@@ -82,44 +82,49 @@ function dist(a: { x: number; z: number }, b: { x: number; z: number }): number 
   return Math.sqrt(dx * dx + dz * dz);
 }
 
-function angleToTarget(from: { x: number; z: number }, to: { x: number; z: number }): number {
-  // Convert world target vector into the same angle convention used by movement:
-  // updateGameState applies dx=-sin(angle), dz=-cos(angle), so we solve angle from
-  // desired world delta (to - from) by negating both vector components.
+function joystickToTarget(
+  from: { x: number; z: number },
+  to: { x: number; z: number },
+  magnitude: number = 1,
+): { x: number; y: number } {
   const dx = to.x - from.x;
   const dz = to.z - from.z;
-  return Math.atan2(-dx, -dz);
-}
-
-function joystickFromAngle(angle: number, magnitude: number = 1): { x: number; y: number } {
+  const len = Math.hypot(dx, dz);
+  if (len < 0.001) return { x: 0, y: 0 };
+  // Movement model: world dx ~= joystick.x, world dz ~= -joystick.y
   return {
-    x: -Math.sin(angle) * magnitude,
-    y: Math.cos(angle) * magnitude,
+    x: (dx / len) * magnitude,
+    y: (-dz / len) * magnitude,
   };
 }
 
-// Simple obstacle avoidance: if direct path is blocked, steer perpendicular
+// Simple obstacle avoidance in joystick space.
 function avoidObstacles(
   from: { x: number; z: number },
-  targetAngle: number,
+  targetJoy: { x: number; y: number },
   stepSize: number = 2,
-): number {
-  const testX = from.x + Math.sin(targetAngle) * -stepSize;
-  const testZ = from.z + Math.cos(targetAngle) * -stepSize;
-  if (!checkCollision(testX, testZ, 0.6)) return targetAngle;
+): { x: number; y: number } {
+  const len = Math.hypot(targetJoy.x, targetJoy.y);
+  if (len < 0.001) return targetJoy;
+  const nx = targetJoy.x / len;
+  const ny = targetJoy.y / len;
 
-  // Try +90° and -90°
-  const left = targetAngle + Math.PI / 2;
-  const lx = from.x + Math.sin(left) * -stepSize;
-  const lz = from.z + Math.cos(left) * -stepSize;
+  const testX = from.x + nx * stepSize;
+  const testZ = from.z + (-ny) * stepSize;
+  if (!checkCollision(testX, testZ, 0.6)) return targetJoy;
+
+  // Try rotating joystick vector ±90°.
+  const left = { x: -ny * len, y: nx * len };
+  const lx = from.x + (left.x / len) * stepSize;
+  const lz = from.z + (-(left.y / len)) * stepSize;
   if (!checkCollision(lx, lz, 0.6)) return left;
 
-  const right = targetAngle - Math.PI / 2;
-  const rx = from.x + Math.sin(right) * -stepSize;
-  const rz = from.z + Math.cos(right) * -stepSize;
+  const right = { x: ny * len, y: -nx * len };
+  const rx = from.x + (right.x / len) * stepSize;
+  const rz = from.z + (-(right.y / len)) * stepSize;
   if (!checkCollision(rx, rz, 0.6)) return right;
 
-  return targetAngle + Math.PI; // reverse
+  return { x: -targetJoy.x, y: -targetJoy.y };
 }
 
 // ─── Eagle Bot ──────────────────────────────────────────────
@@ -188,8 +193,8 @@ function updateEagleBot(
     const patrolAngle = (now / 3000) * Math.PI * 2;
     const px = Math.cos(patrolAngle) * 8;
     const pz = Math.sin(patrolAngle) * 8;
-    const angle = avoidObstacles(bot.position, angleToTarget(bot.position, { x: px, z: pz }));
-    s.targetJoystick = joystickFromAngle(angle, EAGLE_SPEED_FACTOR);
+    const joy = joystickToTarget(bot.position, { x: px, z: pz }, EAGLE_SPEED_FACTOR);
+    s.targetJoystick = avoidObstacles(bot.position, joy);
     return { joystick: smoothJoystick(s), messages };
   }
 
@@ -234,13 +239,9 @@ function updateEagleBot(
     }
   }
 
-  // Interception: lead by velocity estimate (0.5s ahead)
-  // We don't have velocity, so just move to current position
-  const angle = avoidObstacles(
-    bot.position,
-    angleToTarget(bot.position, target.position),
-  );
-  s.targetJoystick = joystickFromAngle(angle, EAGLE_SPEED_FACTOR);
+  // Move toward nearest valid chick directly.
+  const chaseJoy = joystickToTarget(bot.position, target.position, EAGLE_SPEED_FACTOR);
+  s.targetJoystick = avoidObstacles(bot.position, chaseJoy);
 
   // Hitbox clicking (zone building)
   if (stage >= 1) {
@@ -358,7 +359,7 @@ function updateChickBot(
 
   // ── Flee mode ──
   if (isFleeing && nearestEagle && eagleDist < DANGER_RADIUS) {
-    const fleeAngle = angleToTarget(nearestEagle.position, bot.position);
+    const fleeJoy = joystickToTarget(nearestEagle.position, bot.position, 1);
 
     // Juke when very close
     if (eagleDist < JUKE_RADIUS && now - s.lastJukeTime > s.nextJukeInterval) {
@@ -367,8 +368,11 @@ function updateChickBot(
       s.nextJukeInterval = JUKE_INTERVAL_MIN + Math.random() * (JUKE_INTERVAL_MAX - JUKE_INTERVAL_MIN);
     }
 
-    const finalAngle = avoidObstacles(bot.position, fleeAngle + s.jukeAngle);
-    s.targetJoystick = joystickFromAngle(finalAngle, 1);
+    const jukeJoy = {
+      x: fleeJoy.x * Math.cos(s.jukeAngle) - fleeJoy.y * Math.sin(s.jukeAngle),
+      y: fleeJoy.x * Math.sin(s.jukeAngle) + fleeJoy.y * Math.cos(s.jukeAngle),
+    };
+    s.targetJoystick = avoidObstacles(bot.position, jukeJoy);
     return { joystick: smoothJoystick(s), messages };
   }
 
@@ -392,8 +396,8 @@ function updateChickBot(
         s.socialPauseUntil = now + 500;
         s.targetJoystick = { x: 0, y: 0 };
       } else {
-        const angle = avoidObstacles(bot.position, angleToTarget(bot.position, target.position));
-        s.targetJoystick = joystickFromAngle(angle, 0.7);
+        const joy = joystickToTarget(bot.position, target.position, 0.7);
+        s.targetJoystick = avoidObstacles(bot.position, joy);
       }
     } else {
       s.targetJoystick = { x: 0, y: 0 };
@@ -430,12 +434,14 @@ function updateChickBot(
         // Stay in zone (patience)
         s.targetJoystick = { x: 0, y: 0 };
       } else {
-        const targetAngle = angleToTarget(bot.position, targetBuilding.position);
+        const targetJoy = joystickToTarget(bot.position, targetBuilding.position, 0.8);
         const fleeWeight = nearestEagle && eagleDist < FLEE_RADIUS ? Math.max(0, Math.min(0.35, (FLEE_RADIUS - eagleDist) / FLEE_RADIUS * 0.35)) : 0;
-        const fleeAngle = nearestEagle ? angleToTarget(nearestEagle.position, bot.position) : targetAngle;
-        const mixedAngle = targetAngle * (1 - fleeWeight) + fleeAngle * fleeWeight;
-        const angle = avoidObstacles(bot.position, mixedAngle);
-        s.targetJoystick = joystickFromAngle(angle, 0.8);
+        const fleeJoy = nearestEagle ? joystickToTarget(nearestEagle.position, bot.position, 0.8) : targetJoy;
+        const mixedJoy = {
+          x: targetJoy.x * (1 - fleeWeight) + fleeJoy.x * fleeWeight,
+          y: targetJoy.y * (1 - fleeWeight) + fleeJoy.y * fleeWeight,
+        };
+        s.targetJoystick = avoidObstacles(bot.position, mixedJoy);
       }
     } else {
       // If bot has tips, move toward other chicks for sharing
@@ -447,15 +453,15 @@ function updateChickBot(
           (!p.tips[0] || !p.tips[1]),
       );
       if (needyChick && (bot.tips[0] || bot.tips[1])) {
-        const angle = avoidObstacles(bot.position, angleToTarget(bot.position, needyChick.position));
-        s.targetJoystick = joystickFromAngle(angle, 0.7);
+        const joy = joystickToTarget(bot.position, needyChick.position, 0.7);
+        s.targetJoystick = avoidObstacles(bot.position, joy);
       } else {
         // Wander
         const wanderAngle = (now / 5000) * Math.PI;
         const wx = Math.cos(wanderAngle) * 10;
         const wz = Math.sin(wanderAngle) * 10;
-        const angle = avoidObstacles(bot.position, angleToTarget(bot.position, { x: wx, z: wz }));
-        s.targetJoystick = joystickFromAngle(angle, 0.5);
+        const joy = joystickToTarget(bot.position, { x: wx, z: wz }, 0.5);
+        s.targetJoystick = avoidObstacles(bot.position, joy);
       }
     }
     return { joystick: smoothJoystick(s), messages };
@@ -471,8 +477,8 @@ function updateChickBot(
       if (d < 4) {
         s.targetJoystick = { x: 0, y: 0 };
       } else {
-        const angle = avoidObstacles(bot.position, angleToTarget(bot.position, nearest.position));
-        s.targetJoystick = joystickFromAngle(angle, 0.9);
+        const joy = joystickToTarget(bot.position, nearest.position, 0.9);
+        s.targetJoystick = avoidObstacles(bot.position, joy);
       }
     }
     return { joystick: smoothJoystick(s), messages };
