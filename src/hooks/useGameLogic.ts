@@ -513,7 +513,25 @@ export function useGameLogic({ players, broadcast, gameMode }: UseGameLogicProps
       }
     }
 
-    // ── Tip share validity: sharer must stay near other chicks ──
+    // ── Bot AI updates ──
+    for (const [connId, p] of gs.playerStates) {
+      if (!isBot(connId) || !p.alive) continue;
+      const decision = updateBot(p, gs.playerStates, now, gs.stage, gs.buildings, gs.activeEvent, gs.gameTime);
+
+      // Inject bot joystick into players map so movement code picks it up next frame
+      const lobbyPlayer = currentPlayers.get(connId);
+      if (lobbyPlayer) {
+        // Mutate the map entry joystick (bots don't have real connections)
+        (lobbyPlayer as any).joystick = decision.joystick;
+      }
+
+      // Process bot messages through handleClientMessage
+      for (const msg of decision.messages) {
+        handleClientMessage(connId, msg);
+      }
+    }
+
+
     if (gs.activeTipShares.size > 0) {
       for (const [key, ts] of gs.activeTipShares.entries()) {
         const sharer = gs.playerStates.get(ts.connId);
