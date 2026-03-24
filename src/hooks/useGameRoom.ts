@@ -292,7 +292,64 @@ function useHostWebRTC() {
     };
   }, [removePlayer, handleColorSwap]);
 
-  return { roomCode, players, kickPlayer, kickAllPlayers, broadcast, onClientMessage, usedColors: usedColorsRef, gameModeRef, takeoverCodes, sendToClient };
+  const addBot = useCallback((connId: string, colorIndex: number) => {
+    usedColorsRef.current.add(colorIndex);
+    connColorMapRef.current.set(connId, colorIndex);
+    setPlayers((prev) => {
+      const next = new Map(prev);
+      next.set(connId, { joystick: { x: 0, y: 0 }, colorIndex, ping: 0, lastPongAt: Date.now(), isBot: true });
+      return next;
+    });
+  }, []);
+
+  const removeBot = useCallback((connId: string) => {
+    const colorIdx = connColorMapRef.current.get(connId);
+    if (colorIdx !== undefined) {
+      usedColorsRef.current.delete(colorIdx);
+      connColorMapRef.current.delete(connId);
+    }
+    setPlayers((prev) => {
+      const next = new Map(prev);
+      next.delete(connId);
+      return next;
+    });
+  }, []);
+
+  const fillBots = useCallback(() => {
+    const mode = gameModeRef.current;
+    const maxSlots = mode === '2v6' ? MAX_PLAYERS_2V6 : MAX_PLAYERS_1V3;
+    const currentCount = usedColorsRef.current.size;
+    const needed = maxSlots - currentCount;
+    if (needed <= 0) return;
+
+    // In 1v3, we might need a bot eagle. Check if any eagle color is taken.
+    const hasEagle = mode === '1v3' ? Array.from(usedColorsRef.current).some(c => EAGLE_COLOR_INDICES.includes(c)) : true;
+
+    for (let i = 0; i < needed; i++) {
+      const excludeIndices = mode === '2v6' ? [] : (EAGLE_COLOR_INDICES as unknown as number[]);
+      // If 1v3 and no eagle yet, first bot should be eagle
+      const needEagle = mode === '1v3' && !hasEagle && i === 0;
+      let colorIndex: number | null;
+      if (needEagle) {
+        const eagleIdx = EAGLE_COLOR_INDICES.find(c => !usedColorsRef.current.has(c));
+        colorIndex = eagleIdx ?? null;
+      } else {
+        colorIndex = allocateColor(usedColorsRef.current, excludeIndices);
+      }
+      if (colorIndex === null) break;
+
+      const isEagleSlot = EAGLE_COLOR_INDICES.includes(colorIndex);
+      const botId = isEagleSlot ? `bot-eagle-${i}` : `bot-chick-${i + 1}`;
+      addBot(botId, colorIndex);
+    }
+  }, [addBot]);
+
+  const removeBots = useCallback(() => {
+    const botIds = Array.from(connColorMapRef.current.keys()).filter(id => id.startsWith('bot-'));
+    for (const id of botIds) removeBot(id);
+  }, [removeBot]);
+
+  return { roomCode, players, kickPlayer, kickAllPlayers, broadcast, onClientMessage, usedColors: usedColorsRef, gameModeRef, takeoverCodes, sendToClient, addBot, removeBot, fillBots, removeBots };
 }
 
 // ─── HOST: Supabase ─────────────────────────────────────────
