@@ -92,10 +92,14 @@ function joystickToTarget(
   const dz = to.z - from.z;
   const len = Math.hypot(dx, dz);
   if (len < 0.001) return { x: 0, y: 0 };
-  // Movement model: world dx ~= joystick.x, world dz ~= -joystick.y
+  // Movement model in useGameLogic:
+  //   jy = -joystick.y
+  //   angle = atan2(-jx, jy)
+  //   world dx = -sin(angle), world dz = -cos(angle)
+  // This resolves to: joystick.x should follow +dx, joystick.y should follow +dz.
   return {
     x: (dx / len) * magnitude,
-    y: (-dz / len) * magnitude,
+    y: (dz / len) * magnitude,
   };
 }
 
