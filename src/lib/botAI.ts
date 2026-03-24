@@ -199,7 +199,6 @@ function updateEagleBot(
       (b) => b.zoneActive && !b.tipObtained && isInProtectedZone(c.position.x, c.position.z, b.id),
     );
     if (inZone) return false;
-    if (s.avoidTargetId === c.connId && now < s.avoidUntil) return false;
     return true;
   });
 
@@ -213,22 +212,9 @@ function updateEagleBot(
     return { joystick: smoothJoystick(s), messages };
   }
 
-  // Pick target — nearest, with chase timeout
+  // Pick target — always nearest (no chase-timeout retargeting)
   validTargets.sort((a, b) => dist(bot.position, a.position) - dist(bot.position, b.position));
-  let target = validTargets[0];
-
-  // Chase timeout: if chasing same target > 5s, switch
-  if (s.chaseTargetId === target.connId) {
-    if (now - s.chaseStartTime > CHASE_TIMEOUT) {
-      s.avoidTargetId = target.connId;
-      s.avoidUntil = now + CHASE_COOLDOWN;
-      s.chaseTargetId = null;
-      if (validTargets.length > 1) target = validTargets[1];
-    }
-  } else {
-    s.chaseTargetId = target.connId;
-    s.chaseStartTime = now;
-  }
+  const target = validTargets[0];
 
   const d = dist(bot.position, target.position);
 
