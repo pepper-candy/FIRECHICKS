@@ -34,6 +34,7 @@ import {
 } from "@/lib/gameplayMapData";
 import type { PlayerState } from "@/hooks/useGameRoom";
 import type { ChickColor } from "@/components/CharacterViewer";
+import { updateBot, isBot } from "@/lib/botAI";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 const SPEED = 10;
@@ -183,6 +184,7 @@ export function useGameLogic({ players, broadcast, gameMode }: UseGameLogicProps
   const [videoPlaying, setVideoPlaying] = useState<"hurt" | "dead" | null>(null);
   const frameRef = useRef<number>(0);
   const lastTickRef = useRef<number>(0);
+  const handleClientMessageRef = useRef<((connId: string, msg: any) => void) | null>(null);
   // Used by the host to drag/teleport players by their name tags.
   const hostDragBackupRef = useRef<
     Map<string, { position: { x: number; z: number }; frozen: boolean; frozenUntil: number }>
@@ -512,7 +514,25 @@ export function useGameLogic({ players, broadcast, gameMode }: UseGameLogicProps
       }
     }
 
-    // ── Tip share validity: sharer must stay near other chicks ──
+    // ── Bot AI updates ──
+    for (const [connId, p] of gs.playerStates) {
+      if (!isBot(connId) || !p.alive) continue;
+      const decision = updateBot(p, gs.playerStates, now, gs.stage, gs.buildings, gs.activeEvent, gs.gameTime);
+
+      // Inject bot joystick into players map so movement code picks it up next frame
+      const lobbyPlayer = currentPlayers.get(connId);
+      if (lobbyPlayer) {
+        // Mutate the map entry joystick (bots don't have real connections)
+        (lobbyPlayer as any).joystick = decision.joystick;
+      }
+
+      // Process bot messages through handleClientMessage ref
+      for (const msg of decision.messages) {
+        handleClientMessageRef.current?.(connId, msg);
+      }
+    }
+
+
     if (gs.activeTipShares.size > 0) {
       for (const [key, ts] of gs.activeTipShares.entries()) {
         const sharer = gs.playerStates.get(ts.connId);
@@ -1631,7 +1651,10 @@ export function useGameLogic({ players, broadcast, gameMode }: UseGameLogicProps
     }
   }, []);
 
-  // ─── Video complete → post-video eagle freeze ──────────────────────────────
+  // Keep ref in sync for bot AI access
+  handleClientMessageRef.current = handleClientMessage;
+
+
   const onVideoComplete = useCallback(() => {
     const gs = gameStateRef.current as GameStateRef | null;
     if (!gs) return;

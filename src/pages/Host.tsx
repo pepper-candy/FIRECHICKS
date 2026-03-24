@@ -145,8 +145,9 @@ export default function Host() {
   const [stageToast, setStageToast] = useState<{ stage: number; key: number } | null>(null);
   const dismissStageToast = useCallback(() => setStageToast(null), []);
   const prevStageRef = useRef<number | null>(null);
-  const { roomCode, players, kickPlayer, kickAllPlayers, broadcast, onClientMessage, gameModeRef, takeoverCodes } = useHostRoom(mode);
+  const { roomCode, players, kickPlayer, kickAllPlayers, broadcast, onClientMessage, gameModeRef, takeoverCodes, fillBots, removeBots } = useHostRoom(mode);
   const [revealedCodes, setRevealedCodes] = useState<Set<string>>(new Set());
+  const [botsAdded, setBotsAdded] = useState(false);
 
   const {
     phase,
@@ -214,8 +215,8 @@ export default function Host() {
     return (
       <div className="flex flex-col h-screen p-3 gap-3">
         {/* Cyber START button — top center absolute */}
-        {isFull &&
-        <div className="absolute top-4 left-1/2 -translate-x-1/2 z-20">
+        {(isFull || botsAdded) &&
+        <div className="absolute top-4 left-1/2 -translate-x-1/2 z-20 flex gap-3">
             <button
             onClick={() => {
               setStartClickAt(Date.now());
@@ -231,6 +232,25 @@ export default function Host() {
             
               <Zap className="inline w-5 h-5 mr-2 -mt-0.5 text-primary" />
               ▶ START GAME
+            </button>
+          </div>
+        }
+
+        {/* Fill bots button — only when not full */}
+        {!isFull &&
+        <div className="absolute top-4 left-1/2 -translate-x-1/2 z-20">
+            <button
+            onClick={() => {
+              fillBots?.();
+              setBotsAdded(true);
+            }}
+            className="px-6 py-2.5 font-pixel text-sm tracking-widest uppercase
+                text-accent border-2 border-accent bg-accent/10
+                hover:bg-accent/25 transition-all duration-200
+                shadow-[0_0_15px_hsl(var(--accent)/0.3)]
+                hover:shadow-[0_0_25px_hsl(var(--accent)/0.5)]">
+            
+              🤖 FILL BOTS
             </button>
           </div>
         }
@@ -293,7 +313,11 @@ export default function Host() {
                           className="group relative w-5 h-5 rounded-full flex items-center justify-center transition-transform hover:scale-125"
                           style={{ backgroundColor: `hsl(${color.hsl})`, boxShadow: `0 0 6px hsl(${color.hsl} / 0.5)` }}>
                           
-                            <X className="w-3 h-3 text-black/70 opacity-0 group-hover:opacity-100 transition-opacity" strokeWidth={3} />
+                            {connId.startsWith('bot-') ? (
+                              <span className="text-[8px]">🤖</span>
+                            ) : (
+                              <X className="w-3 h-3 text-black/70 opacity-0 group-hover:opacity-100 transition-opacity" strokeWidth={3} />
+                            )}
                           </button>
                         </TooltipTrigger>
                         <TooltipContent side="bottom" className="text-xs font-mono">Kick {color.name}</TooltipContent>
