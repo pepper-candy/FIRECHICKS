@@ -1,129 +1,99 @@
-# New Props & Mechanics Plan
+# AI Bot System — Implementation Plan
 
 ## Overview
 
-Four changes: (1) proximity-based tip sharing with visible radius, (2) chick starting props (2 speed + 1 teleport), (3) eagle Sabotage/Cage prop, (4) bigger spreading invincible ripple.
+Add AI bots that can fill empty player slots for both Eagle and Chick roles. Bots operate at intermediate skill level with 200ms reaction delays, simple pathfinding, and role-specific behaviors. A "Toggle Bots" button in the lobby allows starting with fewer human players.
 
-## 1. Proximity-Based Tip Sharing (3-block radius)
+## Architecture
 
-**Threshold**: `TIP_SHARE_RADIUS = 6` (3 blocks × 2 units per block = 6 units). Two chicks must stay within this radius for the entire QR display + scan + copy process.
+```text
+NEW FILE: src/lib/botAI.ts
+  - All bot logic lives here, called from useGameLogic.ts game loop
+  - Produces synthetic joystick data + client messages per bot per frame
+  - No network layer — bots inject directly into game state
 
-**Game logic `useGameLogic.ts`)**:
+HOST LOBBY:
+  [🤖 Fill Bots] button — adds bot players to fill remaining slots
+  Bots get special connIds: "bot-eagle-1", "bot-chick-1", etc.
+  If a human joins a bot's slot, bot is removed and human takes over
 
-- In the `tip-request` handler: check that at least one other alive chick is within `TIP_SHARE_RADIUS` of the requesting player. If not, reject the request (don't generate QR).
+GAME LOOP:
+  Each frame, botAI.update() runs for each bot player:
+  - Reads game state (positions, stage, threats)
+  - Outputs: joystick vector (x, y) + optional action messages
+  - 200ms reaction delay via a buffered decision queue
+```
 
-- In the `scan-result` handler (tip share path): check proximity between scanner and sharer. If distance > `TIP_SHARE_RADIUS`, reject the scan.
+## Bot Behavior Details
 
-- During game loop: if a tip QR is active and the sharer moves out of range from all other chicks, expire the QR early.
+### Eagle Bot (The Hunter)
 
-**Visual `GameplayMap.tsx`)**:
+- **Targeting**: Find nearest alive, non-invincible, non-caged chick not in a protected zone. If target is "safe" (in zone or invincible), switch to next.
+- **Chase timeout**: Track chase target + duration. If chasing same chick > 5s without catch, pick a different target for 3s.
+- **Interception**: Instead of moving to chick's current position, lead by `chickVelocity * 0.5s` ahead.
+- **Attack**: When within `ATTACK_OVERLAP_THRESHOLD`, emit `attack-press` (respects cooldown).
+- **Fly**: Use fly prop when > 15 units from target and fly is off cooldown.
+- **Cage**: Use cage when off cooldown and > 2 alive chicks.
+- **Hitbox**: When in a building zone with active zone, emit `hitbox-click` at ~5 clicks/s.
+- **Events**: During hitbox challenge, click at ~8/s. During crossy road, use speed-up/add-obstacle on cooldown. Skip mock exam.
 
-- When a player has an active tip share (from `activeTipShares` or a new field in serialized state), render a translucent circle of radius 6 around them on the map (green ring, similar to protected zone but green).
+### Chick Bot (The Gatherer/Survivor)
 
-- Add `activeTipShareConnIds: string[]` to `GameStateSnapshot` so the map knows which players are sharing.
+- **Stage 1 (Social Circle)**: Move toward nearest un-met chick. Juke slightly when eagle is near.
+- **Stage 2 (Exam Tips)**: Move toward nearest glowing building with a tip the bot doesn't have. Stay in zone for 7s to obtain tip.
+- **Stage 2-3 (Tip Sharing)**: If bot has a tip another nearby chick doesn't, virtually "share" it (directly set the tip on the other bot or trigger tip-request/scan-result flow for human players within proximity), the countdown also applies.
+- **Stage 3 (Final Exam)**: Move toward nearest building. Bots do NOT submit exam answers.
+- **Flee Mode**: If eagle is within 12 units, switch to flee — move opposite direction from eagle. If eagle is within 6 units, add random "juke" (90° direction change every 0.5s).
+- **Props**: Use speed prop when fleeing and eagle < 8 units. Use teleport if eagle < 5 units (set target to opposite map quadrant, confirm immediately). Use invincible if eagle < 4 units. Use heal if health < 2.7, attempt use all before the final exam.
+- **Events**: During hitbox, click at ~6/s. During crossy road, hop forward every ~1.5s, hop back if obstacle detected ahead. Skip mock exam answer submission.
 
-**Client `Client.tsx`)**:
+### Reaction Delay
 
-- Show warning text "Move closer to share tips!" if tip request is rejected.
+- Bot decisions are computed each frame but applied with a 200ms delay buffer.
+- Store `lastDecisionTime` per bot; only re-evaluate when 200ms has passed.
+- Joystick values interpolate smoothly toward the target direction.
 
-## 2. Chick Starting Props: 2 Speed + 1 Teleport
+### Pathfinding
 
-`**gameTypes.ts**`:
+- Use simple raycasting against AABB obstacles from `gameplayMapData.ts`:
+  - Cast a ray from bot position toward target.
+  - If ray hits an obstacle, steer perpendicular to obstacle face until clear.
+  - Use `resolvePosition()` for collision resolution (already exists).
+- No A* needed — the map is open enough that obstacle avoidance + sliding works well.
 
-- Add `'teleport'` to `PropType` union: `'speed' | 'heal' | 'fly' | 'invincible' | 'teleport'`
+## New Files
 
-`**useGameLogic.ts**` (startGame, line 269):
 
-- Change chick initial props from `[]` to `[{ type: 'speed', count: 2 }, { type: 'teleport', count: 1 }]`
+| File               | Purpose                                                                                          |
+| ------------------ | ------------------------------------------------------------------------------------------------ |
+| `src/lib/botAI.ts` | Bot decision engine: `BotController` class with `update(gs, delta)` returning joystick + actions |
 
-**Teleport Mechanic** — Two-phase activation:
 
-- Phase 1 (click teleport prop): Set player state `teleportPending = true`, `teleportTarget = player.position`. Client switches thumbstick to move a colored dot instead of the character. Prop icon changes to ✕.
+## Modified Files
 
-- Phase 2 (click teleport prop again): Teleport player instantly to `teleportTarget`. Set `invincibleUntil = now + 500` (brief invincibility during teleport). Consume the prop. Set `teleportPending = false`.
 
-**New fields on `PlayerGameState` / `PlayerGameStateSerializable**`:
+| File                            | Changes                                                                                                                                                                 |
+| ------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `src/hooks/useGameRoom.ts`      | Add `addBot(connId, colorIndex)` and `removeBot(connId)` methods. `fillBots()` fills remaining slots. Bots added to players Map with `isBot: true` flag on PlayerState. |
+| `src/hooks/useGameLogic.ts`     | Import `BotController`. In game loop, after human movement, run `botController.update()` for each bot. Inject synthetic joystick + messages.                            |
+| `src/pages/Host.tsx`            | Add "🤖 Fill Bots" button in lobby. Show bot indicators (robot icon) on player dots. Allow start with fewer than max players when bots fill slots.                      |
+| `src/lib/gameTypes.ts`          | No structural changes needed — bots use same PlayerGameState.                                                                                                           |
+| `src/pages/preview/mockData.ts` | Add bot player mocks for testing.                                                                                                                                       |
 
-- `teleportPending: boolean`
 
-- `teleportTarget: { x: number; z: number }`
+## Integration Rules
 
-**Client message**: Add `| { type: 'teleport-set'; x: number; z: number }` — sent continuously while in teleport-targeting mode (throttled to ~10fps). The host updates `teleportTarget`.
+1. Bots trigger the same collision/win/loss logic as humans (they exist as normal PlayerGameState entries).
+2. Bot connIds use prefix `bot-` so they can be identified.
+3. If a human player joins and all non-bot slots are taken, the most recently added bot is removed and replaced.
+4. Bots don't have real WebRTC connections — their joystick data is written directly into the players Map.
+5. Bots don't attempt mock exam or final exam answer submissions.
+6. Bot tip sharing: between two bots, tips are exchanged directly. Between bot and human, the bot generates a real tip-request (QR code) that the human must scan, or the bot scans the human's QR virtually (instant scan when in proximity).
 
-Add `| { type: 'teleport-confirm' }` — sent when player clicks teleport again.
+## Fine-Tuning Decisions
 
-**Client UI**:
-
-- When `teleportPending` is true, thumbstick controls the dot position instead of player movement.
-
-- Dot rendered on the map `GameplayMap.tsx`) as a pulsing circle matching the player's color.
-
-- Teleport prop button shows ✕ icon instead of the normal icon, switch back when `teleportPending` is done.
-
-## 3. Eagle Sabotage Prop: The Cage
-
-**Constants**: `CAGE_COOLDOWN = 60000`, `CAGE_LOCK_DURATION = 20000`, `CAGE_POST_INVINCIBLE = 5000`
-
-`**gameTypes.ts**`:
-
-- Add `'cage'` to `PropType` union.
-
-- Add to `PlayerGameState`: `cagedUntil: number` (0 = not caged), `cagePostInvincibleUntil: number`
-
-- Add to `ClientMessage`: `| { type: 'cage-use' }`
-
-`**useGameLogic.ts**`:
-
-- Eagle starts with `[{ type: 'fly', count: 3 }, { type: 'cage', count: 99 }]`. Cage has a cooldown tracked via a new field `cageCooldownUntil: number` on eagle's state (starts at game start time, so first use available at ~60s into game).
-
-- On `cage-use` message: if `now < player.cageCooldownUntil`, reject. Otherwise, pick a random alive chick, set `chick.cagedUntil = now + CAGE_LOCK_DURATION`, `chick.frozen = true`, `chick.frozenUntil = now + CAGE_LOCK_DURATION`, `chick.invincibleUntil = now + CAGE_LOCK_DURATION + CAGE_POST_INVINCIBLE`. Set `player.cageCooldownUntil = now + CAGE_COOLDOWN`.
-
-- In game loop: when `cagedUntil > 0 && now >= cagedUntil`, set `cagedUntil = 0` (cage lifts, invincible continues for 5s).
-
-- Caged chick can still turn (facingAngle updates) but position is locked.
-
-**Visual `GameplayMap.tsx`)**:
-
-- When `player.cagedUntil > now`, render a cage mesh around the character: 4 vertical bars + top plate, descending animation on first frame. Show "DETENTION 20s" countdown label above.
-
-- After cage lifts, the existing invincible ripple shows for 5s.
-
-**Client UI**:
-
-- Eagle: cage button with 60s cooldown display (same pattern as fly cooldown).
-
-- Caged chick: show "DETAINED! 20s" overlay on their control screen. Thumbstick disabled.
-
-## 4. Bigger Spreading Invincible Ripple and protected zone (3 unit larger)
-
-`**GameplayMap.tsx**` (invincible shimmer ring, line ~262):
-
-- Replace the static `ringGeometry` with an animated expanding ring using `useFrame`. Start at radius 0.6, expand to 2.5 over 1s, then repeat. Use opacity that fades out as it expands.
-
-- Add 2-3 staggered rings for a continuous ripple effect (offset by 0.3s each).
-
-- Increase the ring color intensity and add a slight glow via `emissiveIntensity`.
-
----
-
-## Files Summary
-
-| File                                               | Changes                                                                                                                                                                                                             |
-
-| -------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-
-| `src/lib/gameTypes.ts`                             | Add `teleport`, `cage` to PropType. Add `teleportPending`, `teleportTarget`, `cagedUntil`, `cagePostInvincibleUntil`, `cageCooldownUntil` fields. Add new client messages. Add `activeTipShareConnIds` to snapshot. |
-
-| `src/hooks/useGameLogic.ts`                        | Proximity check for tip sharing. Chick starting props. Teleport 2-phase logic. Cage logic. Cage cooldown. Game loop updates for cage/teleport.                                                                      |
-
-| `src/components/GameplayMap.tsx`                   | Tip share radius circle. Teleport target dot. Cage mesh around caged players. Animated spreading invincible ripple.                                                                                                 |
-
-| `src/pages/Client.tsx`                             | Teleport targeting mode UI. Cage button for eagle. Caged overlay for chicks. Teleport prop icon swap. Proximity warning for tips.                                                                                   |
-
-| `src/components/controls/ChickStage23Controls.tsx` | Proximity warning for tip sharing.                                                                                                                                                                                  |
-
-| `src/components/controls/EagleControls.tsx`        | Cage button with cooldown.                                                                                                                                                                                          |
-
-| `src/lib/gameplayMapData.ts`                       | Add `TIP_SHARE_RADIUS = 6` constant.                                                                                                                                                                                |
-
-&nbsp;
+- **Eagle chase speed**: Bot eagle moves at 90% of max speed to give chicks a slight edge.
+- **Chick flee juke**: Random 60-120° direction change every 0.3-0.7s when eagle < 6 units.
+- **Prop usage timing**: Bots wait 1s after prop becomes available before using (feels more human).
+- **Building zone patience**: Chick bots stay in zone for full 7s even if eagle approaches (commit to obtaining tip), but flee if eagle enters the zone.
+- **Social circle**: Bots approach other chicks at walking speed, pause 0.5s on contact before moving to next.
