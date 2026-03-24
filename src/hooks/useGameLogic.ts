@@ -526,9 +526,9 @@ export function useGameLogic({ players, broadcast, gameMode }: UseGameLogicProps
         (lobbyPlayer as any).joystick = decision.joystick;
       }
 
-      // Process bot messages through handleClientMessage
+      // Process bot messages through handleClientMessage ref
       for (const msg of decision.messages) {
-        handleClientMessage(connId, msg);
+        handleClientMessageRef.current?.(connId, msg);
       }
     }
 
