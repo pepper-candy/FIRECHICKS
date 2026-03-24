@@ -22,10 +22,12 @@ const EAGLE_SPEED_FACTOR = 0.9; // 90% speed nerf
 const CHASE_TIMEOUT = 5000; // switch target after 5s
 const CHASE_COOLDOWN = 3000; // avoid target for 3s after timeout
 const FLEE_RADIUS = 12;
+const DANGER_RADIUS = 7;
 const JUKE_RADIUS = 6;
 const JUKE_INTERVAL_MIN = 300;
 const JUKE_INTERVAL_MAX = 700;
 const PROP_USE_DELAY = 1000; // wait 1s before using newly available prop
+const TELEPORT_MARGIN = 2;
 
 export interface BotDecision {
   joystick: { x: number; y: number };
@@ -321,9 +323,11 @@ function updateChickBot(
       const teleProp = bot.props.find((p) => p.type === 'teleport' && p.count > 0);
       if (teleProp) {
         messages.push({ type: 'prop-use', propType: 'teleport' });
-        // Immediately set target to opposite quadrant and confirm
-        const targetX = -Math.sign(bot.position.x || 1) * (10 + Math.random() * 10);
-        const targetZ = -Math.sign(bot.position.z || 1) * (10 + Math.random() * 10);
+        // Immediately set target to opposite quadrant and confirm.
+        const minAbs = 10;
+        const maxAbs = MAP_HALF - TELEPORT_MARGIN;
+        const targetX = -Math.sign(bot.position.x || 1) * (minAbs + Math.random() * Math.max(0, maxAbs - minAbs));
+        const targetZ = -Math.sign(bot.position.z || 1) * (minAbs + Math.random() * Math.max(0, maxAbs - minAbs));
         messages.push({ type: 'teleport-set', x: targetX, z: targetZ });
         messages.push({ type: 'teleport-confirm' });
         s.lastPropUseTime = now;
@@ -348,7 +352,7 @@ function updateChickBot(
   }
 
   // ── Flee mode ──
-  if (isFleeing && nearestEagle) {
+  if (isFleeing && nearestEagle && eagleDist < DANGER_RADIUS) {
     const fleeAngle = angleToTarget(nearestEagle.position, bot.position);
 
     // Juke when very close
@@ -394,24 +398,19 @@ function updateChickBot(
 
   // Stage 1-2: Move toward nearest glowing building with tip bot doesn't have
   if (stage === 1 || stage === 2) {
-    // Check for tip sharing opportunity (bot-to-bot)
-    if (stage === 2 && (bot.tips[0] || bot.tips[1])) {
-      const nearbyChicks = Array.from(allPlayers.values()).filter(
+    // Trigger normal tip-share flow to avoid mutating player state directly.
+    if (stage === 2 && (bot.tips[0] || bot.tips[1]) && now >= bot.tipShareCooldownUntil) {
+      const nearbyNeedy = Array.from(allPlayers.values()).some(
         (p) =>
           !p.isEagle &&
           p.alive &&
           p.connId !== bot.connId &&
-          p.connId.startsWith('bot-') &&
+          (!p.tips[0] || !p.tips[1]) &&
           dist(bot.position, p.position) < TIP_SHARE_RADIUS,
       );
-      for (const nc of nearbyChicks) {
-        for (let ti = 0; ti < 2; ti++) {
-          if (bot.tips[ti as 0 | 1] && !nc.tips[ti as 0 | 1]) {
-            // Virtual tip share: directly set (handled in game loop)
-            nc.tips[ti as 0 | 1] = true;
-            nc.actionScore += 5;
-          }
-        }
+      if (nearbyNeedy) {
+        if (bot.tips[0]) messages.push({ type: 'tip-request', tipIndex: 0 });
+        if (bot.tips[1]) messages.push({ type: 'tip-request', tipIndex: 1 });
       }
     }
 
@@ -426,7 +425,11 @@ function updateChickBot(
         // Stay in zone (patience)
         s.targetJoystick = { x: 0, y: 0 };
       } else {
-        const angle = avoidObstacles(bot.position, angleToTarget(bot.position, targetBuilding.position));
+        const targetAngle = angleToTarget(bot.position, targetBuilding.position);
+        const fleeWeight = nearestEagle && eagleDist < FLEE_RADIUS ? Math.max(0, Math.min(0.35, (FLEE_RADIUS - eagleDist) / FLEE_RADIUS * 0.35)) : 0;
+        const fleeAngle = nearestEagle ? angleToTarget(nearestEagle.position, bot.position) : targetAngle;
+        const mixedAngle = targetAngle * (1 - fleeWeight) + fleeAngle * fleeWeight;
+        const angle = avoidObstacles(bot.position, mixedAngle);
         s.targetJoystick = joystickFromAngle(angle, 0.8);
       }
     } else {

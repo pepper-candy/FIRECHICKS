@@ -213,6 +213,13 @@ function useHostWebRTC() {
               const [botId, botColor] = botEntry;
               usedColorsRef.current.delete(botColor);
               connColorMapRef.current.delete(botId);
+              slotDataRef.current.delete(botId);
+              setTakeoverCodes((prev) => {
+                if (!(botId in prev)) return prev;
+                const next = { ...prev };
+                delete next[botId];
+                return next;
+              });
               setPlayers((prev) => { const next = new Map(prev); next.delete(botId); return next; });
             } else {
               conn.send(JSON.stringify({ type: 'room-full' }));
@@ -304,6 +311,7 @@ function useHostWebRTC() {
   const addBot = useCallback((connId: string, colorIndex: number) => {
     usedColorsRef.current.add(colorIndex);
     connColorMapRef.current.set(connId, colorIndex);
+    recordSlot(connId, colorIndex);
     setPlayers((prev) => {
       const next = new Map(prev);
       next.set(connId, { joystick: { x: 0, y: 0 }, colorIndex, ping: 0, lastPongAt: Date.now(), isBot: true });
@@ -317,6 +325,13 @@ function useHostWebRTC() {
       usedColorsRef.current.delete(colorIdx);
       connColorMapRef.current.delete(connId);
     }
+    slotDataRef.current.delete(connId);
+    setTakeoverCodes((prev) => {
+      if (!(connId in prev)) return prev;
+      const next = { ...prev };
+      delete next[connId];
+      return next;
+    });
     setPlayers((prev) => {
       const next = new Map(prev);
       next.delete(connId);
@@ -502,6 +517,13 @@ function useHostSupabase() {
             const [botId, botColor] = botEntry;
             usedColorsRef.current.delete(botColor);
             clientColorMapRef.current.delete(botId);
+            slotDataRef.current.delete(botId);
+            setTakeoverCodes((prev) => {
+              if (!(botId in prev)) return prev;
+              const next = { ...prev };
+              delete next[botId];
+              return next;
+            });
             setPlayers((prev) => { const next = new Map(prev); next.delete(botId); return next; });
           } else {
             channel.send({ type: 'broadcast', event: 'room-full', payload: { clientId } });
@@ -567,6 +589,7 @@ function useHostSupabase() {
   const addBot = useCallback((connId: string, colorIndex: number) => {
     usedColorsRef.current.add(colorIndex);
     clientColorMapRef.current.set(connId, colorIndex);
+    recordSlot(connId, colorIndex);
     setPlayers((prev) => {
       const next = new Map(prev);
       next.set(connId, { joystick: { x: 0, y: 0 }, colorIndex, ping: 0, lastPongAt: Date.now(), isBot: true });
@@ -580,6 +603,13 @@ function useHostSupabase() {
       usedColorsRef.current.delete(colorIdx);
       clientColorMapRef.current.delete(connId);
     }
+    slotDataRef.current.delete(connId);
+    setTakeoverCodes((prev) => {
+      if (!(connId in prev)) return prev;
+      const next = { ...prev };
+      delete next[connId];
+      return next;
+    });
     setPlayers((prev) => {
       const next = new Map(prev);
       next.delete(connId);

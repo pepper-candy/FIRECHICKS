@@ -89,6 +89,7 @@ interface TipShare {
   tipIndex: 0 | 1;
   code: string;
   cooldownUntil: number;
+  expiresAt: number;
 }
 
 interface BuildingTimer {
@@ -213,7 +214,8 @@ export function useGameLogic({ players, broadcast, gameMode }: UseGameLogicProps
             chickColor: PLAYER_COLORS[eagleColorIdx].chickColor,
           };
         } else {
-          const ci = currentPlayers.get(id)?.colorIndex ?? 2;
+          const pickedColor = currentPlayers.get(id)?.colorIndex ?? 2;
+          const ci = EAGLE_COLOR_INDICES.includes(pickedColor) ? 2 : pickedColor;
           assigns[id] = { colorIndex: ci, isEagle: false, chickColor: PLAYER_COLORS[ci].chickColor };
         }
       }
@@ -535,19 +537,12 @@ export function useGameLogic({ players, broadcast, gameMode }: UseGameLogicProps
 
     if (gs.activeTipShares.size > 0) {
       for (const [key, ts] of gs.activeTipShares.entries()) {
-        const sharer = gs.playerStates.get(ts.connId);
-        if (!sharer || !sharer.alive || sharer.isEagle) {
+        if (now >= ts.expiresAt) {
           gs.activeTipShares.delete(key);
           continue;
         }
-        const nearbyChick = Array.from<PlayerGameState>(gs.playerStates.values()).some(
-          (p) =>
-            !p.isEagle &&
-            p.alive &&
-            p.connId !== sharer.connId &&
-            checkOverlap(sharer.position.x, sharer.position.z, p.position.x, p.position.z, TIP_SHARE_RADIUS),
-        );
-        if (!nearbyChick) {
+        const sharer = gs.playerStates.get(ts.connId);
+        if (!sharer || !sharer.alive || sharer.isEagle) {
           gs.activeTipShares.delete(key);
         }
       }
@@ -1403,6 +1398,28 @@ export function useGameLogic({ players, broadcast, gameMode }: UseGameLogicProps
         }
         break;
       }
+      case "teleport-set": {
+        if (player.isEagle || !player.teleportPending) return;
+        const resolved = resolvePosition(
+          msg.x,
+          msg.z,
+          player.teleportTarget.x,
+          player.teleportTarget.z,
+          0.5,
+          false,
+        );
+        player.teleportTarget.x = resolved.x;
+        player.teleportTarget.z = resolved.z;
+        break;
+      }
+      case "teleport-confirm": {
+        if (player.isEagle || !player.teleportPending) return;
+        player.position.x = player.teleportTarget.x;
+        player.position.z = player.teleportTarget.z;
+        player.invincibleUntil = now + 500;
+        player.teleportPending = false;
+        break;
+      }
 
       // ── Hitbox click (eagle attacking building zone) ──
       case "hitbox-click": {
@@ -1515,6 +1532,7 @@ export function useGameLogic({ players, broadcast, gameMode }: UseGameLogicProps
           tipIndex,
           code,
           cooldownUntil: 0,
+          expiresAt: now + TIP_QR_COOLDOWN,
         });
 
         player.tipShareCooldownUntil = now + TIP_QR_COOLDOWN;

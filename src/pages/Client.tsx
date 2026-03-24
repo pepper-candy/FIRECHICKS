@@ -689,7 +689,7 @@ export default function Client() {
   );
   const handleTipTap = useCallback(
     (tipIndex: 0 | 1) => {
-      if (loadingTip[0] || loadingTip[1]) return;
+      if (loadingTip[tipIndex]) return;
       // Check local expiry cooldown
       if (Date.now() < tipExpiryCooldown[tipIndex]) return;
       // If QR is already showing in scanner, dismiss it + set cooldown
@@ -1434,7 +1434,7 @@ export default function Client() {
           </div>
 
           {/* Bottom: Attack + Props */}
-          <div className="flex items-center justify-center gap-6">
+          <div className="flex items-center justify-center gap-6 overflow-visible px-2">
             {gamePhase === "playing" && myState && (
               <>
                 <AttackButton
