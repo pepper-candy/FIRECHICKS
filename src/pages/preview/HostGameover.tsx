@@ -7,6 +7,8 @@ import { gradeToLetter, getGradeColor } from '@/lib/gradeSystem';
 import { Trophy, Star } from 'lucide-react';
 import { createMockSnapshot } from './mockData';
 
+const TRANSCRIPT_CEREMONY_MODEL_SCALE = 0.2;
+
 function DancingChar({ chickColor, isWinner, delay }: { chickColor: string; isWinner: boolean; delay: number }) {
   const angleRef = useRef(delay);
   useFrame((_, d) => { angleRef.current += d * (isWinner ? 1.5 : 0.4); });
@@ -33,37 +35,46 @@ export default function PreviewHostGameover() {
   const mvp = sorted[0];
 
   return (
-    <div className="flex flex-col h-screen bg-background overflow-auto">
-      <div className="py-4 text-center border-b border-border">
-        <h1 className="text-xl font-pixel text-accent text-glow-green mb-1">GAME OVER</h1>
-        <p className="text-lg font-pixel" style={{ color: 'hsl(145 80% 50%)' }}>🐤 Chicks Win!</p>
-      </div>
-
-      <div className="h-[35vh] relative flex-shrink-0">
-        <Canvas camera={{ position: [0, 3, sorted.length * 2.2 + 4], fov: 40 }}>
-          <ambientLight intensity={0.8} />
-          <directionalLight position={[5, 8, 5]} intensity={1.2} />
-          {sorted.map((p, i) => {
-            const isWin = (winner === 'chicks' && !p.isEagle);
-            const x = (i - (sorted.length - 1) / 2) * 2.2;
-            return (
-              <group key={p.connId} position={[x, 0, 0]}>
-                <DancingChar chickColor={p.chickColor} isWinner={isWin} delay={i * 0.4} />
-              </group>
-            );
-          })}
-        </Canvas>
+    <div className="flex flex-col h-screen bg-background overflow-hidden">
+      <div className="h-1/2 min-h-0 w-full relative flex flex-col">
+        <div className="flex-1 min-h-0 w-full">
+          <Canvas
+            className="h-full w-full"
+            style={{ width: '100%', height: '100%' }}
+            camera={{ position: [0, 1.2, Math.min(14, 6 + sorted.length * 0.9)], fov: 42 }}
+          >
+            <ambientLight intensity={0.8} />
+            <directionalLight position={[5, 8, 5]} intensity={1.2} />
+            {sorted.map((p, i) => {
+              const isWin = (winner === 'chicks' && !p.isEagle);
+              const x = (i - (sorted.length - 1) / 2) * 2.2;
+              return (
+                <group key={p.connId} position={[x, 0, 0]}>
+                  <group scale={TRANSCRIPT_CEREMONY_MODEL_SCALE}>
+                    <DancingChar chickColor={p.chickColor} isWinner={isWin} delay={i * 0.4} />
+                  </group>
+                </group>
+              );
+            })}
+          </Canvas>
+        </div>
         {mvp && (
-          <div className="absolute top-3 left-1/2 -translate-x-1/2 flex items-center gap-2 px-4 py-1.5 rounded bg-accent/20 border border-accent">
+          <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex items-center gap-2 px-4 py-1.5 rounded bg-accent/20 border border-accent pointer-events-none">
             <Trophy className="w-4 h-4 text-accent" />
             <span className="text-xs font-pixel text-accent">MVP: {PLAYER_COLORS[mvp.colorIndex]?.name ?? '?'}</span>
           </div>
         )}
       </div>
 
-      <div className="flex-1 p-4 overflow-auto">
-        <h2 className="text-center text-sm font-pixel text-foreground mb-4 tracking-widest">📋 TRANSCRIPT</h2>
-        <div className="max-w-3xl mx-auto">
+      <div className="h-1/2 min-h-0 flex flex-col border-t border-border overflow-hidden">
+        <div className="py-3 px-2 text-center border-b border-border flex-shrink-0">
+          <h1 className="text-xl font-pixel text-accent text-glow-green mb-1">GAME OVER</h1>
+          <p className="text-lg font-pixel" style={{ color: 'hsl(145 80% 50%)' }}>🐤 Chicks Win!</p>
+        </div>
+
+        <div className="flex-1 min-h-0 p-4 overflow-auto">
+          <h2 className="text-center text-sm font-pixel text-foreground mb-4 tracking-widest">📋 TRANSCRIPT</h2>
+          <div className="w-full max-w-3xl mx-auto">
           <table className="w-full text-xs font-mono border-collapse">
             <thead>
               <tr className="text-muted-foreground border-b border-border">
@@ -107,6 +118,7 @@ export default function PreviewHostGameover() {
               })}
             </tbody>
           </table>
+          </div>
         </div>
       </div>
     </div>

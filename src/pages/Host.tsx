@@ -112,6 +112,9 @@ function EventOverlay({ event, players, gameMode }: {event: GameEvent;players: R
 
 }
 
+// Final transcript: GLB scaled to 20% linear size (~80% smaller than ceremony views).
+const TRANSCRIPT_CEREMONY_MODEL_SCALE = 0.2;
+
 // ─── Transcript 3D Character ──────────────────────────────────────────────────
 function DancingChar({ chickColor, isWinner, delay }: {chickColor: string;isWinner: boolean;delay: number;}) {
   const angleRef = useRef(delay + Math.PI);
@@ -711,8 +714,8 @@ function GameOverCeremony({ snapshot, gameMode }: { snapshot: GameStateSnapshot;
     return (
       <div className="flex flex-col items-center justify-center h-screen bg-background gap-6">
         <h1 className="text-2xl font-pixel text-accent text-glow-green animate-pulse tracking-widest">🏆 MVP</h1>
-        <div className="h-[50vh] w-full max-w-md">
-          <Canvas camera={{ position: [0, 2, 4], fov: 30 }}>
+        <div className="h-[50vh] w-full min-h-[280px]">
+          <Canvas className="h-full w-full" style={{ width: '100%', height: '100%' }} camera={{ position: [0, 2, 4], fov: 38 }}>
             <ambientLight intensity={0.8} />
             <directionalLight position={[5, 8, 5]} intensity={1.2} />
             <group position={[0, -0.5, 0]}>
@@ -742,8 +745,12 @@ function GameOverCeremony({ snapshot, gameMode }: { snapshot: GameStateSnapshot;
         >
           {teamName}
         </h1>
-        <div className="h-[50vh] w-full max-w-2xl">
-          <Canvas camera={{ position: [0, 2, winningTeamPlayers.length * 2.5 + 3], fov: 35 }}>
+        <div className="h-[50vh] w-full min-h-[280px]">
+          <Canvas
+            className="h-full w-full"
+            style={{ width: '100%', height: '100%' }}
+            camera={{ position: [0, 2, winningTeamPlayers.length * 2.5 + 3], fov: 42 }}
+          >
             <ambientLight intensity={0.8} />
             <directionalLight position={[5, 8, 5]} intensity={1.2} />
             {winningTeamPlayers.map((p, i) => {
@@ -761,47 +768,59 @@ function GameOverCeremony({ snapshot, gameMode }: { snapshot: GameStateSnapshot;
     );
   }
 
-  // Phase 3: Full transcript — character base at 2/5 screen height
+  // Phase 3: top half = full-width 3D (heads clear of chrome); bottom half = transcript + actions
   return (
-    <div className="flex flex-col h-screen bg-background overflow-auto">
-      <div className="py-4 text-center border-b border-border">
-        <h1 className="text-xl font-pixel text-accent text-glow-green mb-1">GAME OVER</h1>
-        <p
-          className="text-lg font-pixel"
-          style={{ color: winner === 'eagle' ? 'hsl(0 80% 55%)' : winner === 'chicks' ? 'hsl(145 80% 50%)' : 'hsl(45 100% 55%)' }}>
-          {teamName}
-        </p>
-      </div>
+    <div className="flex flex-col h-screen bg-background overflow-hidden">
+      <div className="h-1/2 min-h-0 w-full relative flex flex-col">
+        <div className="flex-1 min-h-0 w-full">
+          <Canvas
+            className="h-full w-full"
+            style={{ width: '100%', height: '100%' }}
+            camera={{ position: [0, 1.2, Math.min(14, 6 + sorted.length * 0.9)], fov: 42 }}
+          >
+            <ambientLight intensity={0.8} />
+            <directionalLight position={[5, 8, 5]} intensity={1.2} />
+            {sorted.map((p, i) => {
+              const isWin = getMatchResult(p) !== 'lose';
+              const spacing = 2.2;
+              const x = (i - (sorted.length - 1) / 2) * spacing;
+              return (
+                <group key={p.connId} position={[x, 0, 0]}>
+                  <group scale={TRANSCRIPT_CEREMONY_MODEL_SCALE}>
+                    <DancingChar chickColor={p.chickColor} isWinner={isWin} delay={i * 0.4} />
+                  </group>
+                </group>
+              );
+            })}
+          </Canvas>
+        </div>
 
-      <div className="h-[40vh] relative flex-shrink-0">
-        <Canvas camera={{ position: [0, 2, sorted.length * 2.2 + 4], fov: 35 }}>
-          <ambientLight intensity={0.8} />
-          <directionalLight position={[5, 8, 5]} intensity={1.2} />
-          {sorted.map((p, i) => {
-            const isWin = getMatchResult(p) !== 'lose';
-            const spacing = 2.2;
-            const x = (i - (sorted.length - 1) / 2) * spacing;
-            return (
-              <group key={p.connId} position={[x, -0.8, 0]}>
-                <DancingChar chickColor={p.chickColor} isWinner={isWin} delay={i * 0.4} />
-              </group>
-            );
-          })}
-        </Canvas>
-
-        {mvp &&
-          <div className="absolute top-3 left-1/2 -translate-x-1/2 flex items-center gap-2 px-4 py-1.5 rounded bg-accent/20 border border-accent">
+        {mvp && (
+          <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex items-center gap-2 px-4 py-1.5 rounded bg-accent/20 border border-accent pointer-events-none">
             <Trophy className="w-4 h-4 text-accent" />
             <span className="text-xs font-pixel text-accent">
               MVP: {PLAYER_COLORS[mvp.colorIndex]?.name ?? '?'}
             </span>
           </div>
-        }
+        )}
       </div>
 
-      <div className="flex-1 p-4 overflow-auto">
-        <h2 className="text-center text-sm font-pixel text-foreground mb-4 tracking-widest">📋 TRANSCRIPT</h2>
-        <div className="max-w-3xl mx-auto">
+      <div className="h-1/2 min-h-0 flex flex-col border-t border-border overflow-hidden">
+        <div className="py-3 px-2 text-center border-b border-border flex-shrink-0">
+          <h1 className="text-lg sm:text-xl font-pixel text-accent text-glow-green mb-1">GAME OVER</h1>
+          <p
+            className="text-base sm:text-lg font-pixel"
+            style={{
+              color: winner === 'eagle' ? 'hsl(0 80% 55%)' : winner === 'chicks' ? 'hsl(145 80% 50%)' : 'hsl(45 100% 55%)',
+            }}
+          >
+            {teamName}
+          </p>
+        </div>
+
+        <div className="flex-1 min-h-0 p-3 sm:p-4 overflow-auto">
+          <h2 className="text-center text-sm font-pixel text-foreground mb-3 tracking-widest">📋 TRANSCRIPT</h2>
+          <div className="w-full max-w-3xl mx-auto">
           <table className="w-full text-xs font-mono border-collapse">
             <thead>
               <tr className="text-muted-foreground border-b border-border">
@@ -857,17 +876,20 @@ function GameOverCeremony({ snapshot, gameMode }: { snapshot: GameStateSnapshot;
               })}
             </tbody>
           </table>
+          </div>
         </div>
-      </div>
 
-      {/* Play Again button */}
-      <div className="py-4 text-center">
-        <button
-          onClick={() => { window.location.href = '/'; }}
-          className="px-8 py-3 rounded-lg border-2 border-primary bg-primary/10 text-primary font-pixel text-sm tracking-widest hover:bg-primary/20 transition-all"
-        >
-          ▶ PLAY AGAIN
-        </button>
+        <div className="py-3 text-center border-t border-border flex-shrink-0">
+          <button
+            type="button"
+            onClick={() => {
+              window.location.href = '/';
+            }}
+            className="px-8 py-3 rounded-lg border-2 border-primary bg-primary/10 text-primary font-pixel text-sm tracking-widest hover:bg-primary/20 transition-all"
+          >
+            ▶ PLAY AGAIN
+          </button>
+        </div>
       </div>
     </div>
   );

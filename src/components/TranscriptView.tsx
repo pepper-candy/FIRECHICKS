@@ -7,6 +7,9 @@ import type { PlayerGameStateSerializable } from '@/lib/gameTypes';
 import { useRef } from 'react';
 import { Star, Trophy } from 'lucide-react';
 
+/** ~80% smaller than default ceremony scale (linear scale 0.2). */
+const TRANSCRIPT_MODEL_SCALE = 0.2;
+
 interface Props {
   players: Record<string, PlayerGameStateSerializable>;
   winner: 'eagle' | 'chicks' | 'draw' | null;
@@ -42,27 +45,33 @@ export default function Transcript({ players, winner }: Props) {
   const mvp = sorted[0];
 
   return (
-    <div className="flex flex-col h-screen">
-      {/* 3D Characters */}
-      <div className="h-[40vh] relative">
-        <Canvas camera={{ position: [0, 3, 8], fov: 35 }}>
-          <ambientLight intensity={0.7} />
-          <directionalLight position={[5, 8, 5]} intensity={1} />
-          {sorted.map((p, i) => {
-            const isWin = (winner === 'eagle' && p.isEagle) || (winner === 'chicks' && !p.isEagle);
-            const spacing = 2.5;
-            const x = (i - (sorted.length - 1) / 2) * spacing;
-            return (
-              <group key={p.connId} position={[x, 0, 0]}>
-                <DancingCharacter chickColor={p.chickColor} isWinner={isWin} delay={i * 0.5} />
-              </group>
-            );
-          })}
-        </Canvas>
+    <div className="flex flex-col h-screen overflow-hidden">
+      <div className="h-1/2 min-h-0 w-full relative flex flex-col">
+        <div className="flex-1 min-h-0 w-full">
+          <Canvas
+            className="h-full w-full"
+            style={{ width: '100%', height: '100%' }}
+            camera={{ position: [0, 1.2, Math.min(14, 6 + sorted.length * 0.9)], fov: 42 }}
+          >
+            <ambientLight intensity={0.7} />
+            <directionalLight position={[5, 8, 5]} intensity={1} />
+            {sorted.map((p, i) => {
+              const isWin = (winner === 'eagle' && p.isEagle) || (winner === 'chicks' && !p.isEagle);
+              const spacing = 2.5;
+              const x = (i - (sorted.length - 1) / 2) * spacing;
+              return (
+                <group key={p.connId} position={[x, 0, 0]}>
+                  <group scale={TRANSCRIPT_MODEL_SCALE}>
+                    <DancingCharacter chickColor={p.chickColor} isWinner={isWin} delay={i * 0.5} />
+                  </group>
+                </group>
+              );
+            })}
+          </Canvas>
+        </div>
 
-        {/* MVP badge */}
         {mvp && (
-          <div className="absolute top-4 left-1/2 -translate-x-1/2 flex items-center gap-2 px-4 py-2 rounded bg-accent/20 border border-accent">
+          <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex items-center gap-2 px-4 py-2 rounded bg-accent/20 border border-accent pointer-events-none">
             <Trophy className="w-5 h-5 text-accent" />
             <span className="text-sm font-pixel text-accent">
               MVP: {PLAYER_COLORS[mvp.colorIndex]?.name ?? '?'}
@@ -71,10 +80,10 @@ export default function Transcript({ players, winner }: Props) {
         )}
       </div>
 
-      {/* Stats table */}
-      <div className="flex-1 overflow-auto p-4">
-        <h2 className="text-center text-lg font-pixel text-foreground mb-4">TRANSCRIPT</h2>
-        <div className="max-w-2xl mx-auto">
+      <div className="h-1/2 min-h-0 flex flex-col border-t border-border overflow-hidden">
+        <div className="flex-1 min-h-0 overflow-auto p-4">
+          <h2 className="text-center text-lg font-pixel text-foreground mb-4">TRANSCRIPT</h2>
+          <div className="w-full max-w-2xl mx-auto">
           <table className="w-full text-xs font-mono">
             <thead>
               <tr className="text-muted-foreground border-b border-border">
@@ -119,6 +128,7 @@ export default function Transcript({ players, winner }: Props) {
               })}
             </tbody>
           </table>
+          </div>
         </div>
       </div>
     </div>
