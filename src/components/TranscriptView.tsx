@@ -7,8 +7,8 @@ import type { PlayerGameStateSerializable } from '@/lib/gameTypes';
 import { useRef } from 'react';
 import { Star, Trophy } from 'lucide-react';
 
-/** ~80% smaller than default ceremony scale (linear scale 0.2). */
-const TRANSCRIPT_MODEL_SCALE = 0.2;
+/** Match host transcript ceremony lineup (7.5x former 0.2 micro scale). */
+const TRANSCRIPT_MODEL_SCALE = 1.5;
 
 interface Props {
   players: Record<string, PlayerGameStateSerializable>;

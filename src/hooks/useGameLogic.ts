@@ -41,6 +41,8 @@ const SPEED = 10;
 const EAGLE_SPEED = 10;
 const ATTACK_COOLDOWN = 5000;
 const FREEZE_DURATION = 5000;
+/** After Hurt/Dead combat video ends or is skipped — overlap no longer double-taps. */
+const POST_HIT_VIDEO_CHICK_INVINC_MS = 500;
 const EAGLE_AWAKE_DELAY = 5000;
 const SPEED_BOOST_DURATION = 2000;
 const SPEED_BOOST_MULTIPLIER = 2;
@@ -1757,6 +1759,7 @@ export function useGameLogic({ players, broadcast, gameMode, connectionMode }: U
     const gs = gameStateRef.current as GameStateRef | null;
     if (!gs) return;
     const now = Date.now();
+    const fromEagleHitVideo = gs.pendingEagleFreezeAfterVideo;
 
     gs.frozenAll = false;
     gs.frozenAllUntil = 0;
@@ -1779,6 +1782,15 @@ export function useGameLogic({ players, broadcast, gameMode, connectionMode }: U
           p.attackCooldownUntil = now + FREEZE_DURATION + ATTACK_COOLDOWN;
           // Disable fly until attack is re-enabled (~18s total from hit)
           p.flyCooldownUntil = Math.max(p.flyCooldownUntil, now + FREEZE_DURATION + ATTACK_COOLDOWN);
+        }
+      }
+    }
+
+    if (fromEagleHitVideo) {
+      const until = now + POST_HIT_VIDEO_CHICK_INVINC_MS;
+      for (const [, p] of gs.playerStates) {
+        if (!p.isEagle && p.alive) {
+          p.invincibleUntil = Math.max(p.invincibleUntil, until);
         }
       }
     }

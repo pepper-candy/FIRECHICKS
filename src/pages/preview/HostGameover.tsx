@@ -7,7 +7,7 @@ import { gradeToLetter, getGradeColor } from '@/lib/gradeSystem';
 import { Trophy, Star } from 'lucide-react';
 import { createMockSnapshot } from './mockData';
 
-const TRANSCRIPT_CEREMONY_MODEL_SCALE = 0.2;
+const TRANSCRIPT_CEREMONY_MODEL_SCALE = 1.5;
 
 function DancingChar({ chickColor, isWinner, delay }: { chickColor: string; isWinner: boolean; delay: number }) {
   const angleRef = useRef(delay);

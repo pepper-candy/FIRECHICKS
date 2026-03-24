@@ -112,8 +112,8 @@ function EventOverlay({ event, players, gameMode }: {event: GameEvent;players: R
 
 }
 
-// Final transcript: GLB scaled to 20% linear size (~80% smaller than ceremony views).
-const TRANSCRIPT_CEREMONY_MODEL_SCALE = 0.2;
+// Final transcript: GLB scale vs earlier tiny lineup (was 0.2; 7.5x for readability).
+const TRANSCRIPT_CEREMONY_MODEL_SCALE = 1.5;
 
 // ─── Transcript 3D Character ──────────────────────────────────────────────────
 function DancingChar({ chickColor, isWinner, delay }: {chickColor: string;isWinner: boolean;delay: number;}) {
