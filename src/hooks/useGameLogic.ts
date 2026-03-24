@@ -1013,7 +1013,7 @@ export function useGameLogic({ players, broadcast, gameMode }: UseGameLogicProps
             }
           }
         } else if (ev.type === "crossy-road" && ev.crossyPlayerStates) {
-          // Crossy Road scoring: 3+ crossings = +2, 0-1 = -2, 2 = no change
+          // Crossy Road scoring: 1+ crossings = +2, 0 = -2
           let goodCount = 0;
           let totalChicks = 0;
           for (const [, p] of gs.playerStates) {
@@ -1021,14 +1021,13 @@ export function useGameLogic({ players, broadcast, gameMode }: UseGameLogicProps
             totalChicks++;
             const cs = ev.crossyPlayerStates[p.connId];
             const crossings = cs?.crossings ?? 0;
-            if (crossings >= 3) {
+            if (crossings >= 1) {
               p.health = addSubGrades(p.health, 2);
               goodCount++;
               p.actionScore += crossings * 2;
-            } else if (crossings <= 1) {
+            } else {
               p.health = addSubGrades(p.health, -2);
             }
-            // crossings === 2 = no change
           }
           ev.result = goodCount > totalChicks / 2 ? "chick" : "eagle";
           // F-grade elimination

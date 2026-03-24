@@ -1212,12 +1212,10 @@ export default function Client() {
             <>
               {isEagle ? (
                 <p className="text-lg font-pixel text-muted-foreground">Results announced</p>
-              ) : myCrossings >= 3 ? (
+              ) : myCrossings >= 1 ? (
                 <p className="text-2xl font-pixel" style={{ color: "hsl(145 80% 50%)" }}>🏁 {myCrossings} crossings! +2 grades</p>
-              ) : myCrossings <= 1 ? (
-                <p className="text-2xl font-pixel" style={{ color: "hsl(0 80% 55%)" }}>💥 {myCrossings} crossing{myCrossings !== 1 ? 's' : ''} — -2 grades</p>
               ) : (
-                <p className="text-2xl font-pixel" style={{ color: "hsl(45 100% 55%)" }}>🐔 {myCrossings} crossings — no change</p>
+                <p className="text-2xl font-pixel" style={{ color: "hsl(0 80% 55%)" }}>💥 {myCrossings} crossing{myCrossings !== 1 ? 's' : ''} — -2 grades</p>
               )}
             </>
           ) : (
@@ -1268,11 +1266,11 @@ export default function Client() {
     return (
       <div className="flex flex-col h-dvh overflow-hidden bg-background">
         {/* Header */}
-        <div className="flex items-center justify-between p-3 border-b border-border">
-          <span className="text-xs font-pixel text-accent">📝 FINAL EXAM</span>
+        <div className="flex items-center justify-between gap-3 p-3 border-b border-border min-w-0">
+          <span className="text-sm font-pixel text-accent tracking-wide whitespace-nowrap">📝 FINAL EXAM</span>
           {gameState?.examState && (
             <span
-              className={`text-sm font-bold font-mono ${gameState.examState.timeRemaining < 10 ? "text-destructive animate-pulse" : "text-accent"}`}
+              className={`text-base font-bold font-mono whitespace-nowrap ${gameState.examState.timeRemaining < 10 ? "text-destructive animate-pulse" : "text-accent"}`}
             >
               ⏱ {Math.ceil(gameState.examState.timeRemaining)}s
             </span>

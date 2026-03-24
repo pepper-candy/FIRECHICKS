@@ -189,7 +189,7 @@ export default function CrossyRoadClient({ event, isEagle, connId, nowTs, onHop,
       </div>
 
       <p className="text-[10px] font-mono text-muted-foreground text-center">
-        🐤 Hop through 5 lanes to cross! Need 3+ crossings for +2 grades
+        🐤 Hop through 5 lanes to cross! Need 1+ crossing for +2 grades
       </p>
     </div>
   );

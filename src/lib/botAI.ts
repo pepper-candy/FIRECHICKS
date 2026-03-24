@@ -28,6 +28,7 @@ const JUKE_INTERVAL_MIN = 300;
 const JUKE_INTERVAL_MAX = 700;
 const PROP_USE_DELAY = 1000; // wait 1s before using newly available prop
 const TELEPORT_MARGIN = 2;
+const BUILDING_APPROACH_OFFSET = 3.8;
 
 export interface BotDecision {
   joystick: { x: number; y: number };
@@ -95,6 +96,15 @@ function joystickToTarget(
   return {
     x: (dx / len) * magnitude,
     y: (-dz / len) * magnitude,
+  };
+}
+
+function buildingApproachPoint(position: { x: number; z: number }): { x: number; z: number } {
+  const toCenterX = -Math.sign(position.x || 1);
+  const toCenterZ = -Math.sign(position.z || 1);
+  return {
+    x: position.x + toCenterX * BUILDING_APPROACH_OFFSET,
+    z: position.z + toCenterZ * BUILDING_APPROACH_OFFSET,
   };
 }
 
@@ -429,12 +439,13 @@ function updateChickBot(
       .sort((a, b) => dist(bot.position, a.position) - dist(bot.position, b.position))[0];
 
     if (targetBuilding) {
-      const d = dist(bot.position, targetBuilding.position);
+      const approach = buildingApproachPoint(targetBuilding.position);
+      const d = dist(bot.position, approach);
       if (d < 4) {
         // Stay in zone (patience)
         s.targetJoystick = { x: 0, y: 0 };
       } else {
-        const targetJoy = joystickToTarget(bot.position, targetBuilding.position, 0.8);
+        const targetJoy = joystickToTarget(bot.position, approach, 0.8);
         const fleeWeight = nearestEagle && eagleDist < FLEE_RADIUS ? Math.max(0, Math.min(0.35, (FLEE_RADIUS - eagleDist) / FLEE_RADIUS * 0.35)) : 0;
         const fleeJoy = nearestEagle ? joystickToTarget(nearestEagle.position, bot.position, 0.8) : targetJoy;
         const mixedJoy = {
@@ -473,11 +484,12 @@ function updateChickBot(
       (a, b) => dist(bot.position, a.position) - dist(bot.position, b.position),
     )[0];
     if (nearest) {
-      const d = dist(bot.position, nearest.position);
+      const approach = buildingApproachPoint(nearest.position);
+      const d = dist(bot.position, approach);
       if (d < 4) {
         s.targetJoystick = { x: 0, y: 0 };
       } else {
-        const joy = joystickToTarget(bot.position, nearest.position, 0.9);
+        const joy = joystickToTarget(bot.position, approach, 0.9);
         s.targetJoystick = avoidObstacles(bot.position, joy);
       }
     }

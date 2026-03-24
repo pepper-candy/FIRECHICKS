@@ -148,6 +148,16 @@ export default function Host() {
   const { roomCode, players, kickPlayer, kickAllPlayers, broadcast, onClientMessage, gameModeRef, takeoverCodes, fillBots, removeBots } = useHostRoom(mode);
   const [revealedCodes, setRevealedCodes] = useState<Set<string>>(new Set());
   const [botsAdded, setBotsAdded] = useState(false);
+  const debugLogRef = useRef<string[]>([]);
+  const lastSnapshotLogAtRef = useRef(0);
+
+  const pushDebugLog = useCallback((line: string) => {
+    const ts = new Date().toISOString();
+    debugLogRef.current.push(`[${ts}] ${line}`);
+    if (debugLogRef.current.length > 5000) {
+      debugLogRef.current = debugLogRef.current.slice(-5000);
+    }
+  }, []);
 
   const {
     phase,
@@ -167,9 +177,36 @@ export default function Host() {
   // Register client message handler
   useEffect(() => {
     onClientMessage((connId, msg) => {
+      pushDebugLog(`client-msg conn=${connId} type=${msg?.type ?? "unknown"} payload=${JSON.stringify(msg)}`);
       handleClientMessage(connId, msg);
     });
-  }, [onClientMessage, handleClientMessage]);
+  }, [onClientMessage, handleClientMessage, pushDebugLog]);
+
+  useEffect(() => {
+    if (!snapshot) return;
+    const now = Date.now();
+    // Periodic state snapshot for movement/stage tracing without spamming every frame.
+    if (now - lastSnapshotLogAtRef.current < 1000) return;
+    lastSnapshotLogAtRef.current = now;
+    const playerSummary = Object.values(snapshot.players)
+      .map((p) => `${p.connId}:${p.isEagle ? "E" : "C"}@(${p.position.x.toFixed(1)},${p.position.z.toFixed(1)}) props=${p.props.map((pi) => `${pi.type}:${pi.count}`).join("|")}`)
+      .join(" ; ");
+    const eventType = snapshot.activeEvent ? `${snapshot.activeEvent.type}/${snapshot.activeEvent.phase}` : "none";
+    pushDebugLog(`state phase=${snapshot.phase} stage=${snapshot.stage} label="${snapshot.stageLabel}" event=${eventType} players=[${playerSummary}]`);
+  }, [snapshot, pushDebugLog]);
+
+  const exportDebugLog = useCallback(() => {
+    const content = debugLogRef.current.join("\n");
+    const blob = new Blob([content], { type: "text/plain;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `firechick-debug-${Date.now()}.log`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  }, []);
 
   useEffect(() => {preloadVideos();}, []);
 
@@ -262,6 +299,13 @@ export default function Host() {
           </h1>
 
           <div className="flex items-center gap-2 font-mono text-xs flex-wrap">
+            <button
+              onClick={exportDebugLog}
+              className="px-2 py-1 rounded border border-border bg-card hover:bg-card/70 text-muted-foreground"
+              title="Download host debug log"
+            >
+              ⬇ LOG
+            </button>
             {/* Game mode toggle (only when not full) */}
             {!isFull &&
             <button
