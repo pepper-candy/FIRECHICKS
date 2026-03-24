@@ -37,7 +37,8 @@ export default function AttackButton({ onAttack, cooldownUntil, disabled }: Prop
     if (!onCooldown && !disabled) onAttack();
   }, [onAttack, onCooldown, disabled]);
 
-  const progress = Math.max(0, Math.min(1, 1 - remainingMs / totalCdRef.current));
+  // Show remaining cooldown ring (full at start, shrinking to 0).
+  const remainingRatio = Math.max(0, Math.min(1, remainingMs / totalCdRef.current));
 
   const inactive = onCooldown || !!disabled;
 
@@ -60,11 +61,11 @@ export default function AttackButton({ onAttack, cooldownUntil, disabled }: Prop
         <Swords className={`w-8 h-8 ${disabled ? 'text-muted-foreground' : 'text-destructive'}`} />
       )}
       {onCooldown && (
-        <svg className="absolute inset-0 w-full h-full -rotate-90" viewBox="0 0 100 100" style={{ pointerEvents: 'none' }}>
+        <svg className="absolute -inset-1 w-[calc(100%+8px)] h-[calc(100%+8px)] -rotate-90 z-10" viewBox="0 0 100 100" style={{ pointerEvents: 'none' }}>
           <circle
             cx="50" cy="50" r="44"
-            fill="none" stroke="hsl(0 80% 55% / 0.6)" strokeWidth="6"
-            strokeDasharray={`${progress * 276.5} 276.5`}
+            fill="none" stroke="hsl(0 90% 60% / 0.95)" strokeWidth="8"
+            strokeDasharray={`${remainingRatio * 276.5} 276.5`}
             strokeLinecap="round"
           />
         </svg>

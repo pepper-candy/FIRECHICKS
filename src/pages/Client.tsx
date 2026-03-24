@@ -82,8 +82,8 @@ function PropsBtn({
   const cooldownSec = onCooldown ? Math.ceil((cooldownUntil - now) / 1000) : 0;
   const totalCd = isFlyBtn ? FLY_COOLDOWN_MS : isCageBtn ? CAGE_COOLDOWN_MS : 0;
   const remainingMs = onCooldown ? Math.max(0, cooldownUntil - now) : 0;
-  const cooldownProgress = totalCd > 0 ? Math.max(0, Math.min(1, 1 - remainingMs / totalCd)) : 0;
-  const cooldownColor = isFlyBtn ? 'hsl(220 80% 55% / 0.6)' : 'hsl(0 70% 50% / 0.6)';
+  const cooldownRatio = totalCd > 0 ? Math.max(0, Math.min(1, remainingMs / totalCd)) : 0;
+  const cooldownColor = isFlyBtn ? 'hsl(220 90% 65% / 0.95)' : 'hsl(0 80% 60% / 0.95)';
   const flyCircumference = 2 * Math.PI * 24; // r=24 in 56x56 viewBox
 
   return (
@@ -111,9 +111,9 @@ function PropsBtn({
           PROP_ICONS[current.type]
         )}
         {onCooldown && totalCd > 0 && (
-          <svg className="absolute inset-0 w-full h-full -rotate-90" viewBox="0 0 56 56" style={{ pointerEvents: 'none' }}>
+          <svg className="absolute -inset-1 w-[calc(100%+8px)] h-[calc(100%+8px)] -rotate-90 z-10" viewBox="0 0 56 56" style={{ pointerEvents: 'none' }}>
             <circle cx="28" cy="28" r="24" fill="none" stroke={cooldownColor} strokeWidth="3"
-              strokeDasharray={`${cooldownProgress * flyCircumference} ${flyCircumference}`} strokeLinecap="round" />
+              strokeDasharray={`${cooldownRatio * flyCircumference} ${flyCircumference}`} strokeLinecap="round" />
           </svg>
         )}
         {showBadge && !onCooldown && (

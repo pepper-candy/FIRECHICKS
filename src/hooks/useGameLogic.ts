@@ -518,11 +518,12 @@ export function useGameLogic({ players, broadcast, gameMode }: UseGameLogicProps
 
     // ── Bot AI updates ──
     for (const [connId, p] of gs.playerStates) {
-      if (!isBot(connId) || !p.alive) continue;
+      const lobbyPlayer = currentPlayers.get(connId);
+      const activelyBotControlled = !!lobbyPlayer?.isBot;
+      if (!activelyBotControlled || !isBot(connId) || !p.alive) continue;
       const decision = updateBot(p, gs.playerStates, now, gs.stage, gs.buildings, gs.activeEvent, gs.gameTime);
 
       // Inject bot joystick into players map so movement code picks it up next frame
-      const lobbyPlayer = currentPlayers.get(connId);
       if (lobbyPlayer) {
         // Mutate the map entry joystick (bots don't have real connections)
         (lobbyPlayer as any).joystick = decision.joystick;
@@ -1414,6 +1415,8 @@ export function useGameLogic({ players, broadcast, gameMode }: UseGameLogicProps
       }
       case "teleport-confirm": {
         if (player.isEagle || !player.teleportPending) return;
+        const teleProp = player.props.find((p) => p.type === "teleport" && p.count > 0);
+        if (teleProp) teleProp.count--;
         player.position.x = player.teleportTarget.x;
         player.position.z = player.teleportTarget.z;
         player.invincibleUntil = now + 500;

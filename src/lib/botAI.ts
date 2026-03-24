@@ -83,7 +83,12 @@ function dist(a: { x: number; z: number }, b: { x: number; z: number }): number 
 }
 
 function angleToTarget(from: { x: number; z: number }, to: { x: number; z: number }): number {
-  return Math.atan2(to.x - from.x, -(to.z - from.z));
+  // Convert world target vector into the same angle convention used by movement:
+  // updateGameState applies dx=-sin(angle), dz=-cos(angle), so we solve angle from
+  // desired world delta (to - from) by negating both vector components.
+  const dx = to.x - from.x;
+  const dz = to.z - from.z;
+  return Math.atan2(-dx, -dz);
 }
 
 function joystickFromAngle(angle: number, magnitude: number = 1): { x: number; y: number } {
