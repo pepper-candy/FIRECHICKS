@@ -496,8 +496,17 @@ function useHostSupabase() {
         const mode = gameModeRef.current;
         const maxSlots = mode === '2v6' ? MAX_PLAYERS_2V6 : MAX_PLAYERS_1V3;
         if (usedColorsRef.current.size >= maxSlots) {
-          channel.send({ type: 'broadcast', event: 'room-full', payload: { clientId } });
-          return;
+          // Try to replace a bot
+          const botEntry = Array.from(clientColorMapRef.current.entries()).find(([id]) => id.startsWith('bot-'));
+          if (botEntry) {
+            const [botId, botColor] = botEntry;
+            usedColorsRef.current.delete(botColor);
+            clientColorMapRef.current.delete(botId);
+            setPlayers((prev) => { const next = new Map(prev); next.delete(botId); return next; });
+          } else {
+            channel.send({ type: 'broadcast', event: 'room-full', payload: { clientId } });
+            return;
+          }
         }
         const excludeIndices = mode === '2v6' ? [] : (EAGLE_COLOR_INDICES as unknown as number[]);
         const colorIndex = allocateColor(usedColorsRef.current, excludeIndices);
