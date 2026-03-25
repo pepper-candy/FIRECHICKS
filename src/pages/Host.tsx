@@ -307,13 +307,19 @@ export default function Host() {
           </h1>
 
           <div className="flex items-center gap-2 font-mono text-xs flex-wrap">
-            <button
-              onClick={exportDebugLog}
-              className="px-2 py-1 rounded border border-border bg-card hover:bg-card/70 text-muted-foreground"
-              title="Download host debug log"
-            >
-              ⬇ LOG
-            </button>
+            {/* Map selector */}
+            <Select value={String(mapId)} onValueChange={(v) => setMapId(Number(v) as MapId)}>
+              <SelectTrigger className="h-7 w-[130px] text-xs font-mono bg-card border-border">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {MAP_LIST.map((m) => (
+                  <SelectItem key={m.id} value={String(m.id)} className="text-xs font-mono">
+                    🗺️ {m.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
             {/* Game mode toggle (only when not full) */}
             {!isFull &&
             <button
