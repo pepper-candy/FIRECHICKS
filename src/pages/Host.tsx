@@ -481,6 +481,7 @@ export default function Host() {
           onHostDragEnd={hostDragEnd}
           activeTipShareConnIds={snapshot.activeTipShareConnIds}
           onHostSkipExam={phase === 'exam' ? hostSkipExam : undefined}
+          mapId={mapId}
         />
 
         {/* Focus camera panel toggle button */}
