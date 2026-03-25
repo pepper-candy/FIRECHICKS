@@ -173,6 +173,7 @@ export default function Host() {
     hostDragBegin,
     hostDragUpdate,
     hostDragEnd,
+    hostSkipExam,
   } = useGameLogic({ players, broadcast, gameMode, connectionMode: mode });
 
   useAdvertiseRoom(phase === 'lobby' ? roomCode : '', mode);
@@ -469,6 +470,7 @@ export default function Host() {
           onHostDragUpdate={hostDragUpdate}
           onHostDragEnd={hostDragEnd}
           activeTipShareConnIds={snapshot.activeTipShareConnIds}
+          onHostSkipExam={phase === 'exam' ? hostSkipExam : undefined}
         />
 
         {/* Focus camera panel toggle button */}
@@ -610,7 +612,7 @@ export default function Host() {
 
         {/* Exam helper layer on host (rule-based visibility) */}
         {snapshot.examState && snapshot.examState.questionNum > 0 && phase === 'exam' && snapshot.examState.hostDisplayLayer !== 'none' &&
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-30 bg-white border-2 border-accent rounded-xl p-4 max-w-md w-[90%] shadow-2xl">
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-30 bg-card border-2 border-accent rounded-xl p-4 max-w-md w-[90%] shadow-2xl">
             <p className="text-[10px] font-mono text-gray-500 mb-1 text-center">HOST EXAM LAYER</p>
             <img
             src={assetUrl(`/PW/PW_Final_${snapshot.examState.questionNum}_layer-${snapshot.examState.hostDisplayLayer}.png`)}
@@ -715,10 +717,10 @@ function GameOverCeremony({ snapshot, gameMode }: { snapshot: GameStateSnapshot;
       <div className="flex flex-col items-center justify-center h-screen bg-background gap-6">
         <h1 className="text-2xl font-pixel text-accent text-glow-green animate-pulse tracking-widest">🏆 MVP</h1>
         <div className="h-[50vh] w-full min-h-[280px]">
-          <Canvas className="h-full w-full" style={{ width: '100%', height: '100%' }} camera={{ position: [0, 2, 4], fov: 38 }}>
+          <Canvas className="h-full w-full" style={{ width: '100%', height: '100%' }} camera={{ position: [0, 2.35, 4.2], fov: 38 }}>
             <ambientLight intensity={0.8} />
             <directionalLight position={[5, 8, 5]} intensity={1.2} />
-            <group position={[0, -0.5, 0]}>
+            <group position={[0, 0.2, 0]}>
               <DancingChar chickColor={mvp.chickColor} isWinner={true} delay={0} />
             </group>
           </Canvas>
@@ -749,14 +751,14 @@ function GameOverCeremony({ snapshot, gameMode }: { snapshot: GameStateSnapshot;
           <Canvas
             className="h-full w-full"
             style={{ width: '100%', height: '100%' }}
-            camera={{ position: [0, 2, winningTeamPlayers.length * 2.5 + 3], fov: 42 }}
+            camera={{ position: [0, 2.4, winningTeamPlayers.length * 3.2 + 3.5], fov: 42 }}
           >
             <ambientLight intensity={0.8} />
             <directionalLight position={[5, 8, 5]} intensity={1.2} />
             {winningTeamPlayers.map((p, i) => {
-              const x = (i - (winningTeamPlayers.length - 1) / 2) * 2.5;
+              const x = (i - (winningTeamPlayers.length - 1) / 2) * 3.2;
               return (
-                <group key={p.connId} position={[x, -0.5, 0]}>
+                <group key={p.connId} position={[x, 0.15, 0]}>
                   <DancingChar chickColor={p.chickColor} isWinner={true} delay={i * 0.4} />
                 </group>
               );
@@ -776,16 +778,16 @@ function GameOverCeremony({ snapshot, gameMode }: { snapshot: GameStateSnapshot;
           <Canvas
             className="h-full w-full"
             style={{ width: '100%', height: '100%' }}
-            camera={{ position: [0, 1.2, Math.min(14, 6 + sorted.length * 0.9)], fov: 42 }}
+            camera={{ position: [0, 1.45, Math.min(16, 7 + sorted.length * 1.1)], fov: 42 }}
           >
             <ambientLight intensity={0.8} />
             <directionalLight position={[5, 8, 5]} intensity={1.2} />
             {sorted.map((p, i) => {
               const isWin = getMatchResult(p) !== 'lose';
-              const spacing = 2.2;
+              const spacing = 3.4;
               const x = (i - (sorted.length - 1) / 2) * spacing;
               return (
-                <group key={p.connId} position={[x, 0, 0]}>
+                <group key={p.connId} position={[x, 0.55, 0]}>
                   <group scale={TRANSCRIPT_CEREMONY_MODEL_SCALE}>
                     <DancingChar chickColor={p.chickColor} isWinner={isWin} delay={i * 0.4} />
                   </group>

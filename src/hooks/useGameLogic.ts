@@ -43,6 +43,8 @@ const ATTACK_COOLDOWN = 5000;
 const FREEZE_DURATION = 5000;
 /** After Hurt/Dead combat video ends or is skipped — overlap no longer double-taps. */
 const POST_HIT_VIDEO_CHICK_INVINC_MS = 500;
+/** Applied immediately on eagle hit — covers overlap during splash + bot spam. */
+const POST_HIT_IMMEDIATE_CHICK_INVINC_MS = 2500;
 const EAGLE_AWAKE_DELAY = 5000;
 const SPEED_BOOST_DURATION = 2000;
 const SPEED_BOOST_MULTIPLIER = 2;
@@ -146,12 +148,29 @@ interface GameStateRef {
   stageTransitionUntil: number;
 }
 
+function isBotConnId(connId: string): boolean {
+  return connId.startsWith("bot-");
+}
+
 function updateHostExamDisplay(gs: GameStateRef) {
   const exam = gs.examState;
   if (!exam) return;
-  const layer1Alive = !!gs.playerStates.get(exam.layer1ConnId)?.alive;
+
+  const layer1 = gs.playerStates.get(exam.layer1ConnId);
+  const layer1Alive = !!layer1?.alive;
+  const layer1NonBotAlive = layer1Alive && !isBotConnId(exam.layer1ConnId);
+
   const aliveLayer2Count = exam.layer2ConnIds.filter((id) => gs.playerStates.get(id)?.alive).length;
-  if (!layer1Alive) {
+  const layer2NonBotAlive = exam.layer2ConnIds.some(
+    (id) => !isBotConnId(id) && gs.playerStates.get(id)?.alive,
+  );
+
+  // Non-bot humans alive: help the missing side on the host TV.
+  if (layer1NonBotAlive && !layer2NonBotAlive) {
+    exam.hostDisplayLayer = "2";
+  } else if (layer2NonBotAlive && !layer1NonBotAlive) {
+    exam.hostDisplayLayer = "1";
+  } else if (!layer1Alive) {
     exam.hostDisplayLayer = "1";
   } else if (aliveLayer2Count === 0) {
     exam.hostDisplayLayer = "2";
@@ -767,6 +786,7 @@ export function useGameLogic({ players, broadcast, gameMode, connectionMode }: U
     // ── Exam timer countdown ──
     if (gs.phase === "exam" && gs.examState && !gs.examState.answered) {
       if (!gs.frozenAll) {
+        updateHostExamDisplay(gs);
         gs.examState.timeRemaining -= delta;
         if (gs.examState.timeRemaining <= 0) {
           gs.examState.timeRemaining = 0;
@@ -1178,6 +1198,12 @@ export function useGameLogic({ players, broadcast, gameMode, connectionMode }: U
 
     const soloExam = aliveChicks.length === 1;
 
+    const nonBotChicks = aliveChicks.filter((c) => !isBotConnId(c.connId));
+    const examWhiteBgConnId =
+      nonBotChicks.length > 0
+        ? nonBotChicks[Math.floor(Math.random() * nonBotChicks.length)].connId
+        : null;
+
     gs.examState = {
       questionNum,
       category: "Final",
@@ -1188,8 +1214,10 @@ export function useGameLogic({ players, broadcast, gameMode, connectionMode }: U
       layer1Dead: soloExam, // If solo, show layer 1 on host screen
       anyAnswerSubmitted: false,
       hostDisplayLayer: soloExam ? "2" : "none",
+      examWhiteBgConnId,
     };
     gs.stageLabel = "FINAL EXAM — Solve together!";
+    updateHostExamDisplay(gs);
 
     // Build per-client assignments
     const examAssigns: Record<string, { layer: "1" | "2"; questionNum: number; category: "Final" }> = {};
@@ -1208,7 +1236,7 @@ export function useGameLogic({ players, broadcast, gameMode, connectionMode }: U
     }
 
     bcast({ type: "phase-change", phase: "exam" });
-    bcast({ type: "exam-start", assignments: examAssigns });
+    bcast({ type: "exam-start", assignments: examAssigns, examWhiteBgConnId });
   }
 
   function endGame(gs: GameStateRef, winner: "eagle" | "chicks" | "draw", bcast: (msg: any) => void) {
@@ -1344,6 +1372,7 @@ export function useGameLogic({ players, broadcast, gameMode, connectionMode }: U
       case "attack-press": {
         if (!player.isEagle) return;
         if (gs.phase === "exam") return;
+        if (gs.frozenAll) return;
         if (now < player.attackCooldownUntil) return;
         if (player.frozen) return;
 
@@ -1371,6 +1400,7 @@ export function useGameLogic({ players, broadcast, gameMode, connectionMode }: U
 
         if (hitChicks.length > 0) {
           let mostSerious: "hurt" | "dead" = "hurt";
+          const invincUntil = now + POST_HIT_IMMEDIATE_CHICK_INVINC_MS;
           for (const chick of hitChicks) {
             const newHealth = applyDamage(chick.health);
             const dmg = chick.health - newHealth;
@@ -1378,6 +1408,9 @@ export function useGameLogic({ players, broadcast, gameMode, connectionMode }: U
             player.damageDealt += dmg;
             player.actionScore += 5;
             chick.health = newHealth;
+            if (chick.alive) {
+              chick.invincibleUntil = Math.max(chick.invincibleUntil, invincUntil);
+            }
 
             if (isDead(chick.health)) {
               chick.alive = false;
@@ -1802,6 +1835,14 @@ export function useGameLogic({ players, broadcast, gameMode, connectionMode }: U
     }
   }, []);
 
+  /** Host-only: end final exam immediately as chicks win; no damage or timeout penalties. */
+  const hostSkipExam = useCallback(() => {
+    const gs = gameStateRef.current as GameStateRef | null;
+    if (!gs || gs.phase !== "exam" || !gs.examState || gs.examState.answered) return;
+    gs.examState.answered = true;
+    endGame(gs, "chicks", broadcastRef.current);
+  }, []);
+
   // ─── Cleanup ─────────────────────────────────────────────────────────────────
   useEffect(() => {
     return () => {
@@ -1821,5 +1862,6 @@ export function useGameLogic({ players, broadcast, gameMode, connectionMode }: U
     hostDragBegin,
     hostDragUpdate,
     hostDragEnd,
+    hostSkipExam,
   };
 }

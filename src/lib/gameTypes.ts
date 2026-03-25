@@ -56,6 +56,8 @@ export interface ExamState {
   layer1Dead: boolean;
   anyAnswerSubmitted: boolean;
   hostDisplayLayer?: 'none' | '1' | '2';
+  /** One random non-bot chick gets PW layer on white bg on phone; host showing a layer disables it. */
+  examWhiteBgConnId?: string | null;
 }
 
 export type EventType = 'mock-exam' | 'hitbox' | 'crossy-road';
@@ -197,7 +199,11 @@ export type HostMessage =
   | { type: 'game-mode'; gameMode: GameMode }
   | { type: 'tip-qr'; forConnId: string; code: string; tipIndex: 0 | 1 }
   | { type: 'tip-reject'; forConnId: string; reason: 'too-far' }
-  | { type: 'exam-start'; assignments: Record<string, { layer: '1' | '2'; questionNum: number; category: 'Final' }> }
+  | {
+      type: 'exam-start';
+      assignments: Record<string, { layer: '1' | '2'; questionNum: number; category: 'Final' }>;
+      examWhiteBgConnId?: string | null;
+    }
   | { type: 'lobby-prop-granted'; colorIndex: number; propType: 'speed' | 'heal' };
 
 // Messages client → host

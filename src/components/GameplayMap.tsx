@@ -41,6 +41,8 @@ interface Props {
   onHostDragUpdate?: (connId: string, x: number, z: number) => void;
   onHostDragEnd?: (connId: string, valid: boolean) => void;
   activeTipShareConnIds?: string[];
+  /** Host: skip final exam and end as chicks win (no damage). */
+  onHostSkipExam?: () => void;
 }
 
 // ─── Building ──────────────────────────────────────────────────────────────────
@@ -473,6 +475,7 @@ export default function GameplayMap({
   onHostDragUpdate,
   onHostDragEnd,
   activeTipShareConnIds,
+  onHostSkipExam,
 }: Props) {
   const playerList = Object.values(players);
 
@@ -581,22 +584,56 @@ export default function GameplayMap({
           </mesh>
         )}
 
-        {/* Exam stage indicator */}
+        {/* Exam stage indicator + host skip */}
         {examState && !examState.answered && (
           <Html position={[0, 8, 0]} center zIndexRange={[100, 0]}>
-            <div style={{
-              background: 'rgba(0,0,0,0.8)',
-              border: '2px solid #ffd700',
-              borderRadius: 6,
-              padding: '4px 10px',
-              color: '#ffd700',
-              fontSize: 13,
-              fontFamily: 'monospace',
-              fontWeight: 'bold',
-              pointerEvents: 'none',
-              whiteSpace: 'nowrap',
-            }}>
-              📝 EXAM — {Math.ceil(examState.timeRemaining)}s
+            <div
+              style={{
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                gap: 8,
+                pointerEvents: 'none',
+              }}
+            >
+              <div
+                style={{
+                  background: 'rgba(0,0,0,0.8)',
+                  border: '2px solid #ffd700',
+                  borderRadius: 6,
+                  padding: '4px 10px',
+                  color: '#ffd700',
+                  fontSize: 13,
+                  fontFamily: 'monospace',
+                  fontWeight: 'bold',
+                  whiteSpace: 'nowrap',
+                }}
+              >
+                📝 FINAL EXAM — {Math.ceil(examState.timeRemaining)}s
+              </div>
+              {onHostSkipExam && (
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onHostSkipExam();
+                  }}
+                  style={{
+                    pointerEvents: 'auto',
+                    cursor: 'pointer',
+                    fontSize: 11,
+                    fontFamily: 'monospace',
+                    padding: '6px 12px',
+                    borderRadius: 6,
+                    border: '1px solid hsl(45 100% 45%)',
+                    background: 'rgba(0,0,0,0.85)',
+                    color: '#ffd700',
+                    fontWeight: 'bold',
+                  }}
+                >
+                  Skip EXAM
+                </button>
+              )}
             </div>
           </Html>
         )}

@@ -1265,6 +1265,13 @@ export default function Client() {
       );
     }
 
+    const es = gameState?.examState;
+    const hostShowsExamLayer = es?.hostDisplayLayer === "1" || es?.hostDisplayLayer === "2";
+    const showPwOnWhiteBg =
+      !!es &&
+      es.examWhiteBgConnId === connIdRef.current &&
+      !hostShowsExamLayer;
+
     return (
       <div className="flex flex-col h-dvh overflow-hidden bg-background">
         {/* Header */}
@@ -1279,20 +1286,22 @@ export default function Client() {
           )}
         </div>
 
-        {/* Camera + overlay */}
+        {/* Camera + optional white underlay (one random non-bot) + PW layer */}
         <div className="relative w-full overflow-hidden bg-black" style={{ aspectRatio: "873/457" }}>
           <video
             ref={examVideoRef}
             autoPlay
             playsInline
             muted
-            className="absolute inset-0 w-full h-full object-cover"
+            className="absolute inset-0 w-full h-full object-cover z-0"
           />
+
+          {showPwOnWhiteBg && <div className="absolute inset-0 z-[1] bg-white" aria-hidden />}
 
           <img
             src={assetUrl(`/PW/PW_Final_${examQuestionNum}_layer-${examLayer}.png`)}
             alt="Final exam"
-            className="absolute inset-0 w-full h-full object-contain pointer-events-none"
+            className="absolute inset-0 z-[2] w-full h-full object-contain pointer-events-none"
             style={{ opacity: examOpacity, transform: `scale(${examZoom})`, transformOrigin: "center center" }}
           />
         </div>
