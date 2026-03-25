@@ -145,6 +145,7 @@ export default function Host() {
   const [gameMode, setGameMode] = useState<GameMode>('1v3');
   const [startClickAt, setStartClickAt] = useState<number | null>(null);
   const [zoomLevel, setZoomLevel] = useState(1);
+  const [mapId, setMapId] = useState<MapId>(1);
   const [revealNow, setRevealNow] = useState(Date.now());
   const [focusPanelOpen, setFocusPanelOpen] = useState(false);
   // Stage transition toast notification
