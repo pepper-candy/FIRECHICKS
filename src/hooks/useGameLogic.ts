@@ -228,6 +228,10 @@ export function useGameLogic({ players, broadcast, gameMode, connectionMode, map
 
   // ─── Start Game ──────────────────────────────────────────────────────────────
   const startGame = useCallback(() => {
+    // Activate selected map variant for collision/spawn data
+    const mv = getMapVariant(mapIdRef.current);
+    setActiveMap(mv.buildings, mv.obstacles, mv.spawnPoints, mv.eagleSpawnCandidates);
+
     const currentPlayers = playersRef.current as Map<string, PlayerState>;
     const playerIds: string[] = Array.from(currentPlayers.keys());
     if (playerIds.length === 0) return;
