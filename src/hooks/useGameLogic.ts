@@ -31,7 +31,10 @@ import {
   PROP_PICKUP_RADIUS,
   MAP_HALF,
   TIP_SHARE_RADIUS,
+  SPAWN_POINTS,
+  setActiveMap,
 } from "@/lib/gameplayMapData";
+import { getMapVariant } from "@/lib/mapVariants";
 import type { PlayerState, ConnectionMode } from "@/hooks/useGameRoom";
 import type { ChickColor } from "@/components/CharacterViewer";
 import { updateBot, isBot } from "@/lib/botAI";
