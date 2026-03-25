@@ -24,6 +24,8 @@ import {
 import {
   Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from
 '@/components/ui/tooltip';
+import type { MapId } from '@/lib/mapVariants';
+import { MAP_LIST } from '@/lib/mapVariants';
 import type { PlayerGameStateSerializable } from '@/lib/gameTypes';
 import { assetUrl } from '@/lib/assets';
 import { Bounds } from '@react-three/drei';
