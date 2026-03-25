@@ -9,13 +9,16 @@ export interface BuildingDef {
   size: { w: number; h: number; d: number };
 }
 
-// Buildings at 4 corners, ~10 units buffer from each edge
-export const BUILDINGS: BuildingDef[] = [
+// Default buildings (Map 1) — kept as initial values
+const DEFAULT_BUILDINGS: BuildingDef[] = [
   { id: 0, position: { x: -22, z: -22 }, size: { w: 5, h: 6, d: 5 } },
   { id: 1, position: { x:  22, z: -22 }, size: { w: 5, h: 6, d: 5 } },
   { id: 2, position: { x: -22, z:  22 }, size: { w: 5, h: 6, d: 5 } },
   { id: 3, position: { x:  22, z:  22 }, size: { w: 5, h: 6, d: 5 } },
 ];
+
+// Mutable active map data — swapped via setActiveMap()
+export let BUILDINGS: BuildingDef[] = DEFAULT_BUILDINGS;
 
 // Diagonal pairs for exam tips
 export const DIAGONAL_PAIRS: [number, number][] = [
@@ -29,31 +32,21 @@ export interface ObstacleDef {
   rotation?: number;
 }
 
-// Short obstacle bars for chase dynamics — arranged to leave clear paths to all buildings
-export const OBSTACLES: ObstacleDef[] = [
-  // Center cross
+const DEFAULT_OBSTACLES: ObstacleDef[] = [
   { position: { x: 0, z: 0 }, size: { w: 6, h: 2, d: 0.5 }, rotation: 0 },
   { position: { x: 0, z: 0 }, size: { w: 0.5, h: 2, d: 6 }, rotation: 0 },
-
-  // Inner ring — angled bars (leave diagonal passages)
   { position: { x: -8, z: -5 }, size: { w: 4, h: 2, d: 0.5 }, rotation: Math.PI / 4 },
   { position: { x:  8, z: -5 }, size: { w: 4, h: 2, d: 0.5 }, rotation: -Math.PI / 4 },
   { position: { x: -8, z:  5 }, size: { w: 4, h: 2, d: 0.5 }, rotation: -Math.PI / 4 },
   { position: { x:  8, z:  5 }, size: { w: 4, h: 2, d: 0.5 }, rotation: Math.PI / 4 },
-
-  // Mid-field horizontal/vertical bars
   { position: { x: -14, z:  0 }, size: { w: 0.5, h: 2, d: 5 }, rotation: 0 },
   { position: { x:  14, z:  0 }, size: { w: 0.5, h: 2, d: 5 }, rotation: 0 },
   { position: { x:   0, z: -14 }, size: { w: 5, h: 2, d: 0.5 }, rotation: 0 },
   { position: { x:   0, z:  14 }, size: { w: 5, h: 2, d: 0.5 }, rotation: 0 },
-
-  // Near buildings (not blocking approach paths)
   { position: { x: -14, z: -14 }, size: { w: 3, h: 2, d: 0.5 }, rotation: Math.PI / 6 },
   { position: { x:  14, z: -14 }, size: { w: 3, h: 2, d: 0.5 }, rotation: -Math.PI / 6 },
   { position: { x: -14, z:  14 }, size: { w: 3, h: 2, d: 0.5 }, rotation: -Math.PI / 6 },
   { position: { x:  14, z:  14 }, size: { w: 3, h: 2, d: 0.5 }, rotation: Math.PI / 6 },
-
-  // Outer ring — spread across far field
   { position: { x:  -6, z: -18 }, size: { w: 4, h: 2, d: 0.5 }, rotation: 0 },
   { position: { x:   6, z: -18 }, size: { w: 4, h: 2, d: 0.5 }, rotation: 0 },
   { position: { x:  -6, z:  18 }, size: { w: 4, h: 2, d: 0.5 }, rotation: 0 },
@@ -64,20 +57,39 @@ export const OBSTACLES: ObstacleDef[] = [
   { position: { x:  18, z:   6 }, size: { w: 0.5, h: 2, d: 4 }, rotation: 0 },
 ];
 
+export let OBSTACLES: ObstacleDef[] = DEFAULT_OBSTACLES;
+
 // Chick spawns near each building inner edge (toward map center)
-export const SPAWN_POINTS: { x: number; z: number }[] = [
+const DEFAULT_SPAWN_POINTS: { x: number; z: number }[] = [
   { x: -18, z: -18 },
   { x: 18, z: -18 },
   { x: -18, z: 18 },
   { x: 18, z: 18 },
 ];
 
-export const EAGLE_SPAWN_CANDIDATES: { x: number; z: number }[] = [
+export let SPAWN_POINTS: { x: number; z: number }[] = DEFAULT_SPAWN_POINTS;
+
+const DEFAULT_EAGLE_SPAWN_CANDIDATES: { x: number; z: number }[] = [
   { x: 2, z: -2 },
   { x: 2, z: 2 },
   { x: -2, z: 2 },
   { x: -2, z: -2 },
 ];
+
+export let EAGLE_SPAWN_CANDIDATES: { x: number; z: number }[] = DEFAULT_EAGLE_SPAWN_CANDIDATES;
+
+/** Swap the active map data used by all collision/spawn functions */
+export function setActiveMap(
+  buildings: BuildingDef[],
+  obstacles: ObstacleDef[],
+  spawnPoints: { x: number; z: number }[],
+  eagleSpawns: { x: number; z: number }[],
+): void {
+  BUILDINGS = buildings;
+  OBSTACLES = obstacles;
+  SPAWN_POINTS = spawnPoints;
+  EAGLE_SPAWN_CANDIDATES = eagleSpawns;
+}
 
 // Protected zone radius (around buildings)
 export const ZONE_RADIUS = 6.0;
