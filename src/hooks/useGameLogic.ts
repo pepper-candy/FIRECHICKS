@@ -181,7 +181,7 @@ function updateHostExamDisplay(gs: GameStateRef) {
 }
 
 // ─── Hook ─────────────────────────────────────────────────────────────────────
-export function useGameLogic({ players, broadcast, gameMode, connectionMode }: UseGameLogicProps) {
+export function useGameLogic({ players, broadcast, gameMode, connectionMode, mapId = 1 }: UseGameLogicProps) {
   const [phase, setPhase] = useState<GamePhase>("lobby");
   const [assignments, setAssignments] = useState<
     Record<string, { colorIndex: number; isEagle: boolean; chickColor: ChickColor }>
