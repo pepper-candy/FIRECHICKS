@@ -14,6 +14,7 @@ import {
   isInProtectedZone,
   MAP_HALF,
   TIP_SHARE_RADIUS,
+  ZONE_RADIUS,
 } from '@/lib/gameplayMapData';
 
 // ─── Constants ──────────────────────────────────────────────
@@ -27,6 +28,8 @@ const JUKE_INTERVAL_MAX = 700;
 const PROP_USE_DELAY = 1000; // wait 1s before using newly available prop
 const TELEPORT_MARGIN = 2;
 const BUILDING_APPROACH_OFFSET = 3.8;
+/** Throttle for eagle `hitbox-click` on building shields (independent of movement reaction delay). */
+const EAGLE_ZONE_HITBOX_INTERVAL_MS = 200;
 
 export interface BotDecision {
   joystick: { x: number; y: number };
@@ -49,6 +52,7 @@ interface BotState {
   // Shared
   lastPropUseTime: number;
   socialPauseUntil: number;
+  lastZoneHitboxClickAt: number;
 }
 
 const botStates = new Map<string, BotState>();
@@ -69,6 +73,7 @@ function getOrCreateState(connId: string): BotState {
       nextJukeInterval: 500,
       lastPropUseTime: 0,
       socialPauseUntil: 0,
+      lastZoneHitboxClickAt: 0,
     };
     botStates.set(connId, s);
   }
@@ -140,11 +145,238 @@ function avoidObstacles(
   return targetJoy;
 }
 
+const CHICK_BODY_RADIUS = 0.6;
+const CHICK_RAY_STEP = 0.7;
+const CHICK_RAY_MAX = 5.5;
+/** Distance from map edge at which chick bots bias back toward center. */
+const CHICK_EDGE_SOFT = 8;
+
+function clearanceAlongRay(
+  fromX: number,
+  fromZ: number,
+  dirX: number,
+  dirZ: number,
+  maxDist: number,
+): number {
+  let d = CHICK_RAY_STEP;
+  while (d <= maxDist) {
+    const x = fromX + dirX * d;
+    const z = fromZ + dirZ * d;
+    if (checkCollision(x, z, CHICK_BODY_RADIUS)) return Math.max(0, d - CHICK_RAY_STEP);
+    d += CHICK_RAY_STEP;
+  }
+  return maxDist;
+}
+
+function boundaryRepulsionJoy(x: number, z: number): { x: number; y: number } {
+  const lim = MAP_HALF - CHICK_BODY_RADIUS - 0.5;
+  let fx = 0;
+  let fz = 0;
+  if (x > lim - CHICK_EDGE_SOFT) fx -= (x - (lim - CHICK_EDGE_SOFT)) / CHICK_EDGE_SOFT;
+  if (x < -lim + CHICK_EDGE_SOFT) fx -= (x - (-lim + CHICK_EDGE_SOFT)) / CHICK_EDGE_SOFT;
+  if (z > lim - CHICK_EDGE_SOFT) fz -= (z - (lim - CHICK_EDGE_SOFT)) / CHICK_EDGE_SOFT;
+  if (z < -lim + CHICK_EDGE_SOFT) fz -= (z - (-lim + CHICK_EDGE_SOFT)) / CHICK_EDGE_SOFT;
+  const len = Math.hypot(fx, fz);
+  if (len < 1e-6) return { x: 0, y: 0 };
+  return { x: fx / len, y: fz / len };
+}
+
+function rayScanChickSteer(
+  from: { x: number; z: number },
+  desiredJoy: { x: number; y: number },
+  magnitude: number,
+): { x: number; y: number } {
+  const len0 = Math.hypot(desiredJoy.x, desiredJoy.y);
+  if (len0 < 0.05) return desiredJoy;
+  const wx0 = desiredJoy.x / len0;
+  const wz0 = desiredJoy.y / len0;
+  const baseAngle = Math.atan2(wx0, wz0);
+  const offsets = [0, -0.45, 0.45, -0.9, 0.9, -1.35, 1.35, Math.PI];
+  let bestJoy = desiredJoy;
+  let bestScore = -1;
+  for (const off of offsets) {
+    const a = baseAngle + off;
+    const wx = Math.sin(a);
+    const wz = Math.cos(a);
+    const clear = clearanceAlongRay(from.x, from.z, wx, wz, CHICK_RAY_MAX);
+    if (clear > bestScore) {
+      bestScore = clear;
+      bestJoy = { x: wx * magnitude, y: wz * magnitude };
+    }
+  }
+  return bestJoy;
+}
+
+/** Ray-scan + edge/corner escape, then one-step obstacle slide (chick bots only). */
+function chickSteer(
+  from: { x: number; z: number },
+  desiredJoy: { x: number; y: number },
+  moveMag: number,
+): { x: number; y: number } {
+  const edge = boundaryRepulsionJoy(from.x, from.z);
+  const edgeLen = Math.hypot(edge.x, edge.y);
+  let blended = desiredJoy;
+  if (edgeLen > 0.05) {
+    blended = {
+      x: desiredJoy.x * 0.55 + edge.x * moveMag * 0.45,
+      y: desiredJoy.y * 0.55 + edge.y * moveMag * 0.45,
+    };
+  }
+  const cornerDist = Math.min(MAP_HALF - Math.abs(from.x), MAP_HALF - Math.abs(from.z));
+  if (cornerDist < 5) {
+    const cx = -from.x;
+    const cz = -from.z;
+    const cLen = Math.hypot(cx, cz);
+    if (cLen > 0.1) {
+      blended = {
+        x: blended.x * 0.35 + (cx / cLen) * moveMag * 0.65,
+        y: blended.y * 0.35 + (cz / cLen) * moveMag * 0.65,
+      };
+    }
+  }
+  const probed = rayScanChickSteer(from, blended, moveMag);
+  return avoidObstacles(from, probed);
+}
+
 /** Chick is inside a shielded exam-tip bubble (eagle can't score hits there). */
 function inActiveTipZone(x: number, z: number, buildings: BuildingState[]): boolean {
   return buildings.some(
     (b) => b.zoneActive && !b.tipObtained && isInProtectedZone(x, z, b.id),
   );
+}
+
+/** Invincible, caged, or inside an active protected zone — chick is not a valid melee target. */
+function isChickSafeFromEagle(c: PlayerGameState, now: number, buildings: BuildingState[]): boolean {
+  if (c.invincibleUntil > now) return true;
+  if (c.cagedUntil > now) return true;
+  return buildings.some(
+    (b) => b.zoneActive && !b.tipObtained && isInProtectedZone(c.position.x, c.position.z, b.id),
+  );
+}
+
+/**
+ * Point inside the shield disk for eagle navigation + hitbox.
+ * Must satisfy dist(center, p) < ZONE_RADIUS (isInProtectedZone uses strict <).
+ * Per-axis offset of ~0.85*R on a corner diagonal was ~7.2 from center — outside the disk.
+ */
+function zoneEagleAttackPoint(buildingPosition: { x: number; z: number }): { x: number; z: number } {
+  const base = buildingApproachPoint(buildingPosition);
+  const vx = base.x - buildingPosition.x;
+  const vz = base.z - buildingPosition.z;
+  const d = Math.hypot(vx, vz);
+  if (d < 1e-4) return base;
+  const maxD = ZONE_RADIUS - 0.45;
+  const scale = Math.min(maxD / d, 1.12);
+  return {
+    x: buildingPosition.x + vx * scale,
+    z: buildingPosition.z + vz * scale,
+  };
+}
+
+const EAGLE_NAV_RADIUS = 0.5;
+
+function clearanceAlongRayEagle(
+  fromX: number,
+  fromZ: number,
+  dirX: number,
+  dirZ: number,
+  maxDist: number,
+): number {
+  let d = 0.85;
+  while (d <= maxDist) {
+    const x = fromX + dirX * d;
+    const z = fromZ + dirZ * d;
+    if (checkCollision(x, z, EAGLE_NAV_RADIUS)) return Math.max(0, d - 0.85);
+    d += 0.85;
+  }
+  return maxDist;
+}
+
+/** Pick clearest direction toward zone when walls block the direct path. */
+function eagleRaySteer(
+  from: { x: number; z: number },
+  desiredJoy: { x: number; y: number },
+  magnitude: number,
+): { x: number; y: number } {
+  const len0 = Math.hypot(desiredJoy.x, desiredJoy.y);
+  if (len0 < 0.05) return desiredJoy;
+  const wx0 = desiredJoy.x / len0;
+  const wz0 = desiredJoy.y / len0;
+  const baseAngle = Math.atan2(wx0, wz0);
+  const offsets = [0, -0.5, 0.5, -1.0, 1.0, -1.5, 1.5, Math.PI];
+  let bestJoy = desiredJoy;
+  let bestScore = -1;
+  for (const off of offsets) {
+    const a = baseAngle + off;
+    const wx = Math.sin(a);
+    const wz = Math.cos(a);
+    const clear = clearanceAlongRayEagle(from.x, from.z, wx, wz, 6);
+    if (clear > bestScore) {
+      bestScore = clear;
+      bestJoy = { x: wx * magnitude, y: wz * magnitude };
+    }
+  }
+  return bestJoy;
+}
+
+function eagleSteerToZone(
+  from: { x: number; z: number },
+  approach: { x: number; z: number },
+  zoneDist: number,
+): { x: number; y: number } {
+  const mag = Math.min(1, Math.max(0.65, zoneDist / 18));
+  const raw = joystickToTarget(from, approach, mag);
+  const probed = eagleRaySteer(from, raw, mag);
+  return avoidObstacles(from, probed);
+}
+
+/** Stay inside shield disk — leaving resets zone health on the server. */
+function eagleHoldInsideZone(bot: PlayerGameState, zone: BuildingState): { x: number; y: number } {
+  const bx = zone.position.x;
+  const bz = zone.position.z;
+  const dx = bot.position.x - bx;
+  const dz = bot.position.z - bz;
+  const d = Math.hypot(dx, dz);
+  if (d < 1e-4) return { x: 0, y: 0 };
+  const edgeBuffer = 1.1;
+  const safeRadius = ZONE_RADIUS - edgeBuffer;
+  if (d <= safeRadius) {
+    return { x: 0, y: 0 };
+  }
+  return joystickToTarget(bot.position, { x: bx, z: bz }, 0.3);
+}
+
+/** Stage 1–2 exam tips: prioritize breaking shields when every chick is safe (in zone / invincible / caged). */
+function canEaglePrioritizeZoneAttack(
+  stage: number,
+  allPlayers: Map<string, PlayerGameState>,
+  now: number,
+  buildings: BuildingState[],
+): { ok: boolean; destructibleZones: BuildingState[] } {
+  if (stage !== 1 && stage !== 2) return { ok: false, destructibleZones: [] };
+  const chicks = Array.from(allPlayers.values()).filter((p) => !p.isEagle && p.alive);
+  const allSafe =
+    chicks.length > 0 && chicks.every((c) => isChickSafeFromEagle(c, now, buildings));
+  const destructibleZones = buildings.filter((b) => b.zoneActive && !b.tipObtained);
+  return { ok: allSafe && destructibleZones.length > 0, destructibleZones };
+}
+
+function emitEagleZoneHitboxIfInZone(
+  bot: PlayerGameState,
+  s: BotState,
+  now: number,
+  buildings: BuildingState[],
+  messages: ClientMessage[],
+): void {
+  for (const b of buildings) {
+    if (b.zoneActive && !b.tipObtained && isInProtectedZone(bot.position.x, bot.position.z, b.id)) {
+      if (now - s.lastZoneHitboxClickAt >= EAGLE_ZONE_HITBOX_INTERVAL_MS) {
+        messages.push({ type: 'hitbox-click' });
+        s.lastZoneHitboxClickAt = now;
+      }
+      break;
+    }
+  }
 }
 
 // Final exam: chicks panic-flee from eagles (attacks are disabled server-side).
@@ -207,7 +439,7 @@ function updateChickExamFlee(
   }
 
   const fleeJoy = joystickToTarget(nearestEagle.position, bot.position, 1);
-  s.targetJoystick = avoidObstacles(bot.position, fleeJoy);
+  s.targetJoystick = chickSteer(bot.position, fleeJoy, 1);
   return { joystick: smoothJoystick(s), messages };
 }
 
@@ -225,23 +457,19 @@ function updateEagleBot(
   const s = getOrCreateState(bot.connId);
   const messages: ClientMessage[] = [];
 
-  // During events
-  if (activeEvent) {
-    if (activeEvent.phase === 'active') {
-      if (activeEvent.type === 'hitbox') {
-        // Click at ~8/s
-        if (now - s.lastDecisionTime > 125) {
-          messages.push({ type: 'event-hitbox-click' });
-        }
-      } else if (activeEvent.type === 'crossy-road') {
-        // Use eagle actions on cooldown
-        if (now - s.lastPropUseTime > 3000) {
-          s.lastPropUseTime = now;
-          messages.push({
-            type: 'crossy-eagle-action',
-            action: Math.random() > 0.5 ? 'speed-up' : 'add-obstacle',
-          });
-        }
+  // During events — only when the minigame is active: freeze main-map movement; countdown/result allow normal AI.
+  if (activeEvent?.phase === 'active') {
+    if (activeEvent.type === 'hitbox') {
+      if (now - s.lastDecisionTime > 125) {
+        messages.push({ type: 'event-hitbox-click' });
+      }
+    } else if (activeEvent.type === 'crossy-road') {
+      if (now - s.lastPropUseTime > 3000) {
+        s.lastPropUseTime = now;
+        messages.push({
+          type: 'crossy-eagle-action',
+          action: Math.random() > 0.5 ? 'speed-up' : 'add-obstacle',
+        });
       }
     }
     return { joystick: { x: 0, y: 0 }, messages };
@@ -281,11 +509,60 @@ function updateEagleBot(
     return { joystick: smoothJoystick(s), messages };
   }
 
+  // Stage 1–2 zone hitbox: fire on throttle even when movement is behind BOT_REACTION_DELAY.
+  const tipZoneAttack = canEaglePrioritizeZoneAttack(stage, allPlayers, now, buildings);
+  let eagleHoldingInTipZone = false;
+  if (tipZoneAttack.ok) {
+    emitEagleZoneHitboxIfInZone(bot, s, now, buildings, messages);
+    const dz = [...tipZoneAttack.destructibleZones].sort(
+      (a, b) => dist(bot.position, a.position) - dist(bot.position, b.position),
+    );
+    const insideNow = dz.find((b) => isInProtectedZone(bot.position.x, bot.position.z, b.id));
+    if (insideNow) {
+      s.targetJoystick = eagleHoldInsideZone(bot, insideNow);
+      eagleHoldingInTipZone = true;
+    }
+  }
+
   // Reaction delay check
   if (now - s.lastDecisionTime < BOT_REACTION_DELAY) {
-    return { joystick: smoothJoystick(s), messages };
+    return {
+      joystick: smoothJoystick(s, eagleHoldingInTipZone ? 0.62 : 0.3),
+      messages,
+    };
   }
   s.lastDecisionTime = now;
+
+  // Stage 1–2: when every alive chick is safe, destroy nearest shield before mystery boxes.
+  if (tipZoneAttack.ok) {
+    const destructibleZones = tipZoneAttack.destructibleZones;
+    destructibleZones.sort(
+      (a, b) => dist(bot.position, a.position) - dist(bot.position, b.position),
+    );
+    const zoneWeAreIn = destructibleZones.find((b) =>
+      isInProtectedZone(bot.position.x, bot.position.z, b.id),
+    );
+
+    if (zoneWeAreIn) {
+      // Do not path toward "nearest" while inside another disk — stay put / nudge inward so
+      // leaving the zone does not reset zoneHealth (useGameLogic eagle zone tracking).
+      s.targetJoystick = eagleHoldInsideZone(bot, zoneWeAreIn);
+    } else {
+      const targetZone = destructibleZones[0];
+      const approach = zoneEagleAttackPoint(targetZone.position);
+      const zoneDist = dist(bot.position, approach);
+      s.targetJoystick = eagleSteerToZone(bot.position, approach, zoneDist);
+
+      if (zoneDist > 15 && now >= bot.flyCooldownUntil && now >= bot.attackCooldownUntil) {
+        const flyProp = bot.props.find((p) => p.type === 'fly' && p.count > 0);
+        if (flyProp) {
+          messages.push({ type: 'prop-use', propType: 'fly' });
+        }
+      }
+    }
+
+    return { joystick: smoothJoystick(s, zoneWeAreIn ? 0.62 : 0.3), messages };
+  }
 
   // Prioritize armed mystery boxes, then stake out boxes that are not yet active, then chicks.
   const activeBoxes = mysteryBoxes.filter((b) => !b.collected && !b.triggered && now >= b.activeAt);
@@ -368,14 +645,7 @@ function updateEagleBot(
 
   // Hitbox clicking (main-game building shield — not the random hitbox event)
   if (stage >= 1) {
-    for (const b of buildings) {
-      if (b.zoneActive && !b.tipObtained && isInProtectedZone(bot.position.x, bot.position.z, b.id)) {
-        if (now - s.lastPropUseTime > 200) {
-          messages.push({ type: 'hitbox-click' });
-          s.lastPropUseTime = now;
-        }
-      }
-    }
+    emitEagleZoneHitboxIfInZone(bot, s, now, buildings, messages);
   }
 
   return { joystick: smoothJoystick(s), messages };
@@ -395,21 +665,16 @@ function updateChickBot(
   const s = getOrCreateState(bot.connId);
   const messages: ClientMessage[] = [];
 
-  // During events
-  if (activeEvent) {
-    if (activeEvent.phase === 'active') {
-      if (activeEvent.type === 'hitbox') {
-        if (now - s.lastDecisionTime > 167) { // ~6/s
-          messages.push({ type: 'event-hitbox-click' });
-        }
-      } else if (activeEvent.type === 'crossy-road') {
-        // Hop forward every ~1.5s
-        if (now - s.lastPropUseTime > 1500) {
-          s.lastPropUseTime = now;
-          messages.push({ type: 'crossy-hop', direction: 'up' });
-        }
+  if (activeEvent?.phase === 'active') {
+    if (activeEvent.type === 'hitbox') {
+      if (now - s.lastDecisionTime > 167) {
+        messages.push({ type: 'event-hitbox-click' });
       }
-      // Skip mock exam
+    } else if (activeEvent.type === 'crossy-road') {
+      if (now - s.lastPropUseTime > 1500) {
+        s.lastPropUseTime = now;
+        messages.push({ type: 'crossy-hop', direction: 'up' });
+      }
     }
     return { joystick: { x: 0, y: 0 }, messages };
   }
@@ -501,7 +766,7 @@ function updateChickBot(
       x: fleeJoy.x * Math.cos(s.jukeAngle) - fleeJoy.y * Math.sin(s.jukeAngle),
       y: fleeJoy.x * Math.sin(s.jukeAngle) + fleeJoy.y * Math.cos(s.jukeAngle),
     };
-    s.targetJoystick = avoidObstacles(bot.position, jukeJoy);
+    s.targetJoystick = chickSteer(bot.position, jukeJoy, 1);
     return { joystick: smoothJoystick(s), messages };
   }
 
@@ -526,7 +791,7 @@ function updateChickBot(
         s.targetJoystick = { x: 0, y: 0 };
       } else {
         const joy = joystickToTarget(bot.position, target.position, 0.7);
-        s.targetJoystick = avoidObstacles(bot.position, joy);
+        s.targetJoystick = chickSteer(bot.position, joy, 0.7);
       }
     } else {
       s.targetJoystick = { x: 0, y: 0 };
@@ -574,7 +839,7 @@ function updateChickBot(
           x: targetJoy.x * (1 - fleeWeight) + fleeJoy.x * fleeWeight,
           y: targetJoy.y * (1 - fleeWeight) + fleeJoy.y * fleeWeight,
         };
-        s.targetJoystick = avoidObstacles(bot.position, mixedJoy);
+        s.targetJoystick = chickSteer(bot.position, mixedJoy, 0.8);
       }
     } else {
       // If bot has tips, move toward other chicks for sharing
@@ -587,14 +852,14 @@ function updateChickBot(
       );
       if (needyChick && (bot.tips[0] || bot.tips[1])) {
         const joy = joystickToTarget(bot.position, needyChick.position, 0.7);
-        s.targetJoystick = avoidObstacles(bot.position, joy);
+        s.targetJoystick = chickSteer(bot.position, joy, 0.7);
       } else {
         // Wander
         const wanderAngle = (now / 5000) * Math.PI;
         const wx = Math.cos(wanderAngle) * 10;
         const wz = Math.sin(wanderAngle) * 10;
         const joy = joystickToTarget(bot.position, { x: wx, z: wz }, 0.5);
-        s.targetJoystick = avoidObstacles(bot.position, joy);
+        s.targetJoystick = chickSteer(bot.position, joy, 0.5);
       }
     }
     return { joystick: smoothJoystick(s), messages };
@@ -611,9 +876,8 @@ function updateChickBot(
       (a, b) => dist(bot.position, a.position) - dist(bot.position, b.position),
     )[0];
     if (nearest) {
-      // For final exam, drive into building center so bot actually touches entry zone.
       const joy = joystickToTarget(bot.position, nearest.position, 0.9);
-      s.targetJoystick = avoidObstacles(bot.position, joy);
+      s.targetJoystick = chickSteer(bot.position, joy, 0.9);
     }
     return { joystick: smoothJoystick(s), messages };
   }
@@ -624,8 +888,7 @@ function updateChickBot(
 }
 
 // ─── Smooth joystick interpolation ──────────────────────────
-function smoothJoystick(s: BotState): { x: number; y: number } {
-  const lerp = 0.3;
+function smoothJoystick(s: BotState, lerp: number = 0.3): { x: number; y: number } {
   s.currentJoystick.x += (s.targetJoystick.x - s.currentJoystick.x) * lerp;
   s.currentJoystick.y += (s.targetJoystick.y - s.currentJoystick.y) * lerp;
   return { ...s.currentJoystick };

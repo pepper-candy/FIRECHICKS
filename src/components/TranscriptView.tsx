@@ -46,8 +46,8 @@ export default function Transcript({ players, winner }: Props) {
 
   return (
     <div className="flex flex-col h-screen overflow-hidden">
-      <div className="h-1/2 min-h-0 w-full relative flex flex-col">
-        <div className="flex-1 min-h-0 w-full">
+      <div className="h-[50vh] min-h-0 w-full relative flex flex-col justify-end pb-4 shrink-0">
+        <div className="h-[40vh] min-h-0 w-full">
           <Canvas
             className="h-full w-full"
             style={{ width: '100%', height: '100%' }}
@@ -80,7 +80,7 @@ export default function Transcript({ players, winner }: Props) {
         )}
       </div>
 
-      <div className="h-1/2 min-h-0 flex flex-col border-t border-border overflow-hidden">
+      <div className="flex-1 min-h-0 flex flex-col border-t border-border overflow-hidden">
         <div className="flex-1 min-h-0 overflow-auto p-4">
           <h2 className="text-center text-lg font-pixel text-foreground mb-4">TRANSCRIPT</h2>
           <div className="w-full max-w-2xl mx-auto">

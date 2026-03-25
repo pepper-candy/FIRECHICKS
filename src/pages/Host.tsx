@@ -26,6 +26,7 @@ import {
 '@/components/ui/tooltip';
 import type { PlayerGameStateSerializable } from '@/lib/gameTypes';
 import { assetUrl } from '@/lib/assets';
+import { Bounds } from '@react-three/drei';
 
 // ─── Event Overlay (shows during mystery box events) ─────────────────────────
 function EventOverlay({ event, players, gameMode }: {event: GameEvent;players: Record<string, any>; gameMode?: string;}) {
@@ -717,13 +718,13 @@ function GameOverCeremony({ snapshot, gameMode }: { snapshot: GameStateSnapshot;
       <div className="flex flex-col items-center justify-center h-screen bg-background gap-6">
         <h1 className="text-2xl font-pixel text-accent text-glow-green animate-pulse tracking-widest">🏆 MVP</h1>
         <div className="h-[50vh] w-full min-h-[280px]">
-          <Canvas className="h-full w-full" style={{ width: '100%', height: '100%' }} camera={{ position: [0, 2.35, 4.2], fov: 38 }}>
+          <Canvas className="h-full w-full" style={{ width: '100%', height: '100%' }} camera={{ position: [0, 1.8, 5.8], fov: 50 }}>
             <ambientLight intensity={0.8} />
             <directionalLight position={[5, 8, 5]} intensity={1.2} />
-            <group position={[0, 0.2, 0]}>
+            <group position={[0, -0.6, 0]}>
               <DancingChar chickColor={mvp.chickColor} isWinner={true} delay={0} />
             </group>
-          </Canvas>
+            </Canvas>
         </div>
         <div className="flex items-center gap-3 px-6 py-3 rounded-xl bg-accent/20 border-2 border-accent">
           <Trophy className="w-6 h-6 text-accent" />
@@ -739,6 +740,11 @@ function GameOverCeremony({ snapshot, gameMode }: { snapshot: GameStateSnapshot;
 
   // Phase 2: Winning team
   if (ceremonyPhase === 'team') {
+    const count = winningTeamPlayers.length;
+    const cols = Math.min(3, count); // max 5 per row
+    const rows = Math.ceil(count / cols);
+    const spacingX = 2.8;
+    const spacingZ = 2.4;
     return (
       <div className="flex flex-col items-center justify-center h-screen bg-background gap-6">
         <h1
@@ -751,14 +757,17 @@ function GameOverCeremony({ snapshot, gameMode }: { snapshot: GameStateSnapshot;
           <Canvas
             className="h-full w-full"
             style={{ width: '100%', height: '100%' }}
-            camera={{ position: [0, 2.4, winningTeamPlayers.length * 3.2 + 3.5], fov: 42 }}
+            camera={{ position: [0, 2.2, 6 + rows * 2.2], fov: 50 }}
           >
             <ambientLight intensity={0.8} />
             <directionalLight position={[5, 8, 5]} intensity={1.2} />
             {winningTeamPlayers.map((p, i) => {
-              const x = (i - (winningTeamPlayers.length - 1) / 2) * 3.2;
+              const col = i % cols;
+              const row = Math.floor(i / cols);
+              const x = (col - (cols - 1) / 2) * spacingX;
+              const z = -row * spacingZ;
               return (
-                <group key={p.connId} position={[x, 0.15, 0]}>
+                <group key={p.connId} position={[x, 0.1, z]}>
                   <DancingChar chickColor={p.chickColor} isWinner={true} delay={i * 0.4} />
                 </group>
               );
@@ -770,30 +779,39 @@ function GameOverCeremony({ snapshot, gameMode }: { snapshot: GameStateSnapshot;
     );
   }
 
-  // Phase 3: top half = full-width 3D (heads clear of chrome); bottom half = transcript + actions
+  // Phase 3: 3D lineup sits in upper half with feet just above viewport mid (bottom of canvas ~48–50vh)
+const count = sorted.length;
+const cols = Math.min(6, count);
+const rows = Math.ceil(count / cols);
+const spacingX = Math.min(3.2, 14 / cols);
+const spacingZ = 2.6;
   return (
     <div className="flex flex-col h-screen bg-background overflow-hidden">
-      <div className="h-1/2 min-h-0 w-full relative flex flex-col">
-        <div className="flex-1 min-h-0 w-full">
+      <div className="h-[50vh] min-h-0 w-full relative flex flex-col justify-end pb-4 shrink-0">
+        <div className="h-[40vh] min-h-0 w-full">
           <Canvas
             className="h-full w-full"
             style={{ width: '100%', height: '100%' }}
-            camera={{ position: [0, 1.45, Math.min(16, 7 + sorted.length * 1.1)], fov: 42 }}
-          >
+            camera={{ position: [0, 1.8, 6 + rows * 2.2], fov: 50 }}
+            >
             <ambientLight intensity={0.8} />
             <directionalLight position={[5, 8, 5]} intensity={1.2} />
+            <group position={[0, 0, (rows - 1) * spacingZ * 0.5]}>
             {sorted.map((p, i) => {
               const isWin = getMatchResult(p) !== 'lose';
-              const spacing = 3.4;
-              const x = (i - (sorted.length - 1) / 2) * spacing;
+              const col = i % cols;
+              const row = Math.floor(i / cols);
+              const x = (col - (cols - 1) / 2) * spacingX;
+              const z = -row * spacingZ;
               return (
-                <group key={p.connId} position={[x, 0.55, 0]}>
-                  <group scale={TRANSCRIPT_CEREMONY_MODEL_SCALE}>
+                <group key={p.connId} position={[x, -0.2 + row * 0.05, z]}>
+                  <group scale={Math.min(1.5, 8 / cols)}>
                     <DancingChar chickColor={p.chickColor} isWinner={isWin} delay={i * 0.4} />
                   </group>
                 </group>
               );
             })}
+            </group>
           </Canvas>
         </div>
 
@@ -807,7 +825,7 @@ function GameOverCeremony({ snapshot, gameMode }: { snapshot: GameStateSnapshot;
         )}
       </div>
 
-      <div className="h-1/2 min-h-0 flex flex-col border-t border-border overflow-hidden">
+      <div className="flex-1 min-h-0 flex flex-col border-t border-border overflow-hidden">
         <div className="py-3 px-2 text-center border-b border-border flex-shrink-0">
           <h1 className="text-lg sm:text-xl font-pixel text-accent text-glow-green mb-1">GAME OVER</h1>
           <p
