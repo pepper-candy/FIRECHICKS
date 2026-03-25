@@ -209,6 +209,9 @@ export function useGameLogic({ players, broadcast, gameMode, connectionMode, map
   useEffect(() => {
     connectionModeRef.current = connectionMode;
   }, [connectionMode]);
+  const mapIdRef = useRef(mapId);
+  useEffect(() => { mapIdRef.current = mapId; }, [mapId]);
+
   const lastNetworkStateBroadcastAtRef = useRef(0);
 
   const gameStateRef = useRef<GameStateRef | null>(null);
