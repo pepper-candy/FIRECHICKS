@@ -31,7 +31,10 @@ import {
   PROP_PICKUP_RADIUS,
   MAP_HALF,
   TIP_SHARE_RADIUS,
+  SPAWN_POINTS,
+  setActiveMap,
 } from "@/lib/gameplayMapData";
+import { getMapVariant } from "@/lib/mapVariants";
 import type { PlayerState, ConnectionMode } from "@/hooks/useGameRoom";
 import type { ChickColor } from "@/components/CharacterViewer";
 import { updateBot, isBot } from "@/lib/botAI";
@@ -111,6 +114,7 @@ interface UseGameLogicProps {
   broadcast: (msg: any) => void;
   gameMode: "1v3" | "2v6";
   connectionMode: ConnectionMode;
+  mapId?: import('@/lib/mapVariants').MapId;
 }
 
 // Named type for the full game state reference — avoids TypeScript `unknown` inference issues
@@ -180,7 +184,7 @@ function updateHostExamDisplay(gs: GameStateRef) {
 }
 
 // ─── Hook ─────────────────────────────────────────────────────────────────────
-export function useGameLogic({ players, broadcast, gameMode, connectionMode }: UseGameLogicProps) {
+export function useGameLogic({ players, broadcast, gameMode, connectionMode, mapId = 1 }: UseGameLogicProps) {
   const [phase, setPhase] = useState<GamePhase>("lobby");
   const [assignments, setAssignments] = useState<
     Record<string, { colorIndex: number; isEagle: boolean; chickColor: ChickColor }>
@@ -205,6 +209,9 @@ export function useGameLogic({ players, broadcast, gameMode, connectionMode }: U
   useEffect(() => {
     connectionModeRef.current = connectionMode;
   }, [connectionMode]);
+  const mapIdRef = useRef(mapId);
+  useEffect(() => { mapIdRef.current = mapId; }, [mapId]);
+
   const lastNetworkStateBroadcastAtRef = useRef(0);
 
   const gameStateRef = useRef<GameStateRef | null>(null);
@@ -221,6 +228,10 @@ export function useGameLogic({ players, broadcast, gameMode, connectionMode }: U
 
   // ─── Start Game ──────────────────────────────────────────────────────────────
   const startGame = useCallback(() => {
+    // Activate selected map variant for collision/spawn data
+    const mv = getMapVariant(mapIdRef.current);
+    setActiveMap(mv.buildings, mv.obstacles, mv.spawnPoints, mv.eagleSpawnCandidates);
+
     const currentPlayers = playersRef.current as Map<string, PlayerState>;
     const playerIds: string[] = Array.from(currentPlayers.keys());
     if (playerIds.length === 0) return;

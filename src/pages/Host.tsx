@@ -24,6 +24,8 @@ import {
 import {
   Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from
 '@/components/ui/tooltip';
+import type { MapId } from '@/lib/mapVariants';
+import { MAP_LIST } from '@/lib/mapVariants';
 import type { PlayerGameStateSerializable } from '@/lib/gameTypes';
 import { assetUrl } from '@/lib/assets';
 import { Bounds } from '@react-three/drei';
@@ -143,6 +145,7 @@ export default function Host() {
   const [gameMode, setGameMode] = useState<GameMode>('1v3');
   const [startClickAt, setStartClickAt] = useState<number | null>(null);
   const [zoomLevel, setZoomLevel] = useState(1);
+  const [mapId, setMapId] = useState<MapId>(1);
   const [revealNow, setRevealNow] = useState(Date.now());
   const [focusPanelOpen, setFocusPanelOpen] = useState(false);
   // Stage transition toast notification
@@ -175,7 +178,7 @@ export default function Host() {
     hostDragUpdate,
     hostDragEnd,
     hostSkipExam,
-  } = useGameLogic({ players, broadcast, gameMode, connectionMode: mode });
+  } = useGameLogic({ players, broadcast, gameMode, connectionMode: mode, mapId });
 
   useAdvertiseRoom(phase === 'lobby' ? roomCode : '', mode);
 
@@ -304,13 +307,19 @@ export default function Host() {
           </h1>
 
           <div className="flex items-center gap-2 font-mono text-xs flex-wrap">
-            <button
-              onClick={exportDebugLog}
-              className="px-2 py-1 rounded border border-border bg-card hover:bg-card/70 text-muted-foreground"
-              title="Download host debug log"
-            >
-              ⬇ LOG
-            </button>
+            {/* Map selector */}
+            <Select value={String(mapId)} onValueChange={(v) => setMapId(Number(v) as MapId)}>
+              <SelectTrigger className="h-7 w-[130px] text-xs font-mono bg-card border-border">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {MAP_LIST.map((m) => (
+                  <SelectItem key={m.id} value={String(m.id)} className="text-xs font-mono">
+                    🗺️ {m.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
             {/* Game mode toggle (only when not full) */}
             {!isFull &&
             <button
@@ -472,6 +481,7 @@ export default function Host() {
           onHostDragEnd={hostDragEnd}
           activeTipShareConnIds={snapshot.activeTipShareConnIds}
           onHostSkipExam={phase === 'exam' ? hostSkipExam : undefined}
+          mapId={mapId}
         />
 
         {/* Focus camera panel toggle button */}
