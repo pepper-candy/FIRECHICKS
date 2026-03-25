@@ -111,6 +111,7 @@ interface UseGameLogicProps {
   broadcast: (msg: any) => void;
   gameMode: "1v3" | "2v6";
   connectionMode: ConnectionMode;
+  mapId?: import('@/lib/mapVariants').MapId;
 }
 
 // Named type for the full game state reference — avoids TypeScript `unknown` inference issues

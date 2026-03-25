@@ -178,7 +178,7 @@ export default function Host() {
     hostDragUpdate,
     hostDragEnd,
     hostSkipExam,
-  } = useGameLogic({ players, broadcast, gameMode, connectionMode: mode });
+  } = useGameLogic({ players, broadcast, gameMode, connectionMode: mode, mapId });
 
   useAdvertiseRoom(phase === 'lobby' ? roomCode : '', mode);
 
