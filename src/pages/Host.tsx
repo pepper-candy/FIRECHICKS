@@ -865,7 +865,7 @@ function GameOverCeremony({ snapshot, gameMode }: { snapshot: GameStateSnapshot;
           >
             <ambientLight intensity={0.8} />
             <directionalLight position={[5, 8, 5]} intensity={1.2} />
-            <group position={[0, -2.2, 0]}>
+            <group position={[0, -1.8, 0]}>
               <group scale={1.5}>
                 <DancingChar chickColor={mvp.chickColor} isWinner={true} delay={0} />
               </group>
@@ -907,7 +907,7 @@ function GameOverCeremony({ snapshot, gameMode }: { snapshot: GameStateSnapshot;
           >
             <ambientLight intensity={0.8} />
             <directionalLight position={[5, 8, 5]} intensity={1.2} />
-            <group position={[0, -2.2, 0]}>
+            <group position={[0, -1.8, 0]}>
               {winningTeamPlayers.map((p, i) => {
                 const col = i % cols;
                 const row = Math.floor(i / cols);
