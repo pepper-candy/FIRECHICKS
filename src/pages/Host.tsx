@@ -1,37 +1,41 @@
-import { useState, useEffect, useCallback, Suspense, useRef } from 'react';
-import { createPortal } from 'react-dom';
-import { Canvas, useFrame, useThree } from '@react-three/fiber';
-import { OrbitControls } from '@react-three/drei';
-import type { GameEvent, GameStateSnapshot } from '@/lib/gameTypes';
-import { useHostRoom, useAdvertiseRoom, type ConnectionMode } from '@/hooks/useGameRoom';
-import { useGameLogic } from '@/hooks/useGameLogic';
-import LobbyArena from '@/components/LobbyArena';
-import GameplayMap from '@/components/GameplayMap';
-import HealthDisplay from '@/components/HealthDisplay';
-import StageProgressBar from '@/components/StageProgressBar';
-import VideoOverlay, { preloadVideos } from '@/components/VideoOverlay';
-import StageTransition from '@/components/StageTransition';
-import NetworkPerformancePanel from '@/components/NetworkPerformancePanel';
-import CrossyRoadHost from '@/components/events/CrossyRoadHost';
-import { PLAYER_COLORS, MAX_PLAYERS_1V3, MAX_PLAYERS_2V6 } from '@/lib/playerColors';
-import { gradeToLetter, getGradeColor } from '@/lib/gradeSystem';
-import { X, Flame, Zap, Trophy, Star, ChevronDown, Palette } from 'lucide-react';
-import type { GameMode } from '@/lib/gameTypes';
-import CharacterViewer from '@/components/CharacterViewer';
-import {
-  Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from
-'@/components/ui/select';
-import {
-  Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from
-'@/components/ui/tooltip';
-import type { MapId } from '@/lib/mapVariants';
-import { MAP_LIST } from '@/lib/mapVariants';
-import type { PlayerGameStateSerializable } from '@/lib/gameTypes';
-import { assetUrl } from '@/lib/assets';
-import { Bounds } from '@react-three/drei';
+import { useState, useEffect, useCallback, Suspense, useRef } from "react";
+import { createPortal } from "react-dom";
+import { Canvas, useFrame, useThree } from "@react-three/fiber";
+import { OrbitControls } from "@react-three/drei";
+import type { GameEvent, GameStateSnapshot } from "@/lib/gameTypes";
+import { useHostRoom, useAdvertiseRoom, type ConnectionMode } from "@/hooks/useGameRoom";
+import { useGameLogic } from "@/hooks/useGameLogic";
+import LobbyArena from "@/components/LobbyArena";
+import GameplayMap from "@/components/GameplayMap";
+import HealthDisplay from "@/components/HealthDisplay";
+import StageProgressBar from "@/components/StageProgressBar";
+import VideoOverlay, { preloadVideos } from "@/components/VideoOverlay";
+import StageTransition from "@/components/StageTransition";
+import NetworkPerformancePanel from "@/components/NetworkPerformancePanel";
+import CrossyRoadHost from "@/components/events/CrossyRoadHost";
+import { PLAYER_COLORS, MAX_PLAYERS_1V3, MAX_PLAYERS_2V6 } from "@/lib/playerColors";
+import { gradeToLetter, getGradeColor } from "@/lib/gradeSystem";
+import { X, Flame, Zap, Trophy, Star, ChevronDown, Palette } from "lucide-react";
+import type { GameMode } from "@/lib/gameTypes";
+import CharacterViewer from "@/components/CharacterViewer";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import type { MapId } from "@/lib/mapVariants";
+import { MAP_LIST } from "@/lib/mapVariants";
+import type { PlayerGameStateSerializable } from "@/lib/gameTypes";
+import { assetUrl } from "@/lib/assets";
+import { Bounds } from "@react-three/drei";
 
 // ─── Event Overlay (shows during mystery box events) ─────────────────────────
-function EventOverlay({ event, players, gameMode }: {event: GameEvent;players: Record<string, any>; gameMode?: string;}) {
+function EventOverlay({
+  event,
+  players,
+  gameMode,
+}: {
+  event: GameEvent;
+  players: Record<string, any>;
+  gameMode?: string;
+}) {
   const [now, setNow] = useState(Date.now());
   useEffect(() => {
     const id = setInterval(() => setNow(Date.now()), 100);
@@ -39,12 +43,13 @@ function EventOverlay({ event, players, gameMode }: {event: GameEvent;players: R
   }, []);
   const aliveChicks = Object.values(players).filter((p: any) => !p.isEagle && p.alive);
   const chickTotal = aliveChicks.reduce((sum: number, p: any) => sum + (event.chickClicks[p.connId] ?? 0), 0);
-  const eagleTotal = Object.values(players).filter((p: any) => p.isEagle && p.alive).
-  reduce((sum: number, p: any) => sum + (event.eagleClicks[p.connId] ?? 0), 0);
+  const eagleTotal = Object.values(players)
+    .filter((p: any) => p.isEagle && p.alive)
+    .reduce((sum: number, p: any) => sum + (event.eagleClicks[p.connId] ?? 0), 0);
   const timeLeft = Math.max(0, Math.ceil((event.endAt - now) / 1000));
 
   // Mock exam active: show layer 1 full-screen centered with white bg — via portal
-  if (event.phase === 'active' && event.type === 'mock-exam' && event.questionNum) {
+  if (event.phase === "active" && event.type === "mock-exam" && event.questionNum) {
     return createPortal(
       <div className="fixed inset-0 flex items-center justify-center bg-white" style={{ zIndex: 9998 }}>
         <div className="flex flex-col items-center gap-4 max-w-2xl w-full px-6">
@@ -58,75 +63,90 @@ function EventOverlay({ event, players, gameMode }: {event: GameEvent;players: R
           <p className="text-xs font-mono text-gray-500">Players check their phones for layer 2!</p>
         </div>
       </div>,
-      document.body
+      document.body,
     );
   }
 
   return (
     <div className="absolute inset-0 z-30 flex items-center justify-center bg-background/80 backdrop-blur-sm">
       <div className="bg-card border-2 border-accent rounded-xl p-6 max-w-lg w-full mx-4 text-center space-y-4">
-        {event.phase === 'countdown' &&
-        <>
+        {event.phase === "countdown" && (
+          <>
             <h2 className="text-2xl font-pixel text-accent">
-              {event.type === 'mock-exam' ? '📝 MOCK EXAM' : event.type === 'hitbox' ? '👊 HITBOX CHALLENGE' : '🐔 CROSSY ROAD'}
+              {event.type === "mock-exam"
+                ? "📝 MOCK EXAM"
+                : event.type === "hitbox"
+                  ? "👊 HITBOX CHALLENGE"
+                  : "🐔 CROSSY ROAD"}
             </h2>
             <div className="text-6xl font-pixel text-primary animate-pulse">
               {Math.max(1, 3 - Math.floor((now - event.startedAt) / 1000))}
             </div>
             <p className="text-sm font-mono text-muted-foreground">Get ready!</p>
           </>
-        }
+        )}
 
-        {event.phase === 'active' && event.type === 'hitbox' &&
-        <>
+        {event.phase === "active" && event.type === "hitbox" && (
+          <>
             <h2 className="text-lg font-pixel text-accent">👊 HITBOX BATTLE — {timeLeft}s</h2>
             <div className="flex justify-around">
               <div className="text-center">
                 <div className="text-4xl font-pixel text-primary">{chickTotal}</div>
-                <div className="text-xs font-mono text-muted-foreground">🐤 Chicks (avg: {aliveChicks.length > 0 ? (chickTotal / aliveChicks.length).toFixed(1) : 0})</div>
+                <div className="text-xs font-mono text-muted-foreground">
+                  🐤 Chicks (avg: {aliveChicks.length > 0 ? (chickTotal / aliveChicks.length).toFixed(1) : 0})
+                </div>
               </div>
               <div className="text-2xl text-muted-foreground">vs</div>
               <div className="text-center">
                 <div className="text-4xl font-pixel text-destructive">{eagleTotal}</div>
-                <div className="text-xs font-mono text-muted-foreground">🦅 Eagle{gameMode === '2v6' ? 's' : ''}</div>
+                <div className="text-xs font-mono text-muted-foreground">🦅 Eagle{gameMode === "2v6" ? "s" : ""}</div>
               </div>
             </div>
             <p className="text-xs font-mono text-muted-foreground">TAP HITBOX AS FAST AS POSSIBLE!</p>
           </>
-        }
+        )}
 
-        {event.phase === 'active' && event.type === 'crossy-road' &&
+        {event.phase === "active" && event.type === "crossy-road" && (
           <CrossyRoadHost event={event} players={players} gameMode={gameMode} />
-        }
+        )}
 
-        {event.phase === 'result' &&
-        <>
+        {event.phase === "result" && (
+          <>
             <h2 className="text-xl font-pixel text-accent">RESULT</h2>
-            <p className="text-2xl font-pixel" style={{ color: event.result === 'chick' ? 'hsl(145 80% 50%)' : 'hsl(0 80% 55%)' }}>
-              {event.result === 'chick' ? '🐤 Chicks Win!' : '🦅 Eagle Wins!'}
+            <p
+              className="text-2xl font-pixel"
+              style={{ color: event.result === "chick" ? "hsl(145 80% 50%)" : "hsl(0 80% 55%)" }}
+            >
+              {event.result === "chick" ? "🐤 Chicks Win!" : "🦅 Eagle Wins!"}
             </p>
             <p className="text-xs font-mono text-muted-foreground">
-              {event.result === 'chick' ? '+2 grades for everyone!' : '-2 grades for chicks'}
+              {event.result === "chick" ? "+2 grades for everyone!" : "-2 grades for chicks"}
             </p>
           </>
-        }
+        )}
       </div>
-    </div>);
-
+    </div>
+  );
 }
 
 // Final transcript: GLB scale vs earlier tiny lineup (was 0.2; 7.5x for readability).
 const TRANSCRIPT_CEREMONY_MODEL_SCALE = 1.5;
 
 // ─── Transcript 3D Character ──────────────────────────────────────────────────
-function DancingChar({ chickColor, isWinner, delay }: {chickColor: string;isWinner: boolean;delay: number;}) {
+function DancingChar({ chickColor, isWinner, delay }: { chickColor: string; isWinner: boolean; delay: number }) {
   const angleRef = useRef(delay + Math.PI);
-  useFrame((_, d) => {angleRef.current += d * (isWinner ? 1.5 : 0.4);});
+  useFrame((_, d) => {
+    angleRef.current += d * (isWinner ? 1.5 : 0.4);
+  });
   return (
     <Suspense fallback={null}>
-      <CharacterViewer color={chickColor as any} animState={isWinner ? 'Victory' : 'Idle'} facingAngle={angleRef.current} />
-    </Suspense>);
-
+      <CharacterViewer
+        color={chickColor as any}
+        animState={isWinner ? "Victory" : "Idle"}
+        facingAngle={angleRef.current}
+      />
+    </Suspense>
+  );
 }
 
 // ─── Focus Camera for individual player ──────────────────────────────────────
@@ -141,8 +161,8 @@ function PlayerFocusCamera({ target }: { target: { x: number; z: number } }) {
 
 // ─── Host Component ──────────────────────────────────────────────────────────
 export default function Host() {
-  const [mode, setMode] = useState<ConnectionMode>('webrtc');
-  const [gameMode, setGameMode] = useState<GameMode>('1v3');
+  const [mode, setMode] = useState<ConnectionMode>("webrtc");
+  const [gameMode, setGameMode] = useState<GameMode>("1v3");
   const [startClickAt, setStartClickAt] = useState<number | null>(null);
   const [zoomLevel, setZoomLevel] = useState(1);
   const [mapId, setMapId] = useState<MapId>(1);
@@ -154,7 +174,18 @@ export default function Host() {
   const [stageToast, setStageToast] = useState<{ stage: number; key: number } | null>(null);
   const dismissStageToast = useCallback(() => setStageToast(null), []);
   const prevStageRef = useRef<number | null>(null);
-  const { roomCode, players, kickPlayer, kickAllPlayers, broadcast, onClientMessage, gameModeRef, takeoverCodes, fillBots, removeBots } = useHostRoom(mode);
+  const {
+    roomCode,
+    players,
+    kickPlayer,
+    kickAllPlayers,
+    broadcast,
+    onClientMessage,
+    gameModeRef,
+    takeoverCodes,
+    fillBots,
+    removeBots,
+  } = useHostRoom(mode);
   const [revealedCodes, setRevealedCodes] = useState<Set<string>>(new Set());
   const [botsAdded, setBotsAdded] = useState(false);
   const debugLogRef = useRef<string[]>([]);
@@ -182,7 +213,7 @@ export default function Host() {
     hostSkipExam,
   } = useGameLogic({ players, broadcast, gameMode, connectionMode: mode, mapId });
 
-  useAdvertiseRoom(phase === 'lobby' ? roomCode : '', mode);
+  useAdvertiseRoom(phase === "lobby" ? roomCode : "", mode);
 
   // Register client message handler
   useEffect(() => {
@@ -199,10 +230,15 @@ export default function Host() {
     if (now - lastSnapshotLogAtRef.current < 1000) return;
     lastSnapshotLogAtRef.current = now;
     const playerSummary = Object.values(snapshot.players)
-      .map((p) => `${p.connId}:${p.isEagle ? "E" : "C"}@(${p.position.x.toFixed(1)},${p.position.z.toFixed(1)}) props=${p.props.map((pi) => `${pi.type}:${pi.count}`).join("|")}`)
+      .map(
+        (p) =>
+          `${p.connId}:${p.isEagle ? "E" : "C"}@(${p.position.x.toFixed(1)},${p.position.z.toFixed(1)}) props=${p.props.map((pi) => `${pi.type}:${pi.count}`).join("|")}`,
+      )
       .join(" ; ");
     const eventType = snapshot.activeEvent ? `${snapshot.activeEvent.type}/${snapshot.activeEvent.phase}` : "none";
-    pushDebugLog(`state phase=${snapshot.phase} stage=${snapshot.stage} label="${snapshot.stageLabel}" event=${eventType} players=[${playerSummary}]`);
+    pushDebugLog(
+      `state phase=${snapshot.phase} stage=${snapshot.stage} label="${snapshot.stageLabel}" event=${eventType} players=[${playerSummary}]`,
+    );
   }, [snapshot, pushDebugLog]);
 
   const exportDebugLog = useCallback(() => {
@@ -218,16 +254,18 @@ export default function Host() {
     URL.revokeObjectURL(url);
   }, []);
 
-  useEffect(() => {preloadVideos();}, []);
+  useEffect(() => {
+    preloadVideos();
+  }, []);
 
   useEffect(() => {
-    broadcast({ type: 'game-mode', gameMode });
+    broadcast({ type: "game-mode", gameMode });
     if (gameModeRef) gameModeRef.current = gameMode;
   }, [gameMode, broadcast, gameModeRef]);
 
   // Fire toast when stage advances during gameplay
   useEffect(() => {
-    if (!snapshot || (phase !== 'playing' && phase !== 'exam')) return;
+    if (!snapshot || (phase !== "playing" && phase !== "exam")) return;
     const currentStage = snapshot.stage;
     if (prevStageRef.current === null) {
       setStageToast({ stage: currentStage, key: Date.now() });
@@ -237,81 +275,81 @@ export default function Host() {
     prevStageRef.current = currentStage;
   }, [snapshot?.stage, phase]);
   useEffect(() => {
-    if (phase !== 'reveal') return;
+    if (phase !== "reveal") return;
     const id = setInterval(() => setRevealNow(Date.now()), 100);
     return () => clearInterval(id);
   }, [phase]);
 
   const handleGameModeToggle = useCallback(() => {
-    const newMode: GameMode = gameMode === '1v3' ? '2v6' : '1v3';
+    const newMode: GameMode = gameMode === "1v3" ? "2v6" : "1v3";
     kickAllPlayers();
     setGameMode(newMode);
   }, [gameMode, kickAllPlayers]);
 
-  const handleConnectionModeChange = useCallback((v: string) => {
-    kickAllPlayers();
-    setMode(v as ConnectionMode);
-  }, [kickAllPlayers]);
+  const handleConnectionModeChange = useCallback(
+    (v: string) => {
+      kickAllPlayers();
+      setMode(v as ConnectionMode);
+    },
+    [kickAllPlayers],
+  );
 
   const playerCount = players.size;
-  const maxPlayers = gameMode === '1v3' ? MAX_PLAYERS_1V3 : MAX_PLAYERS_2V6;
+  const maxPlayers = gameMode === "1v3" ? MAX_PLAYERS_1V3 : MAX_PLAYERS_2V6;
   const isFull = playerCount === maxPlayers;
 
   // ─── LOBBY ────────────────────────────────────────────────────────────────────
-  if (phase === 'lobby') {
+  if (phase === "lobby") {
     return (
       <div className="flex flex-col h-screen p-3 gap-3">
         {/* Cyber START button — top center absolute */}
-        {(isFull || botsAdded) &&
-        <div className="absolute top-4 left-1/2 -translate-x-1/2 z-20 flex gap-3">
+        {(isFull || botsAdded) && (
+          <div className="absolute top-4 left-1/2 -translate-x-1/2 z-20 flex gap-3">
             <button
-            onClick={() => {
-              setStartClickAt(Date.now());
-              startGame();
-            }}
-            className="relative px-10 py-3 font-pixel text-base tracking-[0.3em] uppercase
+              onClick={() => {
+                setStartClickAt(Date.now());
+                startGame();
+              }}
+              className="relative px-10 py-3 font-pixel text-base tracking-[0.3em] uppercase
                 text-primary border-2 border-primary bg-primary/10
                 hover:bg-primary/25 transition-all duration-200
                 shadow-[0_0_25px_hsl(var(--primary)/0.5),inset_0_0_20px_hsl(var(--primary)/0.1)]
                 hover:shadow-[0_0_40px_hsl(var(--primary)/0.7),inset_0_0_30px_hsl(var(--primary)/0.2)]
                 before:absolute before:inset-0 before:border before:border-primary/40 before:animate-pulse
-                after:absolute after:inset-[-3px] after:border after:border-primary/20">
-            
-              <Zap className="inline w-5 h-5 mr-2 -mt-0.5 text-primary" />
-              ▶ START GAME
+                after:absolute after:inset-[-3px] after:border after:border-primary/20"
+            >
+              <Zap className="inline w-5 h-5 mr-2 -mt-0.5 text-primary" />▶ START GAME
             </button>
           </div>
-        }
+        )}
 
         {/* Fill bots button — only when not full */}
-        {!isFull &&
-        <div className="absolute top-4 left-1/2 -translate-x-1/2 z-20">
+        {!isFull && (
+          <div className="absolute top-4 left-1/2 -translate-x-1/2 z-20">
             <button
-            onClick={() => {
-              fillBots?.();
-              setBotsAdded(true);
-            }}
-            className="px-6 py-2.5 font-pixel text-sm tracking-widest uppercase
+              onClick={() => {
+                fillBots?.();
+                setBotsAdded(true);
+              }}
+              className="px-6 py-2.5 font-pixel text-sm tracking-widest uppercase
                 text-accent border-2 border-accent bg-accent/10
                 hover:bg-accent/25 transition-all duration-200
                 shadow-[0_0_15px_hsl(var(--accent)/0.3)]
-                hover:shadow-[0_0_25px_hsl(var(--accent)/0.5)]">
-            
+                hover:shadow-[0_0_25px_hsl(var(--accent)/0.5)]"
+            >
               🤖 FILL BOTS
             </button>
           </div>
-        }
+        )}
 
         {/* Header row */}
         <div className="flex items-center justify-between flex-wrap gap-2 z-10">
-          <h1 className="text-sm md:text-base text-primary text-glow-green tracking-wider font-pixel">
-             LOBBY
-          </h1>
+          <h1 className="text-sm md:text-base text-primary text-glow-green tracking-wider font-pixel">LOBBY</h1>
 
           <div className="flex items-center gap-2 font-mono text-xs flex-wrap">
             {/* Map selector */}
             <Select value={String(mapId)} onValueChange={(v) => setMapId(Number(v) as MapId)}>
-              <SelectTrigger className="h-7 w-[130px] text-xs font-mono bg-card border-border">
+              <SelectTrigger className="h-7 w-fit text-xs font-mono bg-card border-border">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -323,19 +361,19 @@ export default function Host() {
               </SelectContent>
             </Select>
             {/* Game mode toggle (only when not full) */}
-            {!isFull &&
-            <button
-              onClick={handleGameModeToggle}
-              className={`flex items-center gap-1 px-3 py-1.5 rounded border font-pixel text-xs transition-all ${
-              gameMode === '2v6' ?
-              'border-accent bg-accent/10 text-accent hover:bg-accent/20' :
-              'border-primary bg-primary/10 text-primary hover:bg-primary/20'}`
-              }>
-              
-                <Flame className={`w-3 h-3 ${gameMode === '2v6' ? 'animate-pulse' : ''}`} />
+            {!isFull && (
+              <button
+                onClick={handleGameModeToggle}
+                className={`flex items-center gap-1 px-3 py-1.5 rounded border font-pixel text-xs transition-all ${
+                  gameMode === "2v6"
+                    ? "border-accent bg-accent/10 text-accent hover:bg-accent/20"
+                    : "border-primary bg-primary/10 text-primary hover:bg-primary/20"
+                }`}
+              >
+                <Flame className={`w-3 h-3 ${gameMode === "2v6" ? "animate-pulse" : ""}`} />
                 {gameMode}
               </button>
-            }
+            )}
 
             {/* Connection mode */}
             <Select value={mode} onValueChange={handleConnectionModeChange}>
@@ -357,36 +395,46 @@ export default function Host() {
               ROOM: <span className="text-accent font-bold tracking-widest">{roomCode}</span>
             </div>
 
-            <span className="text-muted-foreground">{playerCount}/{maxPlayers}</span>
+            <span className="text-muted-foreground">
+              {playerCount}/{maxPlayers}
+            </span>
 
             {/* Player color dots with kick */}
-            {playerCount > 0 &&
-            <TooltipProvider delayDuration={200}>
+            {playerCount > 0 && (
+              <TooltipProvider delayDuration={200}>
                 <div className="flex items-center gap-1">
                   {Array.from(players.entries()).map(([connId, p]) => {
-                  const color = PLAYER_COLORS[p.colorIndex] ?? PLAYER_COLORS[0];
-                  return (
-                    <Tooltip key={connId}>
+                    const color = PLAYER_COLORS[p.colorIndex] ?? PLAYER_COLORS[0];
+                    return (
+                      <Tooltip key={connId}>
                         <TooltipTrigger asChild>
                           <button
-                          onClick={() => kickPlayer(connId)}
-                          className="group relative w-5 h-5 rounded-full flex items-center justify-center transition-transform hover:scale-125"
-                          style={{ backgroundColor: `hsl(${color.hsl})`, boxShadow: `0 0 6px hsl(${color.hsl} / 0.5)` }}>
-                          
-                            {connId.startsWith('bot-') ? (
+                            onClick={() => kickPlayer(connId)}
+                            className="group relative w-5 h-5 rounded-full flex items-center justify-center transition-transform hover:scale-125"
+                            style={{
+                              backgroundColor: `hsl(${color.hsl})`,
+                              boxShadow: `0 0 6px hsl(${color.hsl} / 0.5)`,
+                            }}
+                          >
+                            {connId.startsWith("bot-") ? (
                               <span className="text-[8px]">🤖</span>
                             ) : (
-                              <X className="w-3 h-3 text-black/70 opacity-0 group-hover:opacity-100 transition-opacity" strokeWidth={3} />
+                              <X
+                                className="w-3 h-3 text-black/70 opacity-0 group-hover:opacity-100 transition-opacity"
+                                strokeWidth={3}
+                              />
                             )}
                           </button>
                         </TooltipTrigger>
-                        <TooltipContent side="bottom" className="text-xs font-mono">Kick {color.name}</TooltipContent>
-                      </Tooltip>);
-
-                })}
+                        <TooltipContent side="bottom" className="text-xs font-mono">
+                          Kick {color.name}
+                        </TooltipContent>
+                      </Tooltip>
+                    );
+                  })}
                 </div>
               </TooltipProvider>
-            }
+            )}
           </div>
         </div>
 
@@ -397,75 +445,71 @@ export default function Host() {
 
         {/* Instructions */}
         <div className="text-center space-y-1">
-          {playerCount === 0 ?
-          <p className="text-xs text-muted-foreground font-mono animate-pulse">
-              Open <span className="text-secondary">/client</span> on phones · Room:{' '}
+          {playerCount === 0 ? (
+            <p className="text-xs text-muted-foreground font-mono animate-pulse">
+              Open <span className="text-secondary">/client</span> on phones · Room:{" "}
               <span className="text-accent font-bold">{roomCode}</span>
-            </p> :
-          !isFull ?
-          <p className="text-xs text-muted-foreground font-mono">
-              Waiting for {maxPlayers - playerCount} more player{maxPlayers - playerCount !== 1 ? 's' : ''}...
-            </p> :
-
-          <p className="text-xs text-primary font-mono animate-pulse">
-              All players ready! Press START GAME ↑
             </p>
-          }
+          ) : !isFull ? (
+            <p className="text-xs text-muted-foreground font-mono">
+              Waiting for {maxPlayers - playerCount} more player{maxPlayers - playerCount !== 1 ? "s" : ""}...
+            </p>
+          ) : (
+            <p className="text-xs text-primary font-mono animate-pulse">All players ready! Press START GAME ↑</p>
+          )}
         </div>
 
         <NetworkPerformancePanel players={players} />
-      </div>);
-
+      </div>
+    );
   }
 
   // ─── REVEAL ──────────────────────────────────────────────────────────────────
-  if (phase === 'reveal') {
+  if (phase === "reveal") {
     const revealCountdown = startClickAt ? Math.max(0, 10 - (revealNow - startClickAt) / 1000) : 10;
     return (
       <div className="flex flex-col items-center justify-center h-screen gap-6 p-4 bg-background">
-        <h1 className="text-2xl font-pixel text-primary text-glow-green tracking-widest animate-pulse">
-          GET READY
-        </h1>
+        <h1 className="text-2xl font-pixel text-primary text-glow-green tracking-widest animate-pulse">GET READY</h1>
         <div className="flex flex-col items-center gap-3">
           <p className="text-sm font-mono text-muted-foreground">Roles are being revealed on each phone...</p>
           <div className="text-6xl font-pixel text-accent animate-pulse">{Math.ceil(revealCountdown)}</div>
           <div className="flex gap-1.5 mt-2">
-            {[...Array(3)].map((_, i) =>
-            <div
-              key={i}
-              className="w-2 h-2 rounded-full bg-primary animate-pulse"
-              style={{ animationDelay: `${i * 0.2}s` }} />
-
-            )}
+            {[...Array(3)].map((_, i) => (
+              <div
+                key={i}
+                className="w-2 h-2 rounded-full bg-primary animate-pulse"
+                style={{ animationDelay: `${i * 0.2}s` }}
+              />
+            ))}
           </div>
           <p className="text-xs text-muted-foreground font-mono mt-2 opacity-60">
-            {Object.keys(assignments).length} player{Object.keys(assignments).length !== 1 ? 's' : ''} assigned
+            {Object.keys(assignments).length} player{Object.keys(assignments).length !== 1 ? "s" : ""} assigned
           </p>
         </div>
-      </div>);
-
+      </div>
+    );
   }
 
   // ─── COUNTDOWN ───────────────────────────────────────────────────────────────
-  if (phase === 'countdown') {
+  if (phase === "countdown") {
     const count = snapshot?.countdownTime ?? COUNTDOWN_DURATION_DISPLAY;
     return (
       <div className="flex flex-col items-center justify-center h-screen gap-4 p-4">
         <h1 className="text-xl font-pixel text-primary text-glow-green">GET READY</h1>
         <div
           className="text-8xl font-pixel text-accent animate-pulse"
-          style={{ textShadow: '0 0 30px hsl(var(--accent) / 0.8)' }}>
-          
+          style={{ textShadow: "0 0 30px hsl(var(--accent) / 0.8)" }}
+        >
           {Math.ceil(count)}
         </div>
         <p className="text-sm font-mono text-muted-foreground">Game starting soon!</p>
-      </div>);
-
+      </div>
+    );
   }
 
   // ─── PLAYING / EXAM ──────────────────────────────────────────────────────────
-  if ((phase === 'playing' || phase === 'exam') && snapshot) {
-    const alivePlayers = Object.values(snapshot.players).filter(p => p.alive);
+  if ((phase === "playing" || phase === "exam") && snapshot) {
+    const alivePlayers = Object.values(snapshot.players).filter((p) => p.alive);
 
     return (
       <div className="relative h-screen">
@@ -477,30 +521,32 @@ export default function Host() {
           mysteryBoxes={snapshot.mysteryBoxes}
           examState={snapshot.examState}
           zoomLevel={zoomLevel}
-          enableHostDrag={phase === 'playing'}
+          enableHostDrag={phase === "playing"}
           onHostDragBegin={hostDragBegin}
           onHostDragUpdate={hostDragUpdate}
           onHostDragEnd={hostDragEnd}
           activeTipShareConnIds={snapshot.activeTipShareConnIds}
-          onHostSkipExam={phase === 'exam' ? hostSkipExam : undefined}
+          onHostSkipExam={phase === "exam" ? hostSkipExam : undefined}
           mapId={mapId}
           themeHue={themeHue}
         />
 
         {/* Focus camera panel toggle button */}
         <button
-          onClick={() => setFocusPanelOpen(prev => !prev)}
+          onClick={() => setFocusPanelOpen((prev) => !prev)}
           className="absolute top-2 left-1/2 -translate-x-1/2 z-20 w-10 h-6 rounded-full bg-card/90 border border-border flex items-center justify-center hover:bg-card transition-all"
           title="Toggle player cameras"
         >
-          <ChevronDown className={`w-4 h-4 text-muted-foreground transition-transform ${focusPanelOpen ? 'rotate-180' : ''}`} />
+          <ChevronDown
+            className={`w-4 h-4 text-muted-foreground transition-transform ${focusPanelOpen ? "rotate-180" : ""}`}
+          />
         </button>
 
         {/* Focus camera panel */}
         {focusPanelOpen && (
           <div className="absolute top-10 left-0 right-0 z-20 bg-card/95 border-b border-border p-2">
             <div className="flex gap-2 overflow-x-auto">
-              {Object.values(snapshot.players).map(p => {
+              {Object.values(snapshot.players).map((p) => {
                 const color = PLAYER_COLORS[p.colorIndex];
                 const code = takeoverCodes[p.connId];
                 const isRevealed = revealedCodes.has(p.connId);
@@ -510,7 +556,7 @@ export default function Host() {
                     {p.alive ? (
                       <div
                         className="w-[140px] h-[100px] rounded border overflow-hidden"
-                        style={{ borderColor: `hsl(${color?.hsl ?? '0 0% 50%'})`, opacity: isDisconnected ? 0.5 : 1 }}
+                        style={{ borderColor: `hsl(${color?.hsl ?? "0 0% 50%"})`, opacity: isDisconnected ? 0.5 : 1 }}
                       >
                         <Canvas camera={{ position: [p.position.x, 8, p.position.z + 6], fov: 40 }}>
                           <ambientLight intensity={0.7} />
@@ -524,12 +570,12 @@ export default function Host() {
                             minDistance={3}
                             maxDistance={15}
                           />
-                          <gridHelper args={[40, 40, 'hsl(0 0% 20%)', 'hsl(0 0% 15%)']} />
+                          <gridHelper args={[40, 40, "hsl(0 0% 20%)", "hsl(0 0% 15%)"]} />
                           <Suspense fallback={null}>
                             <group position={[p.position.x, 0, p.position.z]}>
                               <CharacterViewer
                                 color={p.chickColor as any}
-                                animState={p.isMoving ? 'Running' : 'Idle'}
+                                animState={p.isMoving ? "Running" : "Idle"}
                                 facingAngle={p.facingAngle}
                               />
                             </group>
@@ -541,20 +587,24 @@ export default function Host() {
                         <span className="text-[10px] font-mono text-muted-foreground">eliminated</span>
                       </div>
                     )}
-                    <span className="text-[9px] font-mono" style={{ color: `hsl(${color?.hsl ?? '0 0% 50%'})` }}>
-                      {color?.name} {p.isEagle ? '🦅' : '🐤'}{isDisconnected ? ' ⚡' : ''}
+                    <span className="text-[9px] font-mono" style={{ color: `hsl(${color?.hsl ?? "0 0% 50%"})` }}>
+                      {color?.name} {p.isEagle ? "🦅" : "🐤"}
+                      {isDisconnected ? " ⚡" : ""}
                     </span>
                     {/* Takeover code — blurred until host clicks */}
                     {code && (
                       <button
-                        onClick={() => setRevealedCodes(prev => {
-                          const next = new Set(prev);
-                          if (next.has(p.connId)) next.delete(p.connId); else next.add(p.connId);
-                          return next;
-                        })}
+                        onClick={() =>
+                          setRevealedCodes((prev) => {
+                            const next = new Set(prev);
+                            if (next.has(p.connId)) next.delete(p.connId);
+                            else next.add(p.connId);
+                            return next;
+                          })
+                        }
                         className="text-[9px] font-mono tracking-widest px-1.5 py-0.5 rounded bg-muted/20 border border-muted/30 transition-all"
-                        style={{ filter: isRevealed ? 'none' : 'blur(4px)', color: 'hsl(var(--accent))' }}
-                        title={isRevealed ? 'Click to hide' : 'Click to reveal rejoin code'}
+                        style={{ filter: isRevealed ? "none" : "blur(4px)", color: "hsl(var(--accent))" }}
+                        title={isRevealed ? "Click to hide" : "Click to reveal rejoin code"}
                       >
                         {code}
                       </button>
@@ -576,8 +626,11 @@ export default function Host() {
               const sec = Math.ceil(timer.remainingMs / 1000);
               if (sec <= 0) return null;
               return (
-                <div key={connId} className="px-3 py-1 rounded bg-accent/20 border border-accent font-mono text-xs text-accent whitespace-nowrap">
-                  📖 {color?.name ?? '?'} obtaining tips... {sec}s
+                <div
+                  key={connId}
+                  className="px-3 py-1 rounded bg-accent/20 border border-accent font-mono text-xs text-accent whitespace-nowrap"
+                >
+                  📖 {color?.name ?? "?"} obtaining tips... {sec}s
                 </div>
               );
             })}
@@ -619,7 +672,7 @@ export default function Host() {
           {/* Color picker trigger */}
           <div className="mt-2 flex items-center justify-between">
             <button
-              onClick={() => setColorPickerOpen(p => !p)}
+              onClick={() => setColorPickerOpen((p) => !p)}
               className="flex items-center gap-1 text-[10px] font-mono text-muted-foreground hover:text-foreground transition-colors"
             >
               <Palette className="w-3 h-3" />
@@ -641,7 +694,8 @@ export default function Host() {
               <div
                 className="relative w-32 h-32 rounded-full cursor-pointer"
                 style={{
-                  background: 'conic-gradient(from 0deg, hsl(0,70%,50%), hsl(60,70%,50%), hsl(120,70%,50%), hsl(180,70%,50%), hsl(240,70%,50%), hsl(300,70%,50%), hsl(360,70%,50%))',
+                  background:
+                    "conic-gradient(from 0deg, hsl(0,70%,50%), hsl(60,70%,50%), hsl(120,70%,50%), hsl(180,70%,50%), hsl(240,70%,50%), hsl(300,70%,50%), hsl(360,70%,50%))",
                 }}
                 onClick={(e) => {
                   const rect = e.currentTarget.getBoundingClientRect();
@@ -650,7 +704,7 @@ export default function Host() {
                   const dx = e.clientX - rect.left - cx;
                   const dy = e.clientY - rect.top - cy;
                   const angle = Math.atan2(dy, dx);
-                  const hue = ((angle * 180 / Math.PI) + 360 + 90) % 360;
+                  const hue = ((angle * 180) / Math.PI + 360 + 90) % 360;
                   setThemeHue(Math.round(hue));
                 }}
               >
@@ -658,54 +712,61 @@ export default function Host() {
                 <div
                   className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-10 h-10 rounded-full border-2 border-foreground/30"
                   style={{
-                    backgroundColor: themeHue !== undefined ? `hsl(${themeHue}, 50%, 30%)` : 'hsl(var(--card))',
+                    backgroundColor: themeHue !== undefined ? `hsl(${themeHue}, 50%, 30%)` : "hsl(var(--card))",
                   }}
                 />
                 {/* Hue indicator dot */}
-                {themeHue !== undefined && (() => {
-                  const rad = ((themeHue - 90) * Math.PI) / 180;
-                  const r = 52;
-                  return (
-                    <div
-                      className="absolute w-4 h-4 rounded-full border-2 border-foreground shadow-md"
-                      style={{
-                        backgroundColor: `hsl(${themeHue}, 70%, 50%)`,
-                        left: `calc(50% + ${Math.cos(rad) * r}px - 8px)`,
-                        top: `calc(50% + ${Math.sin(rad) * r}px - 8px)`,
-                      }}
-                    />
-                  );
-                })()}
+                {themeHue !== undefined &&
+                  (() => {
+                    const rad = ((themeHue - 90) * Math.PI) / 180;
+                    const r = 52;
+                    return (
+                      <div
+                        className="absolute w-4 h-4 rounded-full border-2 border-foreground shadow-md"
+                        style={{
+                          backgroundColor: `hsl(${themeHue}, 70%, 50%)`,
+                          left: `calc(50% + ${Math.cos(rad) * r}px - 8px)`,
+                          top: `calc(50% + ${Math.sin(rad) * r}px - 8px)`,
+                        }}
+                      />
+                    );
+                  })()}
               </div>
               <span className="text-[9px] font-mono text-muted-foreground">
-                {themeHue !== undefined ? `Hue: ${themeHue}°` : 'Click wheel to pick'}
+                {themeHue !== undefined ? `Hue: ${themeHue}°` : "Click wheel to pick"}
               </span>
             </div>
           )}
         </div>
 
         {/* Eagle awake countdown */}
-        {!snapshot.eagleAwake &&
-        <div className="absolute left-1/2 -translate-x-1/2 z-10 px-4 py-2 rounded bg-destructive/20 border border-destructive/50 font-mono text-xs text-destructive animate-pulse top-12">
+        {!snapshot.eagleAwake && (
+          <div className="absolute left-1/2 -translate-x-1/2 z-10 px-4 py-2 rounded bg-destructive/20 border border-destructive/50 font-mono text-xs text-destructive animate-pulse top-12">
             🦅 Eagle awakens in {Math.max(0, Math.ceil(5 - snapshot.gameTime))}s
           </div>
-        }
+        )}
 
         {/* Exam helper layer on host (rule-based visibility) */}
-        {snapshot.examState && snapshot.examState.questionNum > 0 && phase === 'exam' && snapshot.examState.hostDisplayLayer !== 'none' &&
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-30 bg-card border-2 border-accent rounded-xl p-4 max-w-md w-[90%] shadow-2xl">
-            <p className="text-[10px] font-mono text-gray-500 mb-1 text-center">HOST EXAM LAYER</p>
-            <img
-            src={assetUrl(`/PW/PW_Final_${snapshot.examState.questionNum}_layer-${snapshot.examState.hostDisplayLayer}.png`)}
-            alt="Final exam"
-            className="w-full rounded" />
-          </div>
-        }
+        {snapshot.examState &&
+          snapshot.examState.questionNum > 0 &&
+          phase === "exam" &&
+          snapshot.examState.hostDisplayLayer !== "none" && (
+            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-30 bg-card border-2 border-accent rounded-xl p-4 max-w-md w-[90%] shadow-2xl">
+              <p className="text-[10px] font-mono text-gray-500 mb-1 text-center">HOST EXAM LAYER</p>
+              <img
+                src={assetUrl(
+                  `/PW/PW_Final_${snapshot.examState.questionNum}_layer-${snapshot.examState.hostDisplayLayer}.png`,
+                )}
+                alt="Final exam"
+                className="w-full rounded"
+              />
+            </div>
+          )}
 
         {/* Active event overlay */}
-        {snapshot.activeEvent &&
-        <EventOverlay event={snapshot.activeEvent} players={snapshot.players} gameMode={gameMode} />
-        }
+        {snapshot.activeEvent && (
+          <EventOverlay event={snapshot.activeEvent} players={snapshot.players} gameMode={gameMode} />
+        )}
 
         <NetworkPerformancePanel players={players} />
 
@@ -720,68 +781,65 @@ export default function Host() {
 
         {/* VideoOverlay LAST so it renders on top of everything */}
         <VideoOverlay video={videoPlaying} onComplete={onVideoComplete} />
-      </div>);
-
+      </div>
+    );
   }
 
   // ─── GAME OVER / TRANSCRIPT ──────────────────────────────────────────────────
-  if (phase === 'gameover' && snapshot) {
+  if (phase === "gameover" && snapshot) {
     return <GameOverCeremony snapshot={snapshot} gameMode={gameMode} />;
   }
 
-  return (
-    <div className="flex items-center justify-center h-screen text-muted-foreground font-mono">
-      Loading...
-    </div>);
-
+  return <div className="flex items-center justify-center h-screen text-muted-foreground font-mono">Loading...</div>;
 }
 
 // ─── Game Over Ceremony Component ──────────────────────────────────────────────
 function GameOverCeremony({ snapshot, gameMode }: { snapshot: GameStateSnapshot; gameMode: string }) {
-  const [ceremonyPhase, setCeremonyPhase] = useState<'mvp' | 'team' | 'transcript'>('mvp');
+  const [ceremonyPhase, setCeremonyPhase] = useState<"mvp" | "team" | "transcript">("mvp");
 
   const winner = snapshot.winner;
-  const getMatchResult = (p: PlayerGameStateSerializable): 'draw' | 'win' | 'lose' => {
-    if (winner === 'draw' || winner === null) return 'draw';
-    if ((winner === 'eagle' && p.isEagle) || (winner === 'chicks' && !p.isEagle)) return 'win';
-    return 'lose';
+  const getMatchResult = (p: PlayerGameStateSerializable): "draw" | "win" | "lose" => {
+    if (winner === "draw" || winner === null) return "draw";
+    if ((winner === "eagle" && p.isEagle) || (winner === "chicks" && !p.isEagle)) return "win";
+    return "lose";
   };
   const sorted: PlayerGameStateSerializable[] = Object.values(snapshot.players).sort((a, b) => {
-    const aWin = getMatchResult(a) !== 'lose';
-    const bWin = getMatchResult(b) !== 'lose';
+    const aWin = getMatchResult(a) !== "lose";
+    const bWin = getMatchResult(b) !== "lose";
     if (aWin !== bWin) return aWin ? -1 : 1;
     return b.actionScore - a.actionScore;
   });
 
   // Determine MVP
   const mvp = (() => {
-    if (winner === 'draw') {
+    if (winner === "draw") {
       return sorted[0];
     }
-    const winningTeam = sorted.filter(p =>
-      (winner === 'eagle' && p.isEagle) || (winner === 'chicks' && !p.isEagle)
-    );
+    const winningTeam = sorted.filter((p) => (winner === "eagle" && p.isEagle) || (winner === "chicks" && !p.isEagle));
     return winningTeam.length > 0 ? winningTeam.sort((a, b) => b.actionScore - a.actionScore)[0] : sorted[0];
   })();
 
-  const winningTeamPlayers = sorted.filter(p =>
-    (winner === 'eagle' && p.isEagle) || (winner === 'chicks' && !p.isEagle)
-  ).filter(p => p.connId !== mvp?.connId);
+  const winningTeamPlayers = sorted
+    .filter((p) => (winner === "eagle" && p.isEagle) || (winner === "chicks" && !p.isEagle))
+    .filter((p) => p.connId !== mvp?.connId);
 
-  const skipTeamPhase = winner === 'draw' || (winner === 'eagle' && gameMode === '1v3') || winningTeamPlayers.length === 0;
+  const skipTeamPhase =
+    winner === "draw" || (winner === "eagle" && gameMode === "1v3") || winningTeamPlayers.length === 0;
 
   useEffect(() => {
     const t1 = setTimeout(() => {
       if (skipTeamPhase) {
-        setCeremonyPhase('transcript');
+        setCeremonyPhase("transcript");
       } else {
-        setCeremonyPhase('team');
+        setCeremonyPhase("team");
       }
     }, 5000);
 
-    const t2 = skipTeamPhase ? null : setTimeout(() => {
-      setCeremonyPhase('transcript');
-    }, 10000);
+    const t2 = skipTeamPhase
+      ? null
+      : setTimeout(() => {
+          setCeremonyPhase("transcript");
+        }, 10000);
 
     return () => {
       clearTimeout(t1);
@@ -790,26 +848,31 @@ function GameOverCeremony({ snapshot, gameMode }: { snapshot: GameStateSnapshot;
   }, [skipTeamPhase]);
 
   const mvpColor = mvp ? PLAYER_COLORS[mvp.colorIndex] : null;
-  const teamName = winner === 'eagle' ? '🦅 GAP Killers Win!' : winner === 'chicks' ? '🐤 Fire Chicks Win!' : '🤝 Draw!';
+  const teamName =
+    winner === "eagle" ? "🦅 GAP Killers Win!" : winner === "chicks" ? "🐤 Fire Chicks Win!" : "🤝 Draw!";
 
   // Phase 1: MVP showcase
-  if (ceremonyPhase === 'mvp' && mvp) {
+  if (ceremonyPhase === "mvp" && mvp) {
     return (
       <div className="flex flex-col items-center justify-center h-screen bg-background gap-6">
         <h1 className="text-2xl font-pixel text-accent text-glow-green animate-pulse tracking-widest">🏆 MVP</h1>
         <div className="h-[50vh] w-full min-h-[280px]">
-          <Canvas className="h-full w-full" style={{ width: '100%', height: '100%' }} camera={{ position: [0, 1.8, 5.8], fov: 50 }}>
+          <Canvas
+            className="h-full w-full"
+            style={{ width: "100%", height: "100%" }}
+            camera={{ position: [0, 1.8, 5.8], fov: 50 }}
+          >
             <ambientLight intensity={0.8} />
             <directionalLight position={[5, 8, 5]} intensity={1.2} />
             <group position={[0, -0.6, 0]}>
               <DancingChar chickColor={mvp.chickColor} isWinner={true} delay={0} />
             </group>
-            </Canvas>
+          </Canvas>
         </div>
         <div className="flex items-center gap-3 px-6 py-3 rounded-xl bg-accent/20 border-2 border-accent">
           <Trophy className="w-6 h-6 text-accent" />
           <span className="text-lg font-pixel" style={{ color: mvpColor ? `hsl(${mvpColor.hsl})` : undefined }}>
-            {mvpColor?.name ?? '?'}
+            {mvpColor?.name ?? "?"}
           </span>
           <span className="text-sm font-mono text-muted-foreground">Score: {mvp.actionScore.toFixed(0)}</span>
         </div>
@@ -819,7 +882,7 @@ function GameOverCeremony({ snapshot, gameMode }: { snapshot: GameStateSnapshot;
   }
 
   // Phase 2: Winning team
-  if (ceremonyPhase === 'team') {
+  if (ceremonyPhase === "team") {
     const count = winningTeamPlayers.length;
     const cols = Math.min(3, count); // max 5 per row
     const rows = Math.ceil(count / cols);
@@ -829,14 +892,14 @@ function GameOverCeremony({ snapshot, gameMode }: { snapshot: GameStateSnapshot;
       <div className="flex flex-col items-center justify-center h-screen bg-background gap-6">
         <h1
           className="text-2xl font-pixel tracking-widest"
-          style={{ color: winner === 'eagle' ? 'hsl(0 80% 55%)' : 'hsl(145 80% 50%)' }}
+          style={{ color: winner === "eagle" ? "hsl(0 80% 55%)" : "hsl(145 80% 50%)" }}
         >
           {teamName}
         </h1>
         <div className="h-[50vh] w-full min-h-[280px]">
           <Canvas
             className="h-full w-full"
-            style={{ width: '100%', height: '100%' }}
+            style={{ width: "100%", height: "100%" }}
             camera={{ position: [0, 2.2, 6 + rows * 2.2], fov: 50 }}
           >
             <ambientLight intensity={0.8} />
@@ -860,37 +923,37 @@ function GameOverCeremony({ snapshot, gameMode }: { snapshot: GameStateSnapshot;
   }
 
   // Phase 3: 3D lineup sits in upper half with feet just above viewport mid (bottom of canvas ~48–50vh)
-const count = sorted.length;
-const cols = Math.min(6, count);
-const rows = Math.ceil(count / cols);
-const spacingX = Math.min(3.2, 14 / cols);
-const spacingZ = 2.6;
+  const count = sorted.length;
+  const cols = Math.min(6, count);
+  const rows = Math.ceil(count / cols);
+  const spacingX = Math.min(3.2, 14 / cols);
+  const spacingZ = 2.6;
   return (
     <div className="flex flex-col h-screen bg-background overflow-hidden">
       <div className="h-[50vh] min-h-0 w-full relative flex flex-col justify-end pb-4 shrink-0">
         <div className="h-[40vh] min-h-0 w-full">
           <Canvas
             className="h-full w-full"
-            style={{ width: '100%', height: '100%' }}
+            style={{ width: "100%", height: "100%" }}
             camera={{ position: [0, 1.8, 6 + rows * 2.2], fov: 50 }}
-            >
+          >
             <ambientLight intensity={0.8} />
             <directionalLight position={[5, 8, 5]} intensity={1.2} />
             <group position={[0, 0, (rows - 1) * spacingZ * 0.5]}>
-            {sorted.map((p, i) => {
-              const isWin = getMatchResult(p) !== 'lose';
-              const col = i % cols;
-              const row = Math.floor(i / cols);
-              const x = (col - (cols - 1) / 2) * spacingX;
-              const z = -row * spacingZ;
-              return (
-                <group key={p.connId} position={[x, -0.2 + row * 0.05, z]}>
-                  <group scale={Math.min(1.5, 8 / cols)}>
-                    <DancingChar chickColor={p.chickColor} isWinner={isWin} delay={i * 0.4} />
+              {sorted.map((p, i) => {
+                const isWin = getMatchResult(p) !== "lose";
+                const col = i % cols;
+                const row = Math.floor(i / cols);
+                const x = (col - (cols - 1) / 2) * spacingX;
+                const z = -row * spacingZ;
+                return (
+                  <group key={p.connId} position={[x, -0.2 + row * 0.05, z]}>
+                    <group scale={Math.min(1.5, 8 / cols)}>
+                      <DancingChar chickColor={p.chickColor} isWinner={isWin} delay={i * 0.4} />
+                    </group>
                   </group>
-                </group>
-              );
-            })}
+                );
+              })}
             </group>
           </Canvas>
         </div>
@@ -898,9 +961,7 @@ const spacingZ = 2.6;
         {mvp && (
           <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex items-center gap-2 px-4 py-1.5 rounded bg-accent/20 border border-accent pointer-events-none">
             <Trophy className="w-4 h-4 text-accent" />
-            <span className="text-xs font-pixel text-accent">
-              MVP: {PLAYER_COLORS[mvp.colorIndex]?.name ?? '?'}
-            </span>
+            <span className="text-xs font-pixel text-accent">MVP: {PLAYER_COLORS[mvp.colorIndex]?.name ?? "?"}</span>
           </div>
         )}
       </div>
@@ -911,7 +972,8 @@ const spacingZ = 2.6;
           <p
             className="text-base sm:text-lg font-pixel"
             style={{
-              color: winner === 'eagle' ? 'hsl(0 80% 55%)' : winner === 'chicks' ? 'hsl(145 80% 50%)' : 'hsl(45 100% 55%)',
+              color:
+                winner === "eagle" ? "hsl(0 80% 55%)" : winner === "chicks" ? "hsl(145 80% 50%)" : "hsl(45 100% 55%)",
             }}
           >
             {teamName}
@@ -921,61 +983,63 @@ const spacingZ = 2.6;
         <div className="flex-1 min-h-0 p-3 sm:p-4 overflow-auto">
           <h2 className="text-center text-sm font-pixel text-foreground mb-3 tracking-widest">📋 TRANSCRIPT</h2>
           <div className="w-full max-w-3xl mx-auto">
-          <table className="w-full text-xs font-mono border-collapse">
-            <thead>
-              <tr className="text-muted-foreground border-b border-border">
-                <th className="py-2 text-left pl-2">Player</th>
-                <th className="py-2 text-center">Grade</th>
-                <th className="py-2 text-center">Survival</th>
-                <th className="py-2 text-center">Damage</th>
-                <th className="py-2 text-center">Score</th>
-                <th className="py-2 text-center">Result</th>
-              </tr>
-            </thead>
-            <tbody>
-              {sorted.map((p) => {
-                const color = PLAYER_COLORS[p.colorIndex];
-                const letter = gradeToLetter(p.health);
-                const gradeColor = getGradeColor(p.health);
-                const result = getMatchResult(p);
+            <table className="w-full text-xs font-mono border-collapse">
+              <thead>
+                <tr className="text-muted-foreground border-b border-border">
+                  <th className="py-2 text-left pl-2">Player</th>
+                  <th className="py-2 text-center">Grade</th>
+                  <th className="py-2 text-center">Survival</th>
+                  <th className="py-2 text-center">Damage</th>
+                  <th className="py-2 text-center">Score</th>
+                  <th className="py-2 text-center">Result</th>
+                </tr>
+              </thead>
+              <tbody>
+                {sorted.map((p) => {
+                  const color = PLAYER_COLORS[p.colorIndex];
+                  const letter = gradeToLetter(p.health);
+                  const gradeColor = getGradeColor(p.health);
+                  const result = getMatchResult(p);
 
-                return (
-                  <tr key={p.connId} className="border-b border-border/40 hover:bg-card/30">
-                    <td className="py-2 pl-2">
-                      <div className="flex items-center gap-1.5">
-                        <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: `hsl(${color?.hsl ?? '0 0% 50%'})` }} />
-                        <span style={{ color: `hsl(${color?.hsl ?? '0 0% 50%'})` }}>{color?.name}</span>
-                        {p.isEagle ? ' 🦅' : ' 🐤'}
-                        {p.isStarStudent && <Star className="w-3 h-3 text-accent fill-accent ml-0.5" />}
-                        {p.connId === mvp?.connId && <Trophy className="w-3 h-3 text-accent ml-0.5" />}
-                      </div>
-                    </td>
-                    <td className="py-2 text-center">
-                      <span className="text-2xl font-bold" style={{ color: gradeColor }}>{letter}</span>
-                      <span className="text-[9px] text-muted-foreground block">{p.health.toFixed(1)}</span>
-                    </td>
-                    <td className="py-2 text-center text-muted-foreground">
-                      {Math.floor(p.survivalTime)}s
-                    </td>
-                    <td className="py-2 text-center text-muted-foreground">
-                      {p.isEagle ? `+${p.damageDealt.toFixed(1)}` : `-${p.damageTaken.toFixed(1)}`}
-                    </td>
-                    <td className="py-2 text-center text-foreground font-bold">
-                      {p.actionScore.toFixed(0)}
-                    </td>
-                    <td className="py-2 text-center">
-                      {result === 'draw'
-                        ? <span className="text-yellow-400 font-bold">DRAW</span>
-                        : result === 'win'
-                          ? <span className="text-primary font-bold">WIN</span>
-                          : <span className="text-destructive">LOSE</span>
-                      }
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
+                  return (
+                    <tr key={p.connId} className="border-b border-border/40 hover:bg-card/30">
+                      <td className="py-2 pl-2">
+                        <div className="flex items-center gap-1.5">
+                          <div
+                            className="w-2.5 h-2.5 rounded-full"
+                            style={{ backgroundColor: `hsl(${color?.hsl ?? "0 0% 50%"})` }}
+                          />
+                          <span style={{ color: `hsl(${color?.hsl ?? "0 0% 50%"})` }}>{color?.name}</span>
+                          {p.isEagle ? " 🦅" : " 🐤"}
+                          {p.isStarStudent && <Star className="w-3 h-3 text-accent fill-accent ml-0.5" />}
+                          {p.connId === mvp?.connId && <Trophy className="w-3 h-3 text-accent ml-0.5" />}
+                        </div>
+                      </td>
+                      <td className="py-2 text-center">
+                        <span className="text-2xl font-bold" style={{ color: gradeColor }}>
+                          {letter}
+                        </span>
+                        <span className="text-[9px] text-muted-foreground block">{p.health.toFixed(1)}</span>
+                      </td>
+                      <td className="py-2 text-center text-muted-foreground">{Math.floor(p.survivalTime)}s</td>
+                      <td className="py-2 text-center text-muted-foreground">
+                        {p.isEagle ? `+${p.damageDealt.toFixed(1)}` : `-${p.damageTaken.toFixed(1)}`}
+                      </td>
+                      <td className="py-2 text-center text-foreground font-bold">{p.actionScore.toFixed(0)}</td>
+                      <td className="py-2 text-center">
+                        {result === "draw" ? (
+                          <span className="text-yellow-400 font-bold">DRAW</span>
+                        ) : result === "win" ? (
+                          <span className="text-primary font-bold">WIN</span>
+                        ) : (
+                          <span className="text-destructive">LOSE</span>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
           </div>
         </div>
 
@@ -983,7 +1047,7 @@ const spacingZ = 2.6;
           <button
             type="button"
             onClick={() => {
-              window.location.href = '/';
+              window.location.href = "/";
             }}
             className="px-8 py-3 rounded-lg border-2 border-primary bg-primary/10 text-primary font-pixel text-sm tracking-widest hover:bg-primary/20 transition-all"
           >
