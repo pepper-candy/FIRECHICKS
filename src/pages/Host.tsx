@@ -355,7 +355,7 @@ export default function Host() {
               <SelectContent>
                 {MAP_LIST.map((m) => (
                   <SelectItem key={m.id} value={String(m.id)} className="text-xs font-mono">
-                    🗺️ {m.name}
+                    🗺️ {m.name}&nbsp;
                   </SelectItem>
                 ))}
               </SelectContent>
