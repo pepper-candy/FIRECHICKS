@@ -12,77 +12,16 @@ import type { NatureObstacle } from '@/lib/mapVariants';
 
 const FLY_SPEED_MULTIPLIER = 3;
 
-// ─── Day/Night Cycle ─────────────────────────────────────────────────────────
-function DayNightCycle() {
-  const sunRef = useRef<THREE.DirectionalLight>(null!);
-  const moonRef = useRef<THREE.DirectionalLight>(null!);
-  const ambientRef = useRef<THREE.AmbientLight>(null!);
-  const skyRef = useRef<THREE.Mesh>(null!);
-
-  useFrame(() => {
-    const CYCLE = 60; // 60s full cycle
-    const t = (Date.now() / 1000) % CYCLE;
-    const norm = t / CYCLE; // 0-1
-
-    // 0-0.5 = day, 0.5-1 = night
-    // Smooth transitions with sine
-    const dayFactor = Math.max(0, Math.cos(norm * Math.PI * 2) * 0.5 + 0.5);
-    const nightFactor = 1 - dayFactor;
-
-    // Sun position — arcs across the sky during day
-    const sunAngle = norm * Math.PI * 2;
-    const sunX = Math.cos(sunAngle) * 30;
-    const sunY = Math.sin(sunAngle) * 30 + 5;
-    if (sunRef.current) {
-      sunRef.current.position.set(sunX, Math.max(2, sunY), 15);
-      sunRef.current.intensity = dayFactor * 1.8;
-      sunRef.current.color.setHSL(0.1, 0.3 + dayFactor * 0.5, 0.6 + dayFactor * 0.4);
-    }
-
-    // Moon — opposite side
-    if (moonRef.current) {
-      moonRef.current.position.set(-sunX, Math.max(2, -sunY + 30), -15);
-      moonRef.current.intensity = nightFactor * 0.6;
-      moonRef.current.color.setHSL(0.6, 0.2, 0.7);
-    }
-
-    // Ambient light shifts
-    if (ambientRef.current) {
-      const intensity = 0.15 + dayFactor * 0.45;
-      ambientRef.current.intensity = intensity;
-      ambientRef.current.color.setHSL(
-        dayFactor > 0.5 ? 0.15 : 0.6,
-        0.2,
-        0.5 + dayFactor * 0.3
-      );
-    }
-
-    // Sky dome color
-    if (skyRef.current) {
-      const mat = skyRef.current.material as THREE.MeshBasicMaterial;
-      // Sunrise/sunset orange hues during transitions
-      const transitionFactor = Math.sin(norm * Math.PI * 2) * 0.5 + 0.5;
-      if (dayFactor > 0.7) {
-        mat.color.setHSL(0.55, 0.4, 0.55); // Day blue
-      } else if (dayFactor > 0.3) {
-        // Sunrise/sunset
-        mat.color.setHSL(0.08, 0.7, 0.3 + transitionFactor * 0.2);
-      } else {
-        mat.color.setHSL(0.65, 0.5, 0.05 + nightFactor * 0.05); // Night deep blue
-      }
-      mat.opacity = 0.3;
-    }
-  });
-
+// ─── Static Day Lighting ─────────────────────────────────────────────────────
+function DayLighting() {
   return (
     <>
-      <directionalLight ref={sunRef} position={[15, 30, 15]} intensity={1.2} castShadow shadow-mapSize={[2048, 2048]} />
-      <directionalLight ref={moonRef} position={[-10, 20, -10]} intensity={0.3} />
-      <ambientLight ref={ambientRef} intensity={0.5} />
-      {/* Sky dome */}
-      <mesh ref={skyRef} scale={[100, 100, 100]}>
+      <directionalLight position={[20, 35, 15]} intensity={1.6} castShadow shadow-mapSize={[2048, 2048]} color="#fff5e0" />
+      <directionalLight position={[-15, 20, -10]} intensity={0.4} color="#b0d0ff" />
+      <ambientLight intensity={0.55} color="#fffaf0" />
+      <mesh scale={[100, 100, 100]}>
         <sphereGeometry args={[1, 32, 32]} />
-        <meshBasicMaterial color="#1a1a3a" side={THREE.BackSide} transparent opacity={0.3} />
+        <meshBasicMaterial color="#4a7ab5" side={THREE.BackSide} transparent opacity={0.25} />
       </mesh>
     </>
   );
@@ -238,15 +177,23 @@ interface Props {
   activeTipShareConnIds?: string[];
   onHostSkipExam?: () => void;
   mapId?: MapId;
+  themeHue?: number;
+}
+
+// Helper: derive themed colors from a hue (0-360)
+function themedColor(hue: number, saturation: number, lightness: number): string {
+  return `hsl(${hue}, ${saturation}%, ${lightness}%)`;
 }
 
 // ─── Building ──────────────────────────────────────────────────────────────────
-function Building({ position, size, tipSiteActive, zoneActive, zoneHealth }: {
+function Building({ position, size, tipSiteActive, zoneActive, zoneHealth, baseColor, baseEmissive }: {
   position: { x: number; z: number };
   size: { w: number; h: number; d: number };
   tipSiteActive?: boolean;
   zoneActive?: boolean;
   zoneHealth?: number;
+  baseColor?: string;
+  baseEmissive?: string;
 }) {
   const pulseRef = useRef(0);
   useFrame((_, delta) => { pulseRef.current += delta * 2; });
@@ -257,16 +204,16 @@ function Building({ position, size, tipSiteActive, zoneActive, zoneHealth }: {
       <mesh position={[0, size.h / 2, 0]}>
         <boxGeometry args={[size.w, size.h, size.d]} />
         <meshStandardMaterial
-          color={gold ? '#ffd700' : '#2a2a4a'}
-          emissive={gold ? '#ffd700' : '#1a1a3a'}
+          color={gold ? '#ffd700' : (baseColor ?? '#2a2a4a')}
+          emissive={gold ? '#ffd700' : (baseEmissive ?? '#1a1a3a')}
           emissiveIntensity={gold ? 0.6 : 0.2}
         />
       </mesh>
       <mesh position={[0, size.h + 0.2, 0]}>
         <boxGeometry args={[size.w + 0.5, 0.4, size.d + 0.5]} />
         <meshStandardMaterial
-          color={gold ? '#ffaa00' : '#3a3a5a'}
-          emissive={gold ? '#ffaa00' : '#2a2a4a'}
+          color={gold ? '#ffaa00' : (baseColor ?? '#3a3a5a')}
+          emissive={gold ? '#ffaa00' : (baseEmissive ?? '#2a2a4a')}
           emissiveIntensity={gold ? 0.5 : 0.1}
         />
       </mesh>
@@ -288,15 +235,17 @@ function Building({ position, size, tipSiteActive, zoneActive, zoneHealth }: {
 }
 
 // ─── Obstacle ──────────────────────────────────────────────────────────────────
-function Obstacle({ position, size, rotation }: {
+function Obstacle({ position, size, rotation, baseColor, baseEmissive }: {
   position: { x: number; z: number };
   size: { w: number; h: number; d: number };
   rotation?: number;
+  baseColor?: string;
+  baseEmissive?: string;
 }) {
   return (
     <mesh position={[position.x, size.h / 2, position.z]} rotation={[0, rotation ?? 0, 0]}>
       <boxGeometry args={[size.w, size.h, size.d]} />
-      <meshStandardMaterial color="#1e3a5f" emissive="#0a1a3a" emissiveIntensity={0.3} />
+      <meshStandardMaterial color={baseColor ?? '#1e3a5f'} emissive={baseEmissive ?? '#0a1a3a'} emissiveIntensity={0.3} />
     </mesh>
   );
 }
@@ -573,20 +522,33 @@ export default function GameplayMap({
   activeTipShareConnIds,
   onHostSkipExam,
   mapId = 1,
+  themeHue,
 }: Props) {
   const playerList = Object.values(players);
   const mapVariant = useMemo(() => getMapVariant(mapId), [mapId]);
+
+  // Derive themed colors when host picks a hue
+  const hasTheme = themeHue !== undefined;
+  const floorColor = hasTheme ? themedColor(themeHue, 30, 8) : mapVariant.floorColor;
+  const gridCell = hasTheme ? themedColor(themeHue, 25, 15) : mapVariant.gridCellColor;
+  const gridSection = hasTheme ? themedColor(themeHue, 25, 22) : mapVariant.gridSectionColor;
+  const wallColor = hasTheme ? themedColor(themeHue, 35, 18) : '#1a1a3a';
+  const wallEmissive = hasTheme ? themedColor(themeHue, 40, 10) : '#0a0a2a';
+  const buildingColor = hasTheme ? themedColor(themeHue, 30, 20) : '#2a2a4a';
+  const buildingEmissive = hasTheme ? themedColor(themeHue, 35, 14) : '#1a1a3a';
+  const obstacleColor = hasTheme ? themedColor(themeHue, 40, 25) : '#1e3a5f';
+  const obstacleEmissive = hasTheme ? themedColor(themeHue, 45, 12) : '#0a1a3a';
 
   return (
     <div className="w-full h-full rounded-lg border border-border overflow-hidden bg-background">
       <Canvas camera={{ position: [0, 56, 42], fov: 58 }} shadows>
         <MapCamera zoomLevel={zoomLevel} />
-        <DayNightCycle />
+        <DayLighting />
 
         {/* Floor */}
         <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.01, 0]} receiveShadow>
           <planeGeometry args={[MAP_SIZE, MAP_SIZE]} />
-          <meshStandardMaterial color={mapVariant.floorColor} />
+          <meshStandardMaterial color={floorColor} />
         </mesh>
 
         {/* Grid */}
@@ -595,10 +557,10 @@ export default function GameplayMap({
           position={[0, 0, 0]}
           cellSize={2}
           cellThickness={0.3}
-          cellColor={mapVariant.gridCellColor}
+          cellColor={gridCell}
           sectionSize={8}
           sectionThickness={0.6}
-          sectionColor={mapVariant.gridSectionColor}
+          sectionColor={gridSection}
           fadeDistance={80}
         />
 
@@ -611,7 +573,7 @@ export default function GameplayMap({
         ].map(([x, y, z, w, h, d], i) => (
           <mesh key={`wall-${i}`} position={[x, y, z]}>
             <boxGeometry args={[w, h, d]} />
-            <meshStandardMaterial color="#1a1a3a" emissive="#0a0a2a" emissiveIntensity={0.4} transparent opacity={0.7} />
+            <meshStandardMaterial color={wallColor} emissive={wallEmissive} emissiveIntensity={0.4} transparent opacity={0.7} />
           </mesh>
         ))}
 
@@ -626,13 +588,15 @@ export default function GameplayMap({
               tipSiteActive={!!bState?.hasTip && !bState?.tipObtained}
               zoneActive={bState?.zoneActive}
               zoneHealth={bState?.zoneHealth}
+              baseColor={buildingColor}
+              baseEmissive={buildingEmissive}
             />
           );
         })}
 
         {/* Box Obstacles */}
         {mapVariant.obstacles.map((o, i) => (
-          <Obstacle key={i} position={o.position} size={o.size} rotation={o.rotation} />
+          <Obstacle key={i} position={o.position} size={o.size} rotation={o.rotation} baseColor={obstacleColor} baseEmissive={obstacleEmissive} />
         ))}
 
         {/* Nature Obstacles */}
