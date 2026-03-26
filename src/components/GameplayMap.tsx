@@ -186,12 +186,14 @@ function themedColor(hue: number, saturation: number, lightness: number): string
 }
 
 // ─── Building ──────────────────────────────────────────────────────────────────
-function Building({ position, size, tipSiteActive, zoneActive, zoneHealth }: {
+function Building({ position, size, tipSiteActive, zoneActive, zoneHealth, baseColor, baseEmissive }: {
   position: { x: number; z: number };
   size: { w: number; h: number; d: number };
   tipSiteActive?: boolean;
   zoneActive?: boolean;
   zoneHealth?: number;
+  baseColor?: string;
+  baseEmissive?: string;
 }) {
   const pulseRef = useRef(0);
   useFrame((_, delta) => { pulseRef.current += delta * 2; });
@@ -202,16 +204,16 @@ function Building({ position, size, tipSiteActive, zoneActive, zoneHealth }: {
       <mesh position={[0, size.h / 2, 0]}>
         <boxGeometry args={[size.w, size.h, size.d]} />
         <meshStandardMaterial
-          color={gold ? '#ffd700' : '#2a2a4a'}
-          emissive={gold ? '#ffd700' : '#1a1a3a'}
+          color={gold ? '#ffd700' : (baseColor ?? '#2a2a4a')}
+          emissive={gold ? '#ffd700' : (baseEmissive ?? '#1a1a3a')}
           emissiveIntensity={gold ? 0.6 : 0.2}
         />
       </mesh>
       <mesh position={[0, size.h + 0.2, 0]}>
         <boxGeometry args={[size.w + 0.5, 0.4, size.d + 0.5]} />
         <meshStandardMaterial
-          color={gold ? '#ffaa00' : '#3a3a5a'}
-          emissive={gold ? '#ffaa00' : '#2a2a4a'}
+          color={gold ? '#ffaa00' : (baseColor ?? '#3a3a5a')}
+          emissive={gold ? '#ffaa00' : (baseEmissive ?? '#2a2a4a')}
           emissiveIntensity={gold ? 0.5 : 0.1}
         />
       </mesh>
@@ -233,15 +235,17 @@ function Building({ position, size, tipSiteActive, zoneActive, zoneHealth }: {
 }
 
 // ─── Obstacle ──────────────────────────────────────────────────────────────────
-function Obstacle({ position, size, rotation }: {
+function Obstacle({ position, size, rotation, baseColor, baseEmissive }: {
   position: { x: number; z: number };
   size: { w: number; h: number; d: number };
   rotation?: number;
+  baseColor?: string;
+  baseEmissive?: string;
 }) {
   return (
     <mesh position={[position.x, size.h / 2, position.z]} rotation={[0, rotation ?? 0, 0]}>
       <boxGeometry args={[size.w, size.h, size.d]} />
-      <meshStandardMaterial color="#1e3a5f" emissive="#0a1a3a" emissiveIntensity={0.3} />
+      <meshStandardMaterial color={baseColor ?? '#1e3a5f'} emissive={baseEmissive ?? '#0a1a3a'} emissiveIntensity={0.3} />
     </mesh>
   );
 }
