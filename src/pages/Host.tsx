@@ -949,7 +949,7 @@ function GameOverCeremony({ snapshot, gameMode }: { snapshot: GameStateSnapshot;
                 const z = -row * spacingZ;
                 return (
                   <group key={p.connId} position={[x, 0.1 + row * 0.05, z]}>
-                    <group scale={Math.min(2.2, 12 / cols)}>
+                    <group scale={Math.min(1.5, 8 / cols)}>
                       <DancingChar chickColor={p.chickColor} isWinner={isWin} delay={i * 0.4} />
                     </group>
                   </group>
