@@ -866,7 +866,7 @@ function GameOverCeremony({ snapshot, gameMode }: { snapshot: GameStateSnapshot;
             <ambientLight intensity={0.8} />
             <directionalLight position={[5, 8, 5]} intensity={1.2} />
             <group position={[0, -2.2, 0]}>
-              <group scale={1.8}>
+              <group scale={1.2}>
                 <DancingChar chickColor={mvp.chickColor} isWinner={true} delay={0} />
               </group>
             </group>
@@ -915,7 +915,7 @@ function GameOverCeremony({ snapshot, gameMode }: { snapshot: GameStateSnapshot;
                 const z = -row * spacingZ;
                 return (
                   <group key={p.connId} position={[x, 0.1, z]}>
-                    <group scale={Math.min(1.8, 8 / cols)}>
+                    <group scale={Math.min(1.2, 8 / cols)}>
                       <DancingChar chickColor={p.chickColor} isWinner={true} delay={i * 0.4} />
                     </group>
                   </group>
