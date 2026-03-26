@@ -12,77 +12,16 @@ import type { NatureObstacle } from '@/lib/mapVariants';
 
 const FLY_SPEED_MULTIPLIER = 3;
 
-// ─── Day/Night Cycle ─────────────────────────────────────────────────────────
-function DayNightCycle() {
-  const sunRef = useRef<THREE.DirectionalLight>(null!);
-  const moonRef = useRef<THREE.DirectionalLight>(null!);
-  const ambientRef = useRef<THREE.AmbientLight>(null!);
-  const skyRef = useRef<THREE.Mesh>(null!);
-
-  useFrame(() => {
-    const CYCLE = 60; // 60s full cycle
-    const t = (Date.now() / 1000) % CYCLE;
-    const norm = t / CYCLE; // 0-1
-
-    // 0-0.5 = day, 0.5-1 = night
-    // Smooth transitions with sine
-    const dayFactor = Math.max(0, Math.cos(norm * Math.PI * 2) * 0.5 + 0.5);
-    const nightFactor = 1 - dayFactor;
-
-    // Sun position — arcs across the sky during day
-    const sunAngle = norm * Math.PI * 2;
-    const sunX = Math.cos(sunAngle) * 30;
-    const sunY = Math.sin(sunAngle) * 30 + 5;
-    if (sunRef.current) {
-      sunRef.current.position.set(sunX, Math.max(2, sunY), 15);
-      sunRef.current.intensity = dayFactor * 1.8;
-      sunRef.current.color.setHSL(0.1, 0.3 + dayFactor * 0.5, 0.6 + dayFactor * 0.4);
-    }
-
-    // Moon — opposite side
-    if (moonRef.current) {
-      moonRef.current.position.set(-sunX, Math.max(2, -sunY + 30), -15);
-      moonRef.current.intensity = nightFactor * 0.6;
-      moonRef.current.color.setHSL(0.6, 0.2, 0.7);
-    }
-
-    // Ambient light shifts
-    if (ambientRef.current) {
-      const intensity = 0.15 + dayFactor * 0.45;
-      ambientRef.current.intensity = intensity;
-      ambientRef.current.color.setHSL(
-        dayFactor > 0.5 ? 0.15 : 0.6,
-        0.2,
-        0.5 + dayFactor * 0.3
-      );
-    }
-
-    // Sky dome color
-    if (skyRef.current) {
-      const mat = skyRef.current.material as THREE.MeshBasicMaterial;
-      // Sunrise/sunset orange hues during transitions
-      const transitionFactor = Math.sin(norm * Math.PI * 2) * 0.5 + 0.5;
-      if (dayFactor > 0.7) {
-        mat.color.setHSL(0.55, 0.4, 0.55); // Day blue
-      } else if (dayFactor > 0.3) {
-        // Sunrise/sunset
-        mat.color.setHSL(0.08, 0.7, 0.3 + transitionFactor * 0.2);
-      } else {
-        mat.color.setHSL(0.65, 0.5, 0.05 + nightFactor * 0.05); // Night deep blue
-      }
-      mat.opacity = 0.3;
-    }
-  });
-
+// ─── Static Day Lighting ─────────────────────────────────────────────────────
+function DayLighting() {
   return (
     <>
-      <directionalLight ref={sunRef} position={[15, 30, 15]} intensity={1.2} castShadow shadow-mapSize={[2048, 2048]} />
-      <directionalLight ref={moonRef} position={[-10, 20, -10]} intensity={0.3} />
-      <ambientLight ref={ambientRef} intensity={0.5} />
-      {/* Sky dome */}
-      <mesh ref={skyRef} scale={[100, 100, 100]}>
+      <directionalLight position={[20, 35, 15]} intensity={1.6} castShadow shadow-mapSize={[2048, 2048]} color="#fff5e0" />
+      <directionalLight position={[-15, 20, -10]} intensity={0.4} color="#b0d0ff" />
+      <ambientLight intensity={0.55} color="#fffaf0" />
+      <mesh scale={[100, 100, 100]}>
         <sphereGeometry args={[1, 32, 32]} />
-        <meshBasicMaterial color="#1a1a3a" side={THREE.BackSide} transparent opacity={0.3} />
+        <meshBasicMaterial color="#4a7ab5" side={THREE.BackSide} transparent opacity={0.25} />
       </mesh>
     </>
   );
