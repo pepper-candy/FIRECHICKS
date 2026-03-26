@@ -518,20 +518,33 @@ export default function GameplayMap({
   activeTipShareConnIds,
   onHostSkipExam,
   mapId = 1,
+  themeHue,
 }: Props) {
   const playerList = Object.values(players);
   const mapVariant = useMemo(() => getMapVariant(mapId), [mapId]);
+
+  // Derive themed colors when host picks a hue
+  const hasTheme = themeHue !== undefined;
+  const floorColor = hasTheme ? themedColor(themeHue, 30, 8) : mapVariant.floorColor;
+  const gridCell = hasTheme ? themedColor(themeHue, 25, 15) : mapVariant.gridCellColor;
+  const gridSection = hasTheme ? themedColor(themeHue, 25, 22) : mapVariant.gridSectionColor;
+  const wallColor = hasTheme ? themedColor(themeHue, 35, 18) : '#1a1a3a';
+  const wallEmissive = hasTheme ? themedColor(themeHue, 40, 10) : '#0a0a2a';
+  const buildingColor = hasTheme ? themedColor(themeHue, 30, 20) : '#2a2a4a';
+  const buildingEmissive = hasTheme ? themedColor(themeHue, 35, 14) : '#1a1a3a';
+  const obstacleColor = hasTheme ? themedColor(themeHue, 40, 25) : '#1e3a5f';
+  const obstacleEmissive = hasTheme ? themedColor(themeHue, 45, 12) : '#0a1a3a';
 
   return (
     <div className="w-full h-full rounded-lg border border-border overflow-hidden bg-background">
       <Canvas camera={{ position: [0, 56, 42], fov: 58 }} shadows>
         <MapCamera zoomLevel={zoomLevel} />
-        <DayNightCycle />
+        <DayLighting />
 
         {/* Floor */}
         <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.01, 0]} receiveShadow>
           <planeGeometry args={[MAP_SIZE, MAP_SIZE]} />
-          <meshStandardMaterial color={mapVariant.floorColor} />
+          <meshStandardMaterial color={floorColor} />
         </mesh>
 
         {/* Grid */}
@@ -540,10 +553,10 @@ export default function GameplayMap({
           position={[0, 0, 0]}
           cellSize={2}
           cellThickness={0.3}
-          cellColor={mapVariant.gridCellColor}
+          cellColor={gridCell}
           sectionSize={8}
           sectionThickness={0.6}
-          sectionColor={mapVariant.gridSectionColor}
+          sectionColor={gridSection}
           fadeDistance={80}
         />
 
@@ -556,7 +569,7 @@ export default function GameplayMap({
         ].map(([x, y, z, w, h, d], i) => (
           <mesh key={`wall-${i}`} position={[x, y, z]}>
             <boxGeometry args={[w, h, d]} />
-            <meshStandardMaterial color="#1a1a3a" emissive="#0a0a2a" emissiveIntensity={0.4} transparent opacity={0.7} />
+            <meshStandardMaterial color={wallColor} emissive={wallEmissive} emissiveIntensity={0.4} transparent opacity={0.7} />
           </mesh>
         ))}
 
