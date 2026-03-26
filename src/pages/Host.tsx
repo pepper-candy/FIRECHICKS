@@ -347,19 +347,6 @@ export default function Host() {
           <h1 className="text-sm md:text-base text-primary text-glow-green tracking-wider font-pixel">LOBBY</h1>
 
           <div className="flex items-center gap-2 font-mono text-xs flex-wrap">
-            {/* Map selector */}
-            <Select value={String(mapId)} onValueChange={(v) => setMapId(Number(v) as MapId)}>
-              <SelectTrigger className="h-7 min-w-[130px] w-auto text-xs font-mono bg-card border-border">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {MAP_LIST.map((m) => (
-                  <SelectItem key={m.id} value={String(m.id)} className="text-xs font-mono">
-                    🗺️ {m.name}&nbsp;
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
             {/* Game mode toggle (only when not full) */}
             {!isFull && (
               <button
@@ -374,6 +361,20 @@ export default function Host() {
                 {gameMode}
               </button>
             )}
+
+            {/* Map selector */}
+            <Select value={String(mapId)} onValueChange={(v) => setMapId(Number(v) as MapId)}>
+              <SelectTrigger className="h-7 min-w-[130px] w-auto text-xs font-mono bg-card border-border">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {MAP_LIST.map((m) => (
+                  <SelectItem key={m.id} value={String(m.id)} className="text-xs font-mono">
+                    🗺️ {m.name}&nbsp;
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
 
             {/* Connection mode */}
             <Select value={mode} onValueChange={handleConnectionModeChange}>
