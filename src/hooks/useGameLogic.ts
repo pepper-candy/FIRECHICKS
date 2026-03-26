@@ -1266,10 +1266,13 @@ export function useGameLogic({ players, broadcast, gameMode, connectionMode, map
 
     if (C === 0) {
       endGame(gs, "eagle", bcast);
-      return;
+    } else if (mode === "1v3") {
+      // 1v3: 2+ chicks = win, 1 = draw
+      endGame(gs, C >= 2 ? "chicks" : "draw", bcast);
+    } else {
+      // 2v6: 3+ chicks = win, 2 = draw, <2 = eagle
+      endGame(gs, C >= 3 ? "chicks" : C === 2 ? "draw" : "eagle", bcast);
     }
-    void mode;
-    endGame(gs, "chicks", bcast);
   }
 
   // ─── Broadcast state ────────────────────────────────────────────────────────
