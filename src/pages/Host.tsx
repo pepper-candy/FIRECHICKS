@@ -146,6 +146,8 @@ export default function Host() {
   const [startClickAt, setStartClickAt] = useState<number | null>(null);
   const [zoomLevel, setZoomLevel] = useState(1);
   const [mapId, setMapId] = useState<MapId>(1);
+  const [themeHue, setThemeHue] = useState<number | undefined>(undefined);
+  const [colorPickerOpen, setColorPickerOpen] = useState(false);
   const [revealNow, setRevealNow] = useState(Date.now());
   const [focusPanelOpen, setFocusPanelOpen] = useState(false);
   // Stage transition toast notification
