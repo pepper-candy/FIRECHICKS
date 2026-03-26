@@ -936,11 +936,11 @@ function GameOverCeremony({ snapshot, gameMode }: { snapshot: GameStateSnapshot;
           <Canvas
             className="h-full w-full"
             style={{ width: "100%", height: "100%" }}
-            camera={{ position: [0, 1.8, 6 + rows * 2.2], fov: 50 }}
+            camera={{ position: [0, 1.8, 6 + rows * 2.2], fov: 45 }}
           >
             <ambientLight intensity={0.8} />
             <directionalLight position={[5, 8, 5]} intensity={1.2} />
-            <group position={[0, 0, (rows - 1) * spacingZ * 0.5]}>
+            <group position={[0, -0.8, (rows - 1) * spacingZ * 0.5]}>
               {sorted.map((p, i) => {
                 const isWin = getMatchResult(p) !== "lose";
                 const col = i % cols;
@@ -948,8 +948,8 @@ function GameOverCeremony({ snapshot, gameMode }: { snapshot: GameStateSnapshot;
                 const x = (col - (cols - 1) / 2) * spacingX;
                 const z = -row * spacingZ;
                 return (
-                  <group key={p.connId} position={[x, -0.2 + row * 0.05, z]}>
-                    <group scale={Math.min(1.5, 8 / cols)}>
+                  <group key={p.connId} position={[x, 0.1 + row * 0.05, z]}>
+                    <group scale={Math.min(2.2, 12 / cols)}>
                       <DancingChar chickColor={p.chickColor} isWinner={isWin} delay={i * 0.4} />
                     </group>
                   </group>
