@@ -615,6 +615,73 @@ export default function Host() {
             onChange={(e) => setZoomLevel(Number(e.target.value))}
             className="w-full"
           />
+
+          {/* Color picker trigger */}
+          <div className="mt-2 flex items-center justify-between">
+            <button
+              onClick={() => setColorPickerOpen(p => !p)}
+              className="flex items-center gap-1 text-[10px] font-mono text-muted-foreground hover:text-foreground transition-colors"
+            >
+              <Palette className="w-3 h-3" />
+              Theme
+            </button>
+            {themeHue !== undefined && (
+              <button
+                onClick={() => setThemeHue(undefined)}
+                className="text-[9px] font-mono text-muted-foreground hover:text-destructive"
+              >
+                Reset
+              </button>
+            )}
+          </div>
+
+          {/* Circular hue picker */}
+          {colorPickerOpen && (
+            <div className="mt-2 flex flex-col items-center gap-2">
+              <div
+                className="relative w-32 h-32 rounded-full cursor-pointer"
+                style={{
+                  background: 'conic-gradient(from 0deg, hsl(0,70%,50%), hsl(60,70%,50%), hsl(120,70%,50%), hsl(180,70%,50%), hsl(240,70%,50%), hsl(300,70%,50%), hsl(360,70%,50%))',
+                }}
+                onClick={(e) => {
+                  const rect = e.currentTarget.getBoundingClientRect();
+                  const cx = rect.width / 2;
+                  const cy = rect.height / 2;
+                  const dx = e.clientX - rect.left - cx;
+                  const dy = e.clientY - rect.top - cy;
+                  const angle = Math.atan2(dy, dx);
+                  const hue = ((angle * 180 / Math.PI) + 360 + 90) % 360;
+                  setThemeHue(Math.round(hue));
+                }}
+              >
+                {/* Center indicator */}
+                <div
+                  className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-10 h-10 rounded-full border-2 border-foreground/30"
+                  style={{
+                    backgroundColor: themeHue !== undefined ? `hsl(${themeHue}, 50%, 30%)` : 'hsl(var(--card))',
+                  }}
+                />
+                {/* Hue indicator dot */}
+                {themeHue !== undefined && (() => {
+                  const rad = ((themeHue - 90) * Math.PI) / 180;
+                  const r = 52;
+                  return (
+                    <div
+                      className="absolute w-4 h-4 rounded-full border-2 border-foreground shadow-md"
+                      style={{
+                        backgroundColor: `hsl(${themeHue}, 70%, 50%)`,
+                        left: `calc(50% + ${Math.cos(rad) * r}px - 8px)`,
+                        top: `calc(50% + ${Math.sin(rad) * r}px - 8px)`,
+                      }}
+                    />
+                  );
+                })()}
+              </div>
+              <span className="text-[9px] font-mono text-muted-foreground">
+                {themeHue !== undefined ? `Hue: ${themeHue}°` : 'Click wheel to pick'}
+              </span>
+            </div>
+          )}
         </div>
 
         {/* Eagle awake countdown */}
