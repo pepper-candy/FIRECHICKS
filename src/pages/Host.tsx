@@ -940,7 +940,7 @@ function GameOverCeremony({ snapshot, gameMode }: { snapshot: GameStateSnapshot;
           >
             <ambientLight intensity={0.8} />
             <directionalLight position={[5, 8, 5]} intensity={1.2} />
-            <group position={[0, -0.8, (rows - 1) * spacingZ * 0.5]}>
+            <group position={[0, -2, (rows - 1) * spacingZ * 0.5]}>
               {sorted.map((p, i) => {
                 const isWin = getMatchResult(p) !== "lose";
                 const col = i % cols;
