@@ -588,13 +588,15 @@ export default function GameplayMap({
               tipSiteActive={!!bState?.hasTip && !bState?.tipObtained}
               zoneActive={bState?.zoneActive}
               zoneHealth={bState?.zoneHealth}
+              baseColor={buildingColor}
+              baseEmissive={buildingEmissive}
             />
           );
         })}
 
         {/* Box Obstacles */}
         {mapVariant.obstacles.map((o, i) => (
-          <Obstacle key={i} position={o.position} size={o.size} rotation={o.rotation} />
+          <Obstacle key={i} position={o.position} size={o.size} rotation={o.rotation} baseColor={obstacleColor} baseEmissive={obstacleEmissive} />
         ))}
 
         {/* Nature Obstacles */}
