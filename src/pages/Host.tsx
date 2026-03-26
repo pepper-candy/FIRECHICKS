@@ -820,9 +820,9 @@ function GameOverCeremony({ snapshot, gameMode }: { snapshot: GameStateSnapshot;
     return winningTeam.length > 0 ? winningTeam.sort((a, b) => b.actionScore - a.actionScore)[0] : sorted[0];
   })();
 
-  const winningTeamPlayers = sorted.filter(
-    (p) => (winner === "eagle" && p.isEagle) || (winner === "chicks" && !p.isEagle)
-  );
+  const winningTeamPlayers = sorted
+    .filter((p) => (winner === "eagle" && p.isEagle) || (winner === "chicks" && !p.isEagle))
+    .filter((p) => p.connId !== mvp?.connId);
 
   const skipTeamPhase =
     winner === "draw" || (winner === "eagle" && gameMode === "1v3") || winningTeamPlayers.length === 0;
@@ -911,7 +911,8 @@ function GameOverCeremony({ snapshot, gameMode }: { snapshot: GameStateSnapshot;
               {winningTeamPlayers.map((p, i) => {
                 const col = i % cols;
                 const row = Math.floor(i / cols);
-                const x = (col - (cols - 1) / 2) * spacingX;
+                const rowOffset = row % 2 === 0 ? -0.8 : 0.8;
+                const x = (col - (cols - 1) / 2) * spacingX + rowOffset;
                 const z = -row * spacingZ;
                 return (
                   <group key={p.connId} position={[x, 0.1, z]}>
@@ -951,7 +952,8 @@ function GameOverCeremony({ snapshot, gameMode }: { snapshot: GameStateSnapshot;
                 const isWin = getMatchResult(p) !== "lose";
                 const col = i % cols;
                 const row = Math.floor(i / cols);
-                const x = (col - (cols - 1) / 2) * spacingX;
+                const rowOffset = row % 2 === 0 ? -0.8 : 0.8;
+                const x = (col - (cols - 1) / 2) * spacingX + rowOffset;
                 const z = -row * spacingZ;
                 return (
                   <group key={p.connId} position={[x, 0.1 + row * 0.05, z]}>
