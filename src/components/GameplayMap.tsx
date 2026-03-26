@@ -177,6 +177,12 @@ interface Props {
   activeTipShareConnIds?: string[];
   onHostSkipExam?: () => void;
   mapId?: MapId;
+  themeHue?: number;
+}
+
+// Helper: derive themed colors from a hue (0-360)
+function themedColor(hue: number, saturation: number, lightness: number): string {
+  return `hsl(${hue}, ${saturation}%, ${lightness}%)`;
 }
 
 // ─── Building ──────────────────────────────────────────────────────────────────
