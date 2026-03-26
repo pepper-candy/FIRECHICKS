@@ -752,7 +752,7 @@ export default function Host() {
           snapshot.examState.questionNum > 0 &&
           phase === "exam" &&
           snapshot.examState.hostDisplayLayer !== "none" && (
-            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-30 bg-[#fefcf5] border-2 border-accent rounded-xl p-4 max-w-md w-[90%] shadow-2xl">
+            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-30 bg-[#fefcf5] border-2 border-accent rounded-xl p-4 max-w-md w-[90%] shadow-2xl pt-[16px] mt-[70px]">
               <p className="text-[10px] font-mono text-gray-500 mb-1 text-center">HOST EXAM LAYER</p>
               <img
                 src={assetUrl(
