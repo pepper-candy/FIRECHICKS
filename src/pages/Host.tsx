@@ -349,7 +349,7 @@ export default function Host() {
           <div className="flex items-center gap-2 font-mono text-xs flex-wrap">
             {/* Map selector */}
             <Select value={String(mapId)} onValueChange={(v) => setMapId(Number(v) as MapId)}>
-              <SelectTrigger className="h-7 w-fit text-xs font-mono bg-card border-border">
+              <SelectTrigger className="h-7 min-w-[130px] w-auto text-xs font-mono bg-card border-border">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
