@@ -820,9 +820,9 @@ function GameOverCeremony({ snapshot, gameMode }: { snapshot: GameStateSnapshot;
     return winningTeam.length > 0 ? winningTeam.sort((a, b) => b.actionScore - a.actionScore)[0] : sorted[0];
   })();
 
-  const winningTeamPlayers = sorted
-    .filter((p) => (winner === "eagle" && p.isEagle) || (winner === "chicks" && !p.isEagle))
-    .filter((p) => p.connId !== mvp?.connId);
+  const winningTeamPlayers = sorted.filter(
+    (p) => (winner === "eagle" && p.isEagle) || (winner === "chicks" && !p.isEagle)
+  );
 
   const skipTeamPhase =
     winner === "draw" || (winner === "eagle" && gameMode === "1v3") || winningTeamPlayers.length === 0;
