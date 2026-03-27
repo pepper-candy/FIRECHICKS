@@ -940,26 +940,32 @@ function GameOverCeremony({ snapshot, gameMode }: { snapshot: GameStateSnapshot;
   // Phase 2: Winning team
   if (ceremonyPhase === "team") {
     const count = winningTeamPlayers.length;
-    const cols = Math.min(3, count); // max 5 per row
+    const cols = Math.min(3, count);
     const rows = Math.ceil(count / cols);
     const spacingX = 2.8;
     const spacingZ = 2.4;
     return (
-      <div className="flex flex-col items-center justify-center h-screen bg-background gap-6">
+      <div className={`flex flex-col items-center justify-center h-screen gap-6 overflow-hidden relative ${isImmersive ? "bg-black" : "bg-background"}`}>
+        {isImmersive && <CeremonyParticles />}
+        {isImmersive && <div className="immersive-vignette" />}
         <h1
-          className="text-2xl font-pixel tracking-widest"
-          style={{ color: winner === "eagle" ? "hsl(0 80% 55%)" : "hsl(145 80% 50%)" }}
+          className={`text-2xl font-pixel tracking-widest z-10 ${isImmersive ? "immersive-fade-in ceremony-title-glow" : ""}`}
+          style={{
+            color: winner === "eagle" ? "hsl(0 80% 55%)" : "hsl(145 80% 50%)",
+            ...(isImmersive ? { "--delay": "0.2s" } as React.CSSProperties : {}),
+          }}
         >
           {teamName}
         </h1>
-        <div className="h-[50vh] w-full min-h-[280px]">
+        <div className="h-[50vh] w-full min-h-[280px] z-10">
           <Canvas
             className="h-full w-full"
             style={{ width: "100%", height: "100%" }}
             camera={{ position: [0, 1.2, 6 + rows * 2.2], fov: 45 }}
           >
-            <ambientLight intensity={0.8} />
-            <directionalLight position={[5, 8, 5]} intensity={1.2} />
+            <ambientLight intensity={isImmersive ? 0.3 : 0.8} />
+            <directionalLight position={[5, 8, 5]} intensity={isImmersive ? 1.4 : 1.2} />
+            {isImmersive && <spotLight position={[0, 8, 3]} angle={0.6} penumbra={0.9} intensity={2.5} color="#ffd700" />}
             <group position={[0, -1.8, 0]}>
               {winningTeamPlayers.map((p, i) => {
                 const col = i % cols;
@@ -978,7 +984,11 @@ function GameOverCeremony({ snapshot, gameMode }: { snapshot: GameStateSnapshot;
             </group>
           </Canvas>
         </div>
-        <p className="text-sm font-mono text-muted-foreground">🎉 Congratulations!</p>
+        <p className={`text-sm font-mono text-muted-foreground z-10 ${isImmersive ? "immersive-fade-in" : ""}`}
+          style={isImmersive ? { "--delay": "0.8s" } as React.CSSProperties : undefined}
+        >
+          🎉 Congratulations!
+        </p>
       </div>
     );
   }
