@@ -15,7 +15,7 @@ import NetworkPerformancePanel from "@/components/NetworkPerformancePanel";
 import CrossyRoadHost from "@/components/events/CrossyRoadHost";
 import { PLAYER_COLORS, MAX_PLAYERS_1V3, MAX_PLAYERS_2V6 } from "@/lib/playerColors";
 import { gradeToLetter, getGradeColor } from "@/lib/gradeSystem";
-import { X, Flame, Zap, Trophy, Star, ChevronDown, Palette } from "lucide-react";
+import { X, Flame, Zap, Trophy, Star, ChevronDown, Palette, Sun } from "lucide-react";
 import type { GameMode } from "@/lib/gameTypes";
 import CharacterViewer from "@/components/CharacterViewer";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -166,6 +166,7 @@ export default function Host() {
   const [gameMode, setGameMode] = useState<GameMode>("1v3");
   const [startClickAt, setStartClickAt] = useState<number | null>(null);
   const [zoomLevel, setZoomLevel] = useState(1);
+  const [lightMode, setLightMode] = useState(false);
   const [mapId, setMapId] = useState<MapId>(1);
   const [themeHue, setThemeHue] = useState<number | undefined>(undefined);
   const [colorPickerOpen, setColorPickerOpen] = useState(false);
@@ -623,6 +624,7 @@ export default function Host() {
           mapId={mapId}
           themeHue={themeHue}
           immersive={isImmersive}
+          lightMode={lightMode}
         />
 
         {/* Focus camera panel toggle button */}
@@ -762,6 +764,18 @@ export default function Host() {
             onChange={(e) => setZoomLevel(Number(e.target.value))}
             className="w-full"
           />
+
+          {/* Light mode torch */}
+          <div className="mt-2 flex items-center justify-between">
+            <button
+              onClick={() => setLightMode((p) => !p)}
+              className={`flex items-center gap-1 text-[10px] font-mono transition-colors ${lightMode ? 'text-yellow-400' : 'text-muted-foreground hover:text-foreground'}`}
+              title="Toggle light mode for better visibility"
+            >
+              <Sun className="w-3 h-3" />
+              Light
+            </button>
+          </div>
 
           {/* Color picker trigger */}
           <div className="mt-2 flex items-center justify-between">

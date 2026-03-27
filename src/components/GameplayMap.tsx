@@ -27,6 +27,21 @@ function DayLighting() {
   );
 }
 
+// ─── Bright Light Mode Lighting ──────────────────────────────────────────────
+function LightModeLighting() {
+  return (
+    <>
+      <directionalLight position={[20, 40, 15]} intensity={2.2} castShadow shadow-mapSize={[2048, 2048]} color="#ffffff" />
+      <directionalLight position={[-15, 30, -10]} intensity={1.0} color="#ffffff" />
+      <ambientLight intensity={1.2} color="#ffffff" />
+      <mesh scale={[100, 100, 100]}>
+        <sphereGeometry args={[1, 32, 32]} />
+        <meshBasicMaterial color="#e8e8ee" side={THREE.BackSide} />
+      </mesh>
+    </>
+  );
+}
+
 // Camera stays centered; zoomLevel lets host tune framing
 function MapCamera({ zoomLevel = 1 }: { zoomLevel?: number }) {
   const { camera } = useThree();
@@ -179,6 +194,7 @@ interface Props {
   mapId?: MapId;
   themeHue?: number;
   immersive?: boolean;
+  lightMode?: boolean;
 }
 
 // Helper: derive themed colors from a hue (0-360)
@@ -274,7 +290,7 @@ function MapParticles() {
 }
 
 // ─── Building ──────────────────────────────────────────────────────────────────
-function Building({ position, size, tipSiteActive, zoneActive, zoneHealth, baseColor, baseEmissive, immersive }: {
+function Building({ position, size, tipSiteActive, zoneActive, zoneHealth, baseColor, baseEmissive, immersive, lightMode }: {
   position: { x: number; z: number };
   size: { w: number; h: number; d: number };
   tipSiteActive?: boolean;
@@ -283,6 +299,7 @@ function Building({ position, size, tipSiteActive, zoneActive, zoneHealth, baseC
   baseColor?: string;
   baseEmissive?: string;
   immersive?: boolean;
+  lightMode?: boolean;
 }) {
   const pulseRef = useRef(0);
   useFrame((_, delta) => { pulseRef.current += delta * 2; });
@@ -297,8 +314,8 @@ function Building({ position, size, tipSiteActive, zoneActive, zoneHealth, baseC
           emissive={gold ? '#ffd700' : (baseEmissive ?? '#1a1a3a')}
           emissiveIntensity={gold ? 0.6 : (immersive ? 0.35 : 0.2)}
         />
-        {immersive && (
-          <Edges scale={1.005} threshold={12} color={gold ? '#ffe566' : '#7070b8'} />
+        {(immersive || lightMode) && (
+          <Edges scale={1.005} threshold={12} color={gold ? '#ffe566' : (lightMode ? '#222222' : '#7070b8')} />
         )}
       </mesh>
       <mesh position={[0, size.h + 0.2, 0]}>
@@ -308,8 +325,8 @@ function Building({ position, size, tipSiteActive, zoneActive, zoneHealth, baseC
           emissive={gold ? '#ffaa00' : (baseEmissive ?? '#2a2a4a')}
           emissiveIntensity={gold ? 0.5 : (immersive ? 0.18 : 0.1)}
         />
-        {immersive && (
-          <Edges scale={1.01} threshold={12} color={gold ? '#ffcc44' : '#5555a0'} />
+        {(immersive || lightMode) && (
+          <Edges scale={1.01} threshold={12} color={gold ? '#ffcc44' : (lightMode ? '#333333' : '#5555a0')} />
         )}
       </mesh>
       {zoneActive && (
@@ -330,17 +347,19 @@ function Building({ position, size, tipSiteActive, zoneActive, zoneHealth, baseC
 }
 
 // ─── Obstacle ──────────────────────────────────────────────────────────────────
-function Obstacle({ position, size, rotation, baseColor, baseEmissive }: {
+function Obstacle({ position, size, rotation, baseColor, baseEmissive, lightMode }: {
   position: { x: number; z: number };
   size: { w: number; h: number; d: number };
   rotation?: number;
   baseColor?: string;
   baseEmissive?: string;
+  lightMode?: boolean;
 }) {
   return (
     <mesh position={[position.x, size.h / 2, position.z]} rotation={[0, rotation ?? 0, 0]}>
       <boxGeometry args={[size.w, size.h, size.d]} />
-      <meshStandardMaterial color={baseColor ?? '#1e3a5f'} emissive={baseEmissive ?? '#0a1a3a'} emissiveIntensity={0.3} />
+      <meshStandardMaterial color={baseColor ?? '#1e3a5f'} emissive={baseEmissive ?? '#0a1a3a'} emissiveIntensity={lightMode ? 0.05 : 0.3} />
+      {lightMode && <Edges scale={1.005} threshold={12} color="#222222" />}
     </mesh>
   );
 }
@@ -573,9 +592,11 @@ function GameCharacter({
     <group position={[player.position.x, 0, player.position.z]}>
       {isInvincible && <InvincibleRipple3D />}
       {isCaged && <CageMesh countdown={cageRemaining} />}
-      <Suspense fallback={null}>
-        <CharacterViewer color={color.chickColor} animState={anim} facingAngle={player.facingAngle} />
-      </Suspense>
+      <group scale={1.5}>
+        <Suspense fallback={null}>
+          <CharacterViewer color={color.chickColor} animState={anim} facingAngle={player.facingAngle} />
+        </Suspense>
+      </group>
       <Html position={[0, 2.8, 0]} center zIndexRange={[100, 0]}>
         <div style={{
           background: 'rgba(0,0,0,0.6)', border: `1px solid hsl(${color.hsl})`, borderRadius: 3, padding: '1px 5px',
@@ -647,24 +668,25 @@ export default function GameplayMap({
   mapId = 1,
   themeHue,
   immersive = false,
+  lightMode = false,
 }: Props) {
   const playerList = Object.values(players);
   const mapVariant = useMemo(() => getMapVariant(mapId), [mapId]);
 
   // Derive themed colors when host picks a hue
   const hasTheme = themeHue !== undefined;
-  const floorColor = hasTheme ? themedColor(themeHue, 30, 8) : mapVariant.floorColor;
-  const gridCell = hasTheme ? themedColor(themeHue, 25, 15) : mapVariant.gridCellColor;
-  const gridSection = hasTheme ? themedColor(themeHue, 25, 22) : mapVariant.gridSectionColor;
-  const wallColor = hasTheme ? themedColor(themeHue, 35, 18) : '#1a1a3a';
-  const wallEmissive = hasTheme ? themedColor(themeHue, 40, 10) : '#0a0a2a';
-  const buildingColor = hasTheme ? themedColor(themeHue, 30, 20) : '#2a2a4a';
-  const buildingEmissive = hasTheme ? themedColor(themeHue, 35, 14) : '#1a1a3a';
-  const obstacleColor = hasTheme ? themedColor(themeHue, 40, 25) : '#1e3a5f';
-  const obstacleEmissive = hasTheme ? themedColor(themeHue, 45, 12) : '#0a1a3a';
+  const floorColor = lightMode ? '#f0f0f0' : (hasTheme ? themedColor(themeHue, 30, 8) : mapVariant.floorColor);
+  const gridCell = lightMode ? '#d0d0d0' : (hasTheme ? themedColor(themeHue, 25, 15) : mapVariant.gridCellColor);
+  const gridSection = lightMode ? '#b0b0b0' : (hasTheme ? themedColor(themeHue, 25, 22) : mapVariant.gridSectionColor);
+  const wallColor = lightMode ? '#cccccc' : (hasTheme ? themedColor(themeHue, 35, 18) : '#1a1a3a');
+  const wallEmissive = lightMode ? '#999999' : (hasTheme ? themedColor(themeHue, 40, 10) : '#0a0a2a');
+  const buildingColor = lightMode ? '#e0e0e0' : (hasTheme ? themedColor(themeHue, 30, 20) : '#2a2a4a');
+  const buildingEmissive = lightMode ? '#cccccc' : (hasTheme ? themedColor(themeHue, 35, 14) : '#1a1a3a');
+  const obstacleColor = lightMode ? '#d8d8d8' : (hasTheme ? themedColor(themeHue, 40, 25) : '#1e3a5f');
+  const obstacleEmissive = lightMode ? '#bbbbbb' : (hasTheme ? themedColor(themeHue, 45, 12) : '#0a1a3a');
 
   return (
-    <div className={`w-full h-full rounded-lg border overflow-hidden relative ${immersive ? 'border-primary/20 bg-black' : 'border-border bg-background'}`}>
+    <div className={`w-full h-full rounded-lg border overflow-hidden relative ${lightMode ? 'border-border bg-white' : (immersive ? 'border-primary/20 bg-black' : 'border-border bg-background')}`}>
       {/* Edge vignette haze — blurs map boundaries into void */}
       {immersive && (
         <div
@@ -674,9 +696,9 @@ export default function GameplayMap({
       )}
       <Canvas camera={{ position: [0, 56, 42], fov: 58 }} shadows>
         <MapCamera zoomLevel={zoomLevel} />
-        {immersive ? <ImmersiveLighting /> : <DayLighting />}
-        {immersive && <SceneFog color="#050510" density={0.008} />}
-        {immersive && <MapParticles />}
+        {lightMode ? <LightModeLighting /> : (immersive ? <ImmersiveLighting /> : <DayLighting />)}
+        {immersive && !lightMode && <SceneFog color="#050510" density={0.008} />}
+        {immersive && !lightMode && <MapParticles />}
 
         {/* Floor */}
         <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.01, 0]} receiveShadow>
@@ -724,13 +746,14 @@ export default function GameplayMap({
               baseColor={buildingColor}
               baseEmissive={buildingEmissive}
               immersive={immersive}
+              lightMode={lightMode}
             />
           );
         })}
 
         {/* Box Obstacles */}
         {mapVariant.obstacles.map((o, i) => (
-          <Obstacle key={i} position={o.position} size={o.size} rotation={o.rotation} baseColor={obstacleColor} baseEmissive={obstacleEmissive} />
+          <Obstacle key={i} position={o.position} size={o.size} rotation={o.rotation} baseColor={obstacleColor} baseEmissive={obstacleEmissive} lightMode={lightMode} />
         ))}
 
         {/* Nature Obstacles */}
