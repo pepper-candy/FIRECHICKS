@@ -179,6 +179,7 @@ interface Props {
   mapId?: MapId;
   themeHue?: number;
   immersive?: boolean;
+  lightMode?: boolean;
 }
 
 // Helper: derive themed colors from a hue (0-360)
