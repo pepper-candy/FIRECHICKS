@@ -731,13 +731,13 @@ export default function Client() {
     }
   }, [sendToHost, examAnswer]);
   const handleJoin = useCallback(
-    (roomCode?: string) => {
+    async (roomCode?: string) => {
       const providedRoom = (roomCode || code).trim().toUpperCase();
       const fallbackRoom = rememberedRoomCode.trim().toUpperCase();
       const hasTakeover = rejoinCode.trim().length >= 5;
       const targetRoom = providedRoom || (hasTakeover ? fallbackRoom : "");
       if (targetRoom.length >= 6) {
-        void enterFullscreen();
+        await enterFullscreen();
         if (roomCode || !code) setCode(targetRoom);
         setWasKicked(false);
         setRoomFullDismissed(false);
