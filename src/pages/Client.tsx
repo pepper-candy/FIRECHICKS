@@ -423,7 +423,7 @@ export default function Client() {
   const examVideoRef = useRef<HTMLVideoElement>(null);
   const examStreamRef = useRef<MediaStream | null>(null);
 
-  const { isFullscreen, canNativeFullscreen, showImmersiveControl, enter: enterFullscreen } = useFullscreen();
+  const { isFullscreen, showImmersiveControl, enter: enterFullscreen } = useFullscreen();
 
   // ── Prevent body scroll / overscroll bounce on mobile ──────────────────────
   useEffect(() => {
@@ -731,13 +731,13 @@ export default function Client() {
     }
   }, [sendToHost, examAnswer]);
   const handleJoin = useCallback(
-    (roomCode?: string) => {
+    async (roomCode?: string) => {
       const providedRoom = (roomCode || code).trim().toUpperCase();
       const fallbackRoom = rememberedRoomCode.trim().toUpperCase();
       const hasTakeover = rejoinCode.trim().length >= 5;
       const targetRoom = providedRoom || (hasTakeover ? fallbackRoom : "");
       if (targetRoom.length >= 6) {
-        void enterFullscreen();
+        await enterFullscreen();
         if (roomCode || !code) setCode(targetRoom);
         setWasKicked(false);
         setRoomFullDismissed(false);
@@ -768,7 +768,7 @@ export default function Client() {
       : false;
 
   // ─── FULLSCREEN SPLASH — shown before join if FS is supported and not yet entered ──
-  if (canNativeFullscreen && !isFullscreen && !fsSplashDone) {
+  if (showImmersiveControl && !isFullscreen && !fsSplashDone) {
     return (
       <div
         className="flex flex-col items-center justify-center h-dvh overflow-hidden gap-8 bg-background"
