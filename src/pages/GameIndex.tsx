@@ -110,8 +110,8 @@ function ParticleField() {
           style={
             {
               left: `${p.x}%`,
-              bottom: "-10%", // ← ADD: start from bottom
-              width: `${p.size}px`, // ← CHANGED: use px units
+              bottom: "-10%",
+              width: `${p.size}px`,
               height: `${p.size}px`,
               background: `radial-gradient(circle at 30% 30%, 
                 rgba(255, 255, 255, 0.9), 
