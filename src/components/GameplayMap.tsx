@@ -27,6 +27,21 @@ function DayLighting() {
   );
 }
 
+// ─── Bright Light Mode Lighting ──────────────────────────────────────────────
+function LightModeLighting() {
+  return (
+    <>
+      <directionalLight position={[20, 40, 15]} intensity={2.2} castShadow shadow-mapSize={[2048, 2048]} color="#ffffff" />
+      <directionalLight position={[-15, 30, -10]} intensity={1.0} color="#ffffff" />
+      <ambientLight intensity={1.2} color="#ffffff" />
+      <mesh scale={[100, 100, 100]}>
+        <sphereGeometry args={[1, 32, 32]} />
+        <meshBasicMaterial color="#e8e8ee" side={THREE.BackSide} />
+      </mesh>
+    </>
+  );
+}
+
 // Camera stays centered; zoomLevel lets host tune framing
 function MapCamera({ zoomLevel = 1 }: { zoomLevel?: number }) {
   const { camera } = useThree();
