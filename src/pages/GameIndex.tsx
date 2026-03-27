@@ -89,12 +89,12 @@ function ImmersiveTitle() {
 function ParticleField() {
   const particles = useMemo(
     () =>
-      Array.from({ length: 80 }, (_, i) => ({
+      Array.from({ length: 150 }, (_, i) => ({
         id: i,
         x: Math.random() * 100,
-        duration: 8 + Math.random() * 25,
+        duration: 8 + Math.random() * 12,
         delay: Math.random() * 10,
-        size: 1 + Math.random() * 2,
+        size: 1 + Math.random() * 25,
         sway: (Math.random() - 0.5) * 100,
         opacity: 0.3 + Math.random() * 0.5,
       })),
@@ -106,14 +106,22 @@ function ParticleField() {
       {particles.map((p) => (
         <div
           key={p.id}
-          className="immersive-particle"
+          className="absolute rounded-full" // ← changed from "immersive-particle"
           style={
             {
-              "--x": `${p.x}%`,
-              "--duration": `${p.duration}s`,
-              "--delay": `${p.delay}s`,
-              width: p.size,
-              height: p.size,
+              left: `${p.x}%`,
+              bottom: "-10%", // ← ADD: start from bottom
+              width: `${p.size}px`, // ← CHANGED: use px units
+              height: `${p.size}px`,
+              background: `radial-gradient(circle at 30% 30%, 
+                rgba(255, 255, 255, 0.9), 
+                rgba(255, 255, 255, 0.4),
+                rgba(255, 255, 255, 0.1))`,
+              opacity: p.opacity,
+              animation: `bubble-float ${p.duration}s linear ${p.delay}s infinite,
+                          bubble-sway ${p.duration * 0.5}s ease-in-out ${p.delay}s infinite`,
+              filter: "blur(1px)",
+              boxShadow: "0 0 10px rgba(255,255,255,0.3)",
             } as React.CSSProperties
           }
         />
@@ -121,7 +129,6 @@ function ParticleField() {
     </div>
   );
 }
-
 // ── Main page ─────────────────────────────────────────────────────────────────
 
 const Index = () => {
@@ -220,20 +227,9 @@ const Index = () => {
           className="absolute top-4 left-4 flex items-center gap-2 px-3 py-1.5 rounded border border-primary/60 text-primary text-xs font-mono hover:bg-primary/10 z-50 immersive-border-breathe immersive-fade-in"
           style={{ "--delay": "0.1s" } as React.CSSProperties}
         >
-          <Sparkles className="w-3 h-3" />
+          <Sparkles className="w-3 h-3 flex-shrink-0" />
           IMMERSIVE ON
         </button>
-
-        {/* Title */}
-        <div className="text-center space-y-4 z-10">
-          {mounted && <ImmersiveTitle />}
-          <p
-            className="text-sm text-muted-foreground font-mono max-w-md immersive-fade-in"
-            style={{ "--delay": "2s" } as React.CSSProperties}
-          >
-            1 V 3 — control characters across devices
-          </p>
-        </div>
 
         {/* Buttons — staggered fade-in */}
         <div className="flex flex-col gap-4 w-full max-w-xs z-10">
