@@ -97,30 +97,31 @@ function ParticleField() {
         size: 8 + Math.random() * 25,
         sway: (Math.random() - 0.5) * 100,
         opacity: 0.3 + Math.random() * 0.5,
-        // Randomly assign a theme color
-        colorType: Math.floor(Math.random() * 4), // 0: primary, 1: secondary, 2: accent, 3: mixed
+        colorType: Math.floor(Math.random() * 4),
+        startFadeAt: 66, // Percentage of journey to start fading
+        endFadeAt: 83, // Percentage of journey to be fully transparent
       })),
     [],
   );
 
   const getParticleGradient = (colorType: number) => {
     switch (colorType) {
-      case 0: // Primary green
+      case 0:
         return `radial-gradient(circle at 30% 30%, 
           rgba(34, 197, 94, 0.9), 
           rgba(34, 197, 94, 0.45),
           rgba(34, 197, 94, 0.08))`;
-      case 1: // Secondary purple
+      case 1:
         return `radial-gradient(circle at 30% 30%, 
           rgba(168, 85, 247, 0.9), 
           rgba(168, 85, 247, 0.45),
           rgba(168, 85, 247, 0.08))`;
-      case 2: // Accent (cyan/teal)
+      case 2:
         return `radial-gradient(circle at 30% 30%, 
           rgba(6, 182, 212, 0.9), 
           rgba(6, 182, 212, 0.45),
           rgba(6, 182, 212, 0.08))`;
-      default: // Mixed gold/white
+      default:
         return `radial-gradient(circle at 30% 30%, 
           rgba(234, 179, 8, 0.9), 
           rgba(234, 179, 8, 0.45),
@@ -140,6 +141,9 @@ function ParticleField() {
               bottom: "-10%",
               animation: `bubble-float ${p.duration}s linear ${p.delay}s infinite`,
               "--sway": `${p.sway}px`,
+              "--start-fade": `${p.startFadeAt}%`,
+              "--end-fade": `${p.endFadeAt}%`,
+              "--particle-opacity": p.opacity,
             } as React.CSSProperties
           }
         >
@@ -150,10 +154,9 @@ function ParticleField() {
                 width: `${p.size}px`,
                 height: `${p.size}px`,
                 background: getParticleGradient(p.colorType),
-                opacity: p.opacity,
-                animation: `bubble-sway ${p.duration * 0.5}s ease-in-out ${p.delay}s infinite`,
+                animation: `bubble-sway ${p.duration * 0.5}s ease-in-out ${p.delay}s infinite, bubble-fade-custom ${p.duration}s linear ${p.delay}s infinite`,
                 filter: "blur(1px)",
-                boxShadow: "0 0 12px rgba(0,0,0,0.35)",
+                boxShadow: `0 0 12px rgba(0,0,0,0.35)`,
               } as React.CSSProperties
             }
           />
