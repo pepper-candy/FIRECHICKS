@@ -89,12 +89,12 @@ function ImmersiveTitle() {
 function ParticleField() {
   const particles = useMemo(
     () =>
-      Array.from({ length: 150 }, (_, i) => ({
+      Array.from({ length: 100 }, (_, i) => ({
         id: i,
         x: Math.random() * 100,
         duration: 8 + Math.random() * 12,
         delay: Math.random() * 10,
-        size: 1 + Math.random() * 25,
+        size: 8 + Math.random() * 25,
         sway: (Math.random() - 0.5) * 100,
         opacity: 0.3 + Math.random() * 0.5,
       })),
@@ -110,8 +110,8 @@ function ParticleField() {
           style={
             {
               left: `${p.x}%`,
-              bottom: "-10%", // ← ADD: start from bottom
-              width: `${p.size}px`, // ← CHANGED: use px units
+              bottom: "-10%",
+              width: `${p.size}px`,
               height: `${p.size}px`,
               background: `radial-gradient(circle at 30% 30%, 
                 rgba(255, 255, 255, 0.9), 
@@ -345,7 +345,7 @@ const Index = () => {
         <h1 className="text-xl md:text-3xl text-primary text-glow-green tracking-wider leading-relaxed">
           EAGLE VS CHICK
         </h1>
-        <p className="text-sm text-muted-foreground font-mono max-w-md">1 V 3 — control characters across devices</p>
+        <p className="text-sm text-muted-foreground font-mono max-w-md mx-auto text-center">1 V 3 — control characters across devices</p>
       </div>
 
       <div className="flex flex-col gap-4 w-full max-w-xs">
