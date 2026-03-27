@@ -1010,8 +1010,9 @@ function GameOverCeremony({ snapshot, gameMode }: { snapshot: GameStateSnapshot;
             style={{ width: "100%", height: "100%" }}
             camera={{ position: [0, 1.8, 6 + rows * 2.2], fov: 45 }}
           >
-            <ambientLight intensity={0.8} />
-            <directionalLight position={[5, 8, 5]} intensity={1.2} />
+            <ambientLight intensity={isImmersive ? 0.3 : 0.8} />
+            <directionalLight position={[5, 8, 5]} intensity={isImmersive ? 1.4 : 1.2} />
+            {isImmersive && <spotLight position={[0, 8, 3]} angle={0.6} penumbra={0.9} intensity={2} color="#ffd700" />}
             <group position={[0, -2.4, (rows - 1) * spacingZ * 0.5]}>
               {sorted.map((p, i) => {
                 const isWin = getMatchResult(p) !== "lose";
