@@ -25,6 +25,7 @@ import { MAP_LIST } from "@/lib/mapVariants";
 import type { PlayerGameStateSerializable } from "@/lib/gameTypes";
 import { assetUrl } from "@/lib/assets";
 import { Bounds } from "@react-three/drei";
+import { useImmersive } from "@/context/ImmersiveContext";
 
 // ─── Event Overlay (shows during mystery box events) ─────────────────────────
 function EventOverlay({
