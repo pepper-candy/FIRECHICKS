@@ -1142,7 +1142,7 @@ function GameOverCeremony({ snapshot, gameMode }: { snapshot: GameStateSnapshot;
                 const isWin = getMatchResult(p) !== "lose";
                 const col = i % cols;
                 const row = Math.floor(i / cols);
-                const rowOffset = row % 2 === 0 ? -0.8 : 0.8;
+                const rowOffset = rows > 1 ? (row % 2 === 0 ? -0.8 : 0.8) : 0;
                 const x = (col - (cols - 1) / 2) * spacingX + rowOffset;
                 const z = -row * spacingZ;
                 return (
