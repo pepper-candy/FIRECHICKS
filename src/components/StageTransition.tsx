@@ -67,7 +67,7 @@ export default function StageTransition({ stage, onDismiss, immersive = false }:
           />
         )}
         <div
-          className="absolute left-0 right-0 top-0 z-50 cursor-pointer select-none stage-banner-slide"
+          className="absolute left-0 right-0 bottom-16 z-50 cursor-pointer select-none stage-banner-slide"
           onClick={onDismiss}
           title="Click to dismiss"
         >
