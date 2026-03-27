@@ -559,3 +559,21 @@
     opacity: 0;
   }
 }
+
+@keyframes float-up {
+  0% {
+    transform: translateY(0) translateX(0);
+    opacity: 0;
+  }
+  10% {
+    opacity: 1;
+  }
+  50% {
+    transform: translateY(-50vh) translateX(0);
+    opacity: 0.5;
+  }
+  100% {
+    transform: translateY(-50vh) translateX(0);
+    opacity: 0;
+  }
+}
