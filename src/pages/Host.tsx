@@ -853,19 +853,65 @@ function GameOverCeremony({ snapshot, gameMode }: { snapshot: GameStateSnapshot;
   const teamName =
     winner === "eagle" ? "🦅 GAP Killers Win!" : winner === "chicks" ? "🐤 Fire Chicks Win!" : "🤝 Draw!";
 
+  // Immersive floating particles for ceremony
+  const ceremonyParticles = useMemo(
+    () =>
+      isImmersive
+        ? Array.from({ length: 60 }, (_, i) => ({
+            id: i,
+            x: Math.random() * 100,
+            duration: 6 + Math.random() * 10,
+            delay: Math.random() * 8,
+            size: 4 + Math.random() * 16,
+            opacity: 0.2 + Math.random() * 0.4,
+          }))
+        : [],
+    [isImmersive],
+  );
+
+  const CeremonyParticles = () =>
+    isImmersive ? (
+      <div className="fixed inset-0 overflow-hidden pointer-events-none z-0">
+        {ceremonyParticles.map((p) => (
+          <div
+            key={p.id}
+            className="absolute rounded-full"
+            style={{
+              left: `${p.x}%`,
+              bottom: "-10%",
+              width: `${p.size}px`,
+              height: `${p.size}px`,
+              background: `radial-gradient(circle at 30% 30%, rgba(255,215,0,0.9), rgba(255,215,0,0.3), rgba(255,215,0,0.05))`,
+              opacity: p.opacity,
+              animation: `bubble-float ${p.duration}s linear ${p.delay}s infinite, bubble-sway ${p.duration * 0.5}s ease-in-out ${p.delay}s infinite`,
+              filter: "blur(1px)",
+              boxShadow: "0 0 12px rgba(255,215,0,0.4)",
+            }}
+          />
+        ))}
+      </div>
+    ) : null;
+
   // Phase 1: MVP showcase
   if (ceremonyPhase === "mvp" && mvp) {
     return (
-      <div className="flex flex-col items-center justify-center h-screen bg-background gap-6">
-        <h1 className="text-2xl font-pixel text-accent text-glow-green animate-pulse tracking-widest">🏆 MVP</h1>
-        <div className="h-[50vh] w-full min-h-[280px]">
+      <div className={`flex flex-col items-center justify-center h-screen gap-6 overflow-hidden relative ${isImmersive ? "bg-black" : "bg-background"}`}>
+        {isImmersive && <CeremonyParticles />}
+        {isImmersive && <div className="immersive-vignette" />}
+        <h1 className={`text-2xl font-pixel text-accent tracking-widest z-10 ${isImmersive ? "immersive-fade-in ceremony-title-glow" : "text-glow-green animate-pulse"}`}
+          style={isImmersive ? { "--delay": "0.3s" } as React.CSSProperties : undefined}
+        >
+          🏆 MVP
+        </h1>
+        <div className="h-[50vh] w-full min-h-[280px] z-10">
           <Canvas
             className="h-full w-full"
             style={{ width: "100%", height: "100%" }}
             camera={{ position: [0, 0.8, 5.8], fov: 45 }}
           >
-            <ambientLight intensity={0.8} />
-            <directionalLight position={[5, 8, 5]} intensity={1.2} />
+            <ambientLight intensity={isImmersive ? 0.4 : 0.8} />
+            <directionalLight position={[5, 8, 5]} intensity={isImmersive ? 1.6 : 1.2} />
+            {isImmersive && <spotLight position={[0, 6, 2]} angle={0.4} penumbra={0.8} intensity={3} color="#ffd700" />}
             <group position={[0, -1.8, 0]}>
               <group scale={1.5}>
                 <DancingChar chickColor={mvp.chickColor} isWinner={true} delay={0} />
@@ -873,14 +919,20 @@ function GameOverCeremony({ snapshot, gameMode }: { snapshot: GameStateSnapshot;
             </group>
           </Canvas>
         </div>
-        <div className="flex items-center gap-3 px-6 py-3 rounded-xl bg-accent/20 border-2 border-accent">
+        <div className={`flex items-center gap-3 px-6 py-3 rounded-xl border-2 border-accent z-10 ${isImmersive ? "bg-accent/10 immersive-fade-in immersive-border-breathe" : "bg-accent/20"}`}
+          style={isImmersive ? { "--delay": "1.0s" } as React.CSSProperties : undefined}
+        >
           <Trophy className="w-6 h-6 text-accent" />
           <span className="text-lg font-pixel" style={{ color: mvpColor ? `hsl(${mvpColor.hsl})` : undefined }}>
             {mvpColor?.name ?? "?"}
           </span>
           <span className="text-sm font-mono text-muted-foreground">Score: {mvp.actionScore.toFixed(0)}</span>
         </div>
-        <p className="text-sm font-mono text-muted-foreground">🎉 Congratulations!</p>
+        <p className={`text-sm font-mono text-muted-foreground z-10 ${isImmersive ? "immersive-fade-in" : ""}`}
+          style={isImmersive ? { "--delay": "1.4s" } as React.CSSProperties : undefined}
+        >
+          🎉 Congratulations!
+        </p>
       </div>
     );
   }
