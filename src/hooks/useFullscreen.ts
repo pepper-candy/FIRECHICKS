@@ -6,7 +6,9 @@ import { useState, useEffect, useCallback } from 'react';
  * Falls back gracefully on iOS where the API is unavailable.
  */
 export function useFullscreen() {
-  const [isFullscreen, setIsFullscreen] = useState(false);
+  const [isFullscreen, setIsFullscreen] = useState(
+    () => !!document.fullscreenElement || !!(document as any).webkitFullscreenElement,
+  );
   const [canNativeFullscreen, setCanNativeFullscreen] = useState(false);
   const [isTouchDevice, setIsTouchDevice] = useState(false);
 
