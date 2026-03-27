@@ -472,7 +472,7 @@ const Index = () => {
           variant="outline"
           className="h-14 text-sm font-pixel border-accent text-accent hover:bg-accent/10"
         >
-          🐔 TEST CROSSY ROAD
+          🐔 CROSSY ROAD
         </Button>
       </div>
 
