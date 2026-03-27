@@ -590,9 +590,11 @@ function GameCharacter({
     <group position={[player.position.x, 0, player.position.z]}>
       {isInvincible && <InvincibleRipple3D />}
       {isCaged && <CageMesh countdown={cageRemaining} />}
-      <Suspense fallback={null}>
-        <CharacterViewer color={color.chickColor} animState={anim} facingAngle={player.facingAngle} />
-      </Suspense>
+      <group scale={1.5}>
+        <Suspense fallback={null}>
+          <CharacterViewer color={color.chickColor} animState={anim} facingAngle={player.facingAngle} />
+        </Suspense>
+      </group>
       <Html position={[0, 2.8, 0]} center zIndexRange={[100, 0]}>
         <div style={{
           background: 'rgba(0,0,0,0.6)', border: `1px solid hsl(${color.hsl})`, borderRadius: 3, padding: '1px 5px',
