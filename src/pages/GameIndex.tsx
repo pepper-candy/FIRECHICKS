@@ -89,12 +89,12 @@ function ImmersiveTitle() {
 function ParticleField() {
   const particles = useMemo(
     () =>
-      Array.from({ length: 150 }, (_, i) => ({
+      Array.from({ length: 100 }, (_, i) => ({
         id: i,
         x: Math.random() * 100,
         duration: 8 + Math.random() * 12,
         delay: Math.random() * 10,
-        size: 1 + Math.random() * 25,
+        size: 8 + Math.random() * 25,
         sway: (Math.random() - 0.5) * 100,
         opacity: 0.3 + Math.random() * 0.5,
       })),
