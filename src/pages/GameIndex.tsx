@@ -361,7 +361,7 @@ const Index = () => {
             className="h-14 text-sm font-pixel border-accent text-accent hover:bg-accent/10 immersive-fade-in"
             style={{ "--delay": "3.2s" } as React.CSSProperties}
           >
-            🐔 TEST CROSSY ROAD
+            🐔 CROSSY ROAD
           </Button>
         </div>
 
@@ -472,7 +472,7 @@ const Index = () => {
           variant="outline"
           className="h-14 text-sm font-pixel border-accent text-accent hover:bg-accent/10"
         >
-          🐔 TEST CROSSY ROAD
+          🐔 CROSSY ROAD
         </Button>
       </div>
 
