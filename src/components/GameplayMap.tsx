@@ -1,6 +1,6 @@
 import { Suspense, useRef, useEffect, useMemo } from 'react';
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
-import { Grid, Html } from '@react-three/drei';
+import { Grid, Html, Edges } from '@react-three/drei';
 import * as THREE from 'three';
 import CharacterViewer from '@/components/CharacterViewer';
 import { MAP_SIZE, MAP_HALF, ZONE_RADIUS, TIP_SHARE_RADIUS } from '@/lib/gameplayMapData';
@@ -178,6 +178,7 @@ interface Props {
   onHostSkipExam?: () => void;
   mapId?: MapId;
   themeHue?: number;
+  immersive?: boolean;
 }
 
 // Helper: derive themed colors from a hue (0-360)
@@ -185,8 +186,95 @@ function themedColor(hue: number, saturation: number, lightness: number): string
   return `hsl(${hue}, ${saturation}%, ${lightness}%)`;
 }
 
+// ─── Immersive Atmosphere ─────────────────────────────────────────────────────
+
+function SceneFog({ color, density }: { color: string; density: number }) {
+  const { scene } = useThree();
+  useEffect(() => {
+    scene.fog = new THREE.FogExp2(color, density);
+    return () => { scene.fog = null; };
+  }, [scene, color, density]);
+  return null;
+}
+
+function ImmersiveLighting() {
+  const skyRef = useRef<THREE.Group>(null!);
+  useFrame((_, delta) => {
+    if (skyRef.current) skyRef.current.rotation.y += delta * 0.006;
+  });
+  return (
+    <>
+      <ambientLight intensity={0.28} color="#1a1a3e" />
+      <directionalLight position={[10, 25, 10]} intensity={1.1} color="#c4d0ff" castShadow />
+      <directionalLight position={[-8, 15, -8]} intensity={0.45} color="#7050c0" />
+      <group ref={skyRef}>
+        {/* Deep indigo night sky */}
+        <mesh scale={[120, 120, 120]}>
+          <sphereGeometry args={[1, 32, 16]} />
+          <meshBasicMaterial color="#050510" side={THREE.BackSide} />
+        </mesh>
+        {/* Subtle teal horizon glow band */}
+        <mesh scale={[118, 118, 118]}>
+          <sphereGeometry args={[1, 32, 8, 0, Math.PI * 2, Math.PI * 0.42, Math.PI * 0.22]} />
+          <meshBasicMaterial color="#0a1628" side={THREE.BackSide} transparent opacity={0.55} />
+        </mesh>
+      </group>
+    </>
+  );
+}
+
+function MapParticles() {
+  const meshRef = useRef<THREE.InstancedMesh>(null!);
+  const count = 45;
+  const dummy = useMemo(() => new THREE.Object3D(), []);
+  const data = useMemo(
+    () =>
+      Array.from({ length: count }, () => ({
+        x: (Math.random() - 0.5) * MAP_SIZE * 0.85,
+        z: (Math.random() - 0.5) * MAP_SIZE * 0.85,
+        y: Math.random() * 10,
+        speed: 0.15 + Math.random() * 0.45,
+        scale: 0.06 + Math.random() * 0.09,
+      })),
+    [],
+  );
+
+  useEffect(() => {
+    data.forEach((p, i) => {
+      dummy.position.set(p.x, p.y, p.z);
+      dummy.scale.setScalar(p.scale);
+      dummy.updateMatrix();
+      meshRef.current.setMatrixAt(i, dummy.matrix);
+    });
+    meshRef.current.instanceMatrix.needsUpdate = true;
+  }, [data, dummy]);
+
+  useFrame((_, delta) => {
+    data.forEach((p, i) => {
+      p.y += p.speed * delta;
+      if (p.y > 11) {
+        p.y = 0;
+        p.x = (Math.random() - 0.5) * MAP_SIZE * 0.85;
+        p.z = (Math.random() - 0.5) * MAP_SIZE * 0.85;
+      }
+      dummy.position.set(p.x, p.y, p.z);
+      dummy.scale.setScalar(p.scale);
+      dummy.updateMatrix();
+      meshRef.current.setMatrixAt(i, dummy.matrix);
+    });
+    meshRef.current.instanceMatrix.needsUpdate = true;
+  });
+
+  return (
+    <instancedMesh ref={meshRef} args={[undefined, undefined, count]}>
+      <sphereGeometry args={[1, 5, 5]} />
+      <meshStandardMaterial color="#8090ff" emissive="#4055dd" emissiveIntensity={1.0} transparent opacity={0.3} />
+    </instancedMesh>
+  );
+}
+
 // ─── Building ──────────────────────────────────────────────────────────────────
-function Building({ position, size, tipSiteActive, zoneActive, zoneHealth, baseColor, baseEmissive }: {
+function Building({ position, size, tipSiteActive, zoneActive, zoneHealth, baseColor, baseEmissive, immersive }: {
   position: { x: number; z: number };
   size: { w: number; h: number; d: number };
   tipSiteActive?: boolean;
@@ -194,6 +282,7 @@ function Building({ position, size, tipSiteActive, zoneActive, zoneHealth, baseC
   zoneHealth?: number;
   baseColor?: string;
   baseEmissive?: string;
+  immersive?: boolean;
 }) {
   const pulseRef = useRef(0);
   useFrame((_, delta) => { pulseRef.current += delta * 2; });
@@ -206,16 +295,22 @@ function Building({ position, size, tipSiteActive, zoneActive, zoneHealth, baseC
         <meshStandardMaterial
           color={gold ? '#ffd700' : (baseColor ?? '#2a2a4a')}
           emissive={gold ? '#ffd700' : (baseEmissive ?? '#1a1a3a')}
-          emissiveIntensity={gold ? 0.6 : 0.2}
+          emissiveIntensity={gold ? 0.6 : (immersive ? 0.35 : 0.2)}
         />
+        {immersive && (
+          <Edges scale={1.005} threshold={12} color={gold ? '#ffe566' : '#7070b8'} />
+        )}
       </mesh>
       <mesh position={[0, size.h + 0.2, 0]}>
         <boxGeometry args={[size.w + 0.5, 0.4, size.d + 0.5]} />
         <meshStandardMaterial
           color={gold ? '#ffaa00' : (baseColor ?? '#3a3a5a')}
           emissive={gold ? '#ffaa00' : (baseEmissive ?? '#2a2a4a')}
-          emissiveIntensity={gold ? 0.5 : 0.1}
+          emissiveIntensity={gold ? 0.5 : (immersive ? 0.18 : 0.1)}
         />
+        {immersive && (
+          <Edges scale={1.01} threshold={12} color={gold ? '#ffcc44' : '#5555a0'} />
+        )}
       </mesh>
       {zoneActive && (
         <mesh position={[0, 1.5, 0]}>
@@ -290,7 +385,33 @@ function PropMarker({ spawn }: { spawn: PropSpawn }) {
 }
 
 // ─── Mystery Box ──────────────────────────────────────────────────────────────
-function MysteryBoxMarker({ box }: { box: MysteryBox }) {
+function MysteryBoxAura() {
+  const outerRef = useRef<THREE.Group>(null!);
+  const innerRef = useRef<THREE.Group>(null!);
+  useFrame((_, delta) => {
+    if (outerRef.current) outerRef.current.rotation.y += delta * 1.8;
+    if (innerRef.current) innerRef.current.rotation.y -= delta * 2.4;
+    if (innerRef.current) innerRef.current.rotation.x += delta * 0.6;
+  });
+  return (
+    <>
+      <group ref={outerRef} position={[0, 0.7, 0]}>
+        <mesh>
+          <torusGeometry args={[1.05, 0.035, 8, 28]} />
+          <meshStandardMaterial color="#ff8c00" emissive="#ff4400" emissiveIntensity={1.8} transparent opacity={0.65} />
+        </mesh>
+      </group>
+      <group ref={innerRef} position={[0, 0.7, 0]}>
+        <mesh rotation={[Math.PI / 2, 0, 0]}>
+          <torusGeometry args={[0.85, 0.025, 8, 24]} />
+          <meshStandardMaterial color="#ffcc00" emissive="#ff8800" emissiveIntensity={1.5} transparent opacity={0.45} />
+        </mesh>
+      </group>
+    </>
+  );
+}
+
+function MysteryBoxMarker({ box, immersive }: { box: MysteryBox; immersive?: boolean }) {
   const meshRef = useRef<THREE.Mesh>(null!);
   const now = Date.now();
   const isActive = now >= box.activeAt;
@@ -300,9 +421,11 @@ function MysteryBoxMarker({ box }: { box: MysteryBox }) {
 
   return (
     <group position={[box.position.x, 0, box.position.z]}>
+      {immersive && isActive && <MysteryBoxAura />}
       <mesh ref={meshRef} position={[0, 0.7, 0]}>
         <boxGeometry args={[0.8, 0.8, 0.8]} />
-        <meshStandardMaterial color={isActive ? '#ff8c00' : '#555'} emissive={isActive ? '#ff4400' : '#222'} emissiveIntensity={isActive ? 1.0 : 0.3} />
+        <meshStandardMaterial color={isActive ? '#ff8c00' : '#555'} emissive={isActive ? '#ff4400' : '#222'} emissiveIntensity={isActive ? (immersive ? 1.6 : 1.0) : 0.3} />
+        {immersive && isActive && <Edges scale={1.05} threshold={10} color="#ffaa44" />}
       </mesh>
       <Html position={[0, 1.8, 0]} center zIndexRange={[100, 0]}>
         <div style={{ color: isActive ? '#ff8c00' : '#888', fontSize: 14, fontFamily: 'monospace', fontWeight: 'bold', pointerEvents: 'none', textShadow: '0 0 6px #000' }}>
@@ -523,6 +646,7 @@ export default function GameplayMap({
   onHostSkipExam,
   mapId = 1,
   themeHue,
+  immersive = false,
 }: Props) {
   const playerList = Object.values(players);
   const mapVariant = useMemo(() => getMapVariant(mapId), [mapId]);
@@ -540,10 +664,19 @@ export default function GameplayMap({
   const obstacleEmissive = hasTheme ? themedColor(themeHue, 45, 12) : '#0a1a3a';
 
   return (
-    <div className="w-full h-full rounded-lg border border-border overflow-hidden bg-background">
+    <div className={`w-full h-full rounded-lg border overflow-hidden relative ${immersive ? 'border-primary/20 bg-black' : 'border-border bg-background'}`}>
+      {/* Edge vignette haze — blurs map boundaries into void */}
+      {immersive && (
+        <div
+          className="absolute inset-0 pointer-events-none z-10"
+          style={{ background: 'radial-gradient(ellipse at center, transparent 55%, rgba(0,0,0,0.85) 100%)' }}
+        />
+      )}
       <Canvas camera={{ position: [0, 56, 42], fov: 58 }} shadows>
         <MapCamera zoomLevel={zoomLevel} />
-        <DayLighting />
+        {immersive ? <ImmersiveLighting /> : <DayLighting />}
+        {immersive && <SceneFog color="#050510" density={0.013} />}
+        {immersive && <MapParticles />}
 
         {/* Floor */}
         <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.01, 0]} receiveShadow>
@@ -590,6 +723,7 @@ export default function GameplayMap({
               zoneHealth={bState?.zoneHealth}
               baseColor={buildingColor}
               baseEmissive={buildingEmissive}
+              immersive={immersive}
             />
           );
         })}
@@ -611,7 +745,7 @@ export default function GameplayMap({
 
         {/* Mystery boxes */}
         {mysteryBoxes?.map((box) => (
-          <MysteryBoxMarker key={box.id} box={box} />
+          <MysteryBoxMarker key={box.id} box={box} immersive={immersive} />
         ))}
 
         {/* Characters */}

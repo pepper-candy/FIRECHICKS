@@ -298,11 +298,32 @@ export default function Host() {
   const playerCount = players.size;
   const maxPlayers = gameMode === "1v3" ? MAX_PLAYERS_1V3 : MAX_PLAYERS_2V6;
   const isFull = playerCount === maxPlayers;
+  const { isImmersive } = useImmersive();
+
+  // ─── Damage glitch (immersive) ────────────────────────────────────────────────
+  const [hostGlitching, setHostGlitching] = useState(false);
+  const prevDamageSumRef = useRef(0);
+  const glitchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    if (!isImmersive || !snapshot) return;
+    const totalDamage = Object.values(snapshot.players).reduce((acc, p) => acc + p.damageTaken, 0);
+    if (totalDamage > prevDamageSumRef.current) {
+      prevDamageSumRef.current = totalDamage;
+      setHostGlitching(true);
+      if (glitchTimerRef.current) clearTimeout(glitchTimerRef.current);
+      glitchTimerRef.current = setTimeout(() => setHostGlitching(false), 240);
+    }
+    if (snapshot.phase === "lobby") prevDamageSumRef.current = 0;
+  }, [isImmersive, snapshot]);
 
   // ─── LOBBY ────────────────────────────────────────────────────────────────────
   if (phase === "lobby") {
     return (
-      <div className="flex flex-col h-screen p-3 gap-3">
+      
+      <div className={`flex flex-col h-screen p-3 gap-3 relative ${isImmersive ? "bg-black" : ""}`}>
+        {isImmersive && <div className="immersive-vignette" />}
+        {isImmersive && <div className="immersive-scanline-overlay" style={{ opacity: 0.25 }} />}
         {/* Cyber START button — top center absolute */}
         {(isFull || botsAdded) && (
           <div className="absolute top-4 left-1/2 -translate-x-1/2 z-20 flex gap-3">
@@ -345,7 +366,7 @@ export default function Host() {
 
         {/* Header row */}
         <div className="flex items-center justify-between flex-wrap gap-2 z-10">
-          <h1 className="text-sm md:text-base text-primary text-glow-green tracking-wider font-pixel">LOBBY</h1>
+          <h1 className={`text-sm md:text-base text-primary tracking-wider font-pixel ${isImmersive ? "ceremony-title-glow" : "text-glow-green"}`}>LOBBY</h1>
 
           <div className="flex items-center gap-2 font-mono text-xs flex-wrap">
             {/* Game mode toggle (only when not full) */}
@@ -469,12 +490,48 @@ export default function Host() {
   // ─── REVEAL ──────────────────────────────────────────────────────────────────
   if (phase === "reveal") {
     const revealCountdown = startClickAt ? Math.max(0, 10 - (revealNow - startClickAt) / 1000) : 10;
+    const revealSec = Math.ceil(revealCountdown);
+    
+    if (isImmersive) {
+      return (
+        <div className="relative flex flex-col items-center justify-center h-screen overflow-hidden bg-black">
+          <div className="immersive-vignette" />
+          <div className="immersive-scanline-overlay" style={{ opacity: 0.4 }} />
+          {/* Edge pulse strips */}
+          <div className="absolute inset-y-0 left-0 w-1 bg-primary/40 animate-pulse" />
+          <div className="absolute inset-y-0 right-0 w-1 bg-primary/40 animate-pulse" />
+
+          <div className="z-10 flex flex-col items-center gap-8">
+            <h1
+              className="text-3xl font-pixel text-primary tracking-[0.3em] immersive-fade-in"
+              style={{ "--delay": "0s", textShadow: "0 0 40px hsl(var(--primary) / 0.8)" } as React.CSSProperties}
+            >
+              GET READY
+            </h1>
+            <div
+              key={revealSec}
+              className="text-[10rem] font-pixel text-accent leading-none host-countdown-pop"
+              style={{ textShadow: "0 0 60px hsl(var(--accent) / 0.9), 0 0 120px hsl(var(--accent) / 0.4)" }}
+            >
+              {revealSec}
+            </div>
+            <p className="text-sm font-mono text-muted-foreground/60 tracking-widest immersive-fade-in" style={{ "--delay": "0.3s" } as React.CSSProperties}>
+              ROLES REVEALING ON PHONES
+            </p>
+            <p className="text-xs font-mono text-muted-foreground/40">
+              {Object.keys(assignments).length} player{Object.keys(assignments).length !== 1 ? "s" : ""} assigned
+            </p>
+          </div>
+        </div>
+      );
+    }
+
     return (
       <div className="flex flex-col items-center justify-center h-screen gap-6 p-4 bg-background">
         <h1 className="text-2xl font-pixel text-primary text-glow-green tracking-widest animate-pulse">GET READY</h1>
         <div className="flex flex-col items-center gap-3">
           <p className="text-sm font-mono text-muted-foreground">Roles are being revealed on each phone...</p>
-          <div className="text-6xl font-pixel text-accent animate-pulse">{Math.ceil(revealCountdown)}</div>
+          <div className="text-6xl font-pixel text-accent animate-pulse">{revealSec}</div>
           <div className="flex gap-1.5 mt-2">
             {[...Array(3)].map((_, i) => (
               <div
@@ -495,6 +552,40 @@ export default function Host() {
   // ─── COUNTDOWN ───────────────────────────────────────────────────────────────
   if (phase === "countdown") {
     const count = snapshot?.countdownTime ?? COUNTDOWN_DURATION_DISPLAY;
+    const countSec = Math.ceil(count);
+    
+    if (isImmersive) {
+      return (
+        <div className="relative flex flex-col items-center justify-center h-screen overflow-hidden bg-black">
+          <div className="immersive-vignette" />
+          <div className="immersive-scanline-overlay" style={{ opacity: 0.4 }} />
+          {/* Pulsing edge strips colored to team green */}
+          <div className="absolute inset-y-0 left-0 w-1.5 bg-primary/50 host-edge-pulse" />
+          <div className="absolute inset-y-0 right-0 w-1.5 bg-primary/50 host-edge-pulse" />
+
+          <div className="z-10 flex flex-col items-center gap-6">
+            <h1
+              className="text-2xl font-pixel text-primary tracking-[0.3em] immersive-fade-in"
+              style={{ "--delay": "0s", textShadow: "0 0 30px hsl(var(--primary) / 0.7)" } as React.CSSProperties}
+            >
+              GAME STARTING
+            </h1>
+            {/* key resets the CSS animation on every integer tick */}
+            <div
+              key={countSec}
+              className="text-[14rem] font-pixel text-accent leading-none host-countdown-pop"
+              style={{ textShadow: "0 0 80px hsl(var(--accent) / 1), 0 0 160px hsl(var(--accent) / 0.5)" }}
+            >
+              {countSec}
+            </div>
+            <p className="text-xs font-mono text-muted-foreground/50 tracking-widest">
+              EAGLE VS CHICK
+            </p>
+          </div>
+        </div>
+      );
+    }
+
     return (
       <div className="flex flex-col items-center justify-center h-screen gap-4 p-4">
         <h1 className="text-xl font-pixel text-primary text-glow-green">GET READY</h1>
@@ -502,7 +593,7 @@ export default function Host() {
           className="text-8xl font-pixel text-accent animate-pulse"
           style={{ textShadow: "0 0 30px hsl(var(--accent) / 0.8)" }}
         >
-          {Math.ceil(count)}
+          {countSec}
         </div>
         <p className="text-sm font-mono text-muted-foreground">Game starting soon!</p>
       </div>
@@ -531,6 +622,7 @@ export default function Host() {
           onHostSkipExam={phase === "exam" ? hostSkipExam : undefined}
           mapId={mapId}
           themeHue={themeHue}
+          immersive={isImmersive}
         />
 
         {/* Focus camera panel toggle button */}
@@ -778,6 +870,7 @@ export default function Host() {
             key={stageToast.key}
             stage={stageToast.stage as 0 | 1 | 2 | 3}
             onDismiss={dismissStageToast}
+            immersive={isImmersive}
           />
         )}
 
@@ -919,14 +1012,31 @@ function GameOverCeremony({ snapshot, gameMode }: { snapshot: GameStateSnapshot;
             </group>
           </Canvas>
         </div>
-        <div className={`flex items-center gap-3 px-6 py-3 rounded-xl border-2 border-accent z-10 ${isImmersive ? "bg-accent/10 immersive-fade-in immersive-border-breathe" : "bg-accent/20"}`}
-          style={isImmersive ? { "--delay": "1.0s" } as React.CSSProperties : undefined}
-        >
+        <div className={`flex items-center gap-3 px-6 py-3 rounded-xl border-2 border-accent z-10 ${isImmersive ? "bg-accent/10 immersive-border-breathe" : "bg-accent/20"}`}>
           <Trophy className="w-6 h-6 text-accent" />
-          <span className="text-lg font-pixel" style={{ color: mvpColor ? `hsl(${mvpColor.hsl})` : undefined }}>
-            {mvpColor?.name ?? "?"}
-          </span>
-          <span className="text-sm font-mono text-muted-foreground">Score: {mvp.actionScore.toFixed(0)}</span>
+          {isImmersive ? (
+            <>
+              <span
+                className="text-2xl font-pixel mvp-name-reveal"
+                style={{ color: mvpColor ? `hsl(${mvpColor.hsl})` : undefined, "--delay": "1.1s" } as React.CSSProperties}
+              >
+                {mvpColor?.name ?? "?"}
+              </span>
+              <span
+                className="text-sm font-mono text-accent/70 mvp-name-reveal"
+                style={{ "--delay": "1.5s" } as React.CSSProperties}
+              >
+                {mvp.actionScore.toFixed(0)} pts
+              </span>
+            </>
+          ) : (
+            <>
+              <span className="text-lg font-pixel" style={{ color: mvpColor ? `hsl(${mvpColor.hsl})` : undefined }}>
+                {mvpColor?.name ?? "?"}
+              </span>
+              <span className="text-sm font-mono text-muted-foreground">Score: {mvp.actionScore.toFixed(0)}</span>
+            </>
+          )}
         </div>
         <p className={`text-sm font-mono text-muted-foreground z-10 ${isImmersive ? "immersive-fade-in" : ""}`}
           style={isImmersive ? { "--delay": "1.4s" } as React.CSSProperties : undefined}
@@ -1055,8 +1165,8 @@ function GameOverCeremony({ snapshot, gameMode }: { snapshot: GameStateSnapshot;
           </p>
         </div>
 
-        <div className="flex-1 min-h-0 p-3 sm:p-4 overflow-auto">
-          <h2 className="text-center text-sm font-pixel text-foreground mb-3 tracking-widest">📋 TRANSCRIPT</h2>
+        <div className={`flex-1 min-h-0 p-3 sm:p-4 overflow-auto relative ${isImmersive ? "transcript-grid-bg" : ""}`}>
+          <h2 className={`text-center text-sm font-pixel mb-3 tracking-widest ${isImmersive ? "text-accent ceremony-title-glow" : "text-foreground"}`}>📋 TRANSCRIPT</h2>
           <div className="w-full max-w-3xl mx-auto">
             <table className="w-full text-xs font-mono border-collapse">
               <thead>
@@ -1094,9 +1204,18 @@ function GameOverCeremony({ snapshot, gameMode }: { snapshot: GameStateSnapshot;
                         </div>
                       </td>
                       <td className="py-2 text-center">
-                        <span className="text-2xl font-bold" style={{ color: gradeColor }}>
-                          {letter}
-                        </span>
+                        {isImmersive ? (
+                          <span
+                            className="text-2xl font-bold ceremony-grade-bounce"
+                            style={{ color: gradeColor, "--grade-delay": `${0.3 + idx * 0.15 + 0.2}s` } as React.CSSProperties}
+                          >
+                            {letter}
+                          </span>
+                        ) : (
+                          <span className="text-2xl font-bold" style={{ color: gradeColor }}>
+                            {letter}
+                          </span>
+                        )}
                         <span className="text-[9px] text-muted-foreground block">{p.health.toFixed(1)}</span>
                       </td>
                       <td className="py-2 text-center text-muted-foreground">{Math.floor(p.survivalTime)}s</td>
@@ -1106,11 +1225,11 @@ function GameOverCeremony({ snapshot, gameMode }: { snapshot: GameStateSnapshot;
                       <td className="py-2 text-center text-foreground font-bold">{p.actionScore.toFixed(0)}</td>
                       <td className="py-2 text-center">
                         {result === "draw" ? (
-                          <span className="text-yellow-400 font-bold">DRAW</span>
+                          <span className={`text-yellow-400 font-bold ${isImmersive ? "ceremony-grade-bounce" : ""}`} style={isImmersive ? { "--grade-delay": `${0.5 + idx * 0.15}s` } as React.CSSProperties : undefined}>DRAW</span>
                         ) : result === "win" ? (
-                          <span className="text-primary font-bold">WIN</span>
+                          <span className={`text-primary font-bold ${isImmersive ? "ceremony-grade-bounce" : ""}`} style={isImmersive ? { "--grade-delay": `${0.5 + idx * 0.15}s` } as React.CSSProperties : undefined}>WIN</span>
                         ) : (
-                          <span className="text-destructive">LOSE</span>
+                          <span className={`text-destructive ${isImmersive ? "ceremony-grade-bounce" : ""}`} style={isImmersive ? { "--grade-delay": `${0.5 + idx * 0.15}s` } as React.CSSProperties : undefined}>LOSE</span>
                         )}
                       </td>
                     </tr>

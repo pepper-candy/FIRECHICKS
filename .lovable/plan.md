@@ -4,6 +4,33 @@ A toggleable cinematic mode that transforms the game into a world-class exhibiti
 
 ---
 
+## Implementation Status
+
+| Section | Status | Notes |
+|---------|--------|-------|
+| 1. Toggle + ImmersiveContext | **Done** | `ImmersiveContext.tsx`, `localStorage` persistence |
+| 2. Cinematic arrival screen | **Done** | Particles, scanlines, vignette, letter-by-letter title, watermark |
+| 3. Enhanced 3D map atmosphere | **Done** | `FogExp2`, dark sky dome w/ slow rotation, 45 instanced particles, `<Edges>` on buildings, mystery-box torus aura, radial edge haze |
+| 4. Phase transitions | **Done** | Countdown: keyed pop animation from scale(2.2); Reveal: same cinematic container; StageTransition: full-width frosted banner w/ flash |
+| 5. Game-over ceremony | **Done** | MVP name reveal animation, transcript scrolling grid bg, grade scale-bounce, WIN/LOSE stamp bounce |
+| 6. Environmental storytelling | **Done** | Host damage glitch (chromatic aberration + translate, 240ms), mystery box dual-torus aura, map edge haze |
+
+**Not implemented** (deferred for perf): `MeshReflectorMaterial` floor reflection — see note below.
+
+---
+
+## Exhibition Design Intent
+
+These guide implementation choices; they are not UI copy.
+
+- **Black box / cinema logic**: Countdown and reveal are full-bleed, sequenced beats. One primary motion per tick — number pops, then fades. Stage banner and flash are the only element in frame when a stage changes.
+- **Spatial distance + emotional connection**: `FogExp2` at low density turns the map into a volume the audience looks *into*. Instanced particles reinforce perceived depth without post-processing overhead.
+- **Interfaces as framed surfaces**: Immersive StageTransition is a `backdrop-blur` bar — a HUD "frame" that slides over the world. Edges on buildings make the architecture legible as constructed data, not just geometry.
+- **Environmental storytelling**: Damage glitch links the simulation state to a visceral interface hiccup. Mystery box torus aura signals "object with power" without text. Map edge haze implies the world extends beyond the frame.
+- **~1 min attention span**: Each phase has one primary cinematic anchor. Nothing competes for focus at the same time.
+
+---
+
 ## 1. Immersive Mode Toggle (Arrival Screen)
 
 Add a toggle button on GameIndex — a glowing "GO IMMERSIVE" switch at the top. Store the mode in React context (`ImmersiveContext`) so every component can read it. When off, game behaves exactly as now.
@@ -33,7 +60,7 @@ Transform the gameplay map when immersive mode is active:
 - **Volumetric fog**: Three.js `FogExp2` with low density, color-matched to theme hue
 - **Floating particles**: Small glowing orbs drifting upward across the map (instanced mesh, ~50 particles, very performant)
 - **Building edge glow**: Add emissive wireframe outlines on buildings using `<Edges>` from drei
-- **Floor reflection**: Subtle reflective plane under the grid using `MeshReflectorMaterial` (drei)
+- **Floor reflection**: Subtle reflective plane under the grid using `MeshReflectorMaterial` (drei) — *optional / perf-gated; skip on low-end exhibition hardware*
 - **Enhanced sky sphere**: Gradient sky dome instead of flat color, with slow rotation
 - **Ambient light rays**: Directional light with subtle volumetric cone visible near buildings
 
