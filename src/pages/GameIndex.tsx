@@ -97,9 +97,36 @@ function ParticleField() {
         size: 8 + Math.random() * 25,
         sway: (Math.random() - 0.5) * 100,
         opacity: 0.3 + Math.random() * 0.5,
+        // Randomly assign a theme color
+        colorType: Math.floor(Math.random() * 4), // 0: primary, 1: secondary, 2: accent, 3: mixed
       })),
     [],
   );
+
+  const getParticleGradient = (colorType: number) => {
+    switch (colorType) {
+      case 0: // Primary green
+        return `radial-gradient(circle at 30% 30%, 
+          rgba(34, 197, 94, 0.9), 
+          rgba(34, 197, 94, 0.45),
+          rgba(34, 197, 94, 0.08))`;
+      case 1: // Secondary purple
+        return `radial-gradient(circle at 30% 30%, 
+          rgba(168, 85, 247, 0.9), 
+          rgba(168, 85, 247, 0.45),
+          rgba(168, 85, 247, 0.08))`;
+      case 2: // Accent (cyan/teal)
+        return `radial-gradient(circle at 30% 30%, 
+          rgba(6, 182, 212, 0.9), 
+          rgba(6, 182, 212, 0.45),
+          rgba(6, 182, 212, 0.08))`;
+      default: // Mixed gold/white
+        return `radial-gradient(circle at 30% 30%, 
+          rgba(234, 179, 8, 0.9), 
+          rgba(234, 179, 8, 0.45),
+          rgba(234, 179, 8, 0.08))`;
+    }
+  };
 
   return (
     <div className="fixed inset-0 overflow-hidden pointer-events-none z-0">
@@ -112,6 +139,7 @@ function ParticleField() {
               left: `${p.x}%`,
               bottom: "-10%",
               animation: `bubble-float ${p.duration}s linear ${p.delay}s infinite`,
+              "--sway": `${p.sway}px`,
             } as React.CSSProperties
           }
         >
@@ -121,14 +149,11 @@ function ParticleField() {
               {
                 width: `${p.size}px`,
                 height: `${p.size}px`,
-                background: `radial-gradient(circle at 30% 30%, 
-                  rgba(255, 255, 255, 0.9), 
-                  rgba(255, 255, 255, 0.45),
-                  rgba(255, 255, 255, 0.08))`,
+                background: getParticleGradient(p.colorType),
                 opacity: p.opacity,
                 animation: `bubble-sway ${p.duration * 0.5}s ease-in-out ${p.delay}s infinite`,
                 filter: "blur(1px)",
-                boxShadow: "0 0 12px rgba(255,255,255,0.35)",
+                boxShadow: "0 0 12px rgba(0,0,0,0.35)",
               } as React.CSSProperties
             }
           />
@@ -240,9 +265,15 @@ const Index = () => {
         </button>
 
         {/* Title + subtitle */}
-        <div className="text-center space-y-4 z-10 immersive-fade-in" style={{ "--delay": "0.4s" } as React.CSSProperties}>
+        <div
+          className="text-center space-y-4 z-10 immersive-fade-in"
+          style={{ "--delay": "0.4s" } as React.CSSProperties}
+        >
           <ImmersiveTitle />
-          <p className="text-sm text-muted-foreground font-mono max-w-md mx-auto immersive-fade-in" style={{ "--delay": "2.0s" } as React.CSSProperties}>
+          <p
+            className="text-sm text-muted-foreground font-mono max-w-md mx-auto immersive-fade-in"
+            style={{ "--delay": "2.0s" } as React.CSSProperties}
+          >
             1 V 3 — control characters across devices
           </p>
         </div>
@@ -361,7 +392,9 @@ const Index = () => {
         <h1 className="text-xl md:text-3xl text-primary text-glow-green tracking-wider leading-relaxed">
           EAGLE VS CHICK
         </h1>
-        <p className="text-sm text-muted-foreground font-mono max-w-md mx-auto text-center">1 V 3 — control characters across devices</p>
+        <p className="text-sm text-muted-foreground font-mono max-w-md mx-auto text-center">
+          1 V 3 — control characters across devices
+        </p>
       </div>
 
       <div className="flex flex-col gap-4 w-full max-w-xs">
