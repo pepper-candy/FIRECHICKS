@@ -768,7 +768,7 @@ export default function Client() {
       : false;
 
   // ─── FULLSCREEN SPLASH — shown before join if FS is supported and not yet entered ──
-  if (canNativeFullscreen && !isFullscreen && !fsSplashDone) {
+  if (showImmersiveControl && !isFullscreen && !fsSplashDone) {
     return (
       <div
         className="flex flex-col items-center justify-center h-dvh overflow-hidden gap-8 bg-background"
