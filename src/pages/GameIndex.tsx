@@ -87,9 +87,11 @@ function ImmersiveTitle() {
 // ── Floating particles field ──────────────────────────────────────────────────
 
 function ParticleField() {
+  const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
+  const count = isMobile ? 50 : 100;
   const particles = useMemo(
     () =>
-      Array.from({ length: 100 }, (_, i) => ({
+      Array.from({ length: count }, (_, i) => ({
         id: i,
         x: Math.random() * 100,
         duration: 8 + Math.random() * 12,
