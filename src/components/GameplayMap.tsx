@@ -347,17 +347,19 @@ function Building({ position, size, tipSiteActive, zoneActive, zoneHealth, baseC
 }
 
 // ─── Obstacle ──────────────────────────────────────────────────────────────────
-function Obstacle({ position, size, rotation, baseColor, baseEmissive }: {
+function Obstacle({ position, size, rotation, baseColor, baseEmissive, lightMode }: {
   position: { x: number; z: number };
   size: { w: number; h: number; d: number };
   rotation?: number;
   baseColor?: string;
   baseEmissive?: string;
+  lightMode?: boolean;
 }) {
   return (
     <mesh position={[position.x, size.h / 2, position.z]} rotation={[0, rotation ?? 0, 0]}>
       <boxGeometry args={[size.w, size.h, size.d]} />
-      <meshStandardMaterial color={baseColor ?? '#1e3a5f'} emissive={baseEmissive ?? '#0a1a3a'} emissiveIntensity={0.3} />
+      <meshStandardMaterial color={baseColor ?? '#1e3a5f'} emissive={baseEmissive ?? '#0a1a3a'} emissiveIntensity={lightMode ? 0.05 : 0.3} />
+      {lightMode && <Edges scale={1.005} threshold={12} color="#222222" />}
     </mesh>
   );
 }
