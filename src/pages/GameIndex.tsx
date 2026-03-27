@@ -89,12 +89,12 @@ function ImmersiveTitle() {
 function ParticleField() {
   const particles = useMemo(
     () =>
-      Array.from({ length: 150 }, (_, i) => ({
+      Array.from({ length: 80 }, (_, i) => ({
         id: i,
         x: Math.random() * 100,
-        duration: 8 + Math.random() * 12,
+        duration: 8 + Math.random() * 25,
         delay: Math.random() * 10,
-        size: 1 + Math.random() * 25,
+        size: 1 + Math.random() * 2,
         sway: (Math.random() - 0.5) * 100,
         opacity: 0.3 + Math.random() * 0.5,
       })),
@@ -106,22 +106,14 @@ function ParticleField() {
       {particles.map((p) => (
         <div
           key={p.id}
-          className="absolute rounded-full" // ← changed from "immersive-particle"
+          className="immersive-particle"
           style={
             {
-              left: `${p.x}%`,
-              bottom: "-10%", // ← ADD: start from bottom
-              width: `${p.size}px`, // ← CHANGED: use px units
-              height: `${p.size}px`,
-              background: `radial-gradient(circle at 30% 30%, 
-                rgba(255, 255, 255, 0.9), 
-                rgba(255, 255, 255, 0.4),
-                rgba(255, 255, 255, 0.1))`,
-              opacity: p.opacity,
-              animation: `bubble-float ${p.duration}s linear ${p.delay}s infinite,
-                          bubble-sway ${p.duration * 0.5}s ease-in-out ${p.delay}s infinite`,
-              filter: "blur(1px)",
-              boxShadow: "0 0 10px rgba(255,255,255,0.3)",
+              "--x": `${p.x}%`,
+              "--duration": `${p.duration}s`,
+              "--delay": `${p.delay}s`,
+              width: p.size,
+              height: p.size,
             } as React.CSSProperties
           }
         />
@@ -129,6 +121,7 @@ function ParticleField() {
     </div>
   );
 }
+
 // ── Main page ─────────────────────────────────────────────────────────────────
 
 const Index = () => {
