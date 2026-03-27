@@ -97,34 +97,52 @@ function ParticleField() {
         size: 8 + Math.random() * 25,
         sway: (Math.random() - 0.5) * 100,
         opacity: 0.3 + Math.random() * 0.5,
-        // Randomly assign a theme color
-        colorType: Math.floor(Math.random() * 4), // 0: primary, 1: secondary, 2: accent, 3: mixed
+        // Randomly assign a red or yellow variant with varying depths
+        colorType: Math.floor(Math.random() * 6), // 0-2: red variants, 3-5: yellow variants
       })),
     [],
   );
 
   const getParticleGradient = (colorType: number) => {
-    switch (colorType) {
-      case 0: // Primary green
-        return `radial-gradient(circle at 30% 30%, 
-          rgba(34, 197, 94, 0.9), 
-          rgba(34, 197, 94, 0.45),
-          rgba(34, 197, 94, 0.08))`;
-      case 1: // Secondary purple
-        return `radial-gradient(circle at 30% 30%, 
-          rgba(168, 85, 247, 0.9), 
-          rgba(168, 85, 247, 0.45),
-          rgba(168, 85, 247, 0.08))`;
-      case 2: // Accent (cyan/teal)
-        return `radial-gradient(circle at 30% 30%, 
-          rgba(6, 182, 212, 0.9), 
-          rgba(6, 182, 212, 0.45),
-          rgba(6, 182, 212, 0.08))`;
-      default: // Mixed gold/white
-        return `radial-gradient(circle at 30% 30%, 
-          rgba(234, 179, 8, 0.9), 
-          rgba(234, 179, 8, 0.45),
-          rgba(234, 179, 8, 0.08))`;
+    // Red variants (deeper to lighter)
+    if (colorType <= 2) {
+      switch (colorType) {
+        case 0: // Deep crimson red
+          return `radial-gradient(circle at 30% 30%, 
+            rgba(220, 38, 38, 0.9), 
+            rgba(185, 28, 28, 0.45),
+            rgba(153, 27, 27, 0.08))`;
+        case 1: // Medium red
+          return `radial-gradient(circle at 30% 30%, 
+            rgba(239, 68, 68, 0.9), 
+            rgba(220, 38, 38, 0.45),
+            rgba(185, 28, 28, 0.08))`;
+        default: // Light red / coral
+          return `radial-gradient(circle at 30% 30%, 
+            rgba(248, 113, 113, 0.9), 
+            rgba(239, 68, 68, 0.45),
+            rgba(220, 38, 38, 0.08))`;
+      }
+    }
+    // Yellow variants (deeper to lighter)
+    else {
+      switch (colorType) {
+        case 3: // Deep amber / golden
+          return `radial-gradient(circle at 30% 30%, 
+            rgba(245, 158, 11, 0.9), 
+            rgba(217, 119, 6, 0.45),
+            rgba(180, 83, 9, 0.08))`;
+        case 4: // Medium golden yellow
+          return `radial-gradient(circle at 30% 30%, 
+            rgba(251, 191, 36, 0.9), 
+            rgba(245, 158, 11, 0.45),
+            rgba(217, 119, 6, 0.08))`;
+        default: // Light yellow / honey
+          return `radial-gradient(circle at 30% 30%, 
+            rgba(253, 224, 71, 0.9), 
+            rgba(250, 204, 21, 0.45),
+            rgba(234, 179, 8, 0.08))`;
+      }
     }
   };
 
