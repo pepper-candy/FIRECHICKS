@@ -535,3 +535,27 @@
     opacity: 0;
   }
 }
+
+@keyframes bubble-float-limited {
+  0% {
+    transform: translateY(0) translateX(0);
+    opacity: 0;
+  }
+  10% {
+    opacity: var(--particle-opacity, 0.8);
+  }
+  /* Fade starts at 2/3 of the way to 50vh */
+  40% {
+    opacity: var(--particle-opacity, 0.8);
+  }
+  /* At 50vh (mid-screen), completely faded and stopped */
+  50% {
+    transform: translateY(-50vh) translateX(calc(var(--sway, 0) * 1px));
+    opacity: 0;
+  }
+  /* Maintain end state for the rest of the animation */
+  100% {
+    transform: translateY(-50vh) translateX(calc(var(--sway, 0) * 1px));
+    opacity: 0;
+  }
+}

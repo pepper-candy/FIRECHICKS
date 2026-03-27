@@ -98,8 +98,6 @@ function ParticleField() {
         sway: (Math.random() - 0.5) * 100,
         opacity: 0.3 + Math.random() * 0.5,
         colorType: Math.floor(Math.random() * 4),
-        startFadeAt: 66, // Percentage of journey to start fading
-        endFadeAt: 83, // Percentage of journey to be fully transparent
       })),
     [],
   );
@@ -139,10 +137,8 @@ function ParticleField() {
             {
               left: `${p.x}%`,
               bottom: "-10%",
-              animation: `bubble-float ${p.duration}s linear ${p.delay}s infinite`,
+              animation: `bubble-float-limited ${p.duration}s linear ${p.delay}s infinite forwards`,
               "--sway": `${p.sway}px`,
-              "--start-fade": `${p.startFadeAt}%`,
-              "--end-fade": `${p.endFadeAt}%`,
               "--particle-opacity": p.opacity,
             } as React.CSSProperties
           }
@@ -154,7 +150,8 @@ function ParticleField() {
                 width: `${p.size}px`,
                 height: `${p.size}px`,
                 background: getParticleGradient(p.colorType),
-                animation: `bubble-sway ${p.duration * 0.5}s ease-in-out ${p.delay}s infinite, bubble-fade-custom ${p.duration}s linear ${p.delay}s infinite`,
+                opacity: p.opacity,
+                animation: `bubble-sway ${p.duration * 0.5}s ease-in-out ${p.delay}s infinite`,
                 filter: "blur(1px)",
                 boxShadow: `0 0 12px rgba(0,0,0,0.35)`,
               } as React.CSSProperties
