@@ -970,15 +970,27 @@ const LOBBY_CHANNEL = 'game-lobby';
 export function useAdvertiseRoom(roomCode: string, _mode: ConnectionMode) {
   useEffect(() => {
     if (!roomCode) return;
-    const channel = supabase.channel(LOBBY_CHANNEL);
+    const channel = supabase.channel(LOBBY_CHANNEL, { config: { presence: { key: `host-${roomCode}` } } });
+    let alive = true;
+
     channel.subscribe(async (status) => {
-      if (status === 'SUBSCRIBED') {
+      if (status === 'SUBSCRIBED' && alive) {
         await channel.track({ roomCode, ts: Date.now() });
       }
     });
+
+    // Re-track periodically to keep presence alive
+    const heartbeat = window.setInterval(async () => {
+      if (alive) {
+        try { await channel.track({ roomCode, ts: Date.now() }); } catch {}
+      }
+    }, 15_000);
+
     return () => {
+      alive = false;
+      clearInterval(heartbeat);
       channel.untrack();
-      channel.unsubscribe();
+      supabase.removeChannel(channel);
     };
   }, [roomCode]);
 }
@@ -986,7 +998,8 @@ export function useAdvertiseRoom(roomCode: string, _mode: ConnectionMode) {
 export function useDiscoverRooms(_mode: ConnectionMode) {
   const [rooms, setRooms] = useState<string[]>([]);
   useEffect(() => {
-    const channel = supabase.channel(LOBBY_CHANNEL);
+    const channel = supabase.channel(LOBBY_CHANNEL, { config: { presence: { key: `discover-${Math.random().toString(36).slice(2, 6)}` } } });
+
     channel.on('presence', { event: 'sync' }, () => {
       const state = channel.presenceState();
       const codes = Object.values(state)
@@ -995,8 +1008,9 @@ export function useDiscoverRooms(_mode: ConnectionMode) {
         .filter(Boolean);
       setRooms([...new Set(codes)]);
     });
+
     channel.subscribe();
-    return () => { channel.unsubscribe(); };
+    return () => { supabase.removeChannel(channel); };
   }, []);
   return rooms;
 }
