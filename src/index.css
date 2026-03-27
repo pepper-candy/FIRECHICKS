@@ -135,10 +135,10 @@
   100% { opacity: 1; transform: translateY(0); }
 }
 
-@keyframes immersive-letter-glow {
-  0% { text-shadow: 0 0 0px hsl(var(--glow-primary) / 0); color: hsl(var(--primary) / 0.3); }
-  50% { text-shadow: 0 0 30px hsl(var(--glow-primary) / 1), 0 0 60px hsl(var(--glow-primary) / 0.5); color: hsl(var(--primary)); }
-  100% { text-shadow: 0 0 10px hsl(var(--glow-primary) / 0.6); color: hsl(var(--primary)); }
+@keyframes immersive-letter-appear {
+  0% { opacity: 0; text-shadow: 0 0 0px hsl(var(--glow-primary) / 0); color: hsl(var(--primary) / 0.3); }
+  50% { opacity: 1; text-shadow: 0 0 30px hsl(var(--glow-primary) / 1), 0 0 60px hsl(var(--glow-primary) / 0.5); color: hsl(var(--primary)); }
+  100% { opacity: 1; text-shadow: 0 0 10px hsl(var(--glow-primary) / 0.6); color: hsl(var(--primary)); }
 }
 
 .immersive-scanline-overlay {
