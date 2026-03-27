@@ -301,7 +301,7 @@ const Index = () => {
           <Button
             onClick={handleHostClick}
             disabled={hostPending}
-            className="h-14 text-sm font-pixel bg-primary hover:bg-primary/80 text-primary-foreground glow-green immersive-fade-in immersive-border-breathe"
+            className="h-14 text-sm font-pixel bg-red-600 hover:bg-red-500 text-white border-red-500/50 glow-red immersive-fade-in immersive-border-breathe-red"
             style={{ "--delay": "2.4s" } as React.CSSProperties}
           >
             {hostPending ? (
