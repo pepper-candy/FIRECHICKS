@@ -423,7 +423,7 @@ export default function Client() {
   const examVideoRef = useRef<HTMLVideoElement>(null);
   const examStreamRef = useRef<MediaStream | null>(null);
 
-  const { isFullscreen, canNativeFullscreen, showImmersiveControl, enter: enterFullscreen } = useFullscreen();
+  const { isFullscreen, showImmersiveControl, enter: enterFullscreen } = useFullscreen();
 
   // ── Prevent body scroll / overscroll bounce on mobile ──────────────────────
   useEffect(() => {
