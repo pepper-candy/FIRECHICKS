@@ -106,25 +106,33 @@ function ParticleField() {
       {particles.map((p) => (
         <div
           key={p.id}
-          className="absolute rounded-full" // ← changed from "immersive-particle"
+          className="absolute"
           style={
             {
               left: `${p.x}%`,
               bottom: "-10%",
-              width: `${p.size}px`,
-              height: `${p.size}px`,
-              background: `radial-gradient(circle at 30% 30%, 
-                rgba(255, 255, 255, 0.9), 
-                rgba(255, 255, 255, 0.4),
-                rgba(255, 255, 255, 0.1))`,
-              opacity: p.opacity,
-              animation: `bubble-float ${p.duration}s linear ${p.delay}s infinite,
-                          bubble-sway ${p.duration * 0.5}s ease-in-out ${p.delay}s infinite`,
-              filter: "blur(1px)",
-              boxShadow: "0 0 10px rgba(255,255,255,0.3)",
+              animation: `bubble-float ${p.duration}s linear ${p.delay}s infinite`,
             } as React.CSSProperties
           }
-        />
+        >
+          <div
+            className="rounded-full"
+            style={
+              {
+                width: `${p.size}px`,
+                height: `${p.size}px`,
+                background: `radial-gradient(circle at 30% 30%, 
+                  rgba(255, 255, 255, 0.9), 
+                  rgba(255, 255, 255, 0.45),
+                  rgba(255, 255, 255, 0.08))`,
+                opacity: p.opacity,
+                animation: `bubble-sway ${p.duration * 0.5}s ease-in-out ${p.delay}s infinite`,
+                filter: "blur(1px)",
+                boxShadow: "0 0 12px rgba(255,255,255,0.35)",
+              } as React.CSSProperties
+            }
+          />
+        </div>
       ))}
     </div>
   );

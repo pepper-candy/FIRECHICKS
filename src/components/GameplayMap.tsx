@@ -225,16 +225,16 @@ function ImmersiveLighting() {
 
 function MapParticles() {
   const meshRef = useRef<THREE.InstancedMesh>(null!);
-  const count = 45;
+  const count = 90;
   const dummy = useMemo(() => new THREE.Object3D(), []);
   const data = useMemo(
     () =>
       Array.from({ length: count }, () => ({
         x: (Math.random() - 0.5) * MAP_SIZE * 0.85,
         z: (Math.random() - 0.5) * MAP_SIZE * 0.85,
-        y: Math.random() * 10,
-        speed: 0.15 + Math.random() * 0.45,
-        scale: 0.06 + Math.random() * 0.09,
+        y: Math.random() * 14,
+        speed: 0.25 + Math.random() * 0.7,
+        scale: 0.14 + Math.random() * 0.2,
       })),
     [],
   );
@@ -252,7 +252,7 @@ function MapParticles() {
   useFrame((_, delta) => {
     data.forEach((p, i) => {
       p.y += p.speed * delta;
-      if (p.y > 11) {
+      if (p.y > 16) {
         p.y = 0;
         p.x = (Math.random() - 0.5) * MAP_SIZE * 0.85;
         p.z = (Math.random() - 0.5) * MAP_SIZE * 0.85;
@@ -268,7 +268,7 @@ function MapParticles() {
   return (
     <instancedMesh ref={meshRef} args={[undefined, undefined, count]}>
       <sphereGeometry args={[1, 5, 5]} />
-      <meshStandardMaterial color="#8090ff" emissive="#4055dd" emissiveIntensity={1.0} transparent opacity={0.3} />
+      <meshStandardMaterial color="#9db5ff" emissive="#5777ff" emissiveIntensity={2.0} transparent opacity={0.65} />
     </instancedMesh>
   );
 }
@@ -675,7 +675,7 @@ export default function GameplayMap({
       <Canvas camera={{ position: [0, 56, 42], fov: 58 }} shadows>
         <MapCamera zoomLevel={zoomLevel} />
         {immersive ? <ImmersiveLighting /> : <DayLighting />}
-        {immersive && <SceneFog color="#050510" density={0.013} />}
+        {immersive && <SceneFog color="#050510" density={0.028} />}
         {immersive && <MapParticles />}
 
         {/* Floor */}
