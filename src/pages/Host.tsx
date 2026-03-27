@@ -1000,7 +1000,9 @@ function GameOverCeremony({ snapshot, gameMode }: { snapshot: GameStateSnapshot;
   const spacingX = Math.min(3.2, 14 / cols);
   const spacingZ = 2.6;
   return (
-    <div className="flex flex-col h-screen bg-background overflow-hidden">
+    <div className={`flex flex-col h-screen overflow-hidden relative ${isImmersive ? "bg-black" : "bg-background"}`}>
+      {isImmersive && <CeremonyParticles />}
+      {isImmersive && <div className="immersive-vignette" />}
       <div className="h-[50vh] min-h-0 w-full relative flex flex-col justify-end pb-4 shrink-0">
         <div className="flex-1 min-h-0 w-full">
           <Canvas
