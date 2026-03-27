@@ -325,8 +325,8 @@ function Building({ position, size, tipSiteActive, zoneActive, zoneHealth, baseC
           emissive={gold ? '#ffaa00' : (baseEmissive ?? '#2a2a4a')}
           emissiveIntensity={gold ? 0.5 : (immersive ? 0.18 : 0.1)}
         />
-        {immersive && (
-          <Edges scale={1.01} threshold={12} color={gold ? '#ffcc44' : '#5555a0'} />
+        {(immersive || lightMode) && (
+          <Edges scale={1.01} threshold={12} color={gold ? '#ffcc44' : (lightMode ? '#333333' : '#5555a0')} />
         )}
       </mesh>
       {zoneActive && (
