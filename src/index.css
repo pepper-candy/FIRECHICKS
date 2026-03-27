@@ -189,6 +189,6 @@
 .immersive-letter {
   display: inline-block;
   opacity: 0;
-  animation: immersive-letter-glow 0.6s ease-out forwards;
+  animation: immersive-letter-appear 0.6s ease-out forwards;
   animation-delay: var(--delay, 0s);
 }
