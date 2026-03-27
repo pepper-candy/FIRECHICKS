@@ -15,7 +15,8 @@ const ImmersiveContext = createContext<ImmersiveContextType>({
 export function ImmersiveProvider({ children }: { children: ReactNode }) {
   const [isImmersive, setIsImmersive] = useState(() => {
     try {
-      return localStorage.getItem('immersive-mode') === 'true';
+      const stored = localStorage.getItem('immersive-mode');
+      return stored === null ? true : stored === 'true';
     } catch {
       return false;
     }
