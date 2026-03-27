@@ -132,19 +132,21 @@ function ParticleField() {
       {particles.map((p) => (
         <div
           key={p.id}
-          className="absolute"
-          style={{
-            left: `${p.x}%`,
-            bottom: "-20px",
-            width: `${p.size}px`,
-            height: `${p.size}px`,
-            background: getParticleGradient(p.colorType),
-            animation: `float-up ${p.duration}s linear ${p.delay}s infinite`,
-            transform: `translateX(${p.sway}px)`,
-            filter: "blur(1px)",
-            boxShadow: "0 0 12px rgba(0,0,0,0.35)",
-            borderRadius: "50%",
-          }}
+          className="absolute rounded-full"
+          style={
+            {
+              left: `${p.x}%`,
+              bottom: "-20px",
+              width: `${p.size}px`,
+              height: `${p.size}px`,
+              background: getParticleGradient(p.colorType),
+              animation: `float-up ${p.duration}s linear ${p.delay}s infinite`,
+              "--particle-opacity": p.opacity,
+              filter: "blur(1px)",
+              boxShadow: "0 0 12px rgba(0,0,0,0.35)",
+              transform: `translateX(${p.sway}px)`,
+            } as React.CSSProperties
+          }
         />
       ))}
     </div>

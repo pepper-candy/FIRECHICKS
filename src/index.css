@@ -565,15 +565,23 @@
     transform: translateY(0) translateX(0);
     opacity: 0;
   }
-  10% {
-    opacity: 1;
+  15% {
+    opacity: var(--particle-opacity, 0.8);
   }
-  50% {
-    transform: translateY(-50vh) translateX(0);
-    opacity: 0.5;
+  /* Smooth fade starts at 40% of the journey */
+  40% {
+    opacity: var(--particle-opacity, 0.8);
+    transform: translateY(calc(-40vh)) translateX(0);
   }
+  /* Continue fading as it rises */
+  70% {
+    opacity: calc(var(--particle-opacity, 0.8) * 0.3);
+    transform: translateY(calc(-48vh)) translateX(0);
+  }
+  /* Completely gone by mid-screen */
   100% {
     transform: translateY(-50vh) translateX(0);
     opacity: 0;
+    visibility: hidden;
   }
 }
