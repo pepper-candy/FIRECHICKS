@@ -648,6 +648,7 @@ export default function GameplayMap({
   mapId = 1,
   themeHue,
   immersive = false,
+  lightMode = false,
 }: Props) {
   const playerList = Object.values(players);
   const mapVariant = useMemo(() => getMapVariant(mapId), [mapId]);
