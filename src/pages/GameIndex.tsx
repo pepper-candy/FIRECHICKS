@@ -231,17 +231,6 @@ const Index = () => {
           IMMERSIVE ON
         </button>
 
-        {/* Title */}
-        <div className="text-center space-y-4 z-10">
-          {mounted && <ImmersiveTitle />}
-          <p
-            className="text-sm text-muted-foreground font-mono max-w-md immersive-fade-in"
-            style={{ "--delay": "2s" } as React.CSSProperties}
-          >
-            1 V 3 — control characters across devices
-          </p>
-        </div>
-
         {/* Buttons — staggered fade-in */}
         <div className="flex flex-col gap-4 w-full max-w-xs z-10">
           <Button
