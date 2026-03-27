@@ -190,6 +190,7 @@ const Index = () => {
   const { isImmersive, toggleImmersive } = useImmersive();
   const {
     isMobile,
+    entryReady,
     fullReady,
     characterAnimationsReady,
     characterAnimationsLoading,
