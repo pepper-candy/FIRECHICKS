@@ -290,7 +290,7 @@ function MapParticles() {
 }
 
 // ─── Building ──────────────────────────────────────────────────────────────────
-function Building({ position, size, tipSiteActive, zoneActive, zoneHealth, baseColor, baseEmissive, immersive }: {
+function Building({ position, size, tipSiteActive, zoneActive, zoneHealth, baseColor, baseEmissive, immersive, lightMode }: {
   position: { x: number; z: number };
   size: { w: number; h: number; d: number };
   tipSiteActive?: boolean;
@@ -299,6 +299,7 @@ function Building({ position, size, tipSiteActive, zoneActive, zoneHealth, baseC
   baseColor?: string;
   baseEmissive?: string;
   immersive?: boolean;
+  lightMode?: boolean;
 }) {
   const pulseRef = useRef(0);
   useFrame((_, delta) => { pulseRef.current += delta * 2; });
