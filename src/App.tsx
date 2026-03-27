@@ -84,6 +84,7 @@ const App = () => (
         </BrowserRouter>
       </TooltipProvider>
     </AssetLoadingProvider>
+    </ImmersiveProvider>
   </QueryClientProvider>
 );
 
