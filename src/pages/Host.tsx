@@ -1070,14 +1070,17 @@ function GameOverCeremony({ snapshot, gameMode }: { snapshot: GameStateSnapshot;
                 </tr>
               </thead>
               <tbody>
-                {sorted.map((p) => {
+                {sorted.map((p, idx) => {
                   const color = PLAYER_COLORS[p.colorIndex];
                   const letter = gradeToLetter(p.health);
                   const gradeColor = getGradeColor(p.health);
                   const result = getMatchResult(p);
 
                   return (
-                    <tr key={p.connId} className="border-b border-border/40 hover:bg-card/30">
+                    <tr key={p.connId}
+                      className={`border-b border-border/40 hover:bg-card/30 ${isImmersive ? "ceremony-row-reveal" : ""}`}
+                      style={isImmersive ? { "--row-delay": `${0.3 + idx * 0.15}s` } as React.CSSProperties : undefined}
+                    >
                       <td className="py-2 pl-2">
                         <div className="flex items-center gap-1.5">
                           <div
