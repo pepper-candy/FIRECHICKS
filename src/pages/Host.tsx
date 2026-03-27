@@ -797,6 +797,7 @@ export default function Host() {
 
 // ─── Game Over Ceremony Component ──────────────────────────────────────────────
 function GameOverCeremony({ snapshot, gameMode }: { snapshot: GameStateSnapshot; gameMode: string }) {
+  const { isImmersive } = useImmersive();
   const [ceremonyPhase, setCeremonyPhase] = useState<"mvp" | "team" | "transcript">("mvp");
 
   const winner = snapshot.winner;
