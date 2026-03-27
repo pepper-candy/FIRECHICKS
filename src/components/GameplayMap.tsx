@@ -684,7 +684,7 @@ export default function GameplayMap({
   const obstacleEmissive = lightMode ? '#bbbbbb' : (hasTheme ? themedColor(themeHue, 45, 12) : '#0a1a3a');
 
   return (
-    <div className={`w-full h-full rounded-lg border overflow-hidden relative ${immersive ? 'border-primary/20 bg-black' : 'border-border bg-background'}`}>
+    <div className={`w-full h-full rounded-lg border overflow-hidden relative ${lightMode ? 'border-border bg-white' : (immersive ? 'border-primary/20 bg-black' : 'border-border bg-background')}`}>
       {/* Edge vignette haze — blurs map boundaries into void */}
       {immersive && (
         <div
