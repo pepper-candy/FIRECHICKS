@@ -97,29 +97,30 @@ function ParticleField() {
         size: 8 + Math.random() * 25,
         sway: (Math.random() - 0.5) * 100,
         opacity: 0.3 + Math.random() * 0.5,
-        colorType: Math.floor(Math.random() * 4),
+        // Randomly assign a theme color
+        colorType: Math.floor(Math.random() * 4), // 0: primary, 1: secondary, 2: accent, 3: mixed
       })),
     [],
   );
 
   const getParticleGradient = (colorType: number) => {
     switch (colorType) {
-      case 0:
+      case 0: // Primary green
         return `radial-gradient(circle at 30% 30%, 
           rgba(34, 197, 94, 0.9), 
           rgba(34, 197, 94, 0.45),
           rgba(34, 197, 94, 0.08))`;
-      case 1:
+      case 1: // Secondary purple
         return `radial-gradient(circle at 30% 30%, 
           rgba(168, 85, 247, 0.9), 
           rgba(168, 85, 247, 0.45),
           rgba(168, 85, 247, 0.08))`;
-      case 2:
+      case 2: // Accent (cyan/teal)
         return `radial-gradient(circle at 30% 30%, 
           rgba(6, 182, 212, 0.9), 
           rgba(6, 182, 212, 0.45),
           rgba(6, 182, 212, 0.08))`;
-      default:
+      default: // Mixed gold/white
         return `radial-gradient(circle at 30% 30%, 
           rgba(234, 179, 8, 0.9), 
           rgba(234, 179, 8, 0.45),
@@ -132,22 +133,31 @@ function ParticleField() {
       {particles.map((p) => (
         <div
           key={p.id}
-          className="absolute rounded-full"
+          className="absolute"
           style={
             {
               left: `${p.x}%`,
-              bottom: "-20px",
-              width: `${p.size}px`,
-              height: `${p.size}px`,
-              background: getParticleGradient(p.colorType),
-              animation: `float-up ${p.duration}s linear ${p.delay}s infinite`,
-              "--particle-opacity": p.opacity,
-              filter: "blur(1px)",
-              boxShadow: "0 0 12px rgba(0,0,0,0.35)",
-              transform: `translateX(${p.sway}px)`,
+              bottom: "-10%",
+              animation: `bubble-float ${p.duration}s linear ${p.delay}s infinite`,
+              "--sway": `${p.sway}px`,
             } as React.CSSProperties
           }
-        />
+        >
+          <div
+            className="rounded-full"
+            style={
+              {
+                width: `${p.size}px`,
+                height: `${p.size}px`,
+                background: getParticleGradient(p.colorType),
+                opacity: p.opacity,
+                animation: `bubble-sway ${p.duration * 0.5}s ease-in-out ${p.delay}s infinite`,
+                filter: "blur(1px)",
+                boxShadow: "0 0 12px rgba(0,0,0,0.35)",
+              } as React.CSSProperties
+            }
+          />
+        </div>
       ))}
     </div>
   );
