@@ -655,15 +655,15 @@ export default function GameplayMap({
 
   // Derive themed colors when host picks a hue
   const hasTheme = themeHue !== undefined;
-  const floorColor = hasTheme ? themedColor(themeHue, 30, 8) : mapVariant.floorColor;
-  const gridCell = hasTheme ? themedColor(themeHue, 25, 15) : mapVariant.gridCellColor;
-  const gridSection = hasTheme ? themedColor(themeHue, 25, 22) : mapVariant.gridSectionColor;
-  const wallColor = hasTheme ? themedColor(themeHue, 35, 18) : '#1a1a3a';
-  const wallEmissive = hasTheme ? themedColor(themeHue, 40, 10) : '#0a0a2a';
-  const buildingColor = hasTheme ? themedColor(themeHue, 30, 20) : '#2a2a4a';
-  const buildingEmissive = hasTheme ? themedColor(themeHue, 35, 14) : '#1a1a3a';
-  const obstacleColor = hasTheme ? themedColor(themeHue, 40, 25) : '#1e3a5f';
-  const obstacleEmissive = hasTheme ? themedColor(themeHue, 45, 12) : '#0a1a3a';
+  const floorColor = lightMode ? '#f0f0f0' : (hasTheme ? themedColor(themeHue, 30, 8) : mapVariant.floorColor);
+  const gridCell = lightMode ? '#d0d0d0' : (hasTheme ? themedColor(themeHue, 25, 15) : mapVariant.gridCellColor);
+  const gridSection = lightMode ? '#b0b0b0' : (hasTheme ? themedColor(themeHue, 25, 22) : mapVariant.gridSectionColor);
+  const wallColor = lightMode ? '#cccccc' : (hasTheme ? themedColor(themeHue, 35, 18) : '#1a1a3a');
+  const wallEmissive = lightMode ? '#999999' : (hasTheme ? themedColor(themeHue, 40, 10) : '#0a0a2a');
+  const buildingColor = lightMode ? '#e0e0e0' : (hasTheme ? themedColor(themeHue, 30, 20) : '#2a2a4a');
+  const buildingEmissive = lightMode ? '#cccccc' : (hasTheme ? themedColor(themeHue, 35, 14) : '#1a1a3a');
+  const obstacleColor = lightMode ? '#d8d8d8' : (hasTheme ? themedColor(themeHue, 40, 25) : '#1e3a5f');
+  const obstacleEmissive = lightMode ? '#bbbbbb' : (hasTheme ? themedColor(themeHue, 45, 12) : '#0a1a3a');
 
   return (
     <div className={`w-full h-full rounded-lg border overflow-hidden relative ${immersive ? 'border-primary/20 bg-black' : 'border-border bg-background'}`}>
