@@ -765,6 +765,18 @@ export default function Host() {
             className="w-full"
           />
 
+          {/* Light mode torch */}
+          <div className="mt-2 flex items-center justify-between">
+            <button
+              onClick={() => setLightMode((p) => !p)}
+              className={`flex items-center gap-1 text-[10px] font-mono transition-colors ${lightMode ? 'text-yellow-400' : 'text-muted-foreground hover:text-foreground'}`}
+              title="Toggle light mode for better visibility"
+            >
+              <Sun className="w-3 h-3" />
+              Light
+            </button>
+          </div>
+
           {/* Color picker trigger */}
           <div className="mt-2 flex items-center justify-between">
             <button
