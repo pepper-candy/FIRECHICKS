@@ -190,6 +190,7 @@ const Index = () => {
   const { isImmersive, toggleImmersive } = useImmersive();
   const {
     isMobile,
+    entryReady,
     fullReady,
     characterAnimationsReady,
     characterAnimationsLoading,
@@ -205,6 +206,14 @@ const Index = () => {
   useEffect(() => {
     setMounted(true);
   }, []);
+
+  // Auto-preload character GLBs in background on mobile when immersive mode is on,
+  // but only after the minimal/entry assets finish loading first.
+  useEffect(() => {
+    if (isImmersive && isMobile && entryReady && !characterAnimationsReady && !characterAnimationsLoading) {
+      startCharacterAnimationPreload();
+    }
+  }, [isImmersive, isMobile, entryReady, characterAnimationsReady, characterAnimationsLoading, startCharacterAnimationPreload]);
 
   useEffect(() => {
     if (hostPending && fullReady) {
