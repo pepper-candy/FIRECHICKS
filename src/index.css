@@ -254,6 +254,60 @@
   }
 }
 
+@keyframes immersive-letter-fire {
+  0% {
+    opacity: 0;
+    text-shadow: 0 0 0px rgba(239, 68, 68, 0);
+    color: rgba(239, 68, 68, 0.2);
+    transform: translateY(8px) scale(0.8);
+  }
+  40% {
+    opacity: 1;
+    text-shadow:
+      0 0 40px rgba(239, 68, 68, 1),
+      0 0 80px rgba(220, 38, 38, 0.7),
+      0 0 120px rgba(185, 28, 28, 0.4);
+    color: hsl(0 90% 65%);
+    transform: translateY(-4px) scale(1.1);
+  }
+  70% {
+    text-shadow:
+      0 0 20px rgba(251, 191, 36, 0.8),
+      0 0 50px rgba(239, 68, 68, 0.6),
+      0 0 90px rgba(185, 28, 28, 0.3);
+    color: hsl(15 95% 60%);
+    transform: translateY(0) scale(1.0);
+  }
+  100% {
+    opacity: 1;
+    text-shadow:
+      0 0 15px rgba(239, 68, 68, 0.8),
+      0 0 40px rgba(220, 38, 38, 0.4);
+    color: hsl(0 85% 60%);
+    transform: translateY(0) scale(1.0);
+  }
+}
+
+.immersive-letter-fire {
+  display: inline-block;
+  opacity: 0;
+  animation: immersive-letter-fire 0.8s ease-out forwards;
+  animation-delay: var(--delay, 0s);
+}
+
+.glow-red {
+  box-shadow: 0 0 20px rgba(239, 68, 68, 0.4), 0 0 40px rgba(220, 38, 38, 0.2);
+}
+
+.immersive-border-breathe-red {
+  animation: immersive-border-breathe-red 3s ease-in-out infinite;
+}
+
+@keyframes immersive-border-breathe-red {
+  0%, 100% { box-shadow: 0 0 15px rgba(239, 68, 68, 0.3), 0 0 30px rgba(220, 38, 38, 0.15); }
+  50% { box-shadow: 0 0 25px rgba(239, 68, 68, 0.5), 0 0 50px rgba(220, 38, 38, 0.3); }
+}
+
 .immersive-scanline-overlay {
   pointer-events: none;
   position: fixed;

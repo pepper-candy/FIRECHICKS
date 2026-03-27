@@ -72,11 +72,11 @@ function CharAnimCircle({
 // ── Typewriter title ──────────────────────────────────────────────────────────
 
 function ImmersiveTitle() {
-  const text = "EAGLE VS CHICK";
+  const text = "FIRECHICK";
   return (
-    <h1 className="text-2xl md:text-4xl font-pixel tracking-wider leading-relaxed">
+    <h1 className="text-3xl md:text-5xl font-pixel tracking-wider leading-relaxed">
       {text.split("").map((char, i) => (
-        <span key={i} className="immersive-letter" style={{ "--delay": `${0.6 + i * 0.08}s` } as React.CSSProperties}>
+        <span key={i} className="immersive-letter-fire" style={{ "--delay": `${0.6 + i * 0.08}s` } as React.CSSProperties}>
           {char === " " ? "\u00A0" : char}
         </span>
       ))}
@@ -301,7 +301,7 @@ const Index = () => {
           <Button
             onClick={handleHostClick}
             disabled={hostPending}
-            className="h-14 text-sm font-pixel bg-primary hover:bg-primary/80 text-primary-foreground glow-green immersive-fade-in immersive-border-breathe"
+            className="h-14 text-sm font-pixel bg-red-600 hover:bg-red-500 text-white border-red-500/50 glow-red immersive-fade-in immersive-border-breathe-red"
             style={{ "--delay": "2.4s" } as React.CSSProperties}
           >
             {hostPending ? (
