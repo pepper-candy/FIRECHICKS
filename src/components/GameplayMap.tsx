@@ -675,7 +675,7 @@ export default function GameplayMap({
       <Canvas camera={{ position: [0, 56, 42], fov: 58 }} shadows>
         <MapCamera zoomLevel={zoomLevel} />
         {immersive ? <ImmersiveLighting /> : <DayLighting />}
-        {immersive && <SceneFog color="#050510" density={0.028} />}
+        {immersive && <SceneFog color="#050510" density={0.008} />}
         {immersive && <MapParticles />}
 
         {/* Floor */}
