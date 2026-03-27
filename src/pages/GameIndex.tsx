@@ -1,11 +1,12 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { useFullscreen } from '@/hooks/useFullscreen';
 import AssetLoadingIndicator from '@/components/AssetLoadingIndicator';
 import { useAssetLoading } from '@/context/AssetLoadingContext';
+import { useImmersive } from '@/context/ImmersiveContext';
 import { toast } from '@/components/ui/sonner';
-import { ArrowDownToLine, Check, Loader2 } from 'lucide-react';
+import { ArrowDownToLine, Check, Loader2, Sparkles } from 'lucide-react';
 
 // ── Circular progress button ──────────────────────────────────────────────────
 
@@ -37,23 +38,13 @@ function CharAnimCircle({
       className="relative flex items-center justify-center w-9 h-9 rounded focus:outline-none"
     >
       <svg width="36" height="36" viewBox="0 0 36 36" className="absolute top-0 left-0">
-        {/* Track ring */}
         <circle
-          cx="18"
-          cy="18"
-          r={radius}
-          fill="none"
-          strokeWidth="2.5"
+          cx="18" cy="18" r={radius} fill="none" strokeWidth="2.5"
           className={ready ? 'stroke-green-500/30' : 'stroke-muted-foreground/30'}
         />
-        {/* Progress arc */}
         {(loading || ready) && (
           <circle
-            cx="18"
-            cy="18"
-            r={radius}
-            fill="none"
-            strokeWidth="2.5"
+            cx="18" cy="18" r={radius} fill="none" strokeWidth="2.5"
             strokeLinecap="round"
             className={ready ? 'stroke-green-500' : 'stroke-primary'}
             strokeDasharray={`${dash} ${circumference}`}
@@ -61,8 +52,6 @@ function CharAnimCircle({
           />
         )}
       </svg>
-
-      {/* Center icon / text */}
       <span className="relative z-10 flex items-center justify-center">
         {ready ? (
           <Check className="w-4 h-4 text-green-500" />
@@ -76,11 +65,63 @@ function CharAnimCircle({
   );
 }
 
+// ── Typewriter title ──────────────────────────────────────────────────────────
+
+function ImmersiveTitle() {
+  const text = 'EAGLE VS CHICK';
+  return (
+    <h1 className="text-2xl md:text-4xl font-pixel tracking-wider leading-relaxed">
+      {text.split('').map((char, i) => (
+        <span
+          key={i}
+          className="immersive-letter"
+          style={{ '--delay': `${0.6 + i * 0.08}s` } as React.CSSProperties}
+        >
+          {char === ' ' ? '\u00A0' : char}
+        </span>
+      ))}
+    </h1>
+  );
+}
+
+// ── Floating particles field ──────────────────────────────────────────────────
+
+function ParticleField() {
+  const particles = useMemo(() =>
+    Array.from({ length: 30 }, (_, i) => ({
+      id: i,
+      x: Math.random() * 100,
+      duration: 8 + Math.random() * 16,
+      delay: Math.random() * 10,
+      size: 1 + Math.random() * 2,
+    })), []
+  );
+
+  return (
+    <div className="fixed inset-0 overflow-hidden pointer-events-none z-0">
+      {particles.map(p => (
+        <div
+          key={p.id}
+          className="immersive-particle"
+          style={{
+            '--x': `${p.x}%`,
+            '--duration': `${p.duration}s`,
+            '--delay': `${p.delay}s`,
+            width: p.size,
+            height: p.size,
+          } as React.CSSProperties}
+        />
+      ))}
+    </div>
+  );
+}
+
 // ── Main page ─────────────────────────────────────────────────────────────────
 
 const Index = () => {
   const navigate = useNavigate();
   const { isFullscreen, showImmersiveControl, enter } = useFullscreen();
+  const { isImmersive, toggleImmersive } = useImmersive();
   const {
     isMobile,
     fullReady,
@@ -91,12 +132,12 @@ const Index = () => {
     startCharacterAnimationPreload,
   } = useAssetLoading();
 
-  // Tracks whether the user pressed HOST on mobile and is waiting for full preload
   const [hostPending, setHostPending] = useState(false);
-  // Tracks whether the user pressed CHARACTER VIEWER (to trigger download if needed)
   const [charViewerPending, setCharViewerPending] = useState(false);
+  const [mounted, setMounted] = useState(false);
 
-  // Navigate to /host as soon as full assets are ready (for mobile host flow)
+  useEffect(() => { setMounted(true); }, []);
+
   useEffect(() => {
     if (hostPending && fullReady) {
       setHostPending(false);
@@ -104,7 +145,6 @@ const Index = () => {
     }
   }, [hostPending, fullReady, navigate]);
 
-  // Navigate to /character once character animations finish loading
   useEffect(() => {
     if (charViewerPending && characterAnimationsReady) {
       setCharViewerPending(false);
@@ -116,26 +156,18 @@ const Index = () => {
     if (isMobile && !fullReady) {
       startFullPreload();
       setHostPending(true);
-      // Stay on this page; navigate happens via effect above once fullReady
       return;
     }
     navigate('/host');
   };
 
   const handleCharViewerClick = () => {
-    if (!isMobile) {
-      navigate('/character');
-      return;
-    }
-    if (characterAnimationsReady) {
-      navigate('/character');
-      return;
-    }
+    if (!isMobile) { navigate('/character'); return; }
+    if (characterAnimationsReady) { navigate('/character'); return; }
     if (characterAnimationsLoading) {
       toast('Please wait for character files to finish loading.');
       return;
     }
-    // Not loaded and not loading — start download and set pending
     startCharacterAnimationPreload();
     setCharViewerPending(true);
   };
@@ -144,6 +176,138 @@ const Index = () => {
     if (characterAnimationsReady || characterAnimationsLoading) return;
     startCharacterAnimationPreload();
   };
+
+  // ── Immersive variant ────────────────────────────────────
+
+  if (isImmersive) {
+    return (
+      <div className="relative flex flex-col items-center justify-center min-h-screen p-6 gap-10 bg-black overflow-hidden">
+        {/* Particle field */}
+        <ParticleField />
+        {/* Scanline overlay */}
+        <div className="immersive-scanline-overlay" />
+        {/* Vignette */}
+        <div className="immersive-vignette" />
+
+        {/* Fullscreen control */}
+        {showImmersiveControl && !isFullscreen && (
+          <button
+            onClick={enter}
+            className="absolute top-4 right-4 px-3 py-1 rounded border border-primary/40 text-primary text-xs font-mono hover:bg-primary/10 z-50 immersive-fade-in"
+            style={{ '--delay': '0.2s' } as React.CSSProperties}
+          >
+            ⛶ Fullscreen
+          </button>
+        )}
+
+        {/* Toggle off immersive */}
+        <button
+          onClick={toggleImmersive}
+          className="absolute top-4 left-4 flex items-center gap-2 px-3 py-1.5 rounded border border-primary/60 text-primary text-xs font-mono hover:bg-primary/10 z-50 immersive-border-breathe immersive-fade-in"
+          style={{ '--delay': '0.1s' } as React.CSSProperties}
+        >
+          <Sparkles className="w-3 h-3" />
+          IMMERSIVE ON
+        </button>
+
+        {/* Title */}
+        <div className="text-center space-y-4 z-10">
+          {mounted && <ImmersiveTitle />}
+          <p
+            className="text-sm text-muted-foreground font-mono max-w-md immersive-fade-in"
+            style={{ '--delay': '2s' } as React.CSSProperties}
+          >
+            1 V 3 — control characters across devices
+          </p>
+        </div>
+
+        {/* Buttons — staggered fade-in */}
+        <div className="flex flex-col gap-4 w-full max-w-xs z-10">
+          <Button
+            onClick={handleHostClick}
+            disabled={hostPending}
+            className="h-14 text-sm font-pixel bg-primary hover:bg-primary/80 text-primary-foreground glow-green immersive-fade-in immersive-border-breathe"
+            style={{ '--delay': '2.4s' } as React.CSSProperties}
+          >
+            {hostPending ? (
+              <span className="flex items-center gap-2">
+                <Loader2 className="w-4 h-4 animate-spin" /> Loading assets…
+              </span>
+            ) : 'HOST GAME'}
+          </Button>
+
+          <Button
+            onClick={() => navigate('/client')}
+            variant="outline"
+            className="h-14 text-sm font-pixel border-secondary text-secondary hover:bg-secondary/10 glow-purple immersive-fade-in"
+            style={{ '--delay': '2.6s', animationFillMode: 'both' } as React.CSSProperties}
+          >
+            JOIN GAME
+          </Button>
+
+          <div
+            className="flex h-14 rounded-md overflow-hidden border border-accent immersive-fade-in"
+            style={{ '--delay': '2.8s' } as React.CSSProperties}
+          >
+            <button
+              onClick={handleCharViewerClick}
+              className="flex-1 text-sm font-pixel text-accent bg-transparent hover:bg-accent/10 transition-colors px-4"
+            >
+              🐤 CHARACTER 🐤
+            </button>
+            {isMobile && (
+              <div className="w-14 border-l border-accent flex items-center justify-center bg-transparent hover:bg-accent/5 transition-colors">
+                <CharAnimCircle
+                  progress={characterAnimationsProgress}
+                  loading={characterAnimationsLoading}
+                  ready={characterAnimationsReady}
+                  onClick={handleCharAnimCircleClick}
+                />
+              </div>
+            )}
+          </div>
+
+          <Button
+            onClick={() => navigate('/pw')}
+            variant="outline"
+            className="h-14 text-sm font-pixel border-border text-muted-foreground hover:text-foreground hover:bg-muted immersive-fade-in"
+            style={{ '--delay': '3.0s' } as React.CSSProperties}
+          >
+            🔐 PW EXAM
+          </Button>
+
+          <Button
+            onClick={() => navigate('/test-crossy-road')}
+            variant="outline"
+            className="h-14 text-sm font-pixel border-accent text-accent hover:bg-accent/10 immersive-fade-in"
+            style={{ '--delay': '3.2s' } as React.CSSProperties}
+          >
+            🐔 TEST CROSSY ROAD
+          </Button>
+        </div>
+
+        {/* Watermark */}
+        <div
+          className="absolute bottom-6 left-1/2 text-[10px] font-mono tracking-[0.3em] uppercase text-muted-foreground/20 whitespace-nowrap z-10"
+          style={{ animation: 'immersive-watermark-rotate 8s ease-in-out infinite' }}
+        >
+          The Power of Interfaces
+        </div>
+
+        <div
+          className="text-xs text-muted-foreground/60 font-mono text-center space-y-1 mt-8 z-10 immersive-fade-in"
+          style={{ '--delay': '3.4s' } as React.CSSProperties}
+        >
+          <p>Host opens the lobby on a big screen</p>
+          <p>Players join from phones with the room code</p>
+        </div>
+
+        <AssetLoadingIndicator />
+      </div>
+    );
+  }
+
+  // ── Standard variant (unchanged) ─────────────────────────
 
   return (
     <div className="flex flex-col items-center justify-center min-h-screen p-6 gap-10 relative">
@@ -156,6 +320,15 @@ const Index = () => {
         </button>
       )}
 
+      {/* Immersive toggle */}
+      <button
+        onClick={toggleImmersive}
+        className="absolute top-4 left-4 flex items-center gap-2 px-3 py-1.5 rounded border border-muted-foreground/30 text-muted-foreground text-xs font-mono hover:border-primary/50 hover:text-primary transition-colors"
+      >
+        <Sparkles className="w-3 h-3" />
+        GO IMMERSIVE
+      </button>
+
       <div className="text-center space-y-4">
         <h1 className="text-xl md:text-3xl text-primary text-glow-green tracking-wider leading-relaxed">
           EAGLE VS CHICK
@@ -166,7 +339,6 @@ const Index = () => {
       </div>
 
       <div className="flex flex-col gap-4 w-full max-w-xs">
-        {/* HOST GAME */}
         <Button
           onClick={handleHostClick}
           disabled={hostPending}
@@ -174,15 +346,11 @@ const Index = () => {
         >
           {hostPending ? (
             <span className="flex items-center gap-2">
-              <Loader2 className="w-4 h-4 animate-spin" />
-              Loading assets…
+              <Loader2 className="w-4 h-4 animate-spin" /> Loading assets…
             </span>
-          ) : (
-            'HOST GAME'
-          )}
+          ) : 'HOST GAME'}
         </Button>
 
-        {/* JOIN GAME */}
         <Button
           onClick={() => navigate('/client')}
           variant="outline"
@@ -191,7 +359,6 @@ const Index = () => {
           JOIN GAME
         </Button>
 
-        {/* CHARACTER VIEWER + optional download circle */}
         <div className="flex h-14 rounded-md overflow-hidden border border-accent">
           <button
             onClick={handleCharViewerClick}
@@ -199,7 +366,6 @@ const Index = () => {
           >
             🐤 CHARACTER 🐤
           </button>
-
           {isMobile && (
             <div className="w-14 border-l border-accent flex items-center justify-center bg-transparent hover:bg-accent/5 transition-colors">
               <CharAnimCircle
@@ -212,7 +378,6 @@ const Index = () => {
           )}
         </div>
 
-        {/* PW EXAM */}
         <Button
           onClick={() => navigate('/pw')}
           variant="outline"
@@ -221,7 +386,6 @@ const Index = () => {
           🔐 PW EXAM
         </Button>
 
-        {/* CROSSY ROAD LAB */}
         <Button
           onClick={() => navigate('/test-crossy-road')}
           variant="outline"

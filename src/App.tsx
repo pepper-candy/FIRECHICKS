@@ -4,6 +4,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AssetLoadingProvider } from "@/context/AssetLoadingContext";
+import { ImmersiveProvider } from "@/context/ImmersiveContext";
 import PWExam from "./pages/PWExam";
 import GameIndex from "./pages/GameIndex";
 import Host from "./pages/Host";
@@ -40,6 +41,7 @@ const queryClient = new QueryClient();
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
+    <ImmersiveProvider>
     <AssetLoadingProvider>
       <TooltipProvider>
         <Toaster />
@@ -82,6 +84,7 @@ const App = () => (
         </BrowserRouter>
       </TooltipProvider>
     </AssetLoadingProvider>
+    </ImmersiveProvider>
   </QueryClientProvider>
 );
 
