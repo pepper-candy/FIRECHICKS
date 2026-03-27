@@ -345,7 +345,7 @@ const Index = () => {
         <h1 className="text-xl md:text-3xl text-primary text-glow-green tracking-wider leading-relaxed">
           EAGLE VS CHICK
         </h1>
-        <p className="text-sm text-muted-foreground font-mono max-w-md">1 V 3 — control characters across devices</p>
+        <p className="text-sm text-muted-foreground font-mono max-w-md mx-auto text-center">1 V 3 — control characters across devices</p>
       </div>
 
       <div className="flex flex-col gap-4 w-full max-w-xs">
