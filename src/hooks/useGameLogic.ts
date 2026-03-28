@@ -427,6 +427,11 @@ export function useGameLogic({ players, broadcast, gameMode, connectionMode, map
   const updateGameState = useCallback((delta: number) => {
     const gs = gameStateRef.current as GameStateRef | null;
     if (!gs || gs.winner) return;
+    if (gamePausedRef.current) {
+      // Still broadcast state so clients see the frozen game
+      doBroadcastState(gs, broadcastRef.current as (msg: any) => void);
+      return;
+    }
 
     const now = Date.now();
     const currentPlayers = playersRef.current as Map<string, PlayerState>;
