@@ -714,9 +714,9 @@ export default function GameplayMap({
       )}
       <Canvas camera={{ position: [0, 56, 42], fov: 58 }} shadows>
         <MapCamera zoomLevel={zoomLevel} />
-        {lightMode ? <LightModeLighting /> : (immersive ? <ImmersiveLighting /> : <DayLighting />)}
-        {immersive && !lightMode && <SceneFog color="#050510" density={0.008} />}
-        {immersive && !lightMode && <MapParticles />}
+        {isLight ? <LightModeLighting /> : isSemi ? <SemiLightLighting /> : (immersive ? <ImmersiveLighting /> : <DayLighting />)}
+        {immersive && !isLight && !isSemi && <SceneFog color="#050510" density={0.008} />}
+        {immersive && !isLight && !isSemi && <MapParticles />}
 
         {/* Floor */}
         <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.01, 0]} receiveShadow>
