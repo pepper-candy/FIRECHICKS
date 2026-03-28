@@ -1,50 +1,19 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
 import { Swords } from 'lucide-react';
 
 interface Props {
   onAttack: () => void;
-  cooldownUntil: number; // timestamp
+  remainingMs: number; // host-calculated remaining cooldown ms
   disabled?: boolean;
+  totalCooldownMs?: number;
 }
 
-const ATTACK_COOLDOWN_MS = 3000;
 const CIRCUMFERENCE = 2 * Math.PI * 44; // ~276.46
 
-export default function AttackButton({ onAttack, cooldownUntil, disabled }: Props) {
-  const [now, setNow] = useState(Date.now());
-  const totalCdRef = useRef(ATTACK_COOLDOWN_MS);
-  const previousCooldownRef = useRef(0);
-
-  useEffect(() => {
-    const id = setInterval(() => setNow(Date.now()), 50);
-    return () => clearInterval(id);
-  }, []);
-
-  const remainingMs = Math.max(0, cooldownUntil - now);
+export default function AttackButton({ onAttack, remainingMs, disabled, totalCooldownMs = 3000 }: Props) {
   const onCooldown = remainingMs > 0;
   const remainingSec = Math.ceil(remainingMs / 1000);
-
-  // Capture total cooldown when a new cooldown starts
-  useEffect(() => {
-    if (cooldownUntil > previousCooldownRef.current) {
-      totalCdRef.current = ATTACK_COOLDOWN_MS;
-    }
-    previousCooldownRef.current = cooldownUntil;
-  }, [cooldownUntil]);
-
-  // Reset when cooldown ends
-  useEffect(() => {
-    if (!onCooldown) {
-      totalCdRef.current = ATTACK_COOLDOWN_MS;
-    }
-  }, [onCooldown]);
-
-  const remainingRatio = totalCdRef.current > 0
-    ? Math.max(0, Math.min(1, remainingMs / totalCdRef.current))
-    : 0;
-
-  const dashLen = remainingRatio * CIRCUMFERENCE;
-
+  const ratio = totalCooldownMs > 0 ? Math.max(0, Math.min(1, remainingMs / totalCooldownMs)) : 0;
+  const dashLen = ratio * CIRCUMFERENCE;
   const inactive = onCooldown || !!disabled;
 
   return (

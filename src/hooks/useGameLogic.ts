@@ -1306,7 +1306,7 @@ export function useGameLogic({ players, broadcast, gameMode, connectionMode, map
     const now = Date.now();
     const playersObj: Record<string, PlayerGameStateSerializable> = {};
     for (const [id, p] of gs.playerStates) {
-      playersObj[id] = serializePlayerState(p);
+      playersObj[id] = serializePlayerState(p, now);
     }
     const tipObtainTimers: Record<string, { buildingId: number; remainingMs: number }> = {};
     for (const [timerKey, t] of gs.buildingTimers.entries()) {

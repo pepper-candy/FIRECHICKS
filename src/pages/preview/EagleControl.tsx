@@ -10,9 +10,9 @@ export default function PreviewEagleControl() {
         onHitboxClick={() => console.log('hitbox')}
         onPropUse={(t) => console.log('prop', t)}
         props={[{ type: 'fly', count: 3 }]}
-        attackCooldownUntil={0}
+        attackRemainingMs={0}
         attackDisabled={false}
-        flyCooldownUntil={0}
+        flyRemainingMs={0}
         isInZone={false}
         thumbstickColor="hsl(0 0% 20%)"
       />
