@@ -813,12 +813,12 @@ export default function Host() {
           {/* Light mode torch */}
           <div className="mt-2 flex items-center justify-between">
             <button
-              onClick={() => setLightMode((p) => !p)}
-              className={`flex items-center gap-1 text-[10px] font-mono transition-colors ${lightMode ? 'text-yellow-400' : 'text-muted-foreground hover:text-foreground'}`}
-              title="Toggle light mode for better visibility"
+              onClick={() => setThemeMode((p) => p === 'semi' ? 'light' : p === 'light' ? 'dark' : 'semi')}
+              className={`flex items-center gap-1 text-[10px] font-mono transition-colors ${themeMode === 'light' ? 'text-yellow-400' : themeMode === 'semi' ? 'text-blue-300' : 'text-muted-foreground hover:text-foreground'}`}
+              title="Cycle theme: Semi-Light → Light → Dark"
             >
               <Sun className="w-3 h-3" />
-              Light
+              {themeMode === 'semi' ? 'Semi' : themeMode === 'light' ? 'Light' : 'Dark'}
             </button>
           </div>
 
