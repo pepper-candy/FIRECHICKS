@@ -36,6 +36,8 @@ export default function ColorPicker({ currentColorIndex, usedColorIndices, onCol
         disabled={isTaken}
         title={isTaken ? `${color.name} (taken)` : showEagleOutline ? `${color.name} (Eagle role 🦅)` : color.name}
         className={`${btnSize} rounded-full transition-all relative ${
+          showEagleOutline ? 'animate-pulse' : ''
+        } ${
           isMine
             ? 'scale-125'
             : isTaken
