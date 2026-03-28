@@ -13,7 +13,7 @@ export default function HealthDisplay({ players }: Props) {
     .sort((a, b) => b.health - a.health);
 
   return (
-    <div className="absolute top-2 right-2 z-10 flex flex-col gap-1 font-mono">
+    <div className="flex flex-col gap-1 font-mono">
       {sorted.map((p) => {
         const color = PLAYER_COLORS[p.colorIndex];
         const letter = gradeToLetter(p.health);

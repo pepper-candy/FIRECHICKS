@@ -15,7 +15,7 @@ import NetworkPerformancePanel from "@/components/NetworkPerformancePanel";
 import CrossyRoadHost from "@/components/events/CrossyRoadHost";
 import { PLAYER_COLORS, MAX_PLAYERS_1V3, MAX_PLAYERS_2V6 } from "@/lib/playerColors";
 import { gradeToLetter, getGradeColor } from "@/lib/gradeSystem";
-import { X, Flame, Zap, Trophy, Star, ChevronDown, Palette, Sun } from "lucide-react";
+import { X, Flame, Zap, Trophy, Star, ChevronDown, Palette, Sun, Pause, Play, Bot } from "lucide-react";
 import type { GameMode } from "@/lib/gameTypes";
 import CharacterViewer from "@/components/CharacterViewer";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -213,7 +213,12 @@ export default function Host() {
     hostDragUpdate,
     hostDragEnd,
     hostSkipExam,
+    togglePause,
+    toggleBotsPause,
   } = useGameLogic({ players, broadcast, gameMode, connectionMode: mode, mapId });
+
+  const [isPaused, setIsPaused] = useState(false);
+  const [isBotsPaused, setIsBotsPaused] = useState(false);
 
   useAdvertiseRoom(phase === "lobby" ? roomCode : "", mode);
 
@@ -733,8 +738,36 @@ export default function Host() {
           </div>
         )}
 
-        {/* Health display top-right */}
-        <HealthDisplay players={snapshot.players} />
+        {/* Pause controls + Health display top-right */}
+        <div className="absolute top-2 right-2 z-10 flex flex-col gap-1">
+          <div className="flex gap-1 justify-end">
+            <button
+              onClick={() => { const v = togglePause(); setIsPaused(v); }}
+              className={`flex items-center gap-1 px-2 py-1 rounded border text-[10px] font-mono transition-all ${
+                isPaused
+                  ? 'border-accent bg-accent/20 text-accent'
+                  : 'border-border bg-card/80 text-muted-foreground hover:text-foreground'
+              }`}
+              title={isPaused ? 'Resume game' : 'Pause game'}
+            >
+              {isPaused ? <Play className="w-3 h-3" /> : <Pause className="w-3 h-3" />}
+              {isPaused ? 'PLAY' : 'PAUSE'}
+            </button>
+            <button
+              onClick={() => { const v = toggleBotsPause(); setIsBotsPaused(v); }}
+              className={`flex items-center gap-1 px-2 py-1 rounded border text-[10px] font-mono transition-all ${
+                isBotsPaused
+                  ? 'border-accent bg-accent/20 text-accent'
+                  : 'border-border bg-card/80 text-muted-foreground hover:text-foreground'
+              }`}
+              title={isBotsPaused ? 'Resume bots' : 'Pause bots'}
+            >
+              <Bot className="w-3 h-3" />
+              {isBotsPaused ? 'BOTS ▶' : 'BOTS ⏸'}
+            </button>
+          </div>
+          <HealthDisplay players={snapshot.players} />
+        </div>
 
         {/* Stage progress bottom */}
         <StageProgressBar currentStage={snapshot.stage} stageLabel={snapshot.stageLabel} />

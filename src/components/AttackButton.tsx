@@ -9,7 +9,7 @@ interface Props {
 
 export default function AttackButton({ onAttack, cooldownUntil, disabled }: Props) {
   const [now, setNow] = useState(Date.now());
-  const totalCdRef = useRef(5000);
+  const totalCdRef = useRef(3000);
 
   useEffect(() => {
     const id = setInterval(() => setNow(Date.now()), 100);
@@ -24,12 +24,12 @@ export default function AttackButton({ onAttack, cooldownUntil, disabled }: Prop
   useEffect(() => {
     if (cooldownUntil > 0) {
       const total = cooldownUntil - Date.now();
-      if (total > 0 && total > totalCdRef.current * 0.8) {
+      if (total > 0) {
         totalCdRef.current = total;
       }
     }
     if (!onCooldown) {
-      totalCdRef.current = 5000;
+      totalCdRef.current = 3000;
     }
   }, [cooldownUntil, onCooldown]);
 
@@ -44,7 +44,7 @@ export default function AttackButton({ onAttack, cooldownUntil, disabled }: Prop
 
   return (
     <button
-      onPointerDown={(e) => { e.stopPropagation(); if (!inactive) onAttack(); }}
+      onPointerDown={(e) => { e.stopPropagation(); e.preventDefault(); if (!inactive) onAttack(); }}
       className={`relative overflow-visible w-20 h-20 rounded-full border-4 flex items-center justify-center transition-all select-none flex-shrink-0 ${
         inactive
           ? 'border-muted bg-muted/30'

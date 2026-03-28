@@ -215,6 +215,8 @@ export function useGameLogic({ players, broadcast, gameMode, connectionMode, map
   const lastNetworkStateBroadcastAtRef = useRef(0);
 
   const gameStateRef = useRef<GameStateRef | null>(null);
+  const gamePausedRef = useRef(false);
+  const botsPausedRef = useRef(false);
 
   const [snapshot, setSnapshot] = useState<GameStateSnapshot | null>(null);
   const [videoPlaying, setVideoPlaying] = useState<"hurt" | "dead" | null>(null);
@@ -425,6 +427,11 @@ export function useGameLogic({ players, broadcast, gameMode, connectionMode, map
   const updateGameState = useCallback((delta: number) => {
     const gs = gameStateRef.current as GameStateRef | null;
     if (!gs || gs.winner) return;
+    if (gamePausedRef.current) {
+      // Still broadcast state so clients see the frozen game
+      doBroadcastState(gs, broadcastRef.current as (msg: any) => void);
+      return;
+    }
 
     const now = Date.now();
     const currentPlayers = playersRef.current as Map<string, PlayerState>;
@@ -570,6 +577,8 @@ export function useGameLogic({ players, broadcast, gameMode, connectionMode, map
       const lobbyPlayer = currentPlayers.get(connId);
       const activelyBotControlled = !!lobbyPlayer?.isBot;
       if (!activelyBotControlled || !isBot(connId) || !p.alive) continue;
+      if (botsPausedRef.current) continue;
+      if (!activelyBotControlled || !isBot(connId) || !p.alive) continue;
       const decision = updateBot(
         p,
         gs.playerStates,
@@ -608,9 +617,8 @@ export function useGameLogic({ players, broadcast, gameMode, connectionMode, map
       }
     }
 
-    // Auto-share tips for nearby chicks with QR cooldown behavior.
-    // This supports one real player with bots: moving into proximity triggers sharing
-    // without requiring manual scan, while still respecting 5s regeneration.
+    // Auto-share tips for nearby chicks — only when at least one party is a bot.
+    // Human-to-human tip sharing requires QR scan (scan-result flow).
     if (gs.stage >= 2) {
       const aliveChicks = Array.from<PlayerGameState>(gs.playerStates.values()).filter((p) => !p.isEagle && p.alive);
       for (const sharer of aliveChicks) {
@@ -625,6 +633,11 @@ export function useGameLogic({ players, broadcast, gameMode, connectionMode, map
               checkOverlap(sharer.position.x, sharer.position.z, c.position.x, c.position.z, TIP_SHARE_RADIUS),
           );
           if (!receiver) continue;
+
+          // Only auto-share if at least one of sharer/receiver is a bot
+          const sharerIsBot = isBotConnId(sharer.connId);
+          const receiverIsBot = isBotConnId(receiver.connId);
+          if (!sharerIsBot && !receiverIsBot) continue;
 
           receiver.tips[tipIndex] = true;
           receiver.actionScore += 5;
@@ -1864,6 +1877,16 @@ export function useGameLogic({ players, broadcast, gameMode, connectionMode, map
     };
   }, []);
 
+  const togglePause = useCallback(() => {
+    gamePausedRef.current = !gamePausedRef.current;
+    return gamePausedRef.current;
+  }, []);
+
+  const toggleBotsPause = useCallback(() => {
+    botsPausedRef.current = !botsPausedRef.current;
+    return botsPausedRef.current;
+  }, []);
+
   // ─── Public API ───────────────────────────────────────────────────────────────
   return {
     phase,
@@ -1877,5 +1900,7 @@ export function useGameLogic({ players, broadcast, gameMode, connectionMode, map
     hostDragUpdate,
     hostDragEnd,
     hostSkipExam,
+    togglePause,
+    toggleBotsPause,
   };
 }

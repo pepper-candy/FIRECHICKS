@@ -40,8 +40,8 @@ const PROP_ICONS: Record<PropType, React.ReactNode> = {
   teleport: <Crosshair className="w-6 h-6" />,
   cage: <Lock className="w-6 h-6" />,
 };
-const FLY_COOLDOWN_MS = 15000;
-const CAGE_COOLDOWN_MS = 60000;
+const FLY_COOLDOWN_MS = 10000;
+const CAGE_COOLDOWN_MS = 30000;
 
 function PropsBtn({
   items,
