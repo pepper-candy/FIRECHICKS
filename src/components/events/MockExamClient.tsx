@@ -37,7 +37,7 @@ function MockExamCamera() {
     };
   }, []);
 
-  return <video ref={videoRef} autoPlay playsInline muted className="w-full h-full object-cover" />;
+  return <video ref={videoRef} autoPlay playsInline muted className="w-full h-full object-cover" style={{ transform: 'scale(0.6)', transformOrigin: 'center center' }} />;
 }
 
 export default function MockExamClient({
