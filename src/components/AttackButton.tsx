@@ -9,7 +9,7 @@ interface Props {
 
 export default function AttackButton({ onAttack, cooldownUntil, disabled }: Props) {
   const [now, setNow] = useState(Date.now());
-  const totalCdRef = useRef(5000);
+  const totalCdRef = useRef(3000);
 
   useEffect(() => {
     const id = setInterval(() => setNow(Date.now()), 100);
