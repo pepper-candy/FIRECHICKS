@@ -375,7 +375,7 @@ const Index = () => {
 
         {/* Watermark */}
         <div
-          className="absolute bottom-6 left-1/2 text-[10px] font-mono tracking-[0.3em] uppercase text-muted-foreground/60 whitespace-nowrap z-10"
+          className="absolute bottom-6 left-1/2 text-[10px] font-mono tracking-[0.3em] uppercase text-muted-foreground/40 whitespace-nowrap z-10"
           style={{ animation: "immersive-watermark-rotate 8s ease-in-out infinite" }}
         >
           The Power of Interfaces
