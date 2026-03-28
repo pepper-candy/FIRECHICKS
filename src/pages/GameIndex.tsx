@@ -374,13 +374,7 @@ const Index = () => {
       )}
 
       {/* Immersive toggle */}
-      <button
-        onClick={toggleImmersive}
-        className="absolute top-4 left-4 flex items-center gap-2 px-3 py-1.5 rounded border border-muted-foreground/30 text-muted-foreground text-xs font-mono hover:border-primary/50 hover:text-primary transition-colors"
-      >
-        <Sparkles className="w-3 h-3" />
-        GO IMMERSIVE
-      </button>
+      <ImmersiveToggle />
 
       <div className="text-center space-y-4">
         <h1 className="text-xl md:text-3xl text-primary text-glow-green tracking-wider leading-relaxed">
