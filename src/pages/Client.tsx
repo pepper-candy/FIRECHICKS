@@ -429,8 +429,16 @@ export default function Client() {
 
   // Fullscreen splash — false = not yet dismissed by user
   const [fsSplashDone, setFsSplashDone] = useState(false);
-
-
+  // ── Damage flash + prop pulse state ──
+  const [damageFlash, setDamageFlash] = useState(false);
+  const [propFlash, setPropFlash] = useState<string | null>(null);
+  const prevDamageTakenRef = useRef<number>(0);
+  const prevSpeedUntilRef = useRef<number>(0);
+  const prevHealthRef = useRef<number>(-1);
+  const prevInvincibleUntilRef = useRef<number>(0);
+  const prevFlyUntilRef = useRef<number>(0);
+  const prevCagedUntilRef = useRef<number>(0);
+  const prevDamageDealtRef = useRef<number>(0);
 
 
   // Tips state — QR now displays in scanner box, not tip box
