@@ -938,6 +938,10 @@ export function useGameLogic({ players, broadcast, gameMode, connectionMode, map
               gs.lastMysteryBoxSpawn = now; // restart after claim
               gs.frozenAll = true;
               gs.frozenAllUntil = now + 60000; // lifted when event ends
+              // Stop eagle movement immediately so it doesn't drift after unfreeze
+              p.isMoving = false;
+              const eagleLobby = currentPlayers.get(p.connId);
+              if (eagleLobby) (eagleLobby as any).joystick = { x: 0, y: 0 };
               const rand = Math.random();
               const eventType = rand < 0.33 ? "mock-exam" : rand < 0.66 ? "hitbox" : "crossy-road";
               const questionNum = Math.floor(Math.random() * 4) + 1;
@@ -951,12 +955,12 @@ export function useGameLogic({ players, broadcast, gameMode, connectionMode, map
                 for (let li = 0; li < 5; li++) {
                   const dir = li % 2 === 0 ? "left" as const : "right" as const;
                   const speed = 2 + Math.random() * 3; // 2-5 units/s
-                  const obstacleCount = 2 + Math.floor(Math.random() * 3); // 2-4
+                  const obstacleCount = 1 + Math.floor(Math.random() * 2); // 1-2 (easier start)
                   const obstacles: { x: number; width: number }[] = [];
                   for (let oi = 0; oi < obstacleCount; oi++) {
                     obstacles.push({
                       x: Math.random() * CROSSY_FIELD_WIDTH,
-                      width: 5 + Math.random() * 7, // 5-12 units wide
+                      width: 4 + Math.random() * 5, // 4-9 units wide (smaller)
                     });
                   }
                   crossyLanes.push({ id: li + 1, direction: dir, speed, obstacles });
