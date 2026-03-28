@@ -393,7 +393,7 @@ const Index = () => {
           EAGLE VS CHICK
         </h1>
         <p className="text-sm text-muted-foreground font-mono max-w-md mx-auto text-center">
-          1 V 3 — control characters across devices
+          one line description
         </p>
       </div>
 
