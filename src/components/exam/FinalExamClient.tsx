@@ -25,6 +25,7 @@ export default function FinalExamClient({
   const streamRef = useRef<MediaStream | null>(null);
   const [zoom, setZoom] = useState(0.6);
   const [opacity, setOpacity] = useState(0.85);
+  const [cameraZoom] = useState(0.6);
 
   useEffect(() => {
     navigator.mediaDevices
