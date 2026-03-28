@@ -120,6 +120,40 @@ export default function Character() {
     };
   }, [handlePanMove, handlePanEnd]);
 
+  // ─── Fullscreen splash in immersive mode ───
+  if (isImmersive && showImmersiveControl && !isFullscreen && !fsSplashDone) {
+    return (
+      <div
+        className="flex flex-col items-center justify-center h-dvh overflow-hidden gap-8 bg-background"
+        style={{ touchAction: 'manipulation' }}
+      >
+        <div className="flex flex-col items-center gap-2">
+          <h1 className="text-xl font-pixel text-destructive tracking-widest" style={{ textShadow: '0 0 10px hsl(0 80% 55% / 0.6)' }}>FIRECHICK</h1>
+          <p className="text-xs font-mono text-muted-foreground">Character Viewer</p>
+        </div>
+
+        <button
+          onClick={async () => { await enterFullscreen(); setFsSplashDone(true); }}
+          className="relative flex flex-col items-center gap-4 px-10 py-8 rounded-2xl
+            border-2 border-destructive bg-destructive/10 text-destructive
+            shadow-[0_0_40px_hsl(var(--destructive)/0.4),inset_0_0_30px_hsl(var(--destructive)/0.05)]
+            hover:bg-destructive/20 active:scale-95 transition-all duration-150
+            before:absolute before:inset-0 before:rounded-2xl before:border before:border-destructive/30 before:animate-pulse"
+        >
+          <span className="text-5xl" style={{ lineHeight: 1 }}>⛶</span>
+          <span className="text-base font-pixel tracking-widest">TAP TO FULLSCREEN</span>
+        </button>
+
+        <button
+          onClick={() => setFsSplashDone(true)}
+          className="text-[11px] font-mono text-muted-foreground underline underline-offset-2 hover:text-foreground transition-colors"
+        >
+          Skip — continue without fullscreen
+        </button>
+      </div>
+    );
+  }
+
   return (
     <div className="w-screen h-screen bg-background relative flex flex-col">
       {/* 3D Canvas */}
