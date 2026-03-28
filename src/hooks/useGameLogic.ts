@@ -400,6 +400,8 @@ export function useGameLogic({ players, broadcast, gameMode, connectionMode, map
       activeEvent: null,
       eventCountdown: 0,
       stageTransitionUntil: 0,
+      totalPauseMs: 0,
+      stageTransitionPauseApplied: false,
     };
 
     setPhase("reveal");
