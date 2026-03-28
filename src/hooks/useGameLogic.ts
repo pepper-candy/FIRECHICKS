@@ -458,7 +458,7 @@ export function useGameLogic({ players, broadcast, gameMode, connectionMode, map
     // When transition just ended, extend all timestamp-based cooldowns
     if (gs.stageTransitionUntil > 0 && now >= gs.stageTransitionUntil && !gs.stageTransitionPauseApplied) {
       gs.stageTransitionPauseApplied = true;
-      const pauseDuration = 5000; // stage transitions are always 5s
+      const pauseDuration = 8000; // stage transitions are 8s (5s instruction + 3s ready-up)
       // Extend all player cooldowns & freeze timers
       for (const [, p] of gs.playerStates) {
         if (p.frozenUntil > 0) p.frozenUntil += pauseDuration;
@@ -743,7 +743,7 @@ export function useGameLogic({ players, broadcast, gameMode, connectionMode, map
       if (chicks.length > 0 && chicks.every((c) => c.socialCircleMet.size >= requiredMeets)) {
         gs.stage = 1;
         gs.stageLabel = "Get Exam Tips from glowing buildings!";
-        gs.stageTransitionUntil = now + 5000;
+        gs.stageTransitionUntil = now + 8000;
         for (const b of gs.buildings) {
           if (b.hasTip) {
             b.glowing = true;
@@ -817,7 +817,7 @@ export function useGameLogic({ players, broadcast, gameMode, connectionMode, map
                   if (gs.stage === 1) {
                     gs.stage = 2;
                     gs.stageLabel = "Stage 2 & 3: Share Exam Tips with everyone!";
-                    gs.stageTransitionUntil = now + 5000;
+                    gs.stageTransitionUntil = now + 8000;
                   }
                 }
               }
@@ -834,7 +834,7 @@ export function useGameLogic({ players, broadcast, gameMode, connectionMode, map
         if (aliveChicks.length > 0 && aliveChicks.every((c) => c.tips[0] && c.tips[1])) {
           gs.stage = 3;
           gs.stageLabel = "Run to any building to start the Final Exam!";
-          gs.stageTransitionUntil = now + 5000;
+          gs.stageTransitionUntil = now + 8000;
         }
       }
     }
