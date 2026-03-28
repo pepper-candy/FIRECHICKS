@@ -577,6 +577,8 @@ export function useGameLogic({ players, broadcast, gameMode, connectionMode, map
       const lobbyPlayer = currentPlayers.get(connId);
       const activelyBotControlled = !!lobbyPlayer?.isBot;
       if (!activelyBotControlled || !isBot(connId) || !p.alive) continue;
+      if (botsPausedRef.current) continue;
+      if (!activelyBotControlled || !isBot(connId) || !p.alive) continue;
       const decision = updateBot(
         p,
         gs.playerStates,
