@@ -222,6 +222,16 @@ export default function Host() {
   const [showPlayTime, setShowPlayTime] = useState(false);
   // 3s "grab back controls" countdown after manual pause resume
   const [grabBackUntil, setGrabBackUntil] = useState(0);
+  // Re-render during grab-back countdown
+  const [, forceRender] = useState(0);
+  useEffect(() => {
+    if (grabBackUntil <= Date.now()) return;
+    const id = setInterval(() => {
+      if (Date.now() >= grabBackUntil) { setGrabBackUntil(0); clearInterval(id); }
+      forceRender((n) => n + 1);
+    }, 200);
+    return () => clearInterval(id);
+  }, [grabBackUntil]);
 
   useAdvertiseRoom(phase === "lobby" ? roomCode : "", mode);
 
