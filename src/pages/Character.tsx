@@ -159,7 +159,7 @@ export default function Character() {
       {/* 3D Canvas */}
       <div className="flex-1 relative">
         <Canvas
-          camera={{ position: [0, 2.7, 5.25], fov: 45 }}
+          camera={{ position: [0, 3.5, 7.2], fov: 45 }}
           dpr={isMobile ? [1, 1.5] : [1, 2]}
           gl={{ antialias: !isMobile, powerPreference: 'default', preserveDrawingBuffer: false }}
         >
