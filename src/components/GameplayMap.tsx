@@ -693,9 +693,9 @@ export default function GameplayMap({
 
   // Derive themed colors when host picks a hue
   const hasTheme = themeHue !== undefined;
-  const floorColor = isLight ? '#f0f0f0' : isSemi ? '#888888' : (hasTheme ? themedColor(themeHue, 30, 8) : mapVariant.floorColor);
-  const gridCell = isLight ? '#d0d0d0' : isSemi ? '#707070' : (hasTheme ? themedColor(themeHue, 25, 15) : mapVariant.gridCellColor);
-  const gridSection = isLight ? '#b0b0b0' : isSemi ? '#606060' : (hasTheme ? themedColor(themeHue, 25, 22) : mapVariant.gridSectionColor);
+  const floorColor = isLight ? '#f0f0f0' : isSemi ? '#f0f0f0' : (hasTheme ? themedColor(themeHue, 30, 8) : mapVariant.floorColor);
+  const gridCell = isLight ? '#d0d0d0' : isSemi ? '#d0d0d0' : (hasTheme ? themedColor(themeHue, 25, 15) : mapVariant.gridCellColor);
+  const gridSection = isLight ? '#b0b0b0' : isSemi ? '#b0b0b0' : (hasTheme ? themedColor(themeHue, 25, 22) : mapVariant.gridSectionColor);
   const wallColor = (isLight || isSemi) ? '#cccccc' : (hasTheme ? themedColor(themeHue, 35, 18) : '#1a1a3a');
   const wallEmissive = (isLight || isSemi) ? '#999999' : (hasTheme ? themedColor(themeHue, 40, 10) : '#0a0a2a');
   const buildingColor = (isLight || isSemi) ? '#e0e0e0' : (hasTheme ? themedColor(themeHue, 30, 20) : '#2a2a4a');

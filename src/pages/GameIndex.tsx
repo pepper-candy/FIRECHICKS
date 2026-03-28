@@ -343,23 +343,6 @@ const Index = () => {
             )}
           </div>
 
-          <Button
-            onClick={() => navigate("/pw")}
-            variant="outline"
-            className="h-14 text-sm font-pixel border-border text-muted-foreground hover:text-foreground hover:bg-muted immersive-fade-in"
-            style={{ "--delay": "3.0s" } as React.CSSProperties}
-          >
-            🔐 PW EXAM
-          </Button>
-
-          <Button
-            onClick={() => navigate("/test-crossy-road")}
-            variant="outline"
-            className="h-14 text-sm font-pixel border-accent text-accent hover:bg-accent/10 immersive-fade-in"
-            style={{ "--delay": "3.2s" } as React.CSSProperties}
-          >
-            🐔 CROSSY ROAD
-          </Button>
         </div>
 
         {/* Watermark */}
