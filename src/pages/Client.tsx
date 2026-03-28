@@ -681,7 +681,7 @@ export default function Client() {
     };
   }, [gamePhase, examLayer]);
 
-
+  const playerColor = colorIndex >= 0 ? PLAYER_COLORS[colorIndex] : null;
   const myState = gameState
     ? Object.values(gameState.players).find((p) => p.colorIndex === (myAssignment?.colorIndex ?? colorIndex))
     : null;
