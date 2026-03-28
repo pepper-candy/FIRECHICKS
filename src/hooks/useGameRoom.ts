@@ -578,6 +578,7 @@ function useHostSupabase() {
         recordSlot(clientId, colorIndex);
         channel.send({ type: 'broadcast', event: 'assign-color', payload: { clientId, colorIndex } });
         channel.send({ type: 'broadcast', event: 'used-colors', payload: { colors: Array.from(usedColorsRef.current) } });
+        channel.send({ type: 'broadcast', event: 'host-direct', payload: { targetId: clientId, type: 'game-mode', gameMode: gameModeRef.current } });
       })
       .on('broadcast', { event: 'client-leave' }, (payload) => {
         const { clientId } = payload.payload as { clientId: string };
