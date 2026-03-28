@@ -22,6 +22,7 @@ import { Zap, Heart, Wind, Shield, ChevronUp, Crosshair, Lock } from "lucide-rea
 import CrossyRoadClient from "@/components/events/CrossyRoadClient";
 import { useNavigate } from "react-router-dom";
 import { ZONE_RADIUS } from "@/lib/gameplayMapData";
+import { buzz } from "@/lib/haptics";
 
 // ─── Props Button (inline for compact layout) ──────────────────────────────────
 const PROP_COLORS: Record<PropType, string> = {
