@@ -751,7 +751,7 @@ export default function Client() {
     prevDamageDealtRef.current = dd;
   }, [myState?.speedMultiplierUntil, myState?.health, myState?.invincibleUntil, myState?.flyCooldownUntil, myState?.cagedUntil, myState?.damageDealt]);
 
-
+  const handleMove = useCallback(
     (x: number, y: number) => {
       sendJoystick({ x, y });
     },
