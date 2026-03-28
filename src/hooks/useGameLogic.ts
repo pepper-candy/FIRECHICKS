@@ -1839,8 +1839,9 @@ export function useGameLogic({ players, broadcast, gameMode, connectionMode, map
         if (msg.answer.toUpperCase().trim() === correct) {
           gs.examState.answered = true;
           player.actionScore += 20;
-          // Correct answer = chicks win (regardless of alive count)
-          endGame(gs, "chicks", broadcastRef.current);
+          // Correct answer — use mode-based alive-count win condition
+          gs.examState.answered = true;
+          resolveExamWinner(gs, gameModeRef.current as "1v3" | "2v6", broadcastRef.current);
         } else {
           // Wrong: -1 grade to all alive chick players
           for (const [, p] of gs.playerStates) {
