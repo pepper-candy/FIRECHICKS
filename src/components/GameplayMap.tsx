@@ -510,11 +510,11 @@ function CageMesh({ countdown }: { countdown: number }) {
         );
       })}
       <mesh position={[0, BAR_H, 0]}>
-        <cylinderGeometry args={[CAGE_R + 0.1, CAGE_R + 0.1, 0.1, 16]} />
+        <cylinderGeometry args={[CAGE_R + 0.15, CAGE_R + 0.15, 0.12, 16]} />
         <meshStandardMaterial color={barColor} emissive={barColor} emissiveIntensity={0.3} />
       </mesh>
-      <Html position={[0, BAR_H + 0.8, 0]} center zIndexRange={[100, 0]}>
-        <div style={{ background: 'rgba(0,0,0,0.8)', border: '1px solid #ff4444', borderRadius: 4, padding: '2px 6px', color: '#ff4444', fontSize: 10, fontFamily: 'monospace', fontWeight: 'bold', whiteSpace: 'nowrap', pointerEvents: 'none' }}>
+      <Html position={[0, BAR_H + 1.0, 0]} center zIndexRange={[100, 0]}>
+        <div style={{ background: 'rgba(0,0,0,0.8)', border: '1px solid #ff4444', borderRadius: 4, padding: '2px 6px', color: '#ff4444', fontSize: 12, fontFamily: 'monospace', fontWeight: 'bold', whiteSpace: 'nowrap', pointerEvents: 'none' }}>
           🔒 DETENTION {countdown}s
         </div>
       </Html>
