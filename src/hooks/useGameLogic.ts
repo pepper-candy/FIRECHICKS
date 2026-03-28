@@ -42,8 +42,8 @@ import { updateBot, isBot } from "@/lib/botAI";
 // ─── Constants ────────────────────────────────────────────────────────────────
 const SPEED = 10;
 const EAGLE_SPEED = 10;
-const ATTACK_COOLDOWN = 5000;
-const FREEZE_DURATION = 5000;
+const ATTACK_COOLDOWN = 3000;
+const FREEZE_DURATION = 3000;
 /** After Hurt/Dead combat video ends or is skipped — overlap no longer double-taps. */
 const POST_HIT_VIDEO_CHICK_INVINC_MS = 500;
 /** Applied immediately on eagle hit — covers overlap during splash + bot spam. */
@@ -52,8 +52,8 @@ const EAGLE_AWAKE_DELAY = 5000;
 const SPEED_BOOST_DURATION = 2000;
 const SPEED_BOOST_MULTIPLIER = 2;
 const FLY_SPEED_MULTIPLIER = 3;
-const FLY_DURATION = 2000;
-const FLY_COOLDOWN = 15000;
+const FLY_DURATION = 3000;
+const FLY_COOLDOWN = 10000;
 const ATTACK_ANIM_DURATION = 1000;
 const PROP_SPAWN_INTERVAL_MIN = 10000;
 const PROP_SPAWN_INTERVAL_MAX = 12000;
@@ -62,9 +62,9 @@ const TIP_OBTAIN_DURATION = 7000; // 7 sec in protected zone to become star stud
 const TIP_QR_COOLDOWN = 5000; // 5 sec before tip QR can regenerate
 const EXAM_TIMER_1V3 = 45;
 const EXAM_TIMER_2V6 = 60;
-const MYSTERY_BOX_INTERVAL = 60000; // every 60 sec
-const MYSTERY_BOX_ACTIVE_MIN = 10000;
-const MYSTERY_BOX_ACTIVE_MAX = 15000;
+const MYSTERY_BOX_INTERVAL = 30000; // every 60 sec
+const MYSTERY_BOX_ACTIVE_MIN = 5000;
+const MYSTERY_BOX_ACTIVE_MAX = 8000;
 const EVENT_HITBOX_DURATION = 10000; // 10s hitbox challenge
 const EVENT_MOCK_DURATION = 30000; // 30s mock exam
 const EVENT_CROSSY_DURATION = 30000; // 30s crossy road
@@ -72,9 +72,9 @@ const CROSSY_FIELD_WIDTH = 100;
 const STAR_STUDENT_GRADE_BONUS = 5;
 const REVEAL_DURATION = 7000;
 const COUNTDOWN_DURATION = 3;
-const CAGE_COOLDOWN = 60000;
-const CAGE_LOCK_DURATION = 20000;
-const CAGE_POST_INVINCIBLE = 5000;
+const CAGE_COOLDOWN = 30000;
+const CAGE_LOCK_DURATION = 10000;
+const CAGE_POST_INVINCIBLE = 3000;
 
 // Answer keys
 const FINAL_ANSWER_KEY: Record<number, string> = {
