@@ -7,6 +7,7 @@ import { useAssetLoading } from "@/context/AssetLoadingContext";
 import { useImmersive } from "@/context/ImmersiveContext";
 import { toast } from "@/components/ui/sonner";
 import { ArrowDownToLine, Check, Loader2, Sparkles } from "lucide-react";
+import ImmersiveToggle from "@/components/ImmersiveToggle";
 
 // ── Circular progress button ──────────────────────────────────────────────────
 
@@ -271,15 +272,8 @@ const Index = () => {
           </button>
         )}
 
-        {/* Toggle off immersive */}
-        <button
-          onClick={toggleImmersive}
-          className="absolute top-4 left-4 flex items-center gap-2 px-3 py-1.5 rounded border border-primary/60 text-primary text-xs font-mono hover:bg-primary/10 z-50 immersive-border-breathe immersive-fade-in"
-          style={{ "--delay": "0.1s" } as React.CSSProperties}
-        >
-          <Sparkles className="w-3 h-3 flex-shrink-0" />
-          IMMERSIVE ON
-        </button>
+        {/* Toggle immersive */}
+        <ImmersiveToggle immersiveVariant />
 
         {/* Title + subtitle */}
         <div
@@ -291,7 +285,7 @@ const Index = () => {
             className="text-sm text-muted-foreground font-mono max-w-md mx-auto immersive-fade-in"
             style={{ "--delay": "2.0s" } as React.CSSProperties}
           >
-            1 V 3 — control characters across devices
+            one line description
           </p>
         </div>
 
@@ -380,20 +374,14 @@ const Index = () => {
       )}
 
       {/* Immersive toggle */}
-      <button
-        onClick={toggleImmersive}
-        className="absolute top-4 left-4 flex items-center gap-2 px-3 py-1.5 rounded border border-muted-foreground/30 text-muted-foreground text-xs font-mono hover:border-primary/50 hover:text-primary transition-colors"
-      >
-        <Sparkles className="w-3 h-3" />
-        GO IMMERSIVE
-      </button>
+      <ImmersiveToggle />
 
       <div className="text-center space-y-4">
         <h1 className="text-xl md:text-3xl text-primary text-glow-green tracking-wider leading-relaxed">
           EAGLE VS CHICK
         </h1>
         <p className="text-sm text-muted-foreground font-mono max-w-md mx-auto text-center">
-          1 V 3 — control characters across devices
+          one line description
         </p>
       </div>
 
