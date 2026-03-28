@@ -7,6 +7,7 @@ import { useAssetLoading } from "@/context/AssetLoadingContext";
 import { useImmersive } from "@/context/ImmersiveContext";
 import { toast } from "@/components/ui/sonner";
 import { ArrowDownToLine, Check, Loader2, Sparkles } from "lucide-react";
+import ImmersiveToggle from "@/components/ImmersiveToggle";
 
 // ── Circular progress button ──────────────────────────────────────────────────
 
