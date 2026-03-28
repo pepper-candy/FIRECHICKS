@@ -6,7 +6,7 @@ import { gradeToLetter, getGradeColor } from "@/lib/gradeSystem";
 import Thumbstick from "@/components/Thumbstick";
 import ColorPicker from "@/components/ColorPicker";
 import CharacterReveal from "@/components/CharacterReveal";
-import AttackButton from "@/components/AttackButton";
+import EagleControls from "@/components/controls/EagleControls";
 import ScannerBox from "@/components/ScannerBox";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -1427,41 +1427,40 @@ export default function Client() {
       {/* ── EAGLE LAYOUT ── */}
       {isEagle && (
         <>
-          {/* Top: Hitbox */}
-          <div className="w-full">
-            <HitboxBtn onHit={handleHitboxClick} inZone={!!isInZone} />
-          </div>
-
-          {/* Middle: Thumbstick */}
-          <div className="flex-1 flex items-center justify-center">
-            <Thumbstick
+          {gamePhase === "playing" && myState ? (
+            <EagleControls
               onMove={handleMove}
               onIdleChange={handleIdleChange}
-              size={200}
-              color={displayColor ? `hsl(${displayColor.hsl})` : undefined}
+              onAttack={handleAttack}
+              onHitboxClick={handleHitboxClick}
+              onPropUse={handlePropUse}
+              onCageUse={() => handlePropUse("cage")}
+              props={myState.props ?? []}
+              attackCooldownUntil={myState.attackCooldownUntil ?? 0}
+              attackDisabled={myState.frozen || !!gameState?.videoPlaying}
+              flyCooldownUntil={myState.flyCooldownUntil ?? 0}
+              cageCooldownUntil={myState.cageCooldownUntil ?? 0}
+              isInZone={!!isInZone}
+              thumbstickColor={displayColor ? `hsl(${displayColor.hsl})` : undefined}
             />
-          </div>
+          ) : (
+            <>
+              {/* Top: Hitbox */}
+              <div className="w-full">
+                <HitboxBtn onHit={handleHitboxClick} inZone={!!isInZone} />
+              </div>
 
-          {/* Bottom: Attack + Props */}
-          <div className="flex items-center justify-center gap-6 overflow-visible px-2">
-            {gamePhase === "playing" && myState && (
-              <>
-                <AttackButton
-                  onAttack={handleAttack}
-                  cooldownUntil={myState.attackCooldownUntil}
-                  disabled={myState.frozen || !!gameState?.videoPlaying}
+              {/* Middle: Thumbstick */}
+              <div className="flex-1 flex items-center justify-center">
+                <Thumbstick
+                  onMove={handleMove}
+                  onIdleChange={handleIdleChange}
+                  size={200}
+                  color={displayColor ? `hsl(${displayColor.hsl})` : undefined}
                 />
-
-                <PropsBtn
-                  items={myState.props ?? []}
-                  onUse={handlePropUse}
-                  isEagle={true}
-                  flyCooldownUntil={Math.max(myState.flyCooldownUntil ?? 0, myState.attackCooldownUntil ?? 0)}
-                  cageCooldownUntil={myState.cageCooldownUntil ?? 0}
-                />
-              </>
-            )}
-          </div>
+              </div>
+            </>
+          )}
         </>
       )}
 
