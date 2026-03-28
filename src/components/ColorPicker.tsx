@@ -45,7 +45,7 @@ export default function ColorPicker({ currentColorIndex, usedColorIndices, onCol
         style={{
           backgroundColor: isTaken ? 'hsl(var(--muted))' : `hsl(${color.hsl})`,
           border: showEagleOutline
-            ? '3px solid hsl(45 100% 55%)'
+            ? '3px solid hsl(0 80% 55%)'
             : isMine
               ? '2px solid hsl(var(--foreground))'
               : isBlack
