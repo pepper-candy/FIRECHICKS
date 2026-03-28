@@ -617,9 +617,8 @@ export function useGameLogic({ players, broadcast, gameMode, connectionMode, map
       }
     }
 
-    // Auto-share tips for nearby chicks with QR cooldown behavior.
-    // This supports one real player with bots: moving into proximity triggers sharing
-    // without requiring manual scan, while still respecting 5s regeneration.
+    // Auto-share tips for nearby chicks — only when at least one party is a bot.
+    // Human-to-human tip sharing requires QR scan (scan-result flow).
     if (gs.stage >= 2) {
       const aliveChicks = Array.from<PlayerGameState>(gs.playerStates.values()).filter((p) => !p.isEagle && p.alive);
       for (const sharer of aliveChicks) {
@@ -634,6 +633,11 @@ export function useGameLogic({ players, broadcast, gameMode, connectionMode, map
               checkOverlap(sharer.position.x, sharer.position.z, c.position.x, c.position.z, TIP_SHARE_RADIUS),
           );
           if (!receiver) continue;
+
+          // Only auto-share if at least one of sharer/receiver is a bot
+          const sharerIsBot = isBotConnId(sharer.connId);
+          const receiverIsBot = isBotConnId(receiver.connId);
+          if (!sharerIsBot && !receiverIsBot) continue;
 
           receiver.tips[tipIndex] = true;
           receiver.actionScore += 5;
