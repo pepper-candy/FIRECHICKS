@@ -42,6 +42,21 @@ function LightModeLighting() {
   );
 }
 
+// ─── Semi-Light Mode Lighting (softer, dark background sky) ─────────────────
+function SemiLightLighting() {
+  return (
+    <>
+      <directionalLight position={[20, 35, 15]} intensity={1.4} castShadow shadow-mapSize={[2048, 2048]} color="#ffffff" />
+      <directionalLight position={[-15, 25, -10]} intensity={0.5} color="#d0d8ff" />
+      <ambientLight intensity={0.7} color="#f0f0f0" />
+      <mesh scale={[100, 100, 100]}>
+        <sphereGeometry args={[1, 32, 32]} />
+        <meshBasicMaterial color="#4a7ab5" side={THREE.BackSide} transparent opacity={0.25} />
+      </mesh>
+    </>
+  );
+}
+
 // Camera stays centered; zoomLevel lets host tune framing
 function MapCamera({ zoomLevel = 1 }: { zoomLevel?: number }) {
   const { camera } = useThree();
