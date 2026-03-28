@@ -7,7 +7,6 @@ import { useAssetLoading } from "@/context/AssetLoadingContext";
 import { useImmersive } from "@/context/ImmersiveContext";
 import { toast } from "@/components/ui/sonner";
 import { ArrowDownToLine, Check, Loader2, Sparkles } from "lucide-react";
-import ImmersiveToggle from "@/components/ImmersiveToggle";
 
 // ── Circular progress button ──────────────────────────────────────────────────
 
@@ -77,7 +76,11 @@ function ImmersiveTitle() {
   return (
     <h1 className="text-3xl md:text-5xl font-pixel tracking-wider leading-relaxed">
       {text.split("").map((char, i) => (
-        <span key={i} className="immersive-letter-fire" style={{ "--delay": `${0.6 + i * 0.08}s` } as React.CSSProperties}>
+        <span
+          key={i}
+          className="immersive-letter-fire"
+          style={{ "--delay": `${0.6 + i * 0.08}s` } as React.CSSProperties}
+        >
           {char === " " ? "\u00A0" : char}
         </span>
       ))}
@@ -195,7 +198,14 @@ const Index = () => {
     if (isImmersive && isMobile && entryReady && !characterAnimationsReady && !characterAnimationsLoading) {
       startCharacterAnimationPreload();
     }
-  }, [isImmersive, isMobile, entryReady, characterAnimationsReady, characterAnimationsLoading, startCharacterAnimationPreload]);
+  }, [
+    isImmersive,
+    isMobile,
+    entryReady,
+    characterAnimationsReady,
+    characterAnimationsLoading,
+    startCharacterAnimationPreload,
+  ]);
 
   useEffect(() => {
     if (hostPending && fullReady) {
@@ -272,8 +282,15 @@ const Index = () => {
           </button>
         )}
 
-        {/* Toggle immersive */}
-        <ImmersiveToggle immersiveVariant />
+        {/* Toggle off immersive */}
+        <button
+          onClick={toggleImmersive}
+          className="absolute top-4 left-4 flex items-center gap-2 px-3 py-1.5 rounded border border-primary/60 text-primary text-xs font-mono hover:bg-primary/10 z-50 immersive-border-breathe immersive-fade-in"
+          style={{ "--delay": "0.1s" } as React.CSSProperties}
+        >
+          <Sparkles className="w-3 h-3 flex-shrink-0" />
+          IMMERSIVE ON
+        </button>
 
         {/* Title + subtitle */}
         <div
@@ -285,7 +302,7 @@ const Index = () => {
             className="text-sm text-muted-foreground font-mono max-w-md mx-auto immersive-fade-in"
             style={{ "--delay": "2.0s" } as React.CSSProperties}
           >
-            one line description
+            1 V 3 — control characters across devices
           </p>
         </div>
 
@@ -337,11 +354,28 @@ const Index = () => {
             )}
           </div>
 
+          <Button
+            onClick={() => navigate("/pw")}
+            variant="outline"
+            className="h-14 text-sm font-pixel border-border text-muted-foreground hover:text-foreground hover:bg-muted immersive-fade-in"
+            style={{ "--delay": "3.0s" } as React.CSSProperties}
+          >
+            🔐 PW EXAM
+          </Button>
+
+          <Button
+            onClick={() => navigate("/test-crossy-road")}
+            variant="outline"
+            className="h-14 text-sm font-pixel border-accent text-accent hover:bg-accent/10 immersive-fade-in"
+            style={{ "--delay": "3.2s" } as React.CSSProperties}
+          >
+            🐔 CROSSY ROAD
+          </Button>
         </div>
 
         {/* Watermark */}
         <div
-          className="absolute bottom-6 left-1/2 text-[10px] font-mono tracking-[0.3em] uppercase text-muted-foreground/20 whitespace-nowrap z-10"
+          className="absolute bottom-6 left-1/2 text-[10px] font-mono tracking-[0.3em] uppercase text-muted-foreground/60 whitespace-nowrap z-10"
           style={{ animation: "immersive-watermark-rotate 8s ease-in-out infinite" }}
         >
           The Power of Interfaces
@@ -374,14 +408,20 @@ const Index = () => {
       )}
 
       {/* Immersive toggle */}
-      <ImmersiveToggle />
+      <button
+        onClick={toggleImmersive}
+        className="absolute top-4 left-4 flex items-center gap-2 px-3 py-1.5 rounded border border-muted-foreground/30 text-muted-foreground text-xs font-mono hover:border-primary/50 hover:text-primary transition-colors"
+      >
+        <Sparkles className="w-3 h-3" />
+        GO IMMERSIVE
+      </button>
 
       <div className="text-center space-y-4">
         <h1 className="text-xl md:text-3xl text-primary text-glow-green tracking-wider leading-relaxed">
           EAGLE VS CHICK
         </h1>
         <p className="text-sm text-muted-foreground font-mono max-w-md mx-auto text-center">
-          one line description
+          1 V 3 — control characters across devices
         </p>
       </div>
 
