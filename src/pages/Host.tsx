@@ -636,7 +636,7 @@ export default function Host() {
         {/* Focus camera panel toggle button */}
         <button
           onClick={() => setFocusPanelOpen((prev) => !prev)}
-          className="absolute top-2 left-1/2 -translate-x-1/2 z-20 w-10 h-6 rounded-full bg-card/90 border border-border flex items-center justify-center hover:bg-card transition-all"
+          className="absolute top-2 left-1/2 -translate-x-1/2 z-30 w-10 h-6 rounded-full bg-card/90 border border-border flex items-center justify-center hover:bg-card transition-all"
           title="Toggle player cameras"
         >
           <ChevronDown
