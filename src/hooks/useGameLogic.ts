@@ -1877,6 +1877,16 @@ export function useGameLogic({ players, broadcast, gameMode, connectionMode, map
     };
   }, []);
 
+  const togglePause = useCallback(() => {
+    gamePausedRef.current = !gamePausedRef.current;
+    return gamePausedRef.current;
+  }, []);
+
+  const toggleBotsPause = useCallback(() => {
+    botsPausedRef.current = !botsPausedRef.current;
+    return botsPausedRef.current;
+  }, []);
+
   // ─── Public API ───────────────────────────────────────────────────────────────
   return {
     phase,
@@ -1890,5 +1900,7 @@ export function useGameLogic({ players, broadcast, gameMode, connectionMode, map
     hostDragUpdate,
     hostDragEnd,
     hostSkipExam,
+    togglePause,
+    toggleBotsPause,
   };
 }
