@@ -244,6 +244,7 @@ function useHostWebRTC() {
 
           conn.send(JSON.stringify({ type: 'assign-color', colorIndex }));
           conn.send(JSON.stringify({ type: 'used-colors', colors: Array.from(usedColorsRef.current) }));
+          conn.send(JSON.stringify({ type: 'game-mode', gameMode: gameModeRef.current }));
           setPlayers((prev) => {
             const next = new Map(prev);
             next.set(effectiveConnId, { joystick: { x: 0, y: 0 }, colorIndex, ping: 0, lastPongAt: Date.now() });
