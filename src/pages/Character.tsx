@@ -8,6 +8,8 @@ import { Button } from '@/components/ui/button';
 import * as THREE from 'three';
 import { useAssetLoading } from '@/context/AssetLoadingContext';
 import type { AnimState } from '@/lib/gameTypes';
+import { useImmersive } from '@/context/ImmersiveContext';
+import { useFullscreen } from '@/hooks/useFullscreen';
 
 const CAN_ATTACK: ChickColor[] = ['Black', 'Gold'];
 

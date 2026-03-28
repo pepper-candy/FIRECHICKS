@@ -807,7 +807,7 @@ export default function Client() {
       >
         {/* App title */}
         <div className="flex flex-col items-center gap-2">
-          <h1 className="text-xl font-pixel text-primary text-glow-green tracking-widest">FIRECHICK</h1>
+          <h1 className="text-xl font-pixel text-destructive tracking-widest" style={{ textShadow: '0 0 10px hsl(0 80% 55% / 0.6)' }}>FIRECHICK</h1>
           <p className="text-xs font-mono text-muted-foreground">Eagle vs Chick</p>
         </div>
 
@@ -815,14 +815,13 @@ export default function Client() {
         <button
           onClick={async () => { await enterFullscreen(); setFsSplashDone(true); }}
           className="relative flex flex-col items-center gap-4 px-10 py-8 rounded-2xl
-            border-2 border-primary bg-primary/10 text-primary
-            shadow-[0_0_40px_hsl(var(--primary)/0.4),inset_0_0_30px_hsl(var(--primary)/0.05)]
-            hover:bg-primary/20 active:scale-95 transition-all duration-150
-            before:absolute before:inset-0 before:rounded-2xl before:border before:border-primary/30 before:animate-pulse"
+            border-2 border-destructive bg-destructive/10 text-destructive
+            shadow-[0_0_40px_hsl(var(--destructive)/0.4),inset_0_0_30px_hsl(var(--destructive)/0.05)]
+            hover:bg-destructive/20 active:scale-95 transition-all duration-150
+            before:absolute before:inset-0 before:rounded-2xl before:border before:border-destructive/30 before:animate-pulse"
         >
           <span className="text-5xl" style={{ lineHeight: 1 }}>⛶</span>
           <span className="text-base font-pixel tracking-widest">TAP TO FULLSCREEN</span>
-          <span className="text-[10px] font-mono text-primary/60">hides browser address bar</span>
         </button>
 
         {/* Skip link */}
