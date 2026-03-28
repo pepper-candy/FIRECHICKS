@@ -681,7 +681,72 @@ export default function Client() {
     };
   }, [gamePhase, examLayer]);
 
-  const playerColor = colorIndex >= 0 ? PLAYER_COLORS[colorIndex] : null;
+  // ── Damage flash: track damageTaken increases (attack only) ──
+  useEffect(() => {
+    if (!myState) return;
+    const dt = myState.damageTaken ?? 0;
+    if (prevDamageTakenRef.current > 0 && dt > prevDamageTakenRef.current) {
+      setDamageFlash(true);
+      buzz(100);
+      const timer = setTimeout(() => setDamageFlash(false), 3000);
+      return () => clearTimeout(timer);
+    }
+    prevDamageTakenRef.current = dt;
+  }, [myState?.damageTaken]);
+
+  // Reset damage tracking on lobby
+  useEffect(() => {
+    if (gamePhase === "lobby") {
+      prevDamageTakenRef.current = 0;
+      prevSpeedUntilRef.current = 0;
+      prevHealthRef.current = -1;
+      prevInvincibleUntilRef.current = 0;
+      prevFlyUntilRef.current = 0;
+      prevCagedUntilRef.current = 0;
+      prevDamageDealtRef.current = 0;
+    }
+  }, [gamePhase]);
+
+  // ── Prop-use screen edge pulse ──
+  useEffect(() => {
+    if (!myState) return;
+    const triggerPulse = (color: string) => {
+      setPropFlash(color);
+      setTimeout(() => setPropFlash(null), 500);
+    };
+
+    // Speed
+    const su = myState.speedMultiplierUntil ?? 0;
+    if (su > prevSpeedUntilRef.current && prevSpeedUntilRef.current > 0) triggerPulse('hsl(48 96% 53% / 0.6)');
+    prevSpeedUntilRef.current = su;
+
+    // Heal
+    const hp = myState.health ?? 0;
+    if (prevHealthRef.current >= 0 && hp > prevHealthRef.current) triggerPulse('hsl(145 80% 50% / 0.5)');
+    prevHealthRef.current = hp;
+
+    // Invincible
+    const iu = myState.invincibleUntil ?? 0;
+    if (iu > prevInvincibleUntilRef.current && prevInvincibleUntilRef.current > 0) triggerPulse('hsl(45 100% 55% / 0.6)');
+    prevInvincibleUntilRef.current = iu;
+
+    // Fly
+    const fu = myState.flyCooldownUntil ?? 0;
+    if (fu > prevFlyUntilRef.current && prevFlyUntilRef.current > 0) triggerPulse('hsl(190 80% 55% / 0.5)');
+    prevFlyUntilRef.current = fu;
+
+    // Caged
+    const cu = myState.cagedUntil ?? 0;
+    if (cu > prevCagedUntilRef.current && prevCagedUntilRef.current > 0) triggerPulse('hsl(0 70% 50% / 0.5)');
+    prevCagedUntilRef.current = cu;
+
+    // Eagle attack success (damageDealt for eagle)
+    const dd = myState.damageDealt ?? 0;
+    if (dd > prevDamageDealtRef.current && prevDamageDealtRef.current > 0) triggerPulse('hsl(0 80% 55% / 0.5)');
+    prevDamageDealtRef.current = dd;
+  }, [myState?.speedMultiplierUntil, myState?.health, myState?.invincibleUntil, myState?.flyCooldownUntil, myState?.cagedUntil, myState?.damageDealt]);
+
+
   const myState = gameState
     ? Object.values(gameState.players).find((p) => p.colorIndex === (myAssignment?.colorIndex ?? colorIndex))
     : null;
