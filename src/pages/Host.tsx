@@ -213,7 +213,12 @@ export default function Host() {
     hostDragUpdate,
     hostDragEnd,
     hostSkipExam,
+    togglePause,
+    toggleBotsPause,
   } = useGameLogic({ players, broadcast, gameMode, connectionMode: mode, mapId });
+
+  const [isPaused, setIsPaused] = useState(false);
+  const [isBotsPaused, setIsBotsPaused] = useState(false);
 
   useAdvertiseRoom(phase === "lobby" ? roomCode : "", mode);
 
