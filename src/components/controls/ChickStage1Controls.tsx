@@ -71,7 +71,7 @@ export default function ChickStage1Controls({
           {availableProps.map((item) => (
             <button
               key={item.type}
-              onPointerDown={(e) => { e.stopPropagation(); e.preventDefault(); onPropUse(item.type); }}
+              onPointerDown={(e) => { e.stopPropagation(); e.preventDefault(); buzz(); onPropUse(item.type); }}
               className="w-12 h-12 rounded-full border-2 flex items-center justify-center transition-all active:scale-90 relative"
               style={{
                 borderColor: PROP_COLORS[item.type] ?? 'hsl(var(--border))',

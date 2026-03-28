@@ -53,7 +53,7 @@ function CooldownRingButton({ onPress, icon, remainingMs, totalCooldownMs, color
     <div className="relative flex-shrink-0" style={{ width: size, height: size }}>
       <button
         type="button"
-        onPointerDown={(e) => { e.stopPropagation(); e.preventDefault(); onPress(); }}
+        onPointerDown={(e) => { e.stopPropagation(); e.preventDefault(); if (!onCooldown) buzz(); onPress(); }}
         className="w-full h-full rounded-full border-2 flex items-center justify-center transition-all active:scale-90"
         style={{
           position: 'relative',
