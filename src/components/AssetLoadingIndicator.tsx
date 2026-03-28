@@ -5,7 +5,7 @@ export default function AssetLoadingIndicator() {
   const { entryProgress, entryReady } = useAssetLoading();
 
   return (
-    <div className="fixed bottom-3 left-3 z-40 flex items-center gap-2 px-3 py-1.5 rounded-lg bg-card/90 border border-border backdrop-blur-sm shadow-lg">
+    <div className="fixed bottom-3 left-3 z-40 flex items-center gap-2 px-3 py-[0.3rem] rounded-lg bg-card/90 border border-border backdrop-blur-sm shadow-lg">
       {entryReady ? (
         <>
           <Check className="w-4 h-4 text-primary" />
