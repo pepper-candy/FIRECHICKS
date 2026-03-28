@@ -2,6 +2,7 @@ import Thumbstick from '@/components/Thumbstick';
 import ScannerBox from '@/components/ScannerBox';
 import type { PropItem, PropType } from '@/lib/gameTypes';
 import { Zap, Heart, Shield, Crosshair } from 'lucide-react';
+import { buzz } from '@/lib/haptics';
 
 const PROP_COLORS: Record<string, string> = {
   speed: 'hsl(48 96% 53%)',
