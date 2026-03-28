@@ -33,6 +33,9 @@ export default function Character() {
   const [charPos, setCharPos] = useState<[number, number, number]>([0, 0, 0]);
   const [isPanning, setIsPanning] = useState(false);
   const panStartRef = useRef<{ x: number; y: number; pos: [number, number, number] } | null>(null);
+  const { isImmersive } = useImmersive();
+  const { isFullscreen, showImmersiveControl, enter: enterFullscreen } = useFullscreen();
+  const [fsSplashDone, setFsSplashDone] = useState(false);
 
   // Ensure character animation GLBs are loaded if user lands here directly (e.g. bookmark)
   const { characterAnimationsReady, startCharacterAnimationPreload } = useAssetLoading();
