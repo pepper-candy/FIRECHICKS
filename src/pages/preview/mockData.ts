@@ -32,6 +32,9 @@ const mockChickPlayer = (connId: string, colorIndex: number, chickColor: string,
   teleportTarget: { x: 0, z: 0 },
   cagedUntil: 0,
   cageCooldownUntil: 0,
+  attackRemainingMs: 0,
+  flyRemainingMs: 0,
+  cageRemainingMs: 0,
   ...overrides,
 });
 

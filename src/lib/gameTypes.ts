@@ -164,6 +164,10 @@ export interface PlayerGameStateSerializable {
   teleportTarget: { x: number; z: number };
   cagedUntil: number;
   cageCooldownUntil: number;
+  // Host-calculated remaining cooldown ms (no client Date.now() needed)
+  attackRemainingMs: number;
+  flyRemainingMs: number;
+  cageRemainingMs: number;
 }
 
 export interface GameStateSnapshot {
@@ -222,9 +226,13 @@ export type ClientMessage =
   | { type: 'teleport-set'; x: number; z: number }
   | { type: 'teleport-confirm' };
 
-export function serializePlayerState(p: PlayerGameState): PlayerGameStateSerializable {
+export function serializePlayerState(p: PlayerGameState, now?: number): PlayerGameStateSerializable {
+  const t = now ?? Date.now();
   return {
     ...p,
     socialCircleMet: Array.from(p.socialCircleMet),
+    attackRemainingMs: Math.max(0, p.attackCooldownUntil - t),
+    flyRemainingMs: Math.max(0, p.flyCooldownUntil - t),
+    cageRemainingMs: Math.max(0, p.cageCooldownUntil - t),
   };
 }

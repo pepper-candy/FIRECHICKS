@@ -1467,10 +1467,10 @@ export default function Client() {
               onPropUse={handlePropUse}
               onCageUse={() => handlePropUse("cage")}
               props={myState.props ?? []}
-              attackCooldownUntil={myState.attackCooldownUntil ?? 0}
+              attackRemainingMs={myState.attackRemainingMs ?? 0}
               attackDisabled={myState.frozen || !!gameState?.videoPlaying}
-              flyCooldownUntil={myState.flyCooldownUntil ?? 0}
-              cageCooldownUntil={myState.cageCooldownUntil ?? 0}
+              flyRemainingMs={myState.flyRemainingMs ?? 0}
+              cageRemainingMs={myState.cageRemainingMs ?? 0}
               isInZone={!!isInZone}
               thumbstickColor={displayColor ? `hsl(${displayColor.hsl})` : undefined}
             />
