@@ -205,6 +205,7 @@ function useHostWebRTC() {
           const newCode = recordSlot(effectiveConnId, slotData.colorIndex);
           conn.send(JSON.stringify({ type: 'takeover-accepted', colorIndex: slotData.colorIndex, connId: effectiveConnId }));
           conn.send(JSON.stringify({ type: 'used-colors', colors: Array.from(usedColorsRef.current) }));
+          conn.send(JSON.stringify({ type: 'game-mode', gameMode: gameModeRef.current }));
           void newCode; // used via slotDataRef side-effect
         } else {
           const mode = gameModeRef.current;
