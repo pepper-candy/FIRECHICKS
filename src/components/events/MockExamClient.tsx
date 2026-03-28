@@ -48,7 +48,7 @@ export default function MockExamClient({
   answer,
   onAnswerChange,
   onSubmit,
-  zoom = 1,
+  zoom = 0.5,
   opacity = 0.85,
   onZoomChange,
   onOpacityChange,
