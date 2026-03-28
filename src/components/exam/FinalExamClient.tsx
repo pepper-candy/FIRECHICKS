@@ -56,7 +56,7 @@ export default function FinalExamClient({
       </div>
 
       <div className="relative w-full overflow-hidden bg-black" style={{ aspectRatio: '873/457' }}>
-        <video ref={videoRef} autoPlay playsInline muted className="absolute inset-0 w-full h-full object-cover" />
+        <video ref={videoRef} autoPlay playsInline muted className="absolute inset-0 w-full h-full object-cover" style={{ transform: `scale(${cameraZoom})`, transformOrigin: 'center center' }} />
         <img
           src={assetUrl(`/PW/PW_Final_${questionNum}_layer-${examLayer}.png`)}
           alt={`Layer ${examLayer}`}
