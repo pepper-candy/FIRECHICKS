@@ -291,7 +291,7 @@ const Index = () => {
             className="text-sm text-muted-foreground font-mono max-w-md mx-auto immersive-fade-in"
             style={{ "--delay": "2.0s" } as React.CSSProperties}
           >
-            1 V 3 — control characters across devices
+            one line description
           </p>
         </div>
 
