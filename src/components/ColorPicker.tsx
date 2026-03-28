@@ -83,7 +83,7 @@ export default function ColorPicker({ currentColorIndex, usedColorIndices, onCol
       </div>
       {gameMode === '2v6' && (
         <p className="text-[9px] font-mono text-muted-foreground mt-1">
-          Gold border + 🦅 = Eagle role
+          Flashing Red border + 🦅 = Eagle role
         </p>
       )}
     </div>
