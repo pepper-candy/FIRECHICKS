@@ -220,6 +220,8 @@ export default function Host() {
   const [isPaused, setIsPaused] = useState(false);
   const [isBotsPaused, setIsBotsPaused] = useState(false);
   const [showPlayTime, setShowPlayTime] = useState(false);
+  // 3s "grab back controls" countdown after manual pause resume
+  const [grabBackUntil, setGrabBackUntil] = useState(0);
 
   useAdvertiseRoom(phase === "lobby" ? roomCode : "", mode);
 
