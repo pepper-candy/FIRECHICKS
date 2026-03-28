@@ -491,9 +491,9 @@ function InvincibleRipple3D() {
 // ─── Cage Mesh ───────────────────────────────────────────────────────────────
 function CageMesh({ countdown }: { countdown: number }) {
   const barColor = '#8b4513';
-  const BAR_H = 3;
-  const BAR_R = 0.06;
-  const CAGE_R = 0.8;
+  const BAR_H = 4.5;
+  const BAR_R = 0.09;
+  const CAGE_R = 1.2;
   const bars = 8;
 
   return (
