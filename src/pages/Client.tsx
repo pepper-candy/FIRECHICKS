@@ -187,7 +187,7 @@ function PropsStackBtn({
       {available.map((item) => (
         <button
           key={item.type}
-          onPointerDown={(e) => { e.stopPropagation(); e.preventDefault(); onUse(item.type); }}
+          onPointerDown={(e) => { e.stopPropagation(); e.preventDefault(); buzz(); onUse(item.type); }}
           className="relative w-14 h-14 rounded-full border-2 flex items-center justify-center transition-all active:scale-90"
           style={{
             borderColor: PROP_COLORS[item.type],
