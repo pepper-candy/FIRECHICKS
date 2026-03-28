@@ -745,7 +745,12 @@ export default function Host() {
         <div className="absolute top-2 right-2 z-30 flex flex-col gap-1">
           <div className="flex gap-1 justify-end">
             <button
-              onClick={() => { const v = togglePause(); setIsPaused(v); }}
+              onClick={() => {
+                const v = togglePause();
+                setIsPaused(v);
+                // When resuming (v=false), trigger 3s grab-back countdown
+                if (!v) setGrabBackUntil(Date.now() + 3000);
+              }}
               className={`flex items-center gap-1 px-2 py-1 rounded border text-[10px] font-mono transition-all ${
                 isPaused
                   ? 'border-accent bg-accent/20 text-accent'
