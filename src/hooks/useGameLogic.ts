@@ -1937,12 +1937,12 @@ export function useGameLogic({ players, broadcast, gameMode, connectionMode, map
     }
   }, []);
 
-  /** Host-only: end final exam immediately as chicks win; no damage or timeout penalties. */
+  /** Host-only: end final exam immediately; uses mode-based alive-count win condition. */
   const hostSkipExam = useCallback(() => {
     const gs = gameStateRef.current as GameStateRef | null;
     if (!gs || gs.phase !== "exam" || !gs.examState || gs.examState.answered) return;
     gs.examState.answered = true;
-    endGame(gs, "chicks", broadcastRef.current);
+    resolveExamWinner(gs, gameModeRef.current as "1v3" | "2v6", broadcastRef.current);
   }, []);
 
   // ─── Cleanup ─────────────────────────────────────────────────────────────────
