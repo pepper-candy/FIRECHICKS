@@ -771,7 +771,7 @@ export default function GameplayMap({
 
         {/* Box Obstacles */}
         {mapVariant.obstacles.map((o, i) => (
-          <Obstacle key={i} position={o.position} size={o.size} rotation={o.rotation} baseColor={obstacleColor} baseEmissive={obstacleEmissive} lightMode={lightMode} />
+          <Obstacle key={i} position={o.position} size={o.size} rotation={o.rotation} baseColor={obstacleColor} baseEmissive={obstacleEmissive} lightMode={hasEdges} />
         ))}
 
         {/* Nature Obstacles */}
