@@ -166,7 +166,7 @@ export default function Host() {
   const [gameMode, setGameMode] = useState<GameMode>("1v3");
   const [startClickAt, setStartClickAt] = useState<number | null>(null);
   const [zoomLevel, setZoomLevel] = useState(1);
-  const [themeMode, setThemeMode] = useState<'dark' | 'semi' | 'light'>('semi');
+  const [themeMode, setThemeMode] = useState<"dark" | "semi" | "light">("semi");
   const [mapId, setMapId] = useState<MapId>(1);
   const [themeHue, setThemeHue] = useState<number | undefined>(undefined);
   const [colorPickerOpen, setColorPickerOpen] = useState(false);
@@ -227,7 +227,10 @@ export default function Host() {
   useEffect(() => {
     if (grabBackUntil <= Date.now()) return;
     const id = setInterval(() => {
-      if (Date.now() >= grabBackUntil) { setGrabBackUntil(0); clearInterval(id); }
+      if (Date.now() >= grabBackUntil) {
+        setGrabBackUntil(0);
+        clearInterval(id);
+      }
       forceRender((n) => n + 1);
     }, 200);
     return () => clearInterval(id);
@@ -339,7 +342,6 @@ export default function Host() {
   // ─── LOBBY ────────────────────────────────────────────────────────────────────
   if (phase === "lobby") {
     return (
-      
       <div className={`flex flex-col h-screen p-3 gap-3 relative ${isImmersive ? "bg-black" : ""}`}>
         {isImmersive && <div className="immersive-vignette" />}
         {isImmersive && <div className="immersive-scanline-overlay" style={{ opacity: 0.25 }} />}
@@ -385,7 +387,11 @@ export default function Host() {
 
         {/* Header row */}
         <div className="flex items-center justify-between flex-wrap gap-2 z-10">
-          <h1 className={`text-sm md:text-base text-primary tracking-wider font-pixel ${isImmersive ? "ceremony-title-glow" : "text-glow-green"}`}>LOBBY</h1>
+          <h1
+            className={`text-sm md:text-base text-primary tracking-wider font-pixel ${isImmersive ? "ceremony-title-glow" : "text-glow-green"}`}
+          >
+            LOBBY
+          </h1>
 
           <div className="flex items-center gap-2 font-mono text-xs flex-wrap">
             {/* Game mode toggle (only when not full) */}
@@ -510,7 +516,7 @@ export default function Host() {
   if (phase === "reveal") {
     const revealCountdown = startClickAt ? Math.max(0, 10 - (revealNow - startClickAt) / 1000) : 10;
     const revealSec = Math.ceil(revealCountdown);
-    
+
     if (isImmersive) {
       return (
         <div className="relative flex flex-col items-center justify-center h-screen overflow-hidden bg-black">
@@ -534,7 +540,10 @@ export default function Host() {
             >
               {revealSec}
             </div>
-            <p className="text-sm font-mono text-muted-foreground/60 tracking-widest immersive-fade-in" style={{ "--delay": "0.3s" } as React.CSSProperties}>
+            <p
+              className="text-sm font-mono text-muted-foreground/60 tracking-widest immersive-fade-in"
+              style={{ "--delay": "0.3s" } as React.CSSProperties}
+            >
               ROLES REVEALING ON PHONES
             </p>
             <p className="text-xs font-mono text-muted-foreground/40">
@@ -572,7 +581,7 @@ export default function Host() {
   if (phase === "countdown") {
     const count = snapshot?.countdownTime ?? COUNTDOWN_DURATION_DISPLAY;
     const countSec = Math.ceil(count);
-    
+
     if (isImmersive) {
       return (
         <div className="relative flex flex-col items-center justify-center h-screen overflow-hidden bg-black">
@@ -597,9 +606,7 @@ export default function Host() {
             >
               {countSec}
             </div>
-            <p className="text-xs font-mono text-muted-foreground/50 tracking-widest">
-              EAGLE VS CHICK
-            </p>
+            <p className="text-xs font-mono text-muted-foreground/50 tracking-widest">EAGLE VS CHICK</p>
           </div>
         </div>
       );
@@ -771,25 +778,28 @@ export default function Host() {
               }}
               className={`flex items-center gap-1 px-2 py-1 rounded border text-[10px] font-mono transition-all ${
                 isPaused
-                  ? 'border-accent bg-accent/20 text-accent'
-                  : 'border-border bg-card/80 text-muted-foreground hover:text-foreground'
+                  ? "border-accent bg-accent/20 text-accent"
+                  : "border-border bg-card/80 text-muted-foreground hover:text-foreground"
               }`}
-              title={isPaused ? 'Resume game' : 'Pause game'}
+              title={isPaused ? "Resume game" : "Pause game"}
             >
               {isPaused ? <Play className="w-3 h-3" /> : <Pause className="w-3 h-3" />}
-              {isPaused ? 'PLAY' : 'PAUSE'}
+              {isPaused ? "PLAY" : "PAUSE"}
             </button>
             <button
-              onClick={() => { const v = toggleBotsPause(); setIsBotsPaused(v); }}
+              onClick={() => {
+                const v = toggleBotsPause();
+                setIsBotsPaused(v);
+              }}
               className={`flex items-center gap-1 px-2 py-1 rounded border text-[10px] font-mono transition-all ${
                 isBotsPaused
-                  ? 'border-accent bg-accent/20 text-accent'
-                  : 'border-border bg-card/80 text-muted-foreground hover:text-foreground'
+                  ? "border-accent bg-accent/20 text-accent"
+                  : "border-border bg-card/80 text-muted-foreground hover:text-foreground"
               }`}
-              title={isBotsPaused ? 'Resume bots' : 'Pause bots'}
+              title={isBotsPaused ? "Resume bots" : "Pause bots"}
             >
               <Bot className="w-3 h-3" />
-              {isBotsPaused ? 'BOTS ▶' : 'BOTS ⏸'}
+              {isBotsPaused ? "BOTS ▶" : "BOTS ⏸"}
             </button>
           </div>
           <HealthDisplay players={snapshot.players} />
@@ -816,7 +826,10 @@ export default function Host() {
                 {isGrabBackPhase || manualGrabBack ? (
                   <>
                     <span className="text-4xl">🎮</span>
-                    <span className="text-3xl font-pixel text-destructive tracking-widest animate-pulse" style={{ textShadow: '0 0 30px hsl(var(--destructive) / 0.6)' }}>
+                    <span
+                      className="text-3xl font-pixel text-destructive tracking-widest animate-pulse"
+                      style={{ textShadow: "0 0 30px hsl(var(--destructive) / 0.6)" }}
+                    >
                       GRAB YOUR CONTROLS!
                     </span>
                     <span className="text-sm font-mono text-muted-foreground">Resuming in...</span>
@@ -825,7 +838,10 @@ export default function Host() {
                 ) : (
                   <>
                     <Pause className="w-20 h-20 text-accent" />
-                    <span className="text-5xl font-pixel text-accent tracking-[0.3em]" style={{ textShadow: '0 0 40px hsl(var(--accent) / 0.8)' }}>
+                    <span
+                      className="text-5xl font-pixel text-accent tracking-[0.3em]"
+                      style={{ textShadow: "0 0 40px hsl(var(--accent) / 0.8)" }}
+                    >
                       PAUSED
                     </span>
                   </>
@@ -841,14 +857,14 @@ export default function Host() {
         {/* Game time — click to toggle total vs play time */}
         <div
           className="absolute top-2 left-2 z-10 px-3 py-1 rounded bg-card/80 border border-border font-mono text-xs cursor-pointer select-none"
-          style={{ color: showPlayTime ? 'hsl(0 80% 55%)' : 'hsl(var(--muted-foreground))' }}
+          style={{ color: showPlayTime ? "hsl(0 80% 55%)" : "hsl(var(--muted-foreground))" }}
           onClick={() => setShowPlayTime((p) => !p)}
-          title={showPlayTime ? 'Play time (excluding pauses) — click for total' : 'Total time — click for play time'}
+          title={showPlayTime ? "Play time (excluding pauses) — click for total" : "Total time — click for play time"}
         >
-          ⏱ {showPlayTime
-            ? `${Math.floor(snapshot.gameTime - (snapshot.totalPauseMs / 1000))}s`
-            : `${Math.floor(snapshot.gameTime)}s`
-          }
+          ⏱{" "}
+          {showPlayTime
+            ? `${Math.floor(snapshot.gameTime - snapshot.totalPauseMs / 1000)}s`
+            : `${Math.floor(snapshot.gameTime)}s`}
         </div>
         <button
           onClick={exportDebugLog}
@@ -875,12 +891,12 @@ export default function Host() {
           {/* Light mode torch */}
           <div className="mt-2 flex items-center justify-between">
             <button
-              onClick={() => setThemeMode((p) => p === 'semi' ? 'light' : p === 'light' ? 'dark' : 'semi')}
-              className={`flex items-center gap-1 text-[10px] font-mono transition-colors ${themeMode === 'light' ? 'text-yellow-400' : themeMode === 'semi' ? 'text-blue-300' : 'text-muted-foreground hover:text-foreground'}`}
+              onClick={() => setThemeMode((p) => (p === "semi" ? "light" : p === "light" ? "dark" : "semi"))}
+              className={`flex items-center gap-1 text-[10px] font-mono transition-colors ${themeMode === "light" ? "text-yellow-400" : themeMode === "semi" ? "text-blue-300" : "text-muted-foreground hover:text-foreground"}`}
               title="Cycle theme: Semi-Light → Light → Dark"
             >
               <Sun className="w-3 h-3" />
-              {themeMode === 'semi' ? 'Semi' : themeMode === 'light' ? 'Light' : 'Dark'}
+              {themeMode === "semi" ? "Semi" : themeMode === "light" ? "Light" : "Dark"}
             </button>
           </div>
 
@@ -1036,8 +1052,9 @@ function GameOverCeremony({ snapshot, gameMode }: { snapshot: GameStateSnapshot;
     return winningTeam.length > 0 ? winningTeam.sort((a, b) => b.actionScore - a.actionScore)[0] : sorted[0];
   })();
 
-  const winningTeamPlayers = sorted
-    .filter((p) => (winner === "eagle" && p.isEagle) || (winner === "chicks" && !p.isEagle));
+  const winningTeamPlayers = sorted.filter(
+    (p) => (winner === "eagle" && p.isEagle) || (winner === "chicks" && !p.isEagle),
+  );
 
   const skipTeamPhase =
     winner === "draw" || (winner === "eagle" && gameMode === "1v3") || winningTeamPlayers.length === 0;
@@ -1109,11 +1126,14 @@ function GameOverCeremony({ snapshot, gameMode }: { snapshot: GameStateSnapshot;
   // Phase 1: MVP showcase
   if (ceremonyPhase === "mvp" && mvp) {
     return (
-      <div className={`flex flex-col items-center justify-center h-screen gap-6 overflow-hidden relative ${isImmersive ? "bg-black" : "bg-background"}`}>
+      <div
+        className={`flex flex-col items-center justify-center h-screen gap-6 overflow-hidden relative ${isImmersive ? "bg-black" : "bg-background"}`}
+      >
         {isImmersive && <CeremonyParticles />}
         {isImmersive && <div className="immersive-vignette" />}
-        <h1 className={`text-2xl font-pixel text-accent tracking-widest z-10 ${isImmersive ? "immersive-fade-in ceremony-title-glow" : "text-glow-green animate-pulse"}`}
-          style={isImmersive ? { "--delay": "0.3s" } as React.CSSProperties : undefined}
+        <h1
+          className={`text-2xl font-pixel text-accent tracking-widest z-10 ${isImmersive ? "immersive-fade-in ceremony-title-glow" : "text-glow-green animate-pulse"}`}
+          style={isImmersive ? ({ "--delay": "0.3s" } as React.CSSProperties) : undefined}
         >
           🏆 MVP
         </h1>
@@ -1133,13 +1153,17 @@ function GameOverCeremony({ snapshot, gameMode }: { snapshot: GameStateSnapshot;
             </group>
           </Canvas>
         </div>
-        <div className={`flex items-center gap-3 px-6 py-3 rounded-xl border-2 border-accent z-10 ${isImmersive ? "bg-accent/10 immersive-border-breathe" : "bg-accent/20"}`}>
+        <div
+          className={`flex items-center gap-3 px-6 py-3 rounded-xl border-2 border-accent z-10 ${isImmersive ? "bg-accent/10 immersive-border-breathe" : "bg-accent/20"}`}
+        >
           <Trophy className="w-6 h-6 text-accent" />
           {isImmersive ? (
             <>
               <span
                 className="text-2xl font-pixel mvp-name-reveal"
-                style={{ color: mvpColor ? `hsl(${mvpColor.hsl})` : undefined, "--delay": "1.1s" } as React.CSSProperties}
+                style={
+                  { color: mvpColor ? `hsl(${mvpColor.hsl})` : undefined, "--delay": "1.1s" } as React.CSSProperties
+                }
               >
                 {mvpColor?.name ?? "?"}
               </span>
@@ -1159,8 +1183,9 @@ function GameOverCeremony({ snapshot, gameMode }: { snapshot: GameStateSnapshot;
             </>
           )}
         </div>
-        <p className={`text-sm font-mono text-muted-foreground z-10 ${isImmersive ? "immersive-fade-in" : ""}`}
-          style={isImmersive ? { "--delay": "1.4s" } as React.CSSProperties : undefined}
+        <p
+          className={`text-sm font-mono text-muted-foreground z-10 ${isImmersive ? "immersive-fade-in" : ""}`}
+          style={isImmersive ? ({ "--delay": "1.4s" } as React.CSSProperties) : undefined}
         >
           🎉 Congratulations!
         </p>
@@ -1176,14 +1201,16 @@ function GameOverCeremony({ snapshot, gameMode }: { snapshot: GameStateSnapshot;
     const spacingX = 2.8;
     const spacingZ = 2.4;
     return (
-      <div className={`flex flex-col items-center justify-center h-screen gap-6 overflow-hidden relative ${isImmersive ? "bg-black" : "bg-background"}`}>
+      <div
+        className={`flex flex-col items-center justify-center h-screen gap-6 overflow-hidden relative ${isImmersive ? "bg-black" : "bg-background"}`}
+      >
         {isImmersive && <CeremonyParticles />}
         {isImmersive && <div className="immersive-vignette" />}
         <h1
           className={`text-2xl font-pixel tracking-widest z-10 ${isImmersive ? "immersive-fade-in ceremony-title-glow" : ""}`}
           style={{
             color: winner === "eagle" ? "hsl(0 80% 55%)" : "hsl(145 80% 50%)",
-            ...(isImmersive ? { "--delay": "0.2s" } as React.CSSProperties : {}),
+            ...(isImmersive ? ({ "--delay": "0.2s" } as React.CSSProperties) : {}),
           }}
         >
           {teamName}
@@ -1196,7 +1223,9 @@ function GameOverCeremony({ snapshot, gameMode }: { snapshot: GameStateSnapshot;
           >
             <ambientLight intensity={isImmersive ? 0.3 : 0.8} />
             <directionalLight position={[5, 8, 5]} intensity={isImmersive ? 1.4 : 1.2} />
-            {isImmersive && <spotLight position={[0, 8, 3]} angle={0.6} penumbra={0.9} intensity={2.5} color="#ffd700" />}
+            {isImmersive && (
+              <spotLight position={[0, 8, 3]} angle={0.6} penumbra={0.9} intensity={2.5} color="#ffd700" />
+            )}
             <group position={[0, -1.8, 0]}>
               {winningTeamPlayers.map((p, i) => {
                 const col = i % cols;
@@ -1215,8 +1244,9 @@ function GameOverCeremony({ snapshot, gameMode }: { snapshot: GameStateSnapshot;
             </group>
           </Canvas>
         </div>
-        <p className={`text-sm font-mono text-muted-foreground z-10 ${isImmersive ? "immersive-fade-in" : ""}`}
-          style={isImmersive ? { "--delay": "0.8s" } as React.CSSProperties : undefined}
+        <p
+          className={`text-sm font-mono text-muted-foreground z-10 ${isImmersive ? "immersive-fade-in" : ""}`}
+          style={isImmersive ? ({ "--delay": "0.8s" } as React.CSSProperties) : undefined}
         >
           🎉 Congratulations!
         </p>
@@ -1226,7 +1256,7 @@ function GameOverCeremony({ snapshot, gameMode }: { snapshot: GameStateSnapshot;
 
   // Phase 3: 3D lineup sits in upper half with feet just above viewport mid (bottom of canvas ~48–50vh)
   const count = sorted.length;
-  const cols = Math.min(6, count);
+  const cols = Math.min(4, count);
   const rows = Math.ceil(count / cols);
   const spacingX = Math.min(3.2, 14 / cols);
   const spacingZ = 2.6;
@@ -1287,7 +1317,11 @@ function GameOverCeremony({ snapshot, gameMode }: { snapshot: GameStateSnapshot;
         </div>
 
         <div className={`flex-1 min-h-0 p-3 sm:p-4 overflow-auto relative ${isImmersive ? "transcript-grid-bg" : ""}`}>
-          <h2 className={`text-center text-sm font-pixel mb-3 tracking-widest ${isImmersive ? "text-accent ceremony-title-glow" : "text-foreground"}`}>📋 TRANSCRIPT</h2>
+          <h2
+            className={`text-center text-sm font-pixel mb-3 tracking-widest ${isImmersive ? "text-accent ceremony-title-glow" : "text-foreground"}`}
+          >
+            📋 TRANSCRIPT
+          </h2>
           <div className="w-full max-w-3xl mx-auto">
             <table className="w-full text-xs font-mono border-collapse">
               <thead>
@@ -1308,9 +1342,12 @@ function GameOverCeremony({ snapshot, gameMode }: { snapshot: GameStateSnapshot;
                   const result = getMatchResult(p);
 
                   return (
-                    <tr key={p.connId}
+                    <tr
+                      key={p.connId}
                       className={`border-b border-border/40 hover:bg-card/30 ${isImmersive ? "ceremony-row-reveal" : ""}`}
-                      style={isImmersive ? { "--row-delay": `${0.3 + idx * 0.15}s` } as React.CSSProperties : undefined}
+                      style={
+                        isImmersive ? ({ "--row-delay": `${0.3 + idx * 0.15}s` } as React.CSSProperties) : undefined
+                      }
                     >
                       <td className="py-2 pl-2">
                         <div className="flex items-center gap-1.5">
@@ -1328,7 +1365,12 @@ function GameOverCeremony({ snapshot, gameMode }: { snapshot: GameStateSnapshot;
                         {isImmersive ? (
                           <span
                             className="text-2xl font-bold ceremony-grade-bounce"
-                            style={{ color: gradeColor, "--grade-delay": `${0.3 + idx * 0.15 + 0.2}s` } as React.CSSProperties}
+                            style={
+                              {
+                                color: gradeColor,
+                                "--grade-delay": `${0.3 + idx * 0.15 + 0.2}s`,
+                              } as React.CSSProperties
+                            }
                           >
                             {letter}
                           </span>
@@ -1346,11 +1388,38 @@ function GameOverCeremony({ snapshot, gameMode }: { snapshot: GameStateSnapshot;
                       <td className="py-2 text-center text-foreground font-bold">{p.actionScore.toFixed(0)}</td>
                       <td className="py-2 text-center">
                         {result === "draw" ? (
-                          <span className={`text-yellow-400 font-bold ${isImmersive ? "ceremony-grade-bounce" : ""}`} style={isImmersive ? { "--grade-delay": `${0.5 + idx * 0.15}s` } as React.CSSProperties : undefined}>DRAW</span>
+                          <span
+                            className={`text-yellow-400 font-bold ${isImmersive ? "ceremony-grade-bounce" : ""}`}
+                            style={
+                              isImmersive
+                                ? ({ "--grade-delay": `${0.5 + idx * 0.15}s` } as React.CSSProperties)
+                                : undefined
+                            }
+                          >
+                            DRAW
+                          </span>
                         ) : result === "win" ? (
-                          <span className={`text-primary font-bold ${isImmersive ? "ceremony-grade-bounce" : ""}`} style={isImmersive ? { "--grade-delay": `${0.5 + idx * 0.15}s` } as React.CSSProperties : undefined}>WIN</span>
+                          <span
+                            className={`text-primary font-bold ${isImmersive ? "ceremony-grade-bounce" : ""}`}
+                            style={
+                              isImmersive
+                                ? ({ "--grade-delay": `${0.5 + idx * 0.15}s` } as React.CSSProperties)
+                                : undefined
+                            }
+                          >
+                            WIN
+                          </span>
                         ) : (
-                          <span className={`text-destructive ${isImmersive ? "ceremony-grade-bounce" : ""}`} style={isImmersive ? { "--grade-delay": `${0.5 + idx * 0.15}s` } as React.CSSProperties : undefined}>LOSE</span>
+                          <span
+                            className={`text-destructive ${isImmersive ? "ceremony-grade-bounce" : ""}`}
+                            style={
+                              isImmersive
+                                ? ({ "--grade-delay": `${0.5 + idx * 0.15}s` } as React.CSSProperties)
+                                : undefined
+                            }
+                          >
+                            LOSE
+                          </span>
                         )}
                       </td>
                     </tr>
