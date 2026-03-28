@@ -43,6 +43,34 @@ const PROP_ICONS: Record<PropType, React.ReactNode> = {
 const FLY_COOLDOWN_MS = 10000;
 const CAGE_COOLDOWN_MS = 30000;
 
+function CooldownRing({ progress, color, size = 56, strokeWidth = 3 }: { progress: number; color: string; size?: number; strokeWidth?: number }) {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+    const center = size / 2;
+    const radius = center - strokeWidth;
+    const startAngle = -Math.PI / 2; // start at top
+    const endAngle = startAngle + (Math.PI * 2 * progress);
+    ctx.clearRect(0, 0, size, size);
+    // Draw background ring
+    ctx.beginPath();
+    ctx.arc(center, center, radius, 0, Math.PI * 2);
+    ctx.strokeStyle = 'rgba(0,0,0,0.2)';
+    ctx.lineWidth = strokeWidth;
+    ctx.stroke();
+    // Draw progress ring
+    ctx.beginPath();
+    ctx.arc(center, center, radius, startAngle, endAngle);
+    ctx.strokeStyle = color;
+    ctx.lineWidth = strokeWidth;
+    ctx.stroke();
+  }, [progress, color, size, strokeWidth]);
+  return <canvas ref={canvasRef} width={size} height={size} className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" style={{ pointerEvents: 'none' }} />;
+}
+
 function PropsBtn({
   items,
   onUse,
@@ -111,11 +139,14 @@ function PropsBtn({
         ) : (
           PROP_ICONS[current.type]
         )}
+        {/* Replace the old SVG ring with canvas CooldownRing */}
         {onCooldown && totalCd > 0 && (
-          <svg className="absolute -inset-1 w-[calc(100%+8px)] h-[calc(100%+8px)] -rotate-90 z-10" viewBox="0 0 56 56" style={{ pointerEvents: 'none' }}>
-            <circle cx="28" cy="28" r="24" fill="none" stroke={cooldownColor} strokeWidth="3"
-              strokeDasharray={`${cooldownRatio * flyCircumference} ${flyCircumference}`} strokeLinecap="round" />
-          </svg>
+          <CooldownRing
+            progress={cooldownRatio}
+            color={cooldownColor}
+            size={64}     // matches button size (w-16 h-16)
+            strokeWidth={4}
+          />
         )}
         {showBadge && !onCooldown && (
           <span
