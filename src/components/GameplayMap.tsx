@@ -764,7 +764,7 @@ export default function GameplayMap({
               baseColor={buildingColor}
               baseEmissive={buildingEmissive}
               immersive={immersive}
-              lightMode={lightMode}
+              lightMode={hasEdges}
             />
           );
         })}
