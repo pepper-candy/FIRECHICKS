@@ -2,6 +2,7 @@ import Thumbstick from '@/components/Thumbstick';
 import AttackButton from '@/components/AttackButton';
 import type { PropItem, PropType } from '@/lib/gameTypes';
 import { Wind, Lock } from 'lucide-react';
+import { buzz } from '@/lib/haptics';
 
 const CIRCUMFERENCE = 2 * Math.PI * 22; // ~138.23 for r=22 in viewBox 0 0 50 50
 
