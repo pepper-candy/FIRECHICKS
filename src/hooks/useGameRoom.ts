@@ -534,6 +534,7 @@ function useHostSupabase() {
               void newCode;
               channel.send({ type: 'broadcast', event: 'host-direct', payload: { targetId: clientId, type: 'takeover-accepted', colorIndex: slotData.colorIndex, connId: oldId } });
               channel.send({ type: 'broadcast', event: 'used-colors', payload: { colors: Array.from(usedColorsRef.current) } });
+              channel.send({ type: 'broadcast', event: 'host-direct', payload: { targetId: clientId, type: 'game-mode', gameMode: gameModeRef.current } });
               return;
             }
           }
