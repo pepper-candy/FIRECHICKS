@@ -17,7 +17,7 @@ export default function StageProgressBar({ currentStage, stageLabel }: Props) {
   const isSharingPhase = currentStage === 2;
 
   return (
-    <div className="absolute bottom-2 left-2 right-2 z-10">
+    <div className="absolute bottom-2 left-2 right-2 z-30">
       <div className="flex items-center gap-1 bg-card/85 border border-border rounded px-3 py-2">
         {STAGES.map((s, idx) => {
           const isCompleted = idx < currentStage && !(isSharingPhase && (idx === 1 || idx === 2));

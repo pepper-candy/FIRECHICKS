@@ -150,6 +150,8 @@ interface GameStateRef {
   activeEvent: GameEvent | null;
   eventCountdown: number;
   stageTransitionUntil: number;
+  totalPauseMs: number;
+  stageTransitionPauseApplied: boolean;
 }
 
 function isBotConnId(connId: string): boolean {
@@ -398,6 +400,8 @@ export function useGameLogic({ players, broadcast, gameMode, connectionMode, map
       activeEvent: null,
       eventCountdown: 0,
       stageTransitionUntil: 0,
+      totalPauseMs: 0,
+      stageTransitionPauseApplied: false,
     };
 
     setPhase("reveal");
@@ -437,6 +441,58 @@ export function useGameLogic({ players, broadcast, gameMode, connectionMode, map
     const currentPlayers = playersRef.current as Map<string, PlayerState>;
     const currentBroadcast = broadcastRef.current as (msg: any) => void;
     const currentMode = gameModeRef.current as "1v3" | "2v6";
+
+    // ── Stage transition auto-pause ──
+    // During stage transitions, freeze all game logic (like pause) but keep gameTime ticking.
+    // Accumulate totalPauseMs so play time can exclude it.
+    if (gs.stageTransitionUntil > 0 && now < gs.stageTransitionUntil) {
+      // Keep gameTime running (stopwatch doesn't stop)
+      if (gs.phase === "playing" || gs.phase === "exam") {
+        gs.gameTime += delta;
+        gs.totalPauseMs += delta * 1000;
+      }
+      gs.stageTransitionPauseApplied = false;
+      doBroadcastState(gs, currentBroadcast);
+      return;
+    }
+    // When transition just ended, extend all timestamp-based cooldowns
+    if (gs.stageTransitionUntil > 0 && now >= gs.stageTransitionUntil && !gs.stageTransitionPauseApplied) {
+      gs.stageTransitionPauseApplied = true;
+      const pauseDuration = 5000; // stage transitions are always 5s
+      // Extend all player cooldowns & freeze timers
+      for (const [, p] of gs.playerStates) {
+        if (p.frozenUntil > 0) p.frozenUntil += pauseDuration;
+        if (p.attackCooldownUntil > 0) p.attackCooldownUntil += pauseDuration;
+        if (p.flyCooldownUntil > 0) p.flyCooldownUntil += pauseDuration;
+        if (p.invincibleUntil > 0) p.invincibleUntil += pauseDuration;
+        if (p.speedMultiplierUntil > 0) p.speedMultiplierUntil += pauseDuration;
+        if (p.tipShareCooldownUntil > 0) p.tipShareCooldownUntil += pauseDuration;
+        if (p.cagedUntil > 0) p.cagedUntil += pauseDuration;
+        if (p.cageCooldownUntil > 0) p.cageCooldownUntil += pauseDuration;
+        if (p.attackAnimUntil > 0) p.attackAnimUntil += pauseDuration;
+      }
+      // Extend global freeze
+      if (gs.frozenAllUntil > 0) gs.frozenAllUntil += pauseDuration;
+      // Extend building timers
+      for (const [, t] of gs.buildingTimers) {
+        t.startTime += pauseDuration; // shift start forward = effectively pause
+      }
+      // Extend event timings
+      if (gs.activeEvent) {
+        gs.activeEvent.endAt += pauseDuration;
+        gs.activeEvent.startedAt += pauseDuration;
+      }
+      // Extend prop/mystery spawn timers
+      gs.lastPropSpawnSpeed += pauseDuration;
+      gs.lastPropSpawnHeal += pauseDuration;
+      gs.lastMysteryBoxSpawn += pauseDuration;
+      // Extend tip share cooldowns
+      for (const [, ts] of gs.activeTipShares) {
+        ts.cooldownUntil += pauseDuration;
+        ts.expiresAt += pauseDuration;
+      }
+      gs.stageTransitionUntil = 0; // clear so we don't re-enter
+    }
 
     // ── Countdown ──
     if (gs.phase === "countdown") {
@@ -1341,6 +1397,7 @@ export function useGameLogic({ players, broadcast, gameMode, connectionMode, map
       tipObtainTimers,
       stageTransitionUntil: gs.stageTransitionUntil ?? 0,
       activeTipShareConnIds: Array.from(gs.activeTipShares.values()).map((ts: TipShare) => ts.connId),
+      totalPauseMs: gs.totalPauseMs ?? 0,
     };
 
     setSnapshot(snap);

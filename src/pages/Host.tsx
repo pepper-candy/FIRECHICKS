@@ -219,6 +219,7 @@ export default function Host() {
 
   const [isPaused, setIsPaused] = useState(false);
   const [isBotsPaused, setIsBotsPaused] = useState(false);
+  const [showPlayTime, setShowPlayTime] = useState(false);
 
   useAdvertiseRoom(phase === "lobby" ? roomCode : "", mode);
 
@@ -635,7 +636,7 @@ export default function Host() {
         {/* Focus camera panel toggle button */}
         <button
           onClick={() => setFocusPanelOpen((prev) => !prev)}
-          className="absolute top-2 left-1/2 -translate-x-1/2 z-20 w-10 h-6 rounded-full bg-card/90 border border-border flex items-center justify-center hover:bg-card transition-all"
+          className="absolute top-2 left-1/2 -translate-x-1/2 z-30 w-10 h-6 rounded-full bg-card/90 border border-border flex items-center justify-center hover:bg-card transition-all"
           title="Toggle player cameras"
         >
           <ChevronDown
@@ -645,7 +646,7 @@ export default function Host() {
 
         {/* Focus camera panel */}
         {focusPanelOpen && (
-          <div className="absolute top-10 left-0 right-0 z-20 bg-card/95 border-b border-border p-2">
+          <div className="absolute top-10 left-0 right-0 z-30 bg-card/95 border-b border-border p-2">
             <div className="flex gap-2 overflow-x-auto">
               {Object.values(snapshot.players).map((p) => {
                 const color = PLAYER_COLORS[p.colorIndex];
@@ -739,7 +740,7 @@ export default function Host() {
         )}
 
         {/* Pause controls + Health display top-right */}
-        <div className="absolute top-2 right-2 z-10 flex flex-col gap-1">
+        <div className="absolute top-2 right-2 z-30 flex flex-col gap-1">
           <div className="flex gap-1 justify-end">
             <button
               onClick={() => { const v = togglePause(); setIsPaused(v); }}
@@ -769,9 +770,9 @@ export default function Host() {
           <HealthDisplay players={snapshot.players} />
         </div>
 
-        {/* PAUSED overlay */}
-        {isPaused && (
-          <div className="absolute inset-0 z-40 flex items-center justify-center bg-background/60 backdrop-blur-sm pointer-events-none">
+        {/* PAUSED overlay — manual pause OR stage transition pause */}
+        {(isPaused || (snapshot.stageTransitionUntil > 0 && Date.now() < snapshot.stageTransitionUntil)) && (
+          <div className="absolute inset-0 z-20 flex items-center justify-center bg-background/60 backdrop-blur-sm pointer-events-none">
             <div className="flex flex-col items-center gap-3">
               <Pause className="w-20 h-20 text-accent" />
               <span className="text-5xl font-pixel text-accent tracking-[0.3em]" style={{ textShadow: '0 0 40px hsl(var(--accent) / 0.8)' }}>
@@ -784,9 +785,17 @@ export default function Host() {
         {/* Stage progress bottom */}
         <StageProgressBar currentStage={snapshot.stage} stageLabel={snapshot.stageLabel} />
 
-        {/* Game time */}
-        <div className="absolute top-2 left-2 z-10 px-3 py-1 rounded bg-card/80 border border-border font-mono text-xs text-muted-foreground">
-          ⏱ {Math.floor(snapshot.gameTime)}s
+        {/* Game time — click to toggle total vs play time */}
+        <div
+          className="absolute top-2 left-2 z-10 px-3 py-1 rounded bg-card/80 border border-border font-mono text-xs cursor-pointer select-none"
+          style={{ color: showPlayTime ? 'hsl(0 80% 55%)' : 'hsl(var(--muted-foreground))' }}
+          onClick={() => setShowPlayTime((p) => !p)}
+          title={showPlayTime ? 'Play time (excluding pauses) — click for total' : 'Total time — click for play time'}
+        >
+          ⏱ {showPlayTime
+            ? `${Math.floor(snapshot.gameTime - (snapshot.totalPauseMs / 1000))}s`
+            : `${Math.floor(snapshot.gameTime)}s`
+          }
         </div>
         <button
           onClick={exportDebugLog}
