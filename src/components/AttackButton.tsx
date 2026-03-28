@@ -24,12 +24,12 @@ export default function AttackButton({ onAttack, cooldownUntil, disabled }: Prop
   useEffect(() => {
     if (cooldownUntil > 0) {
       const total = cooldownUntil - Date.now();
-      if (total > 0 && total > totalCdRef.current * 0.8) {
+      if (total > 0) {
         totalCdRef.current = total;
       }
     }
     if (!onCooldown) {
-      totalCdRef.current = 5000;
+      totalCdRef.current = 3000;
     }
   }, [cooldownUntil, onCooldown]);
 
