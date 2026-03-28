@@ -84,96 +84,77 @@ function ImmersiveTitle() {
   );
 }
 
-// ── Floating particles field ──────────────────────────────────────────────────
+// ── Rising fire traces (even columns, gradient strokes — few DOM nodes) ─────
+
+function getTraceGradient(colorType: number): string {
+  switch (colorType) {
+    case 0:
+      return `linear-gradient(to top,
+        rgba(255, 94, 77, 0.95) 0%,
+        rgba(255, 68, 51, 0.5) 28%,
+        rgba(204, 51, 34, 0.12) 58%,
+        transparent 100%)`;
+    case 1:
+      return `linear-gradient(to top,
+        rgba(255, 120, 77, 0.95) 0%,
+        rgba(255, 94, 77, 0.5) 28%,
+        rgba(255, 68, 51, 0.12) 58%,
+        transparent 100%)`;
+    case 2:
+      return `linear-gradient(to top,
+        rgba(255, 140, 77, 0.95) 0%,
+        rgba(255, 120, 77, 0.5) 28%,
+        rgba(255, 94, 77, 0.12) 58%,
+        transparent 100%)`;
+    case 3:
+      return `linear-gradient(to top,
+        rgba(255, 107, 53, 0.95) 0%,
+        rgba(255, 94, 77, 0.5) 28%,
+        rgba(255, 68, 51, 0.12) 58%,
+        transparent 100%)`;
+    case 4:
+      return `linear-gradient(to top,
+        rgba(255, 159, 67, 0.95) 0%,
+        rgba(255, 140, 77, 0.5) 28%,
+        rgba(255, 120, 77, 0.12) 58%,
+        transparent 100%)`;
+    default:
+      return `linear-gradient(to top,
+        rgba(255, 183, 77, 0.95) 0%,
+        rgba(255, 159, 67, 0.5) 28%,
+        rgba(255, 140, 77, 0.12) 58%,
+        transparent 100%)`;
+  }
+}
 
 function ParticleField() {
-  const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
-  const count = isMobile ? 50 : 100;
-  const particles = useMemo(
+  const isMobile = typeof window !== "undefined" && window.innerWidth < 768;
+  const lineCount = isMobile ? 28 : 44;
+  const traces = useMemo(
     () =>
-      Array.from({ length: count }, (_, i) => ({
-        id: i,
-        x: Math.random() * 100,
-        duration: 8 + Math.random() * 12,
-        delay: Math.random() * 10,
-        size: 8 + Math.random() * 25,
-        sway: (Math.random() - 0.5) * 100,
-        opacity: 0.3 + Math.random() * 0.5,
-        // Randomly assign a red or yellow variant with varying depths
-        colorType: Math.floor(Math.random() * 6), // 0-2: red variants, 3-5: yellow variants
-      })),
-    [],
+      Array.from({ length: lineCount }, (_, i) => {
+        const colorType = i % 6;
+        const duration = 5.5 + (i % 5) * 0.35;
+        const staggerWindow = 4.8;
+        const delay = (i / lineCount) * staggerWindow;
+        return { id: i, colorType, duration, delay };
+      }),
+    [lineCount],
   );
 
-  const getParticleGradient = (colorType: number) => {
-    // Red variants (deeper to lighter)
-    if (colorType <= 2) {
-      switch (colorType) {
-        case 0: // Deep crimson red
-          return `radial-gradient(circle at 30% 30%, 
-            rgba(220, 38, 38, 0.9), 
-            rgba(185, 28, 28, 0.45),
-            rgba(153, 27, 27, 0.08))`;
-        case 1: // Medium red
-          return `radial-gradient(circle at 30% 30%, 
-            rgba(239, 68, 68, 0.9), 
-            rgba(220, 38, 38, 0.45),
-            rgba(185, 28, 28, 0.08))`;
-        default: // Light red / coral
-          return `radial-gradient(circle at 30% 30%, 
-            rgba(248, 113, 113, 0.9), 
-            rgba(239, 68, 68, 0.45),
-            rgba(220, 38, 38, 0.08))`;
-      }
-    }
-    // Yellow variants (deeper to lighter)
-    else {
-      switch (colorType) {
-        case 3: // Deep amber / golden
-          return `radial-gradient(circle at 30% 30%, 
-            rgba(245, 158, 11, 0.9), 
-            rgba(217, 119, 6, 0.45),
-            rgba(180, 83, 9, 0.08))`;
-        case 4: // Medium golden yellow
-          return `radial-gradient(circle at 30% 30%, 
-            rgba(251, 191, 36, 0.9), 
-            rgba(245, 158, 11, 0.45),
-            rgba(217, 119, 6, 0.08))`;
-        default: // Light yellow / honey
-          return `radial-gradient(circle at 30% 30%, 
-            rgba(253, 224, 71, 0.9), 
-            rgba(250, 204, 21, 0.45),
-            rgba(234, 179, 8, 0.08))`;
-      }
-    }
-  };
-
   return (
-    <div className="fixed inset-0 overflow-hidden pointer-events-none z-0">
-      {particles.map((p) => (
-        <div
-          key={p.id}
-          className="absolute"
-          style={
-            {
-              left: `${p.x}%`,
-              bottom: "-10%",
-              animation: `bubble-float ${p.duration}s linear ${p.delay}s infinite`,
-              "--sway": `${p.sway}px`,
-            } as React.CSSProperties
-          }
-        >
+    <div className="fixed inset-0 z-0 flex pointer-events-none overflow-hidden">
+      {traces.map((t) => (
+        <div key={t.id} className="relative h-full min-w-0 flex-1 flex justify-center">
           <div
-            className="rounded-full"
+            className="absolute bottom-0 w-[2px] rounded-full"
             style={
               {
-                width: `${p.size}px`,
-                height: `${p.size}px`,
-                background: getParticleGradient(p.colorType),
-                opacity: p.opacity,
-                animation: `bubble-sway ${p.duration * 0.5}s ease-in-out ${p.delay}s infinite`,
-                filter: "blur(1px)",
-                boxShadow: "0 0 12px rgba(0,0,0,0.35)",
+                height: "min(32vh, 220px)",
+                background: getTraceGradient(t.colorType),
+                boxShadow: "0 0 8px rgba(255, 68, 51, 0.4)",
+                animation: `flame-trace-rise ${t.duration}s linear ${t.delay}s infinite`,
+                willChange: "transform",
               } as React.CSSProperties
             }
           />
@@ -265,7 +246,14 @@ const Index = () => {
   if (isImmersive) {
     return (
       <div className="relative flex flex-col items-center justify-center min-h-screen p-6 gap-10 bg-black overflow-hidden">
-        {/* Particle field */}
+        <div
+          className="fixed inset-0 pointer-events-none z-0"
+          style={{
+            background: "radial-gradient(circle at 50% 70%, rgba(255, 68, 51, 0.15) 0%, transparent 70%)",
+            animation: "heat-distortion 0.3s ease-in-out infinite",
+          }}
+        />
+        {/* Fire trace field */}
         <ParticleField />
         {/* Scanline overlay */}
         <div className="immersive-scanline-overlay" />
