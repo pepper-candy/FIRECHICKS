@@ -938,6 +938,10 @@ export function useGameLogic({ players, broadcast, gameMode, connectionMode, map
               gs.lastMysteryBoxSpawn = now; // restart after claim
               gs.frozenAll = true;
               gs.frozenAllUntil = now + 60000; // lifted when event ends
+              // Stop eagle movement immediately so it doesn't drift after unfreeze
+              p.isMoving = false;
+              const eagleLobby = currentPlayers.get(p.connId);
+              if (eagleLobby) (eagleLobby as any).joystick = { x: 0, y: 0 };
               const rand = Math.random();
               const eventType = rand < 0.33 ? "mock-exam" : rand < 0.66 ? "hitbox" : "crossy-road";
               const questionNum = Math.floor(Math.random() * 4) + 1;
