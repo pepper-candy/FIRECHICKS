@@ -36,6 +36,8 @@ export default function ColorPicker({ currentColorIndex, usedColorIndices, onCol
         disabled={isTaken}
         title={isTaken ? `${color.name} (taken)` : showEagleOutline ? `${color.name} (Eagle role 🦅)` : color.name}
         className={`${btnSize} rounded-full transition-all relative ${
+          showEagleOutline ? 'animate-pulse' : ''
+        } ${
           isMine
             ? 'scale-125'
             : isTaken
@@ -45,7 +47,7 @@ export default function ColorPicker({ currentColorIndex, usedColorIndices, onCol
         style={{
           backgroundColor: isTaken ? 'hsl(var(--muted))' : `hsl(${color.hsl})`,
           border: showEagleOutline
-            ? '3px solid hsl(45 100% 55%)'
+            ? '3px solid hsl(0 80% 55%)'
             : isMine
               ? '2px solid hsl(var(--foreground))'
               : isBlack
@@ -54,7 +56,7 @@ export default function ColorPicker({ currentColorIndex, usedColorIndices, onCol
           boxShadow: isMine
             ? `0 0 12px hsl(${color.hsl} / 0.6)`
             : showEagleOutline && !isTaken
-              ? '0 0 10px hsl(45 100% 55% / 0.7)'
+              ? '0 0 10px hsl(0 80% 55% / 0.7)'
               : 'none',
         }}
       >
@@ -81,7 +83,7 @@ export default function ColorPicker({ currentColorIndex, usedColorIndices, onCol
       </div>
       {gameMode === '2v6' && (
         <p className="text-[9px] font-mono text-muted-foreground mt-1">
-          Gold border + 🦅 = Eagle role
+          Flashing Red border + 🦅 = Eagle role
         </p>
       )}
     </div>
