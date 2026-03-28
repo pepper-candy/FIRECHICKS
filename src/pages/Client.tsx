@@ -1452,6 +1452,17 @@ export default function Client() {
 
   return (
     <div className="flex flex-col h-dvh overflow-hidden p-2 gap-2 select-none">
+      {/* Damage flash overlay */}
+      {damageFlash && (
+        <div className="fixed inset-0 z-[60] pointer-events-none damage-flash-overlay" />
+      )}
+      {/* Prop-use edge pulse overlay */}
+      {propFlash && (
+        <div
+          className="fixed inset-0 z-[59] pointer-events-none prop-pulse-overlay"
+          style={{ boxShadow: `inset 0 0 80px 20px ${propFlash}` }}
+        />
+      )}
       {/* Stage transition overlay — 8s total: 5s instruction + 3s ready-up */}
       {(gameState?.stageTransitionUntil ?? 0) > 0 && clockNow < (gameState?.stageTransitionUntil ?? 0) && (() => {
         const remainMs = gameState.stageTransitionUntil - clockNow;
