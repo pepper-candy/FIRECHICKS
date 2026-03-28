@@ -164,6 +164,10 @@ export interface PlayerGameStateSerializable {
   teleportTarget: { x: number; z: number };
   cagedUntil: number;
   cageCooldownUntil: number;
+  // Host-calculated remaining cooldown ms (no client Date.now() needed)
+  attackRemainingMs: number;
+  flyRemainingMs: number;
+  cageRemainingMs: number;
 }
 
 export interface GameStateSnapshot {
