@@ -81,11 +81,6 @@ export default function ColorPicker({ currentColorIndex, usedColorIndices, onCol
       <div className="flex justify-center gap-2">
         {bottomRow.map(renderButton)}
       </div>
-      {gameMode === '2v6' && (
-        <p className="text-[9px] font-mono text-muted-foreground mt-1">
-          Flashing Red border + 🦅 = Eagle role
-        </p>
-      )}
     </div>
   );
 }
