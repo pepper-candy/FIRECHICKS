@@ -458,7 +458,7 @@ export function useGameLogic({ players, broadcast, gameMode, connectionMode, map
     // When transition just ended, extend all timestamp-based cooldowns
     if (gs.stageTransitionUntil > 0 && now >= gs.stageTransitionUntil && !gs.stageTransitionPauseApplied) {
       gs.stageTransitionPauseApplied = true;
-      const pauseDuration = 5000; // stage transitions are always 5s
+      const pauseDuration = 8000; // stage transitions are 8s (5s instruction + 3s ready-up)
       // Extend all player cooldowns & freeze timers
       for (const [, p] of gs.playerStates) {
         if (p.frozenUntil > 0) p.frozenUntil += pauseDuration;
