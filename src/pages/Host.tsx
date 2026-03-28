@@ -219,6 +219,7 @@ export default function Host() {
 
   const [isPaused, setIsPaused] = useState(false);
   const [isBotsPaused, setIsBotsPaused] = useState(false);
+  const [showPlayTime, setShowPlayTime] = useState(false);
 
   useAdvertiseRoom(phase === "lobby" ? roomCode : "", mode);
 
