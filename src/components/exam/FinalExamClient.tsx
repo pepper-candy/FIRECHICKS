@@ -25,6 +25,7 @@ export default function FinalExamClient({
   const streamRef = useRef<MediaStream | null>(null);
   const [zoom, setZoom] = useState(0.6);
   const [opacity, setOpacity] = useState(0.85);
+  const [cameraZoom] = useState(0.6);
 
   useEffect(() => {
     navigator.mediaDevices
@@ -55,7 +56,7 @@ export default function FinalExamClient({
       </div>
 
       <div className="relative w-full overflow-hidden bg-black" style={{ aspectRatio: '873/457' }}>
-        <video ref={videoRef} autoPlay playsInline muted className="absolute inset-0 w-full h-full object-cover" />
+        <video ref={videoRef} autoPlay playsInline muted className="absolute inset-0 w-full h-full object-cover" style={{ transform: `scale(${cameraZoom})`, transformOrigin: 'center center' }} />
         <img
           src={assetUrl(`/PW/PW_Final_${questionNum}_layer-${examLayer}.png`)}
           alt={`Layer ${examLayer}`}

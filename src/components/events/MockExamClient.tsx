@@ -37,7 +37,7 @@ function MockExamCamera() {
     };
   }, []);
 
-  return <video ref={videoRef} autoPlay playsInline muted className="w-full h-full object-cover" />;
+  return <video ref={videoRef} autoPlay playsInline muted className="w-full h-full object-cover" style={{ transform: 'scale(0.6)', transformOrigin: 'center center' }} />;
 }
 
 export default function MockExamClient({
@@ -48,7 +48,7 @@ export default function MockExamClient({
   answer,
   onAnswerChange,
   onSubmit,
-  zoom = 0.5,
+  zoom = 0.6,
   opacity = 0.85,
   onZoomChange,
   onOpacityChange,

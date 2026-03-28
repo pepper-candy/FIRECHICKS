@@ -25,7 +25,7 @@ const PWExam = () => {
   const [phase, setPhase] = useState<Phase>("menu");
   const [questionNum, setQuestionNum] = useState<number>(1);
   const [layer, setLayer] = useState<string>("layer-1");
-  const [zoom, setZoom] = useState(1);
+  const [zoom, setZoom] = useState(0.6);
   const [opacity, setOpacity] = useState(0.9);
   const [answer, setAnswer] = useState("");
   const [showSuccess, setShowSuccess] = useState(false);
@@ -204,7 +204,7 @@ const PWExam = () => {
         className="relative w-full overflow-hidden bg-black"
         style={{ aspectRatio: `${ASPECT_W} / ${ASPECT_H}`, maxWidth: "100vw" }}
       >
-        <video ref={videoRef} autoPlay playsInline muted className="absolute inset-0 w-full h-full object-cover" />
+        <video ref={videoRef} autoPlay playsInline muted className="absolute inset-0 w-full h-full object-cover" style={{ transform: 'scale(0.6)', transformOrigin: 'center center' }} />
         {/* Overlay image */}
         <img
           src={overlayUrl}
@@ -226,8 +226,8 @@ const PWExam = () => {
           <Slider
             value={[zoom]}
             onValueChange={([v]) => setZoom(v)}
-            min={0.5}
-            max={1.25}
+            min={0.3}
+            max={0.9}
             step={0.05}
             className="flex-1"
           />

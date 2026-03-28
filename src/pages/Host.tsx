@@ -756,10 +756,18 @@ export default function Host() {
           <div className="flex gap-1 justify-end">
             <button
               onClick={() => {
-                const v = togglePause();
-                setIsPaused(v);
-                // When resuming (v=false), trigger 3s grab-back countdown
-                if (!v) setGrabBackUntil(Date.now() + 3000);
+                if (isPaused) {
+                  // Keep game paused during 3s grab-back, then auto-unpause
+                  setGrabBackUntil(Date.now() + 3000);
+                  setTimeout(() => {
+                    togglePause();
+                    setIsPaused(false);
+                    setGrabBackUntil(0);
+                  }, 3000);
+                } else {
+                  togglePause();
+                  setIsPaused(true);
+                }
               }}
               className={`flex items-center gap-1 px-2 py-1 rounded border text-[10px] font-mono transition-all ${
                 isPaused
