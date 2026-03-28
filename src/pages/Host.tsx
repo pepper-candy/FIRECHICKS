@@ -770,9 +770,9 @@ export default function Host() {
           <HealthDisplay players={snapshot.players} />
         </div>
 
-        {/* PAUSED overlay */}
-        {isPaused && (
-          <div className="absolute inset-0 z-40 flex items-center justify-center bg-background/60 backdrop-blur-sm pointer-events-none">
+        {/* PAUSED overlay — manual pause OR stage transition pause */}
+        {(isPaused || (snapshot.stageTransitionUntil > 0 && Date.now() < snapshot.stageTransitionUntil)) && (
+          <div className="absolute inset-0 z-20 flex items-center justify-center bg-background/60 backdrop-blur-sm pointer-events-none">
             <div className="flex flex-col items-center gap-3">
               <Pause className="w-20 h-20 text-accent" />
               <span className="text-5xl font-pixel text-accent tracking-[0.3em]" style={{ textShadow: '0 0 40px hsl(var(--accent) / 0.8)' }}>
@@ -785,9 +785,17 @@ export default function Host() {
         {/* Stage progress bottom */}
         <StageProgressBar currentStage={snapshot.stage} stageLabel={snapshot.stageLabel} />
 
-        {/* Game time */}
-        <div className="absolute top-2 left-2 z-10 px-3 py-1 rounded bg-card/80 border border-border font-mono text-xs text-muted-foreground">
-          ⏱ {Math.floor(snapshot.gameTime)}s
+        {/* Game time — click to toggle total vs play time */}
+        <div
+          className="absolute top-2 left-2 z-10 px-3 py-1 rounded bg-card/80 border border-border font-mono text-xs cursor-pointer select-none"
+          style={{ color: showPlayTime ? 'hsl(0 80% 55%)' : 'hsl(var(--muted-foreground))' }}
+          onClick={() => setShowPlayTime((p) => !p)}
+          title={showPlayTime ? 'Play time (excluding pauses) — click for total' : 'Total time — click for play time'}
+        >
+          ⏱ {showPlayTime
+            ? `${Math.floor(snapshot.gameTime - (snapshot.totalPauseMs / 1000))}s`
+            : `${Math.floor(snapshot.gameTime)}s`
+          }
         </div>
         <button
           onClick={exportDebugLog}
