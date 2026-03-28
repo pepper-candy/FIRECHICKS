@@ -23,7 +23,7 @@ export default function FinalExamClient({
 }: Props) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
-  const [zoom, setZoom] = useState(1);
+  const [zoom, setZoom] = useState(0.6);
   const [opacity, setOpacity] = useState(0.85);
 
   useEffect(() => {
