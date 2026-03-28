@@ -676,7 +676,7 @@ export default function Client() {
   const myState = gameState
     ? Object.values(gameState.players).find((p) => p.colorIndex === (myAssignment?.colorIndex ?? colorIndex))
     : null;
-  const isEagle = myAssignment?.isEagle ?? myState?.isEagle ?? false;
+  const isEagle = myAssignment?.isEagle ?? myState?.isEagle ?? (gameMode === '2v6' && EAGLE_COLOR_INDICES.includes(colorIndex));
   const currentColorIndex = myAssignment?.colorIndex ?? colorIndex;
   const displayColor = PLAYER_COLORS[currentColorIndex] ?? playerColor;
   const currentChickColor = myAssignment?.chickColor ?? playerColor?.chickColor ?? "Red";
