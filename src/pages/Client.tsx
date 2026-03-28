@@ -52,7 +52,7 @@ function CooldownRing({ progress, color, size = 56, strokeWidth = 3 }: { progres
     if (!ctx) return;
     const center = size / 2;
     const radius = center - strokeWidth;
-    const startAngle = -Math.PI / 2; // start at top
+    const startAngle = (-80 * Math.PI) / 180; // start at ~top, slightly offset
     const endAngle = startAngle + (Math.PI * 2 * progress);
     ctx.clearRect(0, 0, size, size);
     // Draw background ring
