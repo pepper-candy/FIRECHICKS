@@ -629,7 +629,7 @@ export default function Host() {
           mapId={mapId}
           themeHue={themeHue}
           immersive={isImmersive}
-          lightMode={lightMode}
+          themeMode={themeMode}
         />
 
         {/* Focus camera panel toggle button */}
