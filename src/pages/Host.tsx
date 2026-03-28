@@ -646,7 +646,7 @@ export default function Host() {
 
         {/* Focus camera panel */}
         {focusPanelOpen && (
-          <div className="absolute top-10 left-0 right-0 z-20 bg-card/95 border-b border-border p-2">
+          <div className="absolute top-10 left-0 right-0 z-30 bg-card/95 border-b border-border p-2">
             <div className="flex gap-2 overflow-x-auto">
               {Object.values(snapshot.players).map((p) => {
                 const color = PLAYER_COLORS[p.colorIndex];
