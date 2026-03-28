@@ -204,7 +204,7 @@ const PWExam = () => {
         className="relative w-full overflow-hidden bg-black"
         style={{ aspectRatio: `${ASPECT_W} / ${ASPECT_H}`, maxWidth: "100vw" }}
       >
-        <video ref={videoRef} autoPlay playsInline muted className="absolute inset-0 w-full h-full object-cover" />
+        <video ref={videoRef} autoPlay playsInline muted className="absolute inset-0 w-full h-full object-cover" style={{ transform: 'scale(0.6)', transformOrigin: 'center center' }} />
         {/* Overlay image */}
         <img
           src={overlayUrl}
