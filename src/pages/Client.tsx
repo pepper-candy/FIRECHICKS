@@ -124,7 +124,7 @@ function PropsBtn({
         </button>
       )}
       <button
-        onPointerDown={(e) => { e.stopPropagation(); e.preventDefault(); if (!onCooldown) onUse(current.type); }}
+        onPointerDown={(e) => { e.stopPropagation(); e.preventDefault(); if (!onCooldown) { buzz(); onUse(current.type); } }}
         className="relative overflow-visible w-16 h-16 rounded-full border-2 flex items-center justify-center transition-all active:scale-90"
         style={{
           borderColor: onCooldown ? 'hsl(var(--muted))' : PROP_COLORS[current.type],
