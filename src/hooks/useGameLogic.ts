@@ -1397,6 +1397,7 @@ export function useGameLogic({ players, broadcast, gameMode, connectionMode, map
       tipObtainTimers,
       stageTransitionUntil: gs.stageTransitionUntil ?? 0,
       activeTipShareConnIds: Array.from(gs.activeTipShares.values()).map((ts: TipShare) => ts.connId),
+      totalPauseMs: gs.totalPauseMs ?? 0,
     };
 
     setSnapshot(snap);
