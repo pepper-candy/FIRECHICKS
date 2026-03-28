@@ -955,7 +955,7 @@ export function useGameLogic({ players, broadcast, gameMode, connectionMode, map
                 for (let li = 0; li < 5; li++) {
                   const dir = li % 2 === 0 ? "left" as const : "right" as const;
                   const speed = 2 + Math.random() * 3; // 2-5 units/s
-                  const obstacleCount = 2 + Math.floor(Math.random() * 3); // 2-4
+                  const obstacleCount = 1 + Math.floor(Math.random() * 2); // 1-2 (easier start)
                   const obstacles: { x: number; width: number }[] = [];
                   for (let oi = 0; oi < obstacleCount; oi++) {
                     obstacles.push({
