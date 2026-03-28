@@ -1,152 +1,58 @@
-# Immersive Exhibition Mode — "The Power of Interfaces"
+# Damage Flash, Prop-Use Effects & Haptic Feedback
 
-A toggleable cinematic mode that transforms the game into a world-class exhibition piece. When activated, every screen gains atmospheric depth, dramatic transitions, and environmental storytelling.
+## 1. Red Damage Flash on Client Screen
 
----
+**What**: When a chick takes attack damage(only attack, other damage no), a full-screen red overlay flashes and fades out with a "melting ice" dissolve effect.
 
-## Implementation Status
+**How**:
 
-| Section | Status | Notes |
-|---------|--------|-------|
-| 1. Toggle + ImmersiveContext | **Done** | `ImmersiveContext.tsx`, `localStorage` persistence |
-| 2. Cinematic arrival screen | **Done** | Particles, scanlines, vignette, letter-by-letter title, watermark |
-| 3. Enhanced 3D map atmosphere | **Done** | `FogExp2`, dark sky dome w/ slow rotation, 45 instanced particles, `<Edges>` on buildings, mystery-box torus aura, radial edge haze |
-| 4. Phase transitions | **Done** | Countdown: keyed pop animation from scale(2.2); Reveal: same cinematic container; StageTransition: full-width frosted banner w/ flash |
-| 5. Game-over ceremony | **Done** | MVP name reveal animation, transcript scrolling grid bg, grade scale-bounce, WIN/LOSE stamp bounce |
-| 6. Environmental storytelling | **Done** | Host damage glitch (chromatic aberration + translate, 240ms), mystery box dual-torus aura, map edge haze |
+- In `Client.tsx`, track `myState.damageTaken` with a `useRef` for the previous value
+- When it increases, set a `damageFlash` state to `true`
+- Render a fixed full-screen `<div>` with red background that uses a CSS animation: instant red at full opacity → fade out over ~3000ms with a downward gradient dissolve (top clears first, bottom lingers — "melting ice" effect)
+- Add a `@keyframes damage-flash` in `tailwind.config.ts` that goes from `opacity:0.6` to `opacity:0` with a vertical mask transition
+- Auto-clear the state after animation ends (~3000ms)
+- Reset tracking on phase change to lobby
+- It is ok to keep it up to 5000ms, as the video of being attack is 8 sec long
 
-**Not implemented** (deferred for perf): `MeshReflectorMaterial` floor reflection — see note below.
+## 2. Prop-Use Screen-Edge Color Pulse
 
----
+**What**: When the player (or any player for eagle attack) uses a prop, a brief radial color pulse flashes at screen edges.
 
-## Exhibition Design Intent
+**How — Client-side only (no new host message needed)**:
 
-These guide implementation choices; they are not UI copy.
+- Track `myState` fields to detect prop usage locally:
+  - `speedMultiplierUntil` increases → speed (yellow)
+  - `health` increases → heal (green)  
+  - `invincibleUntil` increases → invincible (golden ripple, more obvious)
+  - `flyCooldownUntil` increases → fly (cyan)
+  - `cagedUntil` increases on any player → cage was used (red, for the caged player)
+  - Teleport confirm → purple
+- Set a `propFlash` state with the color, render a full-screen `<div>` with a `box-shadow: inset 0 0 80px <color>` that fades out over 400ms
+- For eagle attack (public): detect when any chick's `damageTaken` increases (already handled by damage flash for the victim; for the eagle player, flash red outward on successful attack via `damageDealt` increase)
+- Add `@keyframes prop-pulse` to tailwind config
 
-- **Black box / cinema logic**: Countdown and reveal are full-bleed, sequenced beats. One primary motion per tick — number pops, then fades. Stage banner and flash are the only element in frame when a stage changes.
-- **Spatial distance + emotional connection**: `FogExp2` at low density turns the map into a volume the audience looks *into*. Instanced particles reinforce perceived depth without post-processing overhead.
-- **Interfaces as framed surfaces**: Immersive StageTransition is a `backdrop-blur` bar — a HUD "frame" that slides over the world. Edges on buildings make the architecture legible as constructed data, not just geometry.
-- **Environmental storytelling**: Damage glitch links the simulation state to a visceral interface hiccup. Mystery box torus aura signals "object with power" without text. Map edge haze implies the world extends beyond the frame.
-- **~1 min attention span**: Each phase has one primary cinematic anchor. Nothing competes for focus at the same time.
+## 3. Haptic Feedback
 
----
+**What**: Short vibration buzz on valid button presses.
 
-## 1. Immersive Mode Toggle (Arrival Screen)
+**How**:
 
-Add a toggle button on GameIndex — a glowing "GO IMMERSIVE" switch at the top. Store the mode in React context (`ImmersiveContext`) so every component can read it. When off, game behaves exactly as now.
+- Create a utility `src/lib/haptics.ts` with `export function buzz(ms = 50) { navigator?.vibrate?.(ms); }`
+- Call `buzz()` in:
+  - `AttackButton.tsx` — inside `onPointerDown` when `!inactive`
+  - `CooldownRingButton` in `EagleControls.tsx` — when not on cooldown
+  - `PropsStackBtn` / `PropsBtn` in `Client.tsx` — on valid press
+  - `ChickStage1Controls.tsx` prop buttons — on press
+- Wrapped safely with optional chaining, no-ops on unsupported browsers
 
-**Files**: New `src/context/ImmersiveContext.tsx`, edit `src/pages/GameIndex.tsx`, `src/App.tsx`
+## Files to Modify
 
----
 
-## 2. Cinematic Arrival Screen
-
-When immersive mode is ON, the GameIndex transforms:
-
-- **Full black background** with slow-drifting particle field (tiny floating dots using CSS animations — no canvas overhead)
-- **Title reveal**: "EAGLE VS CHICK" types in letter-by-letter with green glow pulse on each character, then subtitle fades in
-- **Buttons**: fade-in staggered, with subtle border-glow breathing animation
-- **Ambient scanline overlay**: thin horizontal lines scrolling slowly (CSS pseudo-element), evoking CRT/cyber aesthetic
-- **"The Power of Interfaces"** — subtle watermark text at bottom, barely visible, rotating slowly
-
-**Files**: Edit `src/pages/GameIndex.tsx`, add CSS in `src/index.css`
-
----
-
-## 3. Enhanced 3D Map Atmosphere
-
-Transform the gameplay map when immersive mode is active:
-
-- **Volumetric fog**: Three.js `FogExp2` with low density, color-matched to theme hue
-- **Floating particles**: Small glowing orbs drifting upward across the map (instanced mesh, ~50 particles, very performant)
-- **Building edge glow**: Add emissive wireframe outlines on buildings using `<Edges>` from drei
-- **Floor reflection**: Subtle reflective plane under the grid using `MeshReflectorMaterial` (drei) — *optional / perf-gated; skip on low-end exhibition hardware*
-- **Enhanced sky sphere**: Gradient sky dome instead of flat color, with slow rotation
-- **Ambient light rays**: Directional light with subtle volumetric cone visible near buildings
-
-**Files**: Edit `src/components/GameplayMap.tsx`
-
----
-
-## 4. Cinematic Phase Transitions
-
-### Countdown
-
-- Full-screen numbers with **zoom + fade** (scale from 3x to 1x per beat)
-- Screen edges pulse with team colors
-- Background darkens with vignette
-
-### Stage Transitions
-
-- Full-width banner slides across screen with stage name
-- Brief screen flash on stage change
-- Stage info card gets frosted glass treatment
-
-### Reveal Phase
-
-- Camera dramatically pulls back from black
-- Character appears from light burst (white flash → character)
-
-**Files**: Edit `src/pages/Host.tsx` (countdown, reveal sections), `src/components/StageTransition.tsx`
-
----
-
-## 5. Immersive Game-Over Ceremony
-
-Three-phase ceremony with cinematic upgrades:
-
-### MVP Phase
-
-- Screen starts black, spotlight fades in on character
-- Particle burst explosion behind the MVP (golden particles)
-- Camera slowly orbits the character
-- Name + score fly in with typewriter effect
-
-### Team Phase
-
-- Characters march in from sides (staggered entrance)
-- Victory confetti particles (team-colored)
-- Dramatic team name banner with glow
-
-### Transcript Phase
-
-- Rows reveal one at a time with slight delay (staggered fade-in)
-- Grade letters animate in with scale bounce
-- WIN/LOSE stamps with impact animation
-- Background slowly scrolling grid pattern
-
-**Files**: Edit `src/pages/Host.tsx` (GameOverCeremony)
-
----
-
-## 6. Environmental Storytelling Details
-
-Subtle world-building touches when immersive:
-
-- **Glitch frame on damage**: Brief CSS glitch (chromatic aberration + offset) when a player takes damage, visible on host screen
-- **Footprint trails**: Fading marks on the map floor where characters walk (simple decals)
-- **Building windows**: Small emissive rectangles on building faces that flicker occasionally
-- **Mystery box aura**: Swirling particle ring around mystery boxes instead of just rotation
-- **Map edge haze**: Soft gradient fade at map boundaries suggesting the world extends beyond
-
-**Files**: Edit `src/components/GameplayMap.tsx`, `src/pages/Host.tsx`
-
----
-
-## Technical Approach
-
-- **ImmersiveContext**: boolean context, `useImmersive()` hook. Every component checks `isImmersive` before applying cinematic variants.
-- **Performance**: All particle systems use instanced meshes. CSS animations handle 2D effects. No post-processing passes (too heavy for exhibition devices).
-- **Three.js additions**: `@react-three/drei` Edges, fog built-in to Three.js — no new dependencies.
-- **CSS animations**: Scanlines, typewriter, staggered fade-ins — all pure CSS keyframes added to `index.css`.
-
----
-
-## Implementation Order
-
-1. ImmersiveContext + toggle button
-2. Cinematic arrival screen
-3. Enhanced map atmosphere (fog, particles, edges)
-4. Phase transitions (countdown, stage, reveal)
-5. Game-over ceremony upgrades
-6. Environmental details (polish pass)
+| File                                              | Changes                                                        |
+| ------------------------------------------------- | -------------------------------------------------------------- |
+| `src/pages/Client.tsx`                            | Add damage flash + prop pulse overlays with useEffect tracking |
+| `src/index.css` or `tailwind.config.ts`           | Add `damage-flash` and `prop-pulse` keyframe animations        |
+| `src/lib/haptics.ts`                              | New file — `buzz()` utility                                    |
+| `src/components/AttackButton.tsx`                 | Add `buzz()` call                                              |
+| `src/components/controls/EagleControls.tsx`       | Add `buzz()` in CooldownRingButton                             |
+| `src/components/controls/ChickStage1Controls.tsx` | Add `buzz()` on prop press                                     |
