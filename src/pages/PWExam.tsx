@@ -25,7 +25,7 @@ const PWExam = () => {
   const [phase, setPhase] = useState<Phase>("menu");
   const [questionNum, setQuestionNum] = useState<number>(1);
   const [layer, setLayer] = useState<string>("layer-1");
-  const [zoom, setZoom] = useState(1);
+  const [zoom, setZoom] = useState(0.6);
   const [opacity, setOpacity] = useState(0.9);
   const [answer, setAnswer] = useState("");
   const [showSuccess, setShowSuccess] = useState(false);
