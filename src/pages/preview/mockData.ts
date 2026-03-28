@@ -81,6 +81,7 @@ export function createMockSnapshot(overrides?: Partial<GameStateSnapshot>): Game
     activeEvent: null,
     stageTransitionUntil: 0,
     activeTipShareConnIds: [],
+    totalPauseMs: 0,
     ...overrides,
   };
 }
