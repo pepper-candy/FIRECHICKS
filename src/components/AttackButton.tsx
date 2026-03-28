@@ -1,4 +1,5 @@
 import { Swords } from 'lucide-react';
+import { buzz } from '@/lib/haptics';
 
 interface Props {
   onAttack: () => void;
