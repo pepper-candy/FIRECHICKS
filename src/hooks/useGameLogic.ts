@@ -743,7 +743,7 @@ export function useGameLogic({ players, broadcast, gameMode, connectionMode, map
       if (chicks.length > 0 && chicks.every((c) => c.socialCircleMet.size >= requiredMeets)) {
         gs.stage = 1;
         gs.stageLabel = "Get Exam Tips from glowing buildings!";
-        gs.stageTransitionUntil = now + 5000;
+        gs.stageTransitionUntil = now + 8000;
         for (const b of gs.buildings) {
           if (b.hasTip) {
             b.glowing = true;
