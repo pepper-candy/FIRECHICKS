@@ -150,6 +150,8 @@ interface GameStateRef {
   activeEvent: GameEvent | null;
   eventCountdown: number;
   stageTransitionUntil: number;
+  totalPauseMs: number;
+  stageTransitionPauseApplied: boolean;
 }
 
 function isBotConnId(connId: string): boolean {
