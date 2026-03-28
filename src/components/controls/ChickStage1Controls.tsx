@@ -2,6 +2,7 @@ import Thumbstick from '@/components/Thumbstick';
 import ScannerBox from '@/components/ScannerBox';
 import type { PropItem, PropType } from '@/lib/gameTypes';
 import { Zap, Heart, Shield, Crosshair } from 'lucide-react';
+import { buzz } from '@/lib/haptics';
 
 const PROP_COLORS: Record<string, string> = {
   speed: 'hsl(48 96% 53%)',
@@ -70,7 +71,7 @@ export default function ChickStage1Controls({
           {availableProps.map((item) => (
             <button
               key={item.type}
-              onPointerDown={(e) => { e.stopPropagation(); e.preventDefault(); onPropUse(item.type); }}
+              onPointerDown={(e) => { e.stopPropagation(); e.preventDefault(); buzz(); onPropUse(item.type); }}
               className="w-12 h-12 rounded-full border-2 flex items-center justify-center transition-all active:scale-90 relative"
               style={{
                 borderColor: PROP_COLORS[item.type] ?? 'hsl(var(--border))',

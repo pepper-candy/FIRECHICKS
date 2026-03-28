@@ -22,6 +22,7 @@ import { Zap, Heart, Wind, Shield, ChevronUp, Crosshair, Lock } from "lucide-rea
 import CrossyRoadClient from "@/components/events/CrossyRoadClient";
 import { useNavigate } from "react-router-dom";
 import { ZONE_RADIUS } from "@/lib/gameplayMapData";
+import { buzz } from "@/lib/haptics";
 
 // ─── Props Button (inline for compact layout) ──────────────────────────────────
 const PROP_COLORS: Record<PropType, string> = {
@@ -123,7 +124,7 @@ function PropsBtn({
         </button>
       )}
       <button
-        onPointerDown={(e) => { e.stopPropagation(); e.preventDefault(); if (!onCooldown) onUse(current.type); }}
+        onPointerDown={(e) => { e.stopPropagation(); e.preventDefault(); if (!onCooldown) { buzz(); onUse(current.type); } }}
         className="relative overflow-visible w-16 h-16 rounded-full border-2 flex items-center justify-center transition-all active:scale-90"
         style={{
           borderColor: onCooldown ? 'hsl(var(--muted))' : PROP_COLORS[current.type],
@@ -186,7 +187,7 @@ function PropsStackBtn({
       {available.map((item) => (
         <button
           key={item.type}
-          onPointerDown={(e) => { e.stopPropagation(); e.preventDefault(); onUse(item.type); }}
+          onPointerDown={(e) => { e.stopPropagation(); e.preventDefault(); buzz(); onUse(item.type); }}
           className="relative w-14 h-14 rounded-full border-2 flex items-center justify-center transition-all active:scale-90"
           style={{
             borderColor: PROP_COLORS[item.type],
@@ -428,8 +429,16 @@ export default function Client() {
 
   // Fullscreen splash — false = not yet dismissed by user
   const [fsSplashDone, setFsSplashDone] = useState(false);
-
-
+  // ── Damage flash + prop pulse state ──
+  const [damageFlash, setDamageFlash] = useState(false);
+  const [propFlash, setPropFlash] = useState<string | null>(null);
+  const prevDamageTakenRef = useRef<number>(0);
+  const prevSpeedUntilRef = useRef<number>(0);
+  const prevHealthRef = useRef<number>(-1);
+  const prevInvincibleUntilRef = useRef<number>(0);
+  const prevFlyUntilRef = useRef<number>(0);
+  const prevCagedUntilRef = useRef<number>(0);
+  const prevDamageDealtRef = useRef<number>(0);
 
 
   // Tips state — QR now displays in scanner box, not tip box
@@ -688,6 +697,59 @@ export default function Client() {
   const speedRemainingSec = myState?.speedMultiplierUntil ? Math.ceil(Math.max(0, myState.speedMultiplierUntil - nowTs) / 1000) : 0;
   const invincibleRemainingSec = myState?.invincibleUntil ? Math.ceil(Math.max(0, myState.invincibleUntil - nowTs) / 1000) : 0;
   const cagedRemainingSec = myState?.cagedUntil ? Math.ceil(Math.max(0, myState.cagedUntil - nowTs) / 1000) : 0;
+
+  // ── Damage flash: track damageTaken increases (attack only) ──
+  useEffect(() => {
+    if (!myState) return;
+    const dt = myState.damageTaken ?? 0;
+    if (prevDamageTakenRef.current > 0 && dt > prevDamageTakenRef.current) {
+      setDamageFlash(true);
+      buzz(100);
+      const timer = setTimeout(() => setDamageFlash(false), 3000);
+      return () => clearTimeout(timer);
+    }
+    prevDamageTakenRef.current = dt;
+  }, [myState?.damageTaken]);
+
+  // Reset damage tracking on lobby
+  useEffect(() => {
+    if (gamePhase === "lobby") {
+      prevDamageTakenRef.current = 0;
+      prevSpeedUntilRef.current = 0;
+      prevHealthRef.current = -1;
+      prevInvincibleUntilRef.current = 0;
+      prevFlyUntilRef.current = 0;
+      prevCagedUntilRef.current = 0;
+      prevDamageDealtRef.current = 0;
+    }
+  }, [gamePhase]);
+
+  // ── Prop-use screen edge pulse ──
+  useEffect(() => {
+    if (!myState) return;
+    const triggerPulse = (color: string) => {
+      setPropFlash(color);
+      setTimeout(() => setPropFlash(null), 500);
+    };
+    const su = myState.speedMultiplierUntil ?? 0;
+    if (su > prevSpeedUntilRef.current && prevSpeedUntilRef.current > 0) triggerPulse('hsl(48 96% 53% / 0.6)');
+    prevSpeedUntilRef.current = su;
+    const hp = myState.health ?? 0;
+    if (prevHealthRef.current >= 0 && hp > prevHealthRef.current) triggerPulse('hsl(145 80% 50% / 0.5)');
+    prevHealthRef.current = hp;
+    const iu = myState.invincibleUntil ?? 0;
+    if (iu > prevInvincibleUntilRef.current && prevInvincibleUntilRef.current > 0) triggerPulse('hsl(45 100% 55% / 0.6)');
+    prevInvincibleUntilRef.current = iu;
+    const fu = myState.flyCooldownUntil ?? 0;
+    if (fu > prevFlyUntilRef.current && prevFlyUntilRef.current > 0) triggerPulse('hsl(190 80% 55% / 0.5)');
+    prevFlyUntilRef.current = fu;
+    const cu = myState.cagedUntil ?? 0;
+    if (cu > prevCagedUntilRef.current && prevCagedUntilRef.current > 0) triggerPulse('hsl(0 70% 50% / 0.5)');
+    prevCagedUntilRef.current = cu;
+    const dd = myState.damageDealt ?? 0;
+    if (dd > prevDamageDealtRef.current && prevDamageDealtRef.current > 0) triggerPulse('hsl(0 80% 55% / 0.5)');
+    prevDamageDealtRef.current = dd;
+  }, [myState?.speedMultiplierUntil, myState?.health, myState?.invincibleUntil, myState?.flyCooldownUntil, myState?.cagedUntil, myState?.damageDealt]);
 
   const handleMove = useCallback(
     (x: number, y: number) => {
@@ -1390,6 +1452,17 @@ export default function Client() {
 
   return (
     <div className="flex flex-col h-dvh overflow-hidden p-2 gap-2 select-none">
+      {/* Damage flash overlay */}
+      {damageFlash && (
+        <div className="fixed inset-0 z-[60] pointer-events-none damage-flash-overlay" />
+      )}
+      {/* Prop-use edge pulse overlay */}
+      {propFlash && (
+        <div
+          className="fixed inset-0 z-[59] pointer-events-none prop-pulse-overlay"
+          style={{ boxShadow: `inset 0 0 80px 20px ${propFlash}` }}
+        />
+      )}
       {/* Stage transition overlay — 8s total: 5s instruction + 3s ready-up */}
       {(gameState?.stageTransitionUntil ?? 0) > 0 && clockNow < (gameState?.stageTransitionUntil ?? 0) && (() => {
         const remainMs = gameState.stageTransitionUntil - clockNow;

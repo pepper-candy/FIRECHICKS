@@ -1,4 +1,5 @@
 import { Swords } from 'lucide-react';
+import { buzz } from '@/lib/haptics';
 
 interface Props {
   onAttack: () => void;
@@ -20,7 +21,7 @@ export default function AttackButton({ onAttack, remainingMs, disabled, totalCoo
     <div className="relative flex-shrink-0" style={{ width: 80, height: 80 }}>
       <button
         type="button"
-        onPointerDown={(e) => { e.stopPropagation(); e.preventDefault(); if (!inactive) onAttack(); }}
+        onPointerDown={(e) => { e.stopPropagation(); e.preventDefault(); if (!inactive) { buzz(); onAttack(); } }}
         className={`w-full h-full rounded-full border-4 flex items-center justify-center transition-all select-none ${
           inactive
             ? 'border-muted bg-muted/30'

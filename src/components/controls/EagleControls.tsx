@@ -2,6 +2,7 @@ import Thumbstick from '@/components/Thumbstick';
 import AttackButton from '@/components/AttackButton';
 import type { PropItem, PropType } from '@/lib/gameTypes';
 import { Wind, Lock } from 'lucide-react';
+import { buzz } from '@/lib/haptics';
 
 const CIRCUMFERENCE = 2 * Math.PI * 22; // ~138.23 for r=22 in viewBox 0 0 50 50
 
@@ -52,7 +53,7 @@ function CooldownRingButton({ onPress, icon, remainingMs, totalCooldownMs, color
     <div className="relative flex-shrink-0" style={{ width: size, height: size }}>
       <button
         type="button"
-        onPointerDown={(e) => { e.stopPropagation(); e.preventDefault(); onPress(); }}
+        onPointerDown={(e) => { e.stopPropagation(); e.preventDefault(); if (!onCooldown) buzz(); onPress(); }}
         className="w-full h-full rounded-full border-2 flex items-center justify-center transition-all active:scale-90"
         style={{
           position: 'relative',
