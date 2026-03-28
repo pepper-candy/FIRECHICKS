@@ -96,8 +96,8 @@ export default function MockExamClient({
               <span className="text-[10px] font-mono text-muted-foreground w-12 shrink-0">🔍 Zoom</span>
               <Slider
                 value={[zoom]}
-                min={0.5}
-                max={1.25}
+                min={0.3}
+                max={0.9}
                 step={0.05}
                 onValueChange={([v]) => onZoomChange(v)}
                 className="flex-1"

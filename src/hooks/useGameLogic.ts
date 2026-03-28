@@ -960,7 +960,7 @@ export function useGameLogic({ players, broadcast, gameMode, connectionMode, map
                   for (let oi = 0; oi < obstacleCount; oi++) {
                     obstacles.push({
                       x: Math.random() * CROSSY_FIELD_WIDTH,
-                      width: 5 + Math.random() * 7, // 5-12 units wide
+                      width: 4 + Math.random() * 5, // 4-9 units wide (smaller)
                     });
                   }
                   crossyLanes.push({ id: li + 1, direction: dir, speed, obstacles });

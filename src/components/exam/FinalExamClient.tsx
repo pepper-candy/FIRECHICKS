@@ -67,7 +67,7 @@ export default function FinalExamClient({
       <div className="flex flex-col gap-3 p-3">
         <div className="flex items-center gap-3">
           <span className="text-xs font-mono text-muted-foreground w-14 shrink-0">Zoom</span>
-          <Slider value={[zoom]} onValueChange={([v]) => setZoom(v)} min={0.5} max={1.5} step={0.05} className="flex-1" />
+          <Slider value={[zoom]} onValueChange={([v]) => setZoom(v)} min={0.3} max={0.9} step={0.05} className="flex-1" />
           <span className="text-xs text-muted-foreground w-10 text-right">{zoom.toFixed(2)}×</span>
         </div>
         <div className="flex items-center gap-3">
