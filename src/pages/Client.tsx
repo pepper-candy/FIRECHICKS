@@ -52,7 +52,7 @@ function CooldownRing({ progress, color, size = 56, strokeWidth = 3 }: { progres
     if (!ctx) return;
     const center = size / 2;
     const radius = center - strokeWidth;
-    const startAngle = -Math.PI / 2; // start at top
+    const startAngle = (-80 * Math.PI) / 180; // start at ~top, slightly offset
     const endAngle = startAngle + (Math.PI * 2 * progress);
     ctx.clearRect(0, 0, size, size);
     // Draw background ring
@@ -1393,27 +1393,16 @@ export default function Client() {
       {/* Stage transition overlay — 8s total: 5s instruction + 3s ready-up */}
       {(gameState?.stageTransitionUntil ?? 0) > 0 && clockNow < (gameState?.stageTransitionUntil ?? 0) && (() => {
         const remainMs = gameState.stageTransitionUntil - clockNow;
-        const sec = Math.ceil(remainMs / 1000);
-        const isReadyPhase = remainMs <= 3000;
+        // Client only sees the first 5s (instruction phase), not the last 3s (host-only grab-back)
+        if (remainMs <= 3000) return null;
+        const sec = Math.ceil((remainMs - 3000) / 1000); // countdown from 5
         return (
           <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-background/95 backdrop-blur-sm">
-            {!isReadyPhase ? (
-              <>
-                <div className="text-4xl mb-4">{gameState.stage === 0 ? '🤝' : gameState.stage === 1 ? '📍' : gameState.stage === 2 ? '🔗' : '📝'}</div>
-                <h1 className="text-xl font-pixel text-accent tracking-widest mb-2">STAGE {(gameState.stage ?? 0) + 1}</h1>
-                <p className="text-sm font-mono text-muted-foreground text-center max-w-xs px-4">
-                  {gameState.stage === 0 ? 'Meet ALL other Chicks!' : gameState.stage <= 2 ? 'Get tips & share them!' : 'Run to a building for the exam!'}
-                </p>
-              </>
-            ) : (
-              <>
-                <div className="text-4xl mb-4">🎮</div>
-                <h1 className="text-xl font-pixel text-destructive tracking-widest mb-2 animate-pulse">GET READY!</h1>
-                <p className="text-sm font-mono text-muted-foreground text-center max-w-xs px-4">
-                  Game resuming soon — grab your controls!
-                </p>
-              </>
-            )}
+            <div className="text-4xl mb-4">{gameState.stage === 0 ? '🤝' : gameState.stage === 1 ? '📍' : gameState.stage === 2 ? '🔗' : '📝'}</div>
+            <h1 className="text-xl font-pixel text-accent tracking-widest mb-2">STAGE {(gameState.stage ?? 0) + 1}</h1>
+            <p className="text-sm font-mono text-muted-foreground text-center max-w-xs px-4">
+              {gameState.stage === 0 ? 'Meet ALL other Chicks!' : gameState.stage <= 2 ? 'Get tips & share them!' : 'Run to a building for the exam!'}
+            </p>
             <div className="text-3xl font-pixel text-primary animate-pulse mt-4">{sec}</div>
           </div>
         );

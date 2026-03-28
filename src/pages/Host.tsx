@@ -220,6 +220,18 @@ export default function Host() {
   const [isPaused, setIsPaused] = useState(false);
   const [isBotsPaused, setIsBotsPaused] = useState(false);
   const [showPlayTime, setShowPlayTime] = useState(false);
+  // 3s "grab back controls" countdown after manual pause resume
+  const [grabBackUntil, setGrabBackUntil] = useState(0);
+  // Re-render during grab-back countdown
+  const [, forceRender] = useState(0);
+  useEffect(() => {
+    if (grabBackUntil <= Date.now()) return;
+    const id = setInterval(() => {
+      if (Date.now() >= grabBackUntil) { setGrabBackUntil(0); clearInterval(id); }
+      forceRender((n) => n + 1);
+    }, 200);
+    return () => clearInterval(id);
+  }, [grabBackUntil]);
 
   useAdvertiseRoom(phase === "lobby" ? roomCode : "", mode);
 
@@ -743,7 +755,12 @@ export default function Host() {
         <div className="absolute top-2 right-2 z-30 flex flex-col gap-1">
           <div className="flex gap-1 justify-end">
             <button
-              onClick={() => { const v = togglePause(); setIsPaused(v); }}
+              onClick={() => {
+                const v = togglePause();
+                setIsPaused(v);
+                // When resuming (v=false), trigger 3s grab-back countdown
+                if (!v) setGrabBackUntil(Date.now() + 3000);
+              }}
               className={`flex items-center gap-1 px-2 py-1 rounded border text-[10px] font-mono transition-all ${
                 isPaused
                   ? 'border-accent bg-accent/20 text-accent'
@@ -770,17 +787,45 @@ export default function Host() {
           <HealthDisplay players={snapshot.players} />
         </div>
 
-        {/* PAUSED overlay — manual pause OR stage transition pause */}
-        {(isPaused || (snapshot.stageTransitionUntil > 0 && Date.now() < snapshot.stageTransitionUntil)) && (
-          <div className="absolute inset-0 z-20 flex items-center justify-center bg-background/60 backdrop-blur-sm pointer-events-none">
-            <div className="flex flex-col items-center gap-3">
-              <Pause className="w-20 h-20 text-accent" />
-              <span className="text-5xl font-pixel text-accent tracking-[0.3em]" style={{ textShadow: '0 0 40px hsl(var(--accent) / 0.8)' }}>
-                PAUSED
-              </span>
+        {/* PAUSED overlay — manual pause OR stage transition pause OR grab-back after resume */}
+        {(() => {
+          const stageTransActive = snapshot.stageTransitionUntil > 0 && Date.now() < snapshot.stageTransitionUntil;
+          const stageTransRemainMs = stageTransActive ? snapshot.stageTransitionUntil - Date.now() : 0;
+          const isGrabBackPhase = stageTransActive && stageTransRemainMs <= 3000;
+          const manualGrabBack = !isPaused && !stageTransActive && grabBackUntil > Date.now();
+          const showOverlay = isPaused || stageTransActive || manualGrabBack;
+          if (!showOverlay) return null;
+
+          const grabBackSec = isGrabBackPhase
+            ? Math.ceil(stageTransRemainMs / 1000)
+            : manualGrabBack
+              ? Math.ceil((grabBackUntil - Date.now()) / 1000)
+              : 0;
+
+          return (
+            <div className="absolute inset-0 z-20 flex items-center justify-center bg-background/60 backdrop-blur-sm pointer-events-none">
+              <div className="flex flex-col items-center gap-3">
+                {isGrabBackPhase || manualGrabBack ? (
+                  <>
+                    <span className="text-4xl">🎮</span>
+                    <span className="text-3xl font-pixel text-destructive tracking-widest animate-pulse" style={{ textShadow: '0 0 30px hsl(var(--destructive) / 0.6)' }}>
+                      GRAB YOUR CONTROLS!
+                    </span>
+                    <span className="text-sm font-mono text-muted-foreground">Resuming in...</span>
+                    <span className="text-5xl font-pixel text-primary animate-pulse">{grabBackSec}</span>
+                  </>
+                ) : (
+                  <>
+                    <Pause className="w-20 h-20 text-accent" />
+                    <span className="text-5xl font-pixel text-accent tracking-[0.3em]" style={{ textShadow: '0 0 40px hsl(var(--accent) / 0.8)' }}>
+                      PAUSED
+                    </span>
+                  </>
+                )}
+              </div>
             </div>
-          </div>
-        )}
+          );
+        })()}
 
         {/* Stage progress bottom */}
         <StageProgressBar currentStage={snapshot.stage} stageLabel={snapshot.stageLabel} />
