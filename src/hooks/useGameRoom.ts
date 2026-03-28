@@ -205,6 +205,7 @@ function useHostWebRTC() {
           const newCode = recordSlot(effectiveConnId, slotData.colorIndex);
           conn.send(JSON.stringify({ type: 'takeover-accepted', colorIndex: slotData.colorIndex, connId: effectiveConnId }));
           conn.send(JSON.stringify({ type: 'used-colors', colors: Array.from(usedColorsRef.current) }));
+          conn.send(JSON.stringify({ type: 'game-mode', gameMode: gameModeRef.current }));
           void newCode; // used via slotDataRef side-effect
         } else {
           const mode = gameModeRef.current;
@@ -244,6 +245,7 @@ function useHostWebRTC() {
 
           conn.send(JSON.stringify({ type: 'assign-color', colorIndex }));
           conn.send(JSON.stringify({ type: 'used-colors', colors: Array.from(usedColorsRef.current) }));
+          conn.send(JSON.stringify({ type: 'game-mode', gameMode: gameModeRef.current }));
           setPlayers((prev) => {
             const next = new Map(prev);
             next.set(effectiveConnId, { joystick: { x: 0, y: 0 }, colorIndex, ping: 0, lastPongAt: Date.now() });
@@ -532,6 +534,7 @@ function useHostSupabase() {
               void newCode;
               channel.send({ type: 'broadcast', event: 'host-direct', payload: { targetId: clientId, type: 'takeover-accepted', colorIndex: slotData.colorIndex, connId: oldId } });
               channel.send({ type: 'broadcast', event: 'used-colors', payload: { colors: Array.from(usedColorsRef.current) } });
+              channel.send({ type: 'broadcast', event: 'host-direct', payload: { targetId: clientId, type: 'game-mode', gameMode: gameModeRef.current } });
               return;
             }
           }
@@ -577,6 +580,7 @@ function useHostSupabase() {
         recordSlot(clientId, colorIndex);
         channel.send({ type: 'broadcast', event: 'assign-color', payload: { clientId, colorIndex } });
         channel.send({ type: 'broadcast', event: 'used-colors', payload: { colors: Array.from(usedColorsRef.current) } });
+        channel.send({ type: 'broadcast', event: 'host-direct', payload: { targetId: clientId, type: 'game-mode', gameMode: gameModeRef.current } });
       })
       .on('broadcast', { event: 'client-leave' }, (payload) => {
         const { clientId } = payload.payload as { clientId: string };
