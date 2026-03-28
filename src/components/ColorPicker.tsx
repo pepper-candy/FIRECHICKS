@@ -54,7 +54,7 @@ export default function ColorPicker({ currentColorIndex, usedColorIndices, onCol
           boxShadow: isMine
             ? `0 0 12px hsl(${color.hsl} / 0.6)`
             : showEagleOutline && !isTaken
-              ? '0 0 10px hsl(45 100% 55% / 0.7)'
+              ? '0 0 10px hsl(0 80% 55% / 0.7)'
               : 'none',
         }}
       >
