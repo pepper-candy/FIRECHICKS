@@ -2,7 +2,9 @@ import Thumbstick from '@/components/Thumbstick';
 import AttackButton from '@/components/AttackButton';
 import type { PropItem, PropType } from '@/lib/gameTypes';
 import { Wind, Lock } from 'lucide-react';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
+
+const CIRCUMFERENCE = 2 * Math.PI * 22; // ~138.23 for r=22 in viewBox 0 0 50 50
 
 interface HitboxBtnProps {
   onHit: () => void;
@@ -27,6 +29,84 @@ function HitboxBtn({ onHit, inZone }: HitboxBtnProps) {
         {inZone && <span className="text-[10px] font-mono text-destructive/70">Tap to damage zone</span>}
       </div>
     </button>
+  );
+}
+
+interface CooldownRingButtonProps {
+  onPress: () => void;
+  icon: React.ReactNode;
+  cooldownUntil: number;
+  totalCooldownMs: number;
+  now: number;
+  color: string;        // e.g. 'hsl(220 80% 55%)'
+  cooldownColor: string; // ring color
+  size?: number;
+}
+
+function CooldownRingButton({ onPress, icon, cooldownUntil, totalCooldownMs, now, color, cooldownColor, size = 56 }: CooldownRingButtonProps) {
+  const onCooldown = cooldownUntil > now;
+  const remainingMs = onCooldown ? Math.max(0, cooldownUntil - now) : 0;
+  const cdSec = onCooldown ? Math.ceil(remainingMs / 1000) : 0;
+  const totalCdRef = useRef(totalCooldownMs);
+
+  useEffect(() => {
+    if (cooldownUntil > 0) {
+      const total = cooldownUntil - Date.now();
+      if (total > 0) totalCdRef.current = total;
+    }
+  }, [cooldownUntil]);
+
+  useEffect(() => {
+    if (!onCooldown) totalCdRef.current = totalCooldownMs;
+  }, [onCooldown, totalCooldownMs]);
+
+  const ratio = totalCdRef.current > 0 ? Math.max(0, Math.min(1, remainingMs / totalCdRef.current)) : 0;
+  const dashLen = ratio * CIRCUMFERENCE;
+  const svgSize = size + 8;
+
+  return (
+    <div className="relative flex-shrink-0" style={{ width: size, height: size }}>
+      <button
+        onPointerDown={(e) => { e.stopPropagation(); e.preventDefault(); onPress(); }}
+        className="w-full h-full rounded-full border-2 flex items-center justify-center transition-all active:scale-90"
+        style={{
+          borderColor: color,
+          color: color,
+          boxShadow: onCooldown ? 'none' : `0 0 12px ${color.replace(')', ' / 0.35)')}`,
+          touchAction: 'manipulation',
+          opacity: onCooldown ? 0.5 : 1,
+          WebkitTapHighlightColor: 'transparent',
+        }}
+      >
+        {onCooldown ? (
+          <span className="text-xs font-mono font-bold">{cdSec}s</span>
+        ) : (
+          icon
+        )}
+      </button>
+      {onCooldown && (
+        <svg
+          width={svgSize} height={svgSize}
+          viewBox="0 0 50 50"
+          style={{
+            position: 'absolute',
+            top: -4, left: -4,
+            transform: 'rotate(-90deg)',
+            pointerEvents: 'none',
+          }}
+        >
+          <circle
+            cx="25" cy="25" r="22"
+            fill="none"
+            stroke={cooldownColor}
+            strokeOpacity="0.9"
+            strokeWidth="4"
+            strokeDasharray={`${dashLen} ${CIRCUMFERENCE}`}
+            strokeLinecap="round"
+          />
+        </svg>
+      )}
+    </div>
   );
 }
 
@@ -63,15 +143,11 @@ export default function EagleControls({
 }: Props) {
   const [now, setNow] = useState(Date.now());
   useEffect(() => {
-    const id = setInterval(() => setNow(Date.now()), 250);
+    const id = setInterval(() => setNow(Date.now()), 50);
     return () => clearInterval(id);
   }, []);
 
   const effectiveFlyCooldown = Math.max(flyCooldownUntil, attackCooldownUntil);
-  const flyOnCooldown = effectiveFlyCooldown > now;
-  const flyCdSec = flyOnCooldown ? Math.ceil((effectiveFlyCooldown - now) / 1000) : 0;
-  const cageOnCooldown = cageCooldownUntil > now;
-  const cageCdSec = cageOnCooldown ? Math.ceil((cageCooldownUntil - now) / 1000) : 0;
 
   return (
     <div className="flex flex-col h-full gap-2">
@@ -89,41 +165,25 @@ export default function EagleControls({
       <div className="flex items-center justify-center gap-4">
         <AttackButton onAttack={onAttack} cooldownUntil={attackCooldownUntil} disabled={attackDisabled} />
 
-        <button
-          onPointerDown={(e) => { e.stopPropagation(); e.preventDefault(); onPropUse('fly'); }}
-          className="relative w-14 h-14 rounded-full border-2 flex items-center justify-center transition-all active:scale-90"
-          style={{
-            borderColor: 'hsl(220 80% 55%)',
-            color: 'hsl(220 80% 55%)',
-            boxShadow: '0 0 12px hsl(220 80% 55% / 0.35)',
-            touchAction: 'manipulation',
-            opacity: flyOnCooldown ? 0.5 : 1,
-          }}
-        >
-          {flyOnCooldown ? (
-            <span className="text-xs font-mono font-bold">{flyCdSec}s</span>
-          ) : (
-            <Wind className="w-6 h-6" />
-          )}
-        </button>
+        <CooldownRingButton
+          onPress={() => onPropUse('fly')}
+          icon={<Wind className="w-6 h-6" />}
+          cooldownUntil={effectiveFlyCooldown}
+          totalCooldownMs={10000}
+          now={now}
+          color="hsl(220 80% 55%)"
+          cooldownColor="hsl(220 80% 65%)"
+        />
 
-        <button
-          onPointerDown={(e) => { e.stopPropagation(); e.preventDefault(); if (!cageOnCooldown && onCageUse) onCageUse(); }}
-          className="relative w-14 h-14 rounded-full border-2 flex items-center justify-center transition-all active:scale-90"
-          style={{
-            borderColor: 'hsl(0 70% 50%)',
-            color: 'hsl(0 70% 50%)',
-            boxShadow: '0 0 12px hsl(0 70% 50% / 0.35)',
-            touchAction: 'manipulation',
-            opacity: cageOnCooldown ? 0.5 : 1,
-          }}
-        >
-          {cageOnCooldown ? (
-            <span className="text-xs font-mono font-bold">{cageCdSec}s</span>
-          ) : (
-            <Lock className="w-6 h-6" />
-          )}
-        </button>
+        <CooldownRingButton
+          onPress={() => { if (onCageUse) onCageUse(); }}
+          icon={<Lock className="w-6 h-6" />}
+          cooldownUntil={cageCooldownUntil}
+          totalCooldownMs={30000}
+          now={now}
+          color="hsl(0 70% 50%)"
+          cooldownColor="hsl(0 70% 60%)"
+        />
       </div>
     </div>
   );

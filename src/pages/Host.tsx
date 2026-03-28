@@ -769,6 +769,18 @@ export default function Host() {
           <HealthDisplay players={snapshot.players} />
         </div>
 
+        {/* PAUSED overlay */}
+        {isPaused && (
+          <div className="absolute inset-0 z-40 flex items-center justify-center bg-background/60 backdrop-blur-sm pointer-events-none">
+            <div className="flex flex-col items-center gap-3">
+              <Pause className="w-20 h-20 text-accent" />
+              <span className="text-5xl font-pixel text-accent tracking-[0.3em]" style={{ textShadow: '0 0 40px hsl(var(--accent) / 0.8)' }}>
+                PAUSED
+              </span>
+            </div>
+          </div>
+        )}
+
         {/* Stage progress bottom */}
         <StageProgressBar currentStage={snapshot.stage} stageLabel={snapshot.stageLabel} />
 
