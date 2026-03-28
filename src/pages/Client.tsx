@@ -722,6 +722,7 @@ export default function Client() {
   // Reset damage tracking on lobby
   useEffect(() => {
     if (gamePhase === "lobby") {
+      damageInitRef.current = false;
       prevDamageTakenRef.current = 0;
       prevSpeedUntilRef.current = 0;
       prevHealthRef.current = -1;
