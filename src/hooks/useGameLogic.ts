@@ -215,6 +215,8 @@ export function useGameLogic({ players, broadcast, gameMode, connectionMode, map
   const lastNetworkStateBroadcastAtRef = useRef(0);
 
   const gameStateRef = useRef<GameStateRef | null>(null);
+  const gamePausedRef = useRef(false);
+  const botsPausedRef = useRef(false);
 
   const [snapshot, setSnapshot] = useState<GameStateSnapshot | null>(null);
   const [videoPlaying, setVideoPlaying] = useState<"hurt" | "dead" | null>(null);
