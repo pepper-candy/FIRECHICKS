@@ -48,12 +48,13 @@ function CooldownRingButton({ onPress, icon, cooldownUntil, totalCooldownMs, now
   const remainingMs = onCooldown ? Math.max(0, cooldownUntil - now) : 0;
   const cdSec = onCooldown ? Math.ceil(remainingMs / 1000) : 0;
   const totalCdRef = useRef(totalCooldownMs);
+  const previousCooldownRef = useRef(0);
 
   useEffect(() => {
-    if (cooldownUntil > 0) {
-      const total = cooldownUntil - Date.now();
-      if (total > 0) totalCdRef.current = total;
+    if (cooldownUntil > previousCooldownRef.current) {
+      totalCdRef.current = totalCooldownMs;
     }
+    previousCooldownRef.current = cooldownUntil;
   }, [cooldownUntil]);
 
   useEffect(() => {
@@ -67,9 +68,12 @@ function CooldownRingButton({ onPress, icon, cooldownUntil, totalCooldownMs, now
   return (
     <div className="relative flex-shrink-0" style={{ width: size, height: size }}>
       <button
+        type="button"
         onPointerDown={(e) => { e.stopPropagation(); e.preventDefault(); onPress(); }}
         className="w-full h-full rounded-full border-2 flex items-center justify-center transition-all active:scale-90"
         style={{
+          position: 'relative',
+          zIndex: 1,
           borderColor: color,
           color: color,
           boxShadow: onCooldown ? 'none' : `0 0 12px ${color.replace(')', ' / 0.35)')}`,
@@ -93,6 +97,7 @@ function CooldownRingButton({ onPress, icon, cooldownUntil, totalCooldownMs, now
             top: -4, left: -4,
             transform: 'rotate(-90deg)',
             pointerEvents: 'none',
+            zIndex: 2,
           }}
         >
           <circle

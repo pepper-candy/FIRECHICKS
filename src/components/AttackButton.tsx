@@ -7,11 +7,13 @@ interface Props {
   disabled?: boolean;
 }
 
+const ATTACK_COOLDOWN_MS = 3000;
 const CIRCUMFERENCE = 2 * Math.PI * 44; // ~276.46
 
 export default function AttackButton({ onAttack, cooldownUntil, disabled }: Props) {
   const [now, setNow] = useState(Date.now());
-  const totalCdRef = useRef(3000);
+  const totalCdRef = useRef(ATTACK_COOLDOWN_MS);
+  const previousCooldownRef = useRef(0);
 
   useEffect(() => {
     const id = setInterval(() => setNow(Date.now()), 50);
@@ -24,18 +26,16 @@ export default function AttackButton({ onAttack, cooldownUntil, disabled }: Prop
 
   // Capture total cooldown when a new cooldown starts
   useEffect(() => {
-    if (cooldownUntil > 0) {
-      const total = cooldownUntil - Date.now();
-      if (total > 0) {
-        totalCdRef.current = total;
-      }
+    if (cooldownUntil > previousCooldownRef.current) {
+      totalCdRef.current = ATTACK_COOLDOWN_MS;
     }
+    previousCooldownRef.current = cooldownUntil;
   }, [cooldownUntil]);
 
   // Reset when cooldown ends
   useEffect(() => {
     if (!onCooldown) {
-      totalCdRef.current = 3000;
+      totalCdRef.current = ATTACK_COOLDOWN_MS;
     }
   }, [onCooldown]);
 
@@ -50,6 +50,7 @@ export default function AttackButton({ onAttack, cooldownUntil, disabled }: Prop
   return (
     <div className="relative flex-shrink-0" style={{ width: 80, height: 80 }}>
       <button
+        type="button"
         onPointerDown={(e) => { e.stopPropagation(); e.preventDefault(); if (!inactive) onAttack(); }}
         className={`w-full h-full rounded-full border-4 flex items-center justify-center transition-all select-none ${
           inactive
@@ -57,6 +58,8 @@ export default function AttackButton({ onAttack, cooldownUntil, disabled }: Prop
             : 'border-destructive bg-destructive/20 active:scale-95'
         }`}
         style={{
+          position: 'relative',
+          zIndex: 1,
           boxShadow: inactive ? 'none' : '0 0 20px hsl(0 80% 55% / 0.4)',
           touchAction: 'manipulation',
           WebkitTapHighlightColor: 'transparent',
@@ -77,6 +80,7 @@ export default function AttackButton({ onAttack, cooldownUntil, disabled }: Prop
             top: -4, left: -4,
             transform: 'rotate(-90deg)',
             pointerEvents: 'none',
+            zIndex: 2,
           }}
         >
           <circle

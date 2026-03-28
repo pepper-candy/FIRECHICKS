@@ -524,6 +524,13 @@ export function useGameLogic({ players, broadcast, gameMode, connectionMode, map
         const lobbyPlayer = currentPlayers.get(connId);
         if (!lobbyPlayer) continue;
 
+        const isPausedBot = botsPausedRef.current && !!lobbyPlayer.isBot && isBot(connId);
+        if (isPausedBot) {
+          (lobbyPlayer as any).joystick = { x: 0, y: 0 };
+          p.isMoving = false;
+          continue;
+        }
+
         const jx = lobbyPlayer.joystick.x;
         const jy = -lobbyPlayer.joystick.y;
         const magnitude = Math.sqrt(jx * jx + jy * jy);
@@ -577,7 +584,13 @@ export function useGameLogic({ players, broadcast, gameMode, connectionMode, map
       const lobbyPlayer = currentPlayers.get(connId);
       const activelyBotControlled = !!lobbyPlayer?.isBot;
       if (!activelyBotControlled || !isBot(connId) || !p.alive) continue;
-      if (botsPausedRef.current) continue;
+      if (botsPausedRef.current) {
+        if (lobbyPlayer) {
+          (lobbyPlayer as any).joystick = { x: 0, y: 0 };
+        }
+        p.isMoving = false;
+        continue;
+      }
       if (!activelyBotControlled || !isBot(connId) || !p.alive) continue;
       const decision = updateBot(
         p,
