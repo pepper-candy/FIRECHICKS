@@ -699,13 +699,21 @@ export default function Client() {
   const cagedRemainingSec = myState?.cagedUntil ? Math.ceil(Math.max(0, myState.cagedUntil - nowTs) / 1000) : 0;
 
   // ── Damage flash: track damageTaken increases (attack only) ──
+  const damageInitRef = useRef(false);
   useEffect(() => {
     if (!myState) return;
     const dt = myState.damageTaken ?? 0;
-    if (prevDamageTakenRef.current > 0 && dt > prevDamageTakenRef.current) {
+    if (!damageInitRef.current) {
+      // First mount / lobby reset — just record, don't flash
+      damageInitRef.current = true;
+      prevDamageTakenRef.current = dt;
+      return;
+    }
+    if (dt > prevDamageTakenRef.current) {
       setDamageFlash(true);
       buzz(100);
       const timer = setTimeout(() => setDamageFlash(false), 3000);
+      prevDamageTakenRef.current = dt;
       return () => clearTimeout(timer);
     }
     prevDamageTakenRef.current = dt;
@@ -714,6 +722,7 @@ export default function Client() {
   // Reset damage tracking on lobby
   useEffect(() => {
     if (gamePhase === "lobby") {
+      damageInitRef.current = false;
       prevDamageTakenRef.current = 0;
       prevSpeedUntilRef.current = 0;
       prevHealthRef.current = -1;

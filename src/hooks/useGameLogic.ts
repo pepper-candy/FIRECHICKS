@@ -1839,8 +1839,9 @@ export function useGameLogic({ players, broadcast, gameMode, connectionMode, map
         if (msg.answer.toUpperCase().trim() === correct) {
           gs.examState.answered = true;
           player.actionScore += 20;
-          // Correct answer = chicks win (regardless of alive count)
-          endGame(gs, "chicks", broadcastRef.current);
+          // Correct answer — use mode-based alive-count win condition
+          gs.examState.answered = true;
+          resolveExamWinner(gs, gameModeRef.current as "1v3" | "2v6", broadcastRef.current);
         } else {
           // Wrong: -1 grade to all alive chick players
           for (const [, p] of gs.playerStates) {
@@ -1936,12 +1937,12 @@ export function useGameLogic({ players, broadcast, gameMode, connectionMode, map
     }
   }, []);
 
-  /** Host-only: end final exam immediately as chicks win; no damage or timeout penalties. */
+  /** Host-only: end final exam immediately; uses mode-based alive-count win condition. */
   const hostSkipExam = useCallback(() => {
     const gs = gameStateRef.current as GameStateRef | null;
     if (!gs || gs.phase !== "exam" || !gs.examState || gs.examState.answered) return;
     gs.examState.answered = true;
-    endGame(gs, "chicks", broadcastRef.current);
+    resolveExamWinner(gs, gameModeRef.current as "1v3" | "2v6", broadcastRef.current);
   }, []);
 
   // ─── Cleanup ─────────────────────────────────────────────────────────────────
