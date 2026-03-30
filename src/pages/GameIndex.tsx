@@ -465,6 +465,14 @@ const Index = () => {
         >
           🐔 CROSSY ROAD
         </Button>
+
+        <Button
+          onClick={() => { import('@/lib/haptics').then(m => m.buzz(50)); }}
+          variant="outline"
+          className="h-14 text-sm font-pixel border-primary/40 text-primary hover:bg-primary/10"
+        >
+          📳 HAPTIC TEST
+        </Button>
       </div>
 
       <div className="text-xs text-muted-foreground font-mono text-center space-y-1 mt-8">
