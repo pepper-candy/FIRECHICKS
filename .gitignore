@@ -22,3 +22,9 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Add these to .gitignore
+android/
+ios/
+*.apk
+*.aab
