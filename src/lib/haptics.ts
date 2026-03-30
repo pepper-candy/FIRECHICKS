@@ -1,24 +1,16 @@
 /** Short vibration buzz for mobile devices. No-op on unsupported browsers. */
 export function buzz(ms = 50) {
   const tryCapacitorHaptics = () => {
-    const capacitor = (globalThis as { Capacitor?: { isNativePlatform?: () => boolean; Plugins?: Record<string, unknown> } }).Capacitor;
-    const isNative = !!capacitor?.isNativePlatform?.();
-    if (!isNative) return;
+    const capacitor = (globalThis as { Capacitor?: { isNativePlatform?: () => boolean } }).Capacitor;
+    if (!capacitor?.isNativePlatform?.()) return;
 
-    const haptics = capacitor?.Plugins?.Haptics as
-      | { vibrate?: (opts?: { duration?: number }) => Promise<void>; impact?: (opts?: { style?: string }) => Promise<void> }
-      | undefined;
-
-    if (!haptics) return;
-
-    if (typeof haptics.vibrate === 'function') {
-      void haptics.vibrate({ duration: ms });
-      return;
-    }
-
-    if (typeof haptics.impact === 'function') {
-      void haptics.impact({ style: 'LIGHT' });
-    }
+    void import('@capacitor/haptics')
+      .then(({ Haptics, ImpactStyle }) =>
+        Haptics.vibrate({ duration: ms }).catch(() => Haptics.impact({ style: ImpactStyle.Medium })),
+      )
+      .catch(() => {
+        // silently ignore
+      });
   };
 
   try {
