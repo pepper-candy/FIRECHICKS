@@ -6,6 +6,7 @@ import AssetLoadingIndicator from "@/components/AssetLoadingIndicator";
 import { useAssetLoading } from "@/context/AssetLoadingContext";
 import { useImmersive } from "@/context/ImmersiveContext";
 import { toast } from "@/components/ui/sonner";
+import { buzz } from "@/lib/haptics";
 import { ArrowDownToLine, Check, Loader2, Sparkles } from "lucide-react";
 
 // ── Circular progress button ──────────────────────────────────────────────────
@@ -467,7 +468,7 @@ const Index = () => {
         </Button>
 
         <Button
-          onClick={() => { import('@/lib/haptics').then(m => m.buzz(50)); }}
+          onPointerDown={() => buzz(120)}
           variant="outline"
           className="h-14 text-sm font-pixel border-primary/40 text-primary hover:bg-primary/10"
         >
