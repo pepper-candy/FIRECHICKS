@@ -34,5 +34,8 @@ export default defineConfig(({ mode }) => ({
   },
   build: {
     target: "es2015",
+rollupOptions: {
+      external: ['@capacitor/haptics', '@capacitor/core'],
+    },
   },
 }));
