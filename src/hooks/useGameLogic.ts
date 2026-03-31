@@ -597,7 +597,7 @@ export function useGameLogic({ players, broadcast, gameMode, connectionMode, map
           p.isMoving = false;
           if (magnitude > 0.05) {
             const moveAngle = Math.atan2(-jx, jy);
-            const dotSpeed = SPEED * 1.5 * delta;
+            const dotSpeed = SPEED * 4.5 * delta;
             const dx = Math.sin(moveAngle) * dotSpeed * -1;
             const dz = Math.cos(moveAngle) * dotSpeed * -1;
             const newX = p.teleportTarget.x + dx;

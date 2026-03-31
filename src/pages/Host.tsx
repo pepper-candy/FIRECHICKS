@@ -1362,7 +1362,9 @@ function GameOverCeremony({ snapshot, gameMode }: { snapshot: GameStateSnapshot;
                         </div>
                       </td>
                       <td className="py-2 text-center">
-                        {isImmersive ? (
+                        {p.isEagle ? (
+                          <span className="text-lg font-mono text-muted-foreground">N/A</span>
+                        ) : isImmersive ? (
                           <span
                             className="text-2xl font-bold ceremony-grade-bounce"
                             style={
@@ -1379,7 +1381,7 @@ function GameOverCeremony({ snapshot, gameMode }: { snapshot: GameStateSnapshot;
                             {letter}
                           </span>
                         )}
-                        <span className="text-[9px] text-muted-foreground block">{p.health.toFixed(1)}</span>
+                        {!p.isEagle && <span className="text-[9px] text-muted-foreground block">{p.health.toFixed(1)}</span>}
                       </td>
                       <td className="py-2 text-center text-muted-foreground">{Math.floor(p.survivalTime)}s</td>
                       <td className="py-2 text-center text-muted-foreground">

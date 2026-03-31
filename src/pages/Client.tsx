@@ -1399,7 +1399,7 @@ export default function Client() {
             className="absolute inset-0 w-full h-full object-cover z-0"
           />
 
-          {showPwOnWhiteBg && <div className="absolute inset-0 z-[1] bg-white" aria-hidden />}
+          {showPwOnWhiteBg && examLayer === "2" && <div className="absolute inset-0 z-[1] bg-white" aria-hidden />}
 
           <img
             src={assetUrl(`/PW/PW_Final_${examQuestionNum}_layer-${examLayer}.png`)}
