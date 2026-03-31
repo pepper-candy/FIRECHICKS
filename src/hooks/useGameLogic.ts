@@ -597,7 +597,7 @@ export function useGameLogic({ players, broadcast, gameMode, connectionMode, map
           p.isMoving = false;
           if (magnitude > 0.05) {
             const moveAngle = Math.atan2(-jx, jy);
-            const dotSpeed = SPEED * 1.5 * delta;
+            const dotSpeed = SPEED * 4.5 * delta;
             const dx = Math.sin(moveAngle) * dotSpeed * -1;
             const dz = Math.cos(moveAngle) * dotSpeed * -1;
             const newX = p.teleportTarget.x + dx;
@@ -881,6 +881,17 @@ export function useGameLogic({ players, broadcast, gameMode, connectionMode, map
       if (!gs.frozenAll) {
         updateHostExamDisplay(gs);
         gs.examState.timeRemaining -= delta;
+
+        // Check if all alive chicks have submitted — advance early
+        const aliveChickIds = Array.from<PlayerGameState>(gs.playerStates.values())
+          .filter((p) => !p.isEagle && p.alive)
+          .map((p) => p.connId);
+        const submitted = gs.examState.submittedConnIds ?? [];
+        if (aliveChickIds.length > 0 && aliveChickIds.every((id) => submitted.includes(id))) {
+          // All chicks answered — don't wait for timer
+          gs.examState.timeRemaining = 0;
+        }
+
         if (gs.examState.timeRemaining <= 0) {
           gs.examState.timeRemaining = 0;
           gs.examState.answered = true; // prevent re-entry
@@ -1834,6 +1845,11 @@ export function useGameLogic({ players, broadcast, gameMode, connectionMode, map
 
         // Mark that at least one submission happened (suppress timeout video)
         gs.examState.anyAnswerSubmitted = true;
+        // Track this player's submission
+        if (!gs.examState.submittedConnIds) gs.examState.submittedConnIds = [];
+        if (!gs.examState.submittedConnIds.includes(connId)) {
+          gs.examState.submittedConnIds.push(connId);
+        }
 
         const correct = FINAL_ANSWER_KEY[gs.examState.questionNum];
         if (msg.answer.toUpperCase().trim() === correct) {

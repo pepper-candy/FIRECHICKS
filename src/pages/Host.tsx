@@ -165,7 +165,7 @@ export default function Host() {
   const [mode, setMode] = useState<ConnectionMode>("webrtc");
   const [gameMode, setGameMode] = useState<GameMode>("1v3");
   const [startClickAt, setStartClickAt] = useState<number | null>(null);
-  const [zoomLevel, setZoomLevel] = useState(1);
+  const [zoomLevel, setZoomLevel] = useState(0.65);
   const [themeMode, setThemeMode] = useState<"dark" | "semi" | "light">("semi");
   const [mapId, setMapId] = useState<MapId>(1);
   const [themeHue, setThemeHue] = useState<number | undefined>(undefined);
@@ -880,8 +880,8 @@ export default function Host() {
           </div>
           <input
             type="range"
-            min={0.65}
-            max={1.5}
+            min={0.3}
+            max={0.9}
             step={0.05}
             value={zoomLevel}
             onChange={(e) => setZoomLevel(Number(e.target.value))}
@@ -1362,7 +1362,9 @@ function GameOverCeremony({ snapshot, gameMode }: { snapshot: GameStateSnapshot;
                         </div>
                       </td>
                       <td className="py-2 text-center">
-                        {isImmersive ? (
+                        {p.isEagle ? (
+                          <span className="text-lg font-mono text-muted-foreground">N/A</span>
+                        ) : isImmersive ? (
                           <span
                             className="text-2xl font-bold ceremony-grade-bounce"
                             style={
@@ -1379,7 +1381,7 @@ function GameOverCeremony({ snapshot, gameMode }: { snapshot: GameStateSnapshot;
                             {letter}
                           </span>
                         )}
-                        <span className="text-[9px] text-muted-foreground block">{p.health.toFixed(1)}</span>
+                        {!p.isEagle && <span className="text-[9px] text-muted-foreground block">{p.health.toFixed(1)}</span>}
                       </td>
                       <td className="py-2 text-center text-muted-foreground">{Math.floor(p.survivalTime)}s</td>
                       <td className="py-2 text-center text-muted-foreground">

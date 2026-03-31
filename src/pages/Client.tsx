@@ -410,6 +410,7 @@ export default function Client() {
   } | null>(null);
   const [gameState, setGameState] = useState<GameStateSnapshot | null>(null);
   const [isDead, setIsDead] = useState(false);
+  const [directWinner, setDirectWinner] = useState<"eagle" | "chicks" | "draw" | null>(null);
   const [colorChosen, setColorChosen] = useState(false);
   const [hasSubmittedMockExam, setHasSubmittedMockExam] = useState(false);
   const [mockExamZoom, setMockExamZoom] = useState(1);
@@ -551,6 +552,7 @@ export default function Client() {
           setColorChosen(true);
         }
       } else if (msg.type === "game-over") {
+        setDirectWinner(msg.winner ?? null);
         setGamePhase("gameover");
       } else if (msg.type === "you-died") {
         if (msg.connId === connIdRef.current) setIsDead(true);
@@ -1122,7 +1124,7 @@ export default function Client() {
 
   // ─── GAME OVER ───────────────────────────────────────────────────────────────
   if (gamePhase === "gameover") {
-    const winner = gameState?.winner;
+    const winner = directWinner ?? gameState?.winner;
     const amWinner = (winner === "eagle" && isEagle) || (winner === "chicks" && !isEagle);
     const isDraw = winner === "draw";
     return (
@@ -1397,7 +1399,7 @@ export default function Client() {
             className="absolute inset-0 w-full h-full object-cover z-0"
           />
 
-          {showPwOnWhiteBg && <div className="absolute inset-0 z-[1] bg-white" aria-hidden />}
+          {showPwOnWhiteBg && examLayer === "2" && <div className="absolute inset-0 z-[1] bg-white" aria-hidden />}
 
           <img
             src={assetUrl(`/PW/PW_Final_${examQuestionNum}_layer-${examLayer}.png`)}

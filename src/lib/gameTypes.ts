@@ -58,6 +58,8 @@ export interface ExamState {
   hostDisplayLayer?: 'none' | '1' | '2';
   /** One random non-bot chick gets PW layer on white bg on phone; host showing a layer disables it. */
   examWhiteBgConnId?: string | null;
+  /** Track which chicks have submitted answers (for early advance) */
+  submittedConnIds?: string[];
 }
 
 export type EventType = 'mock-exam' | 'hitbox' | 'crossy-road';
