@@ -1124,7 +1124,7 @@ export default function Client() {
 
   // ─── GAME OVER ───────────────────────────────────────────────────────────────
   if (gamePhase === "gameover") {
-    const winner = gameState?.winner;
+    const winner = directWinner ?? gameState?.winner;
     const amWinner = (winner === "eagle" && isEagle) || (winner === "chicks" && !isEagle);
     const isDraw = winner === "draw";
     return (
