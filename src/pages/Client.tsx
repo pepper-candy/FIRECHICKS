@@ -552,6 +552,7 @@ export default function Client() {
           setColorChosen(true);
         }
       } else if (msg.type === "game-over") {
+        setDirectWinner(msg.winner ?? null);
         setGamePhase("gameover");
       } else if (msg.type === "you-died") {
         if (msg.connId === connIdRef.current) setIsDead(true);
