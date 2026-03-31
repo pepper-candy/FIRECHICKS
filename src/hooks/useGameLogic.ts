@@ -1834,6 +1834,11 @@ export function useGameLogic({ players, broadcast, gameMode, connectionMode, map
 
         // Mark that at least one submission happened (suppress timeout video)
         gs.examState.anyAnswerSubmitted = true;
+        // Track this player's submission
+        if (!gs.examState.submittedConnIds) gs.examState.submittedConnIds = [];
+        if (!gs.examState.submittedConnIds.includes(connId)) {
+          gs.examState.submittedConnIds.push(connId);
+        }
 
         const correct = FINAL_ANSWER_KEY[gs.examState.questionNum];
         if (msg.answer.toUpperCase().trim() === correct) {
