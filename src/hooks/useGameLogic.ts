@@ -881,6 +881,17 @@ export function useGameLogic({ players, broadcast, gameMode, connectionMode, map
       if (!gs.frozenAll) {
         updateHostExamDisplay(gs);
         gs.examState.timeRemaining -= delta;
+
+        // Check if all alive chicks have submitted — advance early
+        const aliveChickIds = Array.from<PlayerGameState>(gs.playerStates.values())
+          .filter((p) => !p.isEagle && p.alive)
+          .map((p) => p.connId);
+        const submitted = gs.examState.submittedConnIds ?? [];
+        if (aliveChickIds.length > 0 && aliveChickIds.every((id) => submitted.includes(id))) {
+          // All chicks answered — don't wait for timer
+          gs.examState.timeRemaining = 0;
+        }
+
         if (gs.examState.timeRemaining <= 0) {
           gs.examState.timeRemaining = 0;
           gs.examState.answered = true; // prevent re-entry
