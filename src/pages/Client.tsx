@@ -410,6 +410,7 @@ export default function Client() {
   } | null>(null);
   const [gameState, setGameState] = useState<GameStateSnapshot | null>(null);
   const [isDead, setIsDead] = useState(false);
+  const [directWinner, setDirectWinner] = useState<"eagle" | "chicks" | "draw" | null>(null);
   const [colorChosen, setColorChosen] = useState(false);
   const [hasSubmittedMockExam, setHasSubmittedMockExam] = useState(false);
   const [mockExamZoom, setMockExamZoom] = useState(1);
