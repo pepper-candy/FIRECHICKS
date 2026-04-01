@@ -124,9 +124,10 @@ export default function GameOverScreen({
       {/* Scrollable content */}
       <div
         ref={containerRef}
-        onScroll={handleScroll}
-        className="absolute inset-0 z-10 overflow-y-auto snap-y snap-mandatory hide-scrollbar"
-        style={{ scrollBehavior: 'smooth' }}
+        onWheel={handleWheel}
+        onTouchStart={handleTouchStart}
+        onTouchEnd={handleTouchEnd}
+        className="absolute inset-0 z-10 overflow-y-hidden snap-y snap-mandatory hide-scrollbar"
       >
       {/* ── SIGHT 1: Game Over + Grade + Character Tag ── */}
       <div
