@@ -1379,7 +1379,7 @@ export default function Client() {
               onClick={() => setExamWhiteBg((p) => !p)}
               className={`px-2 py-1 rounded text-[10px] font-mono border transition-colors ${examWhiteBg ? "bg-white text-black border-white" : "bg-transparent text-muted-foreground border-border"}`}
             >
-              {examWhiteBg ? "📷 Camera" : "⬜ White BG"}
+              {examWhiteBg ? "📷 Transparent" : "⬜ White BG"}
             </button>
             {gameState?.examState && (
               <span
