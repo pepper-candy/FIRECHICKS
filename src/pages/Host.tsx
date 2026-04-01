@@ -170,6 +170,7 @@ export default function Host() {
   const [gameMode, setGameMode] = useState<GameMode>("1v3");
   const [startClickAt, setStartClickAt] = useState<number | null>(null);
   const [zoomLevel, setZoomLevel] = useState(1);
+  const [settingsPanelOpen, setSettingsPanelOpen] = useState(false);
   const [themeMode, setThemeMode] = useState<"dark" | "semi" | "light">("semi");
   const [mapId, setMapId] = useState<MapId>(1);
   const [themeHue, setThemeHue] = useState<number | undefined>(undefined);
