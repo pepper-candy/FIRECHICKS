@@ -86,7 +86,7 @@ function MapCamera({ zoomLevel = 1 }: { zoomLevel?: number }) {
     const posZ = 28 + (clamped - 0.65) * 22;
 
     // LookAt Y controls vertical pan
-    const lookY = (clamped - 1) * 20; // 0 at default, up to 1.5 at max zoom
+    const lookY = (clamped - 1) * -20; // 0 at default, up to 1.5 at max zoom
 
     camera.position.set(0, posY, posZ);
     (camera as any).fov = 58 / Math.max(0.75, clamped);
