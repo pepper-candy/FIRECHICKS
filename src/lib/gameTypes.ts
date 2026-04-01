@@ -60,6 +60,8 @@ export interface ExamState {
   examWhiteBgConnId?: string | null;
   /** Track which chicks have submitted answers (for early advance) */
   submittedConnIds?: string[];
+  /** Total wrong attempts across all submitters (max 3) */
+  wrongCount?: number;
 }
 
 export type EventType = 'mock-exam' | 'hitbox' | 'crossy-road';
