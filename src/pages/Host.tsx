@@ -630,7 +630,7 @@ export default function Host() {
   // ─── PLAYING / EXAM ──────────────────────────────────────────────────────────
   if ((phase === "playing" || phase === "exam") && snapshot) {
     const alivePlayers = Object.values(snapshot.players).filter((p) => p.alive);
-    const isCrossyActive = snapshot.activeEvent?.type === 'crossy-road' && snapshot.activeEvent?.phase === 'active';
+    const isEventOverlay = !!snapshot.activeEvent && (snapshot.activeEvent.type === 'crossy-road' || snapshot.activeEvent.type === 'hitbox');
 
     return (
       <div className="relative h-screen">
@@ -740,7 +740,7 @@ export default function Host() {
         )}
 
         {/* Tip obtain countdowns — stacked at top */}
-        {!isCrossyActive && snapshot.tipObtainTimers && Object.keys(snapshot.tipObtainTimers).length > 0 && (
+        {!isEventOverlay && snapshot.tipObtainTimers && Object.keys(snapshot.tipObtainTimers).length > 0 && (
           <div className="absolute left-1/2 -translate-x-1/2 z-10 flex flex-col gap-1 items-center top-10">
             {Object.entries(snapshot.tipObtainTimers).map(([connId, timer]) => {
               const player = snapshot.players[connId];
@@ -761,7 +761,7 @@ export default function Host() {
         )}
 
         {/* Pause controls + Health display top-right */}
-        {!isCrossyActive && (
+        {!isEventOverlay && (
         <div className="absolute top-2 right-2 z-30 flex flex-col gap-1">
           <div className="flex gap-1 justify-end">
             <button
@@ -855,10 +855,10 @@ export default function Host() {
         })()}
 
         {/* Stage progress bottom */}
-        {!isCrossyActive && <StageProgressBar currentStage={snapshot.stage} stageLabel={snapshot.stageLabel} />}
+        {!isEventOverlay && <StageProgressBar currentStage={snapshot.stage} stageLabel={snapshot.stageLabel} />}
 
         {/* Game time — click to toggle total vs play time */}
-        {!isCrossyActive && (
+        {!isEventOverlay && (
         <div
           className="absolute top-2 left-2 z-10 px-3 py-1 rounded bg-card/80 border border-border font-mono text-xs cursor-pointer select-none"
           style={{ color: showPlayTime ? "hsl(0 80% 55%)" : "hsl(var(--muted-foreground))" }}
