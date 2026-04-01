@@ -1,8 +1,8 @@
-import { Suspense, useState, useEffect, useMemo, useRef } from 'react';
-import { Canvas, useThree } from '@react-three/fiber';
-import { useGLTF } from '@react-three/drei';
-import { PLAYER_COLORS } from '@/lib/playerColors';
-import { assetUrl } from '@/lib/assets';
+import { Suspense, useState, useEffect, useMemo, useRef } from "react";
+import { Canvas, useThree } from "@react-three/fiber";
+import { useGLTF } from "@react-three/drei";
+import { PLAYER_COLORS } from "@/lib/playerColors";
+import { assetUrl } from "@/lib/assets";
 
 interface Props {
   colorIndex: number;
@@ -12,9 +12,7 @@ interface Props {
 function RotatingStaticCharacter({ modelPath, angle }: { modelPath: string; angle: number }) {
   const gltf = useGLTF(modelPath);
   const scene = useMemo(() => gltf.scene.clone(true), [gltf.scene]);
-  return (
-    <primitive object={scene} scale={[0.85, 0.85, 0.85]} rotation={[0, angle, 0]} />
-  );
+  return <primitive object={scene} scale={[0.85, 0.85, 0.85]} rotation={[0, angle, 0]} />;
 }
 
 function CharacterCamera() {
@@ -37,11 +35,12 @@ export default function CharacterReveal({ colorIndex, isEagle }: Props) {
   const [canvasKey, setCanvasKey] = useState(0);
   const startRef = useRef(performance.now());
   const rafRef = useRef(0);
-  const isMobile = typeof window !== 'undefined' && /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+  const isMobile = typeof window !== "undefined" && /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
 
   useEffect(() => {
     startRef.current = performance.now();
     const totalRotation = Math.PI * 2 * 1.25;
+    const startOffset = 1.22; // radians (70°)
     const duration = 7000; // 7 seconds
 
     const tick = (time: number) => {
@@ -67,7 +66,7 @@ export default function CharacterReveal({ colorIndex, isEagle }: Props) {
   return (
     <div className="flex flex-col items-center justify-start h-dvh overflow-hidden w-full">
       {/* Canvas takes 2/3 of screen height */}
-      <div className="w-full" style={{ maxWidth: 380, minHeight: 0, height: '66.67vh' }}>
+      <div className="w-full" style={{ maxWidth: 380, minHeight: 0, height: "66.67vh" }}>
         {contextLost ? (
           <div className="w-full h-full flex items-center justify-center px-4">
             <button
@@ -85,13 +84,13 @@ export default function CharacterReveal({ colorIndex, isEagle }: Props) {
             key={canvasKey}
             camera={{ position: [0, 2.2, 3.8], fov: 32 }}
             dpr={isMobile ? [1, 1.5] : [1, 2]}
-            gl={{ antialias: !isMobile, powerPreference: 'default', preserveDrawingBuffer: false }}
+            gl={{ antialias: !isMobile, powerPreference: "default", preserveDrawingBuffer: false }}
             onCreated={({ gl }) => {
               const onContextLost = (ev: Event) => {
                 ev.preventDefault();
                 setContextLost(true);
               };
-              gl.domElement.addEventListener('webglcontextlost', onContextLost, false);
+              gl.domElement.addEventListener("webglcontextlost", onContextLost, false);
             }}
           >
             <CharacterCamera />
@@ -125,11 +124,11 @@ export default function CharacterReveal({ colorIndex, isEagle }: Props) {
         </div>
 
         <p className="text-xl font-pixel" style={{ color: `hsl(${color.hsl})` }}>
-          {isEagle ? '🦅 EAGLE' : '🐤 CHICK'}
+          {isEagle ? "🦅 EAGLE" : "🐤 CHICK"}
         </p>
 
         <p className="text-[11px] text-muted-foreground font-mono text-center">
-          {isEagle ? 'Hunt down the chicks — catch them all!' : 'Survive, cooperate, and pass the exam!'}
+          {isEagle ? "Hunt down the chicks — catch them all!" : "Survive, cooperate, and pass the exam!"}
         </p>
 
         <div className="w-full mt-1">
@@ -143,7 +142,7 @@ export default function CharacterReveal({ colorIndex, isEagle }: Props) {
             />
           </div>
           <p className="text-center text-[10px] font-mono text-muted-foreground mt-1">
-            {remaining > 0 ? `${remaining}s` : 'Get ready!'}
+            {remaining > 0 ? `${remaining}s` : "Get ready!"}
           </p>
         </div>
       </div>
@@ -151,11 +150,11 @@ export default function CharacterReveal({ colorIndex, isEagle }: Props) {
   );
 }
 
-useGLTF.preload(assetUrl('/FireChick/FireChick_Models/FireChick_Black.glb'));
-useGLTF.preload(assetUrl('/FireChick/FireChick_Models/FireChick_Gold.glb'));
-useGLTF.preload(assetUrl('/FireChick/FireChick_Models/FireChick_Red.glb'));
-useGLTF.preload(assetUrl('/FireChick/FireChick_Models/FireChick_Yellow.glb'));
-useGLTF.preload(assetUrl('/FireChick/FireChick_Models/FireChick_Blue.glb'));
-useGLTF.preload(assetUrl('/FireChick/FireChick_Models/FireChick_Green.glb'));
-useGLTF.preload(assetUrl('/FireChick/FireChick_Models/FireChick_Cyan.glb'));
-useGLTF.preload(assetUrl('/FireChick/FireChick_Models/FireChick_Pink.glb'));
+useGLTF.preload(assetUrl("/FireChick/FireChick_Models/FireChick_Black.glb"));
+useGLTF.preload(assetUrl("/FireChick/FireChick_Models/FireChick_Gold.glb"));
+useGLTF.preload(assetUrl("/FireChick/FireChick_Models/FireChick_Red.glb"));
+useGLTF.preload(assetUrl("/FireChick/FireChick_Models/FireChick_Yellow.glb"));
+useGLTF.preload(assetUrl("/FireChick/FireChick_Models/FireChick_Blue.glb"));
+useGLTF.preload(assetUrl("/FireChick/FireChick_Models/FireChick_Green.glb"));
+useGLTF.preload(assetUrl("/FireChick/FireChick_Models/FireChick_Cyan.glb"));
+useGLTF.preload(assetUrl("/FireChick/FireChick_Models/FireChick_Pink.glb"));
