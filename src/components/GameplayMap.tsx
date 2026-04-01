@@ -57,18 +57,36 @@ function SemiLightLighting() {
   );
 }
 
-// Camera stays centered; zoomLevel lets host tune framing
+// Camera stays centered; zoomLevel lets host tune framing.
+// Zooming in pushes the camera forward while pitching down to keep
+// the near (bottom) edge of the map anchored at the screen bottom.
 function MapCamera({ zoomLevel = 1 }: { zoomLevel?: number }) {
   const { camera } = useThree();
   useEffect(() => {
-    const clamped = Math.max(0.65, Math.min(1.5, zoomLevel));
-    camera.position.set(0, 56 / clamped, 42 / clamped);
+    const clamped = Math.max(0.6, Math.min(1.5, zoomLevel));
+
+    // Base camera parameters at zoom = 1
+    const baseY = 56;
+    const baseZ = 42;
+    const basePitch = Math.atan2(baseY, baseZ); // ~0.927 rad (~53°)
+
+    // Scale distance inversely with zoom
+    const dist = Math.sqrt(baseY * baseY + baseZ * baseZ) / clamped;
+
+    // Adjust pitch: as we zoom in (clamped > 1) pitch steeper to keep bottom edge fixed
+    const newPitch = Math.min(1.4, Math.max(0.5, basePitch * (1 / clamped)));
+
+    const camY = dist * Math.sin(newPitch);
+    const camZ = dist * Math.cos(newPitch);
+
+    camera.position.set(0, camY, camZ);
     (camera as any).fov = 58 / Math.max(0.75, clamped);
     (camera as any).updateProjectionMatrix?.();
-    const threshold = 1.2;
-    const excess = Math.max(0, clamped - threshold);
-    const yLookAt = Math.min(2.0, excess * 1.8);
-    camera.lookAt(0, yLookAt, 0);
+
+    // Look at a point slightly above ground; shift up when zoomed in
+    // to compensate for the steeper angle
+    const lookY = Math.max(0, (clamped - 1) * 4);
+    camera.lookAt(0, lookY, 0);
   }, [camera, zoomLevel]);
   return null;
 }

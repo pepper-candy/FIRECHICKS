@@ -165,7 +165,7 @@ export default function Host() {
   const [mode, setMode] = useState<ConnectionMode>("webrtc");
   const [gameMode, setGameMode] = useState<GameMode>("1v3");
   const [startClickAt, setStartClickAt] = useState<number | null>(null);
-  const [zoomLevel, setZoomLevel] = useState(0.65);
+  const [zoomLevel, setZoomLevel] = useState(1);
   const [themeMode, setThemeMode] = useState<"dark" | "semi" | "light">("semi");
   const [mapId, setMapId] = useState<MapId>(1);
   const [themeHue, setThemeHue] = useState<number | undefined>(undefined);
@@ -889,8 +889,8 @@ export default function Host() {
           </div>
           <input
             type="range"
-            min={0.3}
-            max={0.9}
+            min={0.6}
+            max={1.5}
             step={0.05}
             value={zoomLevel}
             onChange={(e) => setZoomLevel(Number(e.target.value))}
