@@ -352,7 +352,7 @@ function Building({ position, size, tipSiteActive, zoneActive, zoneHealth, baseC
           <meshStandardMaterial color="#ffd700" emissive="#ffd700" emissiveIntensity={0.3} transparent opacity={0.15} side={THREE.DoubleSide} wireframe={false} />
         </mesh>
       )}
-      {zoneActive && zoneHealth !== undefined && (
+      {zoneActive && zoneHealth !== undefined && !hideOverlays && (
         <Html position={[0, size.h + 2, 0]} center zIndexRange={[100, 0]}>
           <div style={{ background: 'rgba(0,0,0,0.7)', border: '1px solid #ffd700', borderRadius: 4, padding: '2px 6px', color: '#ffd700', fontSize: 11, fontFamily: 'monospace', whiteSpace: 'nowrap', pointerEvents: 'none' }}>
             🛡 {zoneHealth}/50
