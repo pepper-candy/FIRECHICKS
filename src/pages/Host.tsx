@@ -415,7 +415,7 @@ export default function Host() {
             )}
 
             {/* Room code */}
-            <div className="px-2 py-1 rounded border border-border bg-card text-xs font-mono">
+            <div className="px-2 py-1 rounded border border-border bg-card font-mono text-sm">
               ROOM: <span className="text-accent font-bold tracking-widest">{roomCode}</span>
             </div>
           </div>
