@@ -740,7 +740,7 @@ export default function Host() {
         )}
 
         {/* Tip obtain countdowns — stacked at top */}
-        {snapshot.tipObtainTimers && Object.keys(snapshot.tipObtainTimers).length > 0 && (
+        {!isCrossyActive && snapshot.tipObtainTimers && Object.keys(snapshot.tipObtainTimers).length > 0 && (
           <div className="absolute left-1/2 -translate-x-1/2 z-10 flex flex-col gap-1 items-center top-10">
             {Object.entries(snapshot.tipObtainTimers).map(([connId, timer]) => {
               const player = snapshot.players[connId];
