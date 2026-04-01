@@ -631,6 +631,9 @@ export default function Host() {
   if ((phase === "playing" || phase === "exam") && snapshot) {
     const alivePlayers = Object.values(snapshot.players).filter((p) => p.alive);
     const isEventOverlay = !!snapshot.activeEvent && (snapshot.activeEvent.type === 'crossy-road' || snapshot.activeEvent.type === 'hitbox');
+    const stageTransActiveForHide = snapshot.stageTransitionUntil > 0 && Date.now() < snapshot.stageTransitionUntil;
+    const manualGrabBackForHide = !stageTransActiveForHide && grabBackUntil > Date.now();
+    const shouldHideOverlays = isEventOverlay || isPaused || stageTransActiveForHide || manualGrabBackForHide;
 
     return (
       <div className="relative h-screen">
@@ -652,7 +655,7 @@ export default function Host() {
           themeHue={themeHue}
           immersive={isImmersive}
           themeMode={themeMode}
-          hideOverlays={isEventOverlay}
+          hideOverlays={shouldHideOverlays}
         />
 
         {/* Focus camera panel toggle button */}
