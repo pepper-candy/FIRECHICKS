@@ -1760,7 +1760,7 @@ export function useGameLogic({ players, broadcast, gameMode, connectionMode, map
           if (!b.zoneActive || b.tipObtained) continue;
           if (isInProtectedZone(player.position.x, player.position.z, b.id)) {
             b.zoneHealth = Math.max(0, b.zoneHealth - 1);
-            player.actionScore += 0.5;
+            addBreakdown(player, 'building-hp', 'Destroy building HP', 0.5);
             if (b.zoneHealth <= 0) {
               // Zone broken: tips remain obtainable, just unprotected (building stays gold via hasTip && !tipObtained)
               b.zoneActive = false;
