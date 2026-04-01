@@ -1681,17 +1681,17 @@ export function useGameLogic({ players, broadcast, gameMode, connectionMode, map
           if (tipShare.connId === connId) return; // can't scan own tip
           if (now < tipShare.cooldownUntil) return; // on cooldown
 
+          // Reject if scanner already has this tip (prevent occupying quota)
+          if (player.tips[tipShare.tipIndex]) return;
+
           // Proximity check: scanner must be near sharer
           const sharer = gs.playerStates.get(tipShare.connId);
           if (sharer && !checkOverlap(player.position.x, player.position.z, sharer.position.x, sharer.position.z, TIP_SHARE_RADIUS)) {
             return; // too far
           }
 
-          const alreadyHasTip = player.tips[tipShare.tipIndex];
-          if (!alreadyHasTip) {
-            player.tips[tipShare.tipIndex] = true;
-            player.actionScore += 5;
-          }
+          player.tips[tipShare.tipIndex] = true;
+          player.actionScore += 5;
           tipShare.cooldownUntil = now + TIP_QR_COOLDOWN;
 
           // Notify both scanner and sharer to show 3s copying countdown
@@ -1702,7 +1702,7 @@ export function useGameLogic({ players, broadcast, gameMode, connectionMode, map
           });
 
           // Check if all alive chicks now have both tips
-          if (!alreadyHasTip && gs.stage === 2) {
+          if (gs.stage === 2) {
             const aliveChicks = Array.from<PlayerGameState>(gs.playerStates.values()).filter(
               (p) => !p.isEagle && p.alive,
             );
@@ -1878,6 +1878,10 @@ export function useGameLogic({ players, broadcast, gameMode, connectionMode, map
               }
             }
           }
+
+          // Broadcast wrong answer notification to all players
+          const attemptsLeft = 3 - (gs.examState.wrongCount ?? 0);
+          broadcastRef.current({ type: "exam-wrong", attemptsLeft });
 
           // Check if all chicks dead or max 3 attempts reached
           const aliveAfter = Array.from<PlayerGameState>(gs.playerStates.values()).filter((p) => !p.isEagle && p.alive);

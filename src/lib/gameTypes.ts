@@ -213,7 +213,8 @@ export type HostMessage =
       assignments: Record<string, { layer: '1' | '2'; questionNum: number; category: 'Final' }>;
       examWhiteBgConnId?: string | null;
     }
-  | { type: 'lobby-prop-granted'; colorIndex: number; propType: 'speed' | 'heal' };
+  | { type: 'lobby-prop-granted'; colorIndex: number; propType: 'speed' | 'heal' }
+  | { type: 'exam-wrong'; attemptsLeft: number };
 
 // Messages client → host
 export type ClientMessage =
