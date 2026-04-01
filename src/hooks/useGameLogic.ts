@@ -1879,6 +1879,10 @@ export function useGameLogic({ players, broadcast, gameMode, connectionMode, map
             }
           }
 
+          // Broadcast wrong answer notification to all players
+          const attemptsLeft = 3 - (gs.examState.wrongCount ?? 0);
+          broadcastRef.current({ type: "exam-wrong", attemptsLeft });
+
           // Check if all chicks dead or max 3 attempts reached
           const aliveAfter = Array.from<PlayerGameState>(gs.playerStates.values()).filter((p) => !p.isEagle && p.alive);
           if (aliveAfter.length === 0) {
