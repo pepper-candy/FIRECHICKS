@@ -977,21 +977,31 @@ export default function Host() {
           </div>
         )}
 
-        {/* Exam helper layer on host (rule-based visibility) */}
+        {/* Exam helper layer on host — full-screen portal like mock exam */}
         {snapshot.examState &&
           snapshot.examState.questionNum > 0 &&
           phase === "exam" &&
-          snapshot.examState.hostDisplayLayer !== "none" && (
-            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-30 bg-[#fefcf5] border-2 border-accent rounded-xl p-4 max-w-md w-[90%] shadow-2xl">
-              <p className="text-[10px] font-mono text-gray-500 mb-1 text-center">HOST EXAM LAYER</p>
-              <img
-                src={assetUrl(
-                  `/PW/PW_Final_${snapshot.examState.questionNum}_layer-${snapshot.examState.hostDisplayLayer}.png`,
-                )}
-                alt="Final exam"
-                className="w-full rounded"
-              />
-            </div>
+          snapshot.examState.hostDisplayLayer !== "none" &&
+          createPortal(
+            <div className="fixed inset-0 flex items-center justify-center bg-white" style={{ zIndex: 9998 }}>
+              <div className="flex flex-col items-center gap-4 max-w-2xl w-full px-6">
+                <div className="flex items-center justify-between w-full">
+                  <h2 className="text-lg font-pixel text-gray-800">📝 FINAL EXAM</h2>
+                  <span className="font-mono text-lg font-bold text-gray-800">{Math.ceil(snapshot.examState.timeRemaining)}s</span>
+                </div>
+                <div className="w-full border-2 border-gray-300 rounded-xl overflow-hidden bg-white shadow-lg">
+                  <img
+                    src={assetUrl(
+                      `/PW/PW_Final_${snapshot.examState.questionNum}_layer-${snapshot.examState.hostDisplayLayer}.png`,
+                    )}
+                    alt="Final exam layer"
+                    className="w-full"
+                  />
+                </div>
+                <p className="text-xs font-mono text-gray-500">Players check their phones for another layer!</p>
+              </div>
+            </div>,
+            document.body,
           )}
 
         {/* Active event overlay */}
