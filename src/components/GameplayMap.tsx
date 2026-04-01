@@ -1,14 +1,14 @@
-import { Suspense, useRef, useEffect, useMemo } from 'react';
-import { Canvas, useFrame, useThree } from '@react-three/fiber';
-import { Grid, Html, Edges } from '@react-three/drei';
-import * as THREE from 'three';
-import CharacterViewer from '@/components/CharacterViewer';
-import { MAP_SIZE, MAP_HALF, ZONE_RADIUS, TIP_SHARE_RADIUS } from '@/lib/gameplayMapData';
-import { PLAYER_COLORS } from '@/lib/playerColors';
-import type { PlayerGameStateSerializable, BuildingState, PropSpawn, MysteryBox, ExamState } from '@/lib/gameTypes';
-import type { MapId } from '@/lib/mapVariants';
-import { getMapVariant } from '@/lib/mapVariants';
-import type { NatureObstacle } from '@/lib/mapVariants';
+import { Suspense, useRef, useEffect, useMemo } from "react";
+import { Canvas, useFrame, useThree } from "@react-three/fiber";
+import { Grid, Html, Edges } from "@react-three/drei";
+import * as THREE from "three";
+import CharacterViewer from "@/components/CharacterViewer";
+import { MAP_SIZE, MAP_HALF, ZONE_RADIUS, TIP_SHARE_RADIUS } from "@/lib/gameplayMapData";
+import { PLAYER_COLORS } from "@/lib/playerColors";
+import type { PlayerGameStateSerializable, BuildingState, PropSpawn, MysteryBox, ExamState } from "@/lib/gameTypes";
+import type { MapId } from "@/lib/mapVariants";
+import { getMapVariant } from "@/lib/mapVariants";
+import type { NatureObstacle } from "@/lib/mapVariants";
 
 const FLY_SPEED_MULTIPLIER = 3;
 
@@ -16,7 +16,13 @@ const FLY_SPEED_MULTIPLIER = 3;
 function DayLighting() {
   return (
     <>
-      <directionalLight position={[20, 35, 15]} intensity={1.6} castShadow shadow-mapSize={[2048, 2048]} color="#fff5e0" />
+      <directionalLight
+        position={[20, 35, 15]}
+        intensity={1.6}
+        castShadow
+        shadow-mapSize={[2048, 2048]}
+        color="#fff5e0"
+      />
       <directionalLight position={[-15, 20, -10]} intensity={0.4} color="#b0d0ff" />
       <ambientLight intensity={0.55} color="#fffaf0" />
       <mesh scale={[100, 100, 100]}>
@@ -31,7 +37,13 @@ function DayLighting() {
 function LightModeLighting() {
   return (
     <>
-      <directionalLight position={[20, 40, 15]} intensity={2.2} castShadow shadow-mapSize={[2048, 2048]} color="#ffffff" />
+      <directionalLight
+        position={[20, 40, 15]}
+        intensity={2.2}
+        castShadow
+        shadow-mapSize={[2048, 2048]}
+        color="#ffffff"
+      />
       <directionalLight position={[-15, 30, -10]} intensity={1.0} color="#ffffff" />
       <ambientLight intensity={1.2} color="#ffffff" />
       <mesh scale={[100, 100, 100]}>
@@ -46,7 +58,13 @@ function LightModeLighting() {
 function SemiLightLighting() {
   return (
     <>
-      <directionalLight position={[20, 35, 15]} intensity={1.4} castShadow shadow-mapSize={[2048, 2048]} color="#ffffff" />
+      <directionalLight
+        position={[20, 35, 15]}
+        intensity={1.4}
+        castShadow
+        shadow-mapSize={[2048, 2048]}
+        color="#ffffff"
+      />
       <directionalLight position={[-15, 25, -10]} intensity={0.5} color="#d0d8ff" />
       <ambientLight intensity={0.7} color="#f0f0f0" />
       <mesh scale={[100, 100, 100]}>
@@ -57,32 +75,32 @@ function SemiLightLighting() {
   );
 }
 
-// Camera stays centered; zoomLevel lets host tune framing.
+// Camera stays centered; zoomLevel lets host tune framing
 function MapCamera({ zoomLevel = 1 }: { zoomLevel?: number }) {
   const { camera } = useThree();
   useEffect(() => {
     const clamped = Math.max(0.65, Math.min(1.5, zoomLevel));
-    
+
     // Base camera parameters at zoom = 1
     const baseY = 56;
     const baseZ = 42;
     const basePitch = Math.atan2(baseY, baseZ); // ~0.927 rad (~53°)
-    
+
     // Distance scales inversely with zoom
     const dist = Math.sqrt(baseY * baseY + baseZ * baseZ) / clamped;
-    
+
     // Adjust pitch: as zoom increases (clamped larger), pitch becomes steeper
     // Formula: newPitch = basePitch × (1 / clamped)
     // Clamp between 0.6 rad (34°) and 1.3 rad (74°)
     const newPitch = Math.min(1.3, Math.max(0.6, basePitch * (1 / clamped)));
-    
+
     const camY = dist * Math.sin(newPitch);
     const camZ = dist * Math.cos(newPitch);
-    
+
     camera.position.set(0, camY, camZ);
     (camera as any).fov = 58 / Math.max(0.75, clamped);
     (camera as any).updateProjectionMatrix?.();
-    
+
     // Look at ground level; shift slightly up when very zoomed in
     const lookY = Math.min(1.5, (clamped - 1) * 2);
     camera.lookAt(0, lookY, 0);
@@ -150,7 +168,14 @@ function Pond({ position, scale = 1 }: { position: { x: number; z: number }; sca
       {/* Surface shimmer ring */}
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.03, 0]}>
         <ringGeometry args={[r * 0.7, r * 0.9, 24]} />
-        <meshStandardMaterial color="#3a7aaa" emissive="#2a5a8a" emissiveIntensity={0.3} transparent opacity={0.3} side={THREE.DoubleSide} />
+        <meshStandardMaterial
+          color="#3a7aaa"
+          emissive="#2a5a8a"
+          emissiveIntensity={0.3}
+          transparent
+          opacity={0.3}
+          side={THREE.DoubleSide}
+        />
       </mesh>
     </group>
   );
@@ -196,13 +221,13 @@ function Bush({ position, scale = 1 }: { position: { x: number; z: number }; sca
 
 function NatureObstacleRenderer({ obstacle }: { obstacle: NatureObstacle }) {
   switch (obstacle.type) {
-    case 'tree':
+    case "tree":
       return <Tree position={obstacle.position} scale={obstacle.scale} />;
-    case 'pond':
+    case "pond":
       return <Pond position={obstacle.position} scale={obstacle.scale} />;
-    case 'rock':
+    case "rock":
       return <Rock position={obstacle.position} scale={obstacle.scale} />;
-    case 'bush':
+    case "bush":
       return <Bush position={obstacle.position} scale={obstacle.scale} />;
     default:
       return null;
@@ -226,7 +251,7 @@ interface Props {
   mapId?: MapId;
   themeHue?: number;
   immersive?: boolean;
-  themeMode?: 'dark' | 'semi' | 'light';
+  themeMode?: "dark" | "semi" | "light";
   hideOverlays?: boolean;
 }
 
@@ -241,7 +266,9 @@ function SceneFog({ color, density }: { color: string; density: number }) {
   const { scene } = useThree();
   useEffect(() => {
     scene.fog = new THREE.FogExp2(color, density);
-    return () => { scene.fog = null; };
+    return () => {
+      scene.fog = null;
+    };
   }, [scene, color, density]);
   return null;
 }
@@ -323,7 +350,18 @@ function MapParticles() {
 }
 
 // ─── Building ──────────────────────────────────────────────────────────────────
-function Building({ position, size, tipSiteActive, zoneActive, zoneHealth, baseColor, baseEmissive, immersive, lightMode, hideOverlays }: {
+function Building({
+  position,
+  size,
+  tipSiteActive,
+  zoneActive,
+  zoneHealth,
+  baseColor,
+  baseEmissive,
+  immersive,
+  lightMode,
+  hideOverlays,
+}: {
   position: { x: number; z: number };
   size: { w: number; h: number; d: number };
   tipSiteActive?: boolean;
@@ -336,7 +374,9 @@ function Building({ position, size, tipSiteActive, zoneActive, zoneHealth, baseC
   hideOverlays?: boolean;
 }) {
   const pulseRef = useRef(0);
-  useFrame((_, delta) => { pulseRef.current += delta * 2; });
+  useFrame((_, delta) => {
+    pulseRef.current += delta * 2;
+  });
   const gold = !!tipSiteActive;
 
   return (
@@ -344,34 +384,54 @@ function Building({ position, size, tipSiteActive, zoneActive, zoneHealth, baseC
       <mesh position={[0, size.h / 2, 0]}>
         <boxGeometry args={[size.w, size.h, size.d]} />
         <meshStandardMaterial
-          color={gold ? '#ffd700' : (baseColor ?? '#2a2a4a')}
-          emissive={gold ? '#ffd700' : (baseEmissive ?? '#1a1a3a')}
-          emissiveIntensity={gold ? 0.6 : (immersive ? 0.35 : 0.2)}
+          color={gold ? "#ffd700" : (baseColor ?? "#2a2a4a")}
+          emissive={gold ? "#ffd700" : (baseEmissive ?? "#1a1a3a")}
+          emissiveIntensity={gold ? 0.6 : immersive ? 0.35 : 0.2}
         />
         {(immersive || lightMode) && (
-          <Edges scale={1.005} threshold={12} color={gold ? '#ffe566' : (lightMode ? '#222222' : '#7070b8')} />
+          <Edges scale={1.005} threshold={12} color={gold ? "#ffe566" : lightMode ? "#222222" : "#7070b8"} />
         )}
       </mesh>
       <mesh position={[0, size.h + 0.2, 0]}>
         <boxGeometry args={[size.w + 0.5, 0.4, size.d + 0.5]} />
         <meshStandardMaterial
-          color={gold ? '#ffaa00' : (baseColor ?? '#3a3a5a')}
-          emissive={gold ? '#ffaa00' : (baseEmissive ?? '#2a2a4a')}
-          emissiveIntensity={gold ? 0.5 : (immersive ? 0.18 : 0.1)}
+          color={gold ? "#ffaa00" : (baseColor ?? "#3a3a5a")}
+          emissive={gold ? "#ffaa00" : (baseEmissive ?? "#2a2a4a")}
+          emissiveIntensity={gold ? 0.5 : immersive ? 0.18 : 0.1}
         />
         {(immersive || lightMode) && (
-          <Edges scale={1.01} threshold={12} color={gold ? '#ffcc44' : (lightMode ? '#333333' : '#5555a0')} />
+          <Edges scale={1.01} threshold={12} color={gold ? "#ffcc44" : lightMode ? "#333333" : "#5555a0"} />
         )}
       </mesh>
       {zoneActive && (
         <mesh position={[0, 1.5, 0]}>
           <sphereGeometry args={[ZONE_RADIUS, 24, 24]} />
-          <meshStandardMaterial color="#ffd700" emissive="#ffd700" emissiveIntensity={0.3} transparent opacity={0.15} side={THREE.DoubleSide} wireframe={false} />
+          <meshStandardMaterial
+            color="#ffd700"
+            emissive="#ffd700"
+            emissiveIntensity={0.3}
+            transparent
+            opacity={0.15}
+            side={THREE.DoubleSide}
+            wireframe={false}
+          />
         </mesh>
       )}
       {zoneActive && zoneHealth !== undefined && !hideOverlays && (
         <Html position={[0, size.h + 2, 0]} center zIndexRange={[100, 0]}>
-          <div style={{ background: 'rgba(0,0,0,0.7)', border: '1px solid #ffd700', borderRadius: 4, padding: '2px 6px', color: '#ffd700', fontSize: 11, fontFamily: 'monospace', whiteSpace: 'nowrap', pointerEvents: 'none' }}>
+          <div
+            style={{
+              background: "rgba(0,0,0,0.7)",
+              border: "1px solid #ffd700",
+              borderRadius: 4,
+              padding: "2px 6px",
+              color: "#ffd700",
+              fontSize: 11,
+              fontFamily: "monospace",
+              whiteSpace: "nowrap",
+              pointerEvents: "none",
+            }}
+          >
             🛡 {zoneHealth}/50
           </div>
         </Html>
@@ -381,7 +441,14 @@ function Building({ position, size, tipSiteActive, zoneActive, zoneHealth, baseC
 }
 
 // ─── Obstacle ──────────────────────────────────────────────────────────────────
-function Obstacle({ position, size, rotation, baseColor, baseEmissive, lightMode }: {
+function Obstacle({
+  position,
+  size,
+  rotation,
+  baseColor,
+  baseEmissive,
+  lightMode,
+}: {
   position: { x: number; z: number };
   size: { w: number; h: number; d: number };
   rotation?: number;
@@ -392,20 +459,24 @@ function Obstacle({ position, size, rotation, baseColor, baseEmissive, lightMode
   return (
     <mesh position={[position.x, size.h / 2, position.z]} rotation={[0, rotation ?? 0, 0]}>
       <boxGeometry args={[size.w, size.h, size.d]} />
-      <meshStandardMaterial color={baseColor ?? '#1e3a5f'} emissive={baseEmissive ?? '#0a1a3a'} emissiveIntensity={lightMode ? 0.05 : 0.3} />
+      <meshStandardMaterial
+        color={baseColor ?? "#1e3a5f"}
+        emissive={baseEmissive ?? "#0a1a3a"}
+        emissiveIntensity={lightMode ? 0.05 : 0.3}
+      />
       {lightMode && <Edges scale={1.005} threshold={12} color="#222222" />}
     </mesh>
   );
 }
 
 // ─── Prop Spawn Marker ─────────────────────────────────────────────────────────
-const PROP_COLORS: Record<string, string> = { speed: '#facc15', heal: '#22c55e' };
+const PROP_COLORS: Record<string, string> = { speed: "#facc15", heal: "#22c55e" };
 
 function PropMarker({ spawn }: { spawn: PropSpawn }) {
   const outerRef = useRef<THREE.Mesh>(null!);
   const innerRef = useRef<THREE.Mesh>(null!);
-  const color = PROP_COLORS[spawn.type] ?? '#ffffff';
-  const icon = spawn.type === 'speed' ? '⚡' : '💚';
+  const color = PROP_COLORS[spawn.type] ?? "#ffffff";
+  const icon = spawn.type === "speed" ? "⚡" : "💚";
   const BALL_R = 0.4;
 
   useFrame((_, delta) => {
@@ -418,7 +489,15 @@ function PropMarker({ spawn }: { spawn: PropSpawn }) {
     <group position={[spawn.position.x, 0, spawn.position.z]}>
       <mesh ref={outerRef} position={[0, BALL_R, 0]}>
         <sphereGeometry args={[BALL_R, 20, 20]} />
-        <meshStandardMaterial color={color} emissive={color} emissiveIntensity={0.4} transparent opacity={0.55} roughness={0.0} metalness={0.1} />
+        <meshStandardMaterial
+          color={color}
+          emissive={color}
+          emissiveIntensity={0.4}
+          transparent
+          opacity={0.55}
+          roughness={0.0}
+          metalness={0.1}
+        />
       </mesh>
       <mesh ref={innerRef} position={[0, BALL_R, 0]}>
         <sphereGeometry args={[BALL_R * 0.45, 12, 12]} />
@@ -426,10 +505,29 @@ function PropMarker({ spawn }: { spawn: PropSpawn }) {
       </mesh>
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.02, 0]}>
         <ringGeometry args={[BALL_R * 0.6, BALL_R * 1.2, 20]} />
-        <meshStandardMaterial color={color} emissive={color} emissiveIntensity={0.6} transparent opacity={0.2} side={THREE.DoubleSide} />
+        <meshStandardMaterial
+          color={color}
+          emissive={color}
+          emissiveIntensity={0.6}
+          transparent
+          opacity={0.2}
+          side={THREE.DoubleSide}
+        />
       </mesh>
       <Html position={[0, BALL_R * 2.6, 0]} center occlude={false} zIndexRange={[100, 0]}>
-        <div style={{ background: 'rgba(0,0,0,0.75)', border: `1px solid ${color}`, borderRadius: 3, padding: '1px 5px', color, fontSize: 8, fontFamily: 'monospace', whiteSpace: 'nowrap', pointerEvents: 'none' }}>
+        <div
+          style={{
+            background: "rgba(0,0,0,0.75)",
+            border: `1px solid ${color}`,
+            borderRadius: 3,
+            padding: "1px 5px",
+            color,
+            fontSize: 8,
+            fontFamily: "monospace",
+            whiteSpace: "nowrap",
+            pointerEvents: "none",
+          }}
+        >
           {icon} {spawn.type.toUpperCase()}
         </div>
       </Html>
@@ -470,19 +568,34 @@ function MysteryBoxMarker({ box, immersive }: { box: MysteryBox; immersive?: boo
   const isActive = now >= box.activeAt;
   const countdown = Math.ceil(Math.max(0, (box.activeAt - now) / 1000));
 
-  useFrame((_, delta) => { if (meshRef.current && isActive) meshRef.current.rotation.y += delta * 3; });
+  useFrame((_, delta) => {
+    if (meshRef.current && isActive) meshRef.current.rotation.y += delta * 3;
+  });
 
   return (
     <group position={[box.position.x, 0, box.position.z]}>
       {immersive && isActive && <MysteryBoxAura />}
       <mesh ref={meshRef} position={[0, 0.7, 0]}>
         <boxGeometry args={[0.8, 0.8, 0.8]} />
-        <meshStandardMaterial color={isActive ? '#ff8c00' : '#555'} emissive={isActive ? '#ff4400' : '#222'} emissiveIntensity={isActive ? (immersive ? 1.6 : 1.0) : 0.3} />
+        <meshStandardMaterial
+          color={isActive ? "#ff8c00" : "#555"}
+          emissive={isActive ? "#ff4400" : "#222"}
+          emissiveIntensity={isActive ? (immersive ? 1.6 : 1.0) : 0.3}
+        />
         {immersive && isActive && <Edges scale={1.05} threshold={10} color="#ffaa44" />}
       </mesh>
       <Html position={[0, 1.8, 0]} center zIndexRange={[100, 0]}>
-        <div style={{ color: isActive ? '#ff8c00' : '#888', fontSize: 14, fontFamily: 'monospace', fontWeight: 'bold', pointerEvents: 'none', textShadow: '0 0 6px #000' }}>
-          {isActive ? '?' : `${countdown}s`}
+        <div
+          style={{
+            color: isActive ? "#ff8c00" : "#888",
+            fontSize: 14,
+            fontFamily: "monospace",
+            fontWeight: "bold",
+            pointerEvents: "none",
+            textShadow: "0 0 6px #000",
+          }}
+        >
+          {isActive ? "?" : `${countdown}s`}
         </div>
       </Html>
     </group>
@@ -515,7 +628,14 @@ function InvincibleRipple3D() {
       {[ring1, ring2, ring3].map((ref, i) => (
         <mesh key={i} ref={ref} rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.05, 0]}>
           <ringGeometry args={[0.8, 1.0, 32]} />
-          <meshStandardMaterial color="#ffd700" emissive="#ffd700" emissiveIntensity={1.5} transparent opacity={0.6} side={THREE.DoubleSide} />
+          <meshStandardMaterial
+            color="#ffd700"
+            emissive="#ffd700"
+            emissiveIntensity={1.5}
+            transparent
+            opacity={0.6}
+            side={THREE.DoubleSide}
+          />
         </mesh>
       ))}
     </group>
@@ -524,7 +644,7 @@ function InvincibleRipple3D() {
 
 // ─── Cage Mesh ───────────────────────────────────────────────────────────────
 function CageMesh({ countdown }: { countdown: number }) {
-  const barColor = '#8b4513';
+  const barColor = "#8b4513";
   const BAR_H = 4.5;
   const BAR_R = 0.09;
   const CAGE_R = 1.2;
@@ -548,7 +668,20 @@ function CageMesh({ countdown }: { countdown: number }) {
         <meshStandardMaterial color={barColor} emissive={barColor} emissiveIntensity={0.3} />
       </mesh>
       <Html position={[0, BAR_H + 1.0, 0]} center zIndexRange={[100, 0]}>
-        <div style={{ background: 'rgba(0,0,0,0.8)', border: '1px solid #ff4444', borderRadius: 4, padding: '2px 6px', color: '#ff4444', fontSize: 12, fontFamily: 'monospace', fontWeight: 'bold', whiteSpace: 'nowrap', pointerEvents: 'none' }}>
+        <div
+          style={{
+            background: "rgba(0,0,0,0.8)",
+            border: "1px solid #ff4444",
+            borderRadius: 4,
+            padding: "2px 6px",
+            color: "#ff4444",
+            fontSize: 12,
+            fontFamily: "monospace",
+            fontWeight: "bold",
+            whiteSpace: "nowrap",
+            pointerEvents: "none",
+          }}
+        >
           🔒 DETENTION {countdown}s
         </div>
       </Html>
@@ -569,10 +702,25 @@ function TeleportDot({ position, hsl }: { position: { x: number; z: number }; hs
     <group position={[position.x, 0.1, position.z]}>
       <mesh ref={meshRef} rotation={[-Math.PI / 2, 0, 0]}>
         <circleGeometry args={[0.5, 24]} />
-        <meshStandardMaterial color={`hsl(${hsl})`} emissive={`hsl(${hsl})`} emissiveIntensity={1} transparent opacity={0.7} side={THREE.DoubleSide} />
+        <meshStandardMaterial
+          color={`hsl(${hsl})`}
+          emissive={`hsl(${hsl})`}
+          emissiveIntensity={1}
+          transparent
+          opacity={0.7}
+          side={THREE.DoubleSide}
+        />
       </mesh>
       <Html position={[0, 1.5, 0]} center zIndexRange={[100, 0]}>
-        <div style={{ color: `hsl(${hsl})`, fontSize: 10, fontFamily: 'monospace', pointerEvents: 'none', textShadow: '0 0 4px #000' }}>
+        <div
+          style={{
+            color: `hsl(${hsl})`,
+            fontSize: 10,
+            fontFamily: "monospace",
+            pointerEvents: "none",
+            textShadow: "0 0 4px #000",
+          }}
+        >
           ✕ TELEPORT
         </div>
       </Html>
@@ -585,7 +733,14 @@ function TipShareRadiusCircle({ position }: { position: { x: number; z: number }
   return (
     <mesh rotation={[-Math.PI / 2, 0, 0]} position={[position.x, 0.03, position.z]}>
       <ringGeometry args={[TIP_SHARE_RADIUS - 0.15, TIP_SHARE_RADIUS, 48]} />
-      <meshStandardMaterial color="#22c55e" emissive="#22c55e" emissiveIntensity={0.5} transparent opacity={0.25} side={THREE.DoubleSide} />
+      <meshStandardMaterial
+        color="#22c55e"
+        emissive="#22c55e"
+        emissiveIntensity={0.5}
+        transparent
+        opacity={0.25}
+        side={THREE.DoubleSide}
+      />
     </mesh>
   );
 }
@@ -613,10 +768,13 @@ function GameCharacter({
 
   const draggable = !!enableHostDrag;
   const isFlying = player.isEagle && player.speedMultiplier >= (FLY_SPEED_MULTIPLIER ?? 3);
-  const anim =
-    player.frozen ? 'Idle' :
-    (player.isAttacking || isFlying) ? 'Attack' :
-    player.isMoving ? 'Running' : 'Idle';
+  const anim = player.frozen
+    ? "Idle"
+    : player.isAttacking || isFlying
+      ? "Attack"
+      : player.isMoving
+        ? "Running"
+        : "Idle";
 
   const isInvincible = player.invincibleUntil > Date.now();
   const isCaged = player.cagedUntil > Date.now();
@@ -632,11 +790,20 @@ function GameCharacter({
         </Suspense>
       </group>
       <Html position={[0, 2.8, 0]} center zIndexRange={[100, 0]}>
-        <div style={{
-          background: 'rgba(0,0,0,0.6)', border: `1px solid hsl(${color.hsl})`, borderRadius: 3, padding: '1px 5px',
-          color: `hsl(${color.hsl})`, fontSize: 9, fontFamily: 'monospace', whiteSpace: 'nowrap',
-          pointerEvents: draggable ? 'auto' : 'none', cursor: draggable ? 'grab' : 'default',
-        }}>
+        <div
+          style={{
+            background: "rgba(0,0,0,0.6)",
+            border: `1px solid hsl(${color.hsl})`,
+            borderRadius: 3,
+            padding: "1px 5px",
+            color: `hsl(${color.hsl})`,
+            fontSize: 9,
+            fontFamily: "monospace",
+            whiteSpace: "nowrap",
+            pointerEvents: draggable ? "auto" : "none",
+            cursor: draggable ? "grab" : "default",
+          }}
+        >
           <div
             onPointerDown={(e) => {
               if (!draggable) return;
@@ -665,18 +832,18 @@ function GameCharacter({
               };
               const up = (ev: PointerEvent) => {
                 ev.preventDefault();
-                window.removeEventListener('pointermove', move);
-                window.removeEventListener('pointerup', up);
-                window.removeEventListener('pointercancel', up);
+                window.removeEventListener("pointermove", move);
+                window.removeEventListener("pointerup", up);
+                window.removeEventListener("pointercancel", up);
                 const hit = computeHit(ev);
                 onHostDragEnd?.(player.connId, hit ? hit.valid : lastValid);
               };
-              window.addEventListener('pointermove', move);
-              window.addEventListener('pointerup', up, { once: true });
-              window.addEventListener('pointercancel', up, { once: true });
+              window.addEventListener("pointermove", move);
+              window.addEventListener("pointerup", up, { once: true });
+              window.addEventListener("pointercancel", up, { once: true });
             }}
           >
-            {color.name} {player.isEagle ? '🦅' : (player.isStarStudent ? '⭐' : '🐤')}
+            {color.name} {player.isEagle ? "🦅" : player.isStarStudent ? "⭐" : "🐤"}
           </div>
         </div>
       </Html>
@@ -702,39 +869,67 @@ export default function GameplayMap({
   mapId = 1,
   themeHue,
   immersive = false,
-  themeMode = 'dark',
+  themeMode = "dark",
   hideOverlays = false,
 }: Props) {
   const playerList = Object.values(players);
   const mapVariant = useMemo(() => getMapVariant(mapId), [mapId]);
-  const isLight = themeMode === 'light';
-  const isSemi = themeMode === 'semi';
+  const isLight = themeMode === "light";
+  const isSemi = themeMode === "semi";
   const hasEdges = isLight || isSemi; // both light modes get edges
 
   // Derive themed colors when host picks a hue
   const hasTheme = themeHue !== undefined;
-  const floorColor = isLight ? '#f0f0f0' : isSemi ? '#f0f0f0' : (hasTheme ? themedColor(themeHue, 30, 8) : mapVariant.floorColor);
-  const gridCell = isLight ? '#d0d0d0' : isSemi ? '#d0d0d0' : (hasTheme ? themedColor(themeHue, 25, 15) : mapVariant.gridCellColor);
-  const gridSection = isLight ? '#b0b0b0' : isSemi ? '#b0b0b0' : (hasTheme ? themedColor(themeHue, 25, 22) : mapVariant.gridSectionColor);
-  const wallColor = (isLight || isSemi) ? '#cccccc' : (hasTheme ? themedColor(themeHue, 35, 18) : '#1a1a3a');
-  const wallEmissive = (isLight || isSemi) ? '#999999' : (hasTheme ? themedColor(themeHue, 40, 10) : '#0a0a2a');
-  const buildingColor = (isLight || isSemi) ? '#e0e0e0' : (hasTheme ? themedColor(themeHue, 30, 20) : '#2a2a4a');
-  const buildingEmissive = (isLight || isSemi) ? '#cccccc' : (hasTheme ? themedColor(themeHue, 35, 14) : '#1a1a3a');
-  const obstacleColor = (isLight || isSemi) ? '#d8d8d8' : (hasTheme ? themedColor(themeHue, 40, 25) : '#1e3a5f');
-  const obstacleEmissive = (isLight || isSemi) ? '#bbbbbb' : (hasTheme ? themedColor(themeHue, 45, 12) : '#0a1a3a');
+  const floorColor = isLight
+    ? "#f0f0f0"
+    : isSemi
+      ? "#f0f0f0"
+      : hasTheme
+        ? themedColor(themeHue, 30, 8)
+        : mapVariant.floorColor;
+  const gridCell = isLight
+    ? "#d0d0d0"
+    : isSemi
+      ? "#d0d0d0"
+      : hasTheme
+        ? themedColor(themeHue, 25, 15)
+        : mapVariant.gridCellColor;
+  const gridSection = isLight
+    ? "#b0b0b0"
+    : isSemi
+      ? "#b0b0b0"
+      : hasTheme
+        ? themedColor(themeHue, 25, 22)
+        : mapVariant.gridSectionColor;
+  const wallColor = isLight || isSemi ? "#cccccc" : hasTheme ? themedColor(themeHue, 35, 18) : "#1a1a3a";
+  const wallEmissive = isLight || isSemi ? "#999999" : hasTheme ? themedColor(themeHue, 40, 10) : "#0a0a2a";
+  const buildingColor = isLight || isSemi ? "#e0e0e0" : hasTheme ? themedColor(themeHue, 30, 20) : "#2a2a4a";
+  const buildingEmissive = isLight || isSemi ? "#cccccc" : hasTheme ? themedColor(themeHue, 35, 14) : "#1a1a3a";
+  const obstacleColor = isLight || isSemi ? "#d8d8d8" : hasTheme ? themedColor(themeHue, 40, 25) : "#1e3a5f";
+  const obstacleEmissive = isLight || isSemi ? "#bbbbbb" : hasTheme ? themedColor(themeHue, 45, 12) : "#0a1a3a";
 
   return (
-    <div className={`w-full h-full rounded-lg border overflow-hidden relative ${isLight ? 'border-border bg-white' : (immersive ? 'border-primary/20 bg-black' : 'border-border bg-background')}`}>
+    <div
+      className={`w-full h-full rounded-lg border overflow-hidden relative ${isLight ? "border-border bg-white" : immersive ? "border-primary/20 bg-black" : "border-border bg-background"}`}
+    >
       {/* Edge vignette haze — blurs map boundaries into void */}
       {immersive && (
         <div
           className="absolute inset-0 pointer-events-none z-10"
-          style={{ background: 'radial-gradient(ellipse at center, transparent 55%, rgba(0,0,0,0.85) 100%)' }}
+          style={{ background: "radial-gradient(ellipse at center, transparent 55%, rgba(0,0,0,0.85) 100%)" }}
         />
       )}
       <Canvas camera={{ position: [0, 56, 42], fov: 58 }} shadows>
         <MapCamera zoomLevel={zoomLevel} />
-        {isLight ? <LightModeLighting /> : isSemi ? <SemiLightLighting /> : (immersive ? <ImmersiveLighting /> : <DayLighting />)}
+        {isLight ? (
+          <LightModeLighting />
+        ) : isSemi ? (
+          <SemiLightLighting />
+        ) : immersive ? (
+          <ImmersiveLighting />
+        ) : (
+          <DayLighting />
+        )}
         {immersive && !isLight && !isSemi && <SceneFog color="#050510" density={0.008} />}
         {immersive && !isLight && !isSemi && <MapParticles />}
 
@@ -766,7 +961,13 @@ export default function GameplayMap({
         ].map(([x, y, z, w, h, d], i) => (
           <mesh key={`wall-${i}`} position={[x, y, z]}>
             <boxGeometry args={[w, h, d]} />
-            <meshStandardMaterial color={wallColor} emissive={wallEmissive} emissiveIntensity={0.4} transparent opacity={0.7} />
+            <meshStandardMaterial
+              color={wallColor}
+              emissive={wallEmissive}
+              emissiveIntensity={0.4}
+              transparent
+              opacity={0.7}
+            />
           </mesh>
         ))}
 
@@ -792,7 +993,15 @@ export default function GameplayMap({
 
         {/* Box Obstacles */}
         {mapVariant.obstacles.map((o, i) => (
-          <Obstacle key={i} position={o.position} size={o.size} rotation={o.rotation} baseColor={obstacleColor} baseEmissive={obstacleEmissive} lightMode={hasEdges} />
+          <Obstacle
+            key={i}
+            position={o.position}
+            size={o.size}
+            rotation={o.rotation}
+            baseColor={obstacleColor}
+            baseEmissive={obstacleEmissive}
+            lightMode={hasEdges}
+          />
         ))}
 
         {/* Nature Obstacles */}
@@ -801,59 +1010,95 @@ export default function GameplayMap({
         ))}
 
         {/* Prop spawns */}
-        {!hideOverlays && propSpawns?.filter((p) => p.active).map((spawn) => (
-          <PropMarker key={spawn.id} spawn={spawn} />
-        ))}
+        {!hideOverlays &&
+          propSpawns?.filter((p) => p.active).map((spawn) => <PropMarker key={spawn.id} spawn={spawn} />)}
 
         {/* Mystery boxes */}
-        {!hideOverlays && mysteryBoxes?.map((box) => (
-          <MysteryBoxMarker key={box.id} box={box} immersive={immersive} />
-        ))}
+        {!hideOverlays && mysteryBoxes?.map((box) => <MysteryBoxMarker key={box.id} box={box} immersive={immersive} />)}
 
         {/* Characters */}
-        {!hideOverlays && playerList.map((p) => (
-          <GameCharacter
-            key={p.connId}
-            player={p}
-            enableHostDrag={enableHostDrag}
-            onHostDragBegin={onHostDragBegin}
-            onHostDragUpdate={onHostDragUpdate}
-            onHostDragEnd={onHostDragEnd}
-          />
-        ))}
+        {!hideOverlays &&
+          playerList.map((p) => (
+            <GameCharacter
+              key={p.connId}
+              player={p}
+              enableHostDrag={enableHostDrag}
+              onHostDragBegin={onHostDragBegin}
+              onHostDragUpdate={onHostDragUpdate}
+              onHostDragEnd={onHostDragEnd}
+            />
+          ))}
 
         {/* Teleport target dots */}
-        {!hideOverlays && playerList.filter((p) => p.teleportPending && p.alive).map((p) => {
-          const color = PLAYER_COLORS[p.colorIndex];
-          return color ? <TeleportDot key={`tp-${p.connId}`} position={p.teleportTarget} hsl={color.hsl} /> : null;
-        })}
+        {!hideOverlays &&
+          playerList
+            .filter((p) => p.teleportPending && p.alive)
+            .map((p) => {
+              const color = PLAYER_COLORS[p.colorIndex];
+              return color ? <TeleportDot key={`tp-${p.connId}`} position={p.teleportTarget} hsl={color.hsl} /> : null;
+            })}
 
         {/* Tip share radius circles */}
-        {!hideOverlays && activeTipShareConnIds?.map((connId) => {
-          const p = players[connId];
-          return p ? <TipShareRadiusCircle key={`tsr-${connId}`} position={p.position} /> : null;
-        })}
+        {!hideOverlays &&
+          activeTipShareConnIds?.map((connId) => {
+            const p = players[connId];
+            return p ? <TipShareRadiusCircle key={`tsr-${connId}`} position={p.position} /> : null;
+          })}
 
         {/* Eagle awake countdown */}
         {!hideOverlays && eagleAwake === false && (
           <mesh position={[0, 0.5, 0]}>
             <cylinderGeometry args={[1.5, 1.5, 0.1, 24]} />
-            <meshStandardMaterial color="#ff4444" emissive="#ff0000" emissiveIntensity={0.8} transparent opacity={0.4} />
+            <meshStandardMaterial
+              color="#ff4444"
+              emissive="#ff0000"
+              emissiveIntensity={0.8}
+              transparent
+              opacity={0.4}
+            />
           </mesh>
         )}
 
         {/* Exam stage indicator + host skip */}
         {!hideOverlays && examState && !examState.answered && (
           <Html position={[0, 8, 0]} center zIndexRange={[100, 0]}>
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8, pointerEvents: 'none' }}>
-              <div style={{ background: 'rgba(0,0,0,0.8)', border: '2px solid #ffd700', borderRadius: 6, padding: '4px 10px', color: '#ffd700', fontSize: 13, fontFamily: 'monospace', fontWeight: 'bold', whiteSpace: 'nowrap' }}>
+            <div
+              style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 8, pointerEvents: "none" }}
+            >
+              <div
+                style={{
+                  background: "rgba(0,0,0,0.8)",
+                  border: "2px solid #ffd700",
+                  borderRadius: 6,
+                  padding: "4px 10px",
+                  color: "#ffd700",
+                  fontSize: 13,
+                  fontFamily: "monospace",
+                  fontWeight: "bold",
+                  whiteSpace: "nowrap",
+                }}
+              >
                 📝 FINAL EXAM — {Math.ceil(examState.timeRemaining)}s
               </div>
               {onHostSkipExam && (
                 <button
                   type="button"
-                  onClick={(e) => { e.stopPropagation(); onHostSkipExam(); }}
-                  style={{ pointerEvents: 'auto', cursor: 'pointer', fontSize: 11, fontFamily: 'monospace', padding: '6px 12px', borderRadius: 6, border: '1px solid hsl(45 100% 45%)', background: 'rgba(0,0,0,0.85)', color: '#ffd700', fontWeight: 'bold' }}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onHostSkipExam();
+                  }}
+                  style={{
+                    pointerEvents: "auto",
+                    cursor: "pointer",
+                    fontSize: 11,
+                    fontFamily: "monospace",
+                    padding: "6px 12px",
+                    borderRadius: 6,
+                    border: "1px solid hsl(45 100% 45%)",
+                    background: "rgba(0,0,0,0.85)",
+                    color: "#ffd700",
+                    fontWeight: "bold",
+                  }}
                 >
                   Skip EXAM
                 </button>
