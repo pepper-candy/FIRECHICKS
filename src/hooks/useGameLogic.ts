@@ -370,6 +370,11 @@ export function useGameLogic({ players, broadcast, gameMode, connectionMode, map
         teleportTarget: { x: spawn.x, z: spawn.z },
         cagedUntil: 0,
         cageCooldownUntil: assign.isEagle ? Date.now() + totalRevealAndCountdown + EAGLE_AWAKE_DELAY + CAGE_COOLDOWN : 0,
+        scoreBreakdown: {},
+        scansPerformed: 0,
+        timeInZones: 0,
+        tipsShared: 0,
+        socialCircleCompleted: false,
       });
     }
 
