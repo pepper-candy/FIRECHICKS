@@ -813,7 +813,7 @@ export default function Host() {
           const stageTransActive = snapshot.stageTransitionUntil > 0 && Date.now() < snapshot.stageTransitionUntil;
           const stageTransRemainMs = stageTransActive ? snapshot.stageTransitionUntil - Date.now() : 0;
           const isGrabBackPhase = stageTransActive && stageTransRemainMs <= 3000;
-          const manualGrabBack = !isPaused && !stageTransActive && grabBackUntil > Date.now();
+          const manualGrabBack = !stageTransActive && grabBackUntil > Date.now();
           const showOverlay = isPaused || stageTransActive || manualGrabBack;
           if (!showOverlay) return null;
 
