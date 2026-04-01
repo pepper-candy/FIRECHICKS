@@ -1940,7 +1940,7 @@ export function useGameLogic({ players, broadcast, gameMode, connectionMode, map
             });
           }
         }
-        player.actionScore += 1;
+        addBreakdown(player, 'crossy-road', 'Crossy Road', 2);
         break;
       }
 
