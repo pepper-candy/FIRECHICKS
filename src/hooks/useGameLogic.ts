@@ -158,6 +158,18 @@ function isBotConnId(connId: string): boolean {
   return connId.startsWith("bot-");
 }
 
+function addBreakdown(p: PlayerGameState, key: string, label: string, points: number, countDelta: number = 1) {
+  if (!p.scoreBreakdown) p.scoreBreakdown = {};
+  const entry = p.scoreBreakdown[key];
+  if (entry) {
+    entry.points += points;
+    entry.count += countDelta;
+  } else {
+    p.scoreBreakdown[key] = { label, points, count: countDelta };
+  }
+  p.actionScore += points;
+}
+
 function updateHostExamDisplay(gs: GameStateRef) {
   const exam = gs.examState;
   if (!exam) return;
