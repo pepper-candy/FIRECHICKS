@@ -1794,7 +1794,10 @@ export function useGameLogic({ players, broadcast, gameMode, connectionMode, map
           }
 
           player.tips[tipShare.tipIndex] = true;
-          player.actionScore += 5;
+          addBreakdown(player, 'receive-tip', 'Receive shared tip', 5);
+          player.scansPerformed++;
+          const sharerPlayer = gs.playerStates.get(tipShare.connId);
+          if (sharerPlayer) sharerPlayer.tipsShared++;
           tipShare.cooldownUntil = now + TIP_QR_COOLDOWN;
 
           // Notify both scanner and sharer to show 3s copying countdown
