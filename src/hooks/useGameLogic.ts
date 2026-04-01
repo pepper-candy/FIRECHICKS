@@ -1658,15 +1658,17 @@ export function useGameLogic({ players, broadcast, gameMode, connectionMode, map
         const propItem = player.props.find((p) => p.type === msg.propType && p.count > 0);
         if (!propItem) return;
         propItem.count--;
-        player.actionScore += 2;
+        // scoring handled per-prop below
 
         switch (msg.propType as PropType) {
           case "speed":
             player.speedMultiplier = SPEED_BOOST_MULTIPLIER;
             player.speedMultiplierUntil = now + SPEED_BOOST_DURATION;
+            if (!player.isEagle) addBreakdown(player, 'use-prop', 'Use a prop', 3);
             break;
           case "heal":
             if (player.health < STARTING_HEALTH) player.health = applyHeal(player.health);
+            if (!player.isEagle) addBreakdown(player, 'use-prop', 'Use a prop', 3);
             break;
           case "fly":
             if (player.isEagle) {
@@ -1679,10 +1681,12 @@ export function useGameLogic({ players, broadcast, gameMode, connectionMode, map
               player.speedMultiplier = FLY_SPEED_MULTIPLIER;
               player.speedMultiplierUntil = now + FLY_DURATION;
               player.flyCooldownUntil = now + FLY_COOLDOWN;
+              addBreakdown(player, 'use-prop', 'Use prop (fly)', 3);
             }
             break;
           case "invincible":
             player.invincibleUntil = now + 3000;
+            if (!player.isEagle) addBreakdown(player, 'use-prop', 'Use a prop', 3);
             break;
           case "teleport":
             if (player.isEagle) return;
@@ -1698,6 +1702,7 @@ export function useGameLogic({ players, broadcast, gameMode, connectionMode, map
               player.invincibleUntil = now + 500;
               player.teleportPending = false;
               // propItem already decremented above
+              addBreakdown(player, 'use-prop', 'Use a prop', 3);
             }
             break;
           case "cage":
@@ -1716,7 +1721,7 @@ export function useGameLogic({ players, broadcast, gameMode, connectionMode, map
               target.frozenUntil = now + CAGE_LOCK_DURATION;
               target.invincibleUntil = now + CAGE_LOCK_DURATION + CAGE_POST_INVINCIBLE;
               player.cageCooldownUntil = now + CAGE_COOLDOWN;
-              player.actionScore += 5;
+              addBreakdown(player, 'cage', 'Cage a chick', 3);
             }
             break;
         }
