@@ -81,42 +81,39 @@ function MapCamera({ zoomLevel = 1 }: { zoomLevel?: number }) {
   useEffect(() => {
     const clamped = Math.max(0.65, Math.min(1.5, zoomLevel));
 
-    // Linear interpolation between zoom-out and zoom-in positions
-    // Values calibrated for your map (tested manually)
-
-    // At zoom 0.65 (zoomed out)
+    // Zoom in/out positions
     const posY_out = 65;
     const posZ_out = 52;
-    const angle_out = 0.88;
-
-    // At zoom 1.0 (default)
     const posY_default = 56;
     const posZ_default = 42;
-    const angle_default = 0.93;
-
-    // At zoom 1.5 (zoomed in)
     const posY_in = 44;
     const posZ_in = 30;
-    const angle_in = 1.02;
 
-    let camY, camZ, angle;
+    // lookAt Y controls vertical pan
+    // Higher value = camera looks up (bottom edge rises)
+    // Lower value = camera looks down (bottom edge lowers)
+    const lookY_out = -1.5; // zoomed out: look slightly down to keep bottom fixed
+    const lookY_default = 0; // default: look at center
+    const lookY_in = 2.5; // zoomed in: look up to keep bottom fixed
+
+    let camY, camZ, lookY;
 
     if (clamped < 1) {
       const t = (1 - clamped) / (1 - 0.65);
       camY = posY_default + (posY_out - posY_default) * t;
       camZ = posZ_default + (posZ_out - posZ_default) * t;
-      angle = angle_default + (angle_out - angle_default) * t;
+      lookY = lookY_default + (lookY_out - lookY_default) * t;
     } else {
       const t = (clamped - 1) / (1.5 - 1);
       camY = posY_default + (posY_in - posY_default) * t;
       camZ = posZ_default + (posZ_in - posZ_default) * t;
-      angle = angle_default + (angle_in - angle_default) * t;
+      lookY = lookY_default + (lookY_in - lookY_default) * t;
     }
 
     camera.position.set(0, camY, camZ);
     (camera as any).fov = 58 / Math.max(0.75, clamped);
     (camera as any).updateProjectionMatrix?.();
-    camera.lookAt(0, angle * 1.5, 0);
+    camera.lookAt(0, lookY, 0);
   }, [camera, zoomLevel]);
   return null;
 }
