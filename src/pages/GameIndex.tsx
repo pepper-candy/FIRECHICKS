@@ -300,10 +300,10 @@ const Index = () => {
         >
           <ImmersiveTitle />
           <p
-            className="text-sm text-muted-foreground font-mono max-w-md mx-auto immersive-fade-in"
+            className="text-sm text-muted-foreground font-mono max-w-md mx-auto immersive-fade-in whitespace-pre-line"
             style={{ "--delay": "2.0s" } as React.CSSProperties}
           >
-            1 V 3 — control characters across devices
+            {"GPA Killer wants your grade.\nFirechicks want to graduate.\nGPA Killer vs Firechicks — who survives?"}
           </p>
         </div>
 
