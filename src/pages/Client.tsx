@@ -462,6 +462,7 @@ export default function Client() {
   const [examZoom, setExamZoom] = useState(1);
   const [examOpacity, setExamOpacity] = useState(0.85);
   const examVideoRef = useRef<HTMLVideoElement>(null);
+  const [examWhiteBg, setExamWhiteBg] = useState(false);
   const examStreamRef = useRef<MediaStream | null>(null);
 
   const { isFullscreen, showImmersiveControl, enter: enterFullscreen } = useFullscreen();
@@ -1368,38 +1369,41 @@ export default function Client() {
       );
     }
 
-    const es = gameState?.examState;
-    const hostShowsExamLayer = es?.hostDisplayLayer === "1" || es?.hostDisplayLayer === "2";
-    const showPwOnWhiteBg =
-      !!es &&
-      es.examWhiteBgConnId === connIdRef.current &&
-      !hostShowsExamLayer;
-
     return (
       <div className="flex flex-col h-dvh overflow-hidden bg-background">
         {/* Header */}
         <div className="flex items-center justify-between gap-3 p-3 border-b border-border min-w-0">
           <span className="text-sm font-pixel text-accent tracking-wide whitespace-nowrap">📝 FINAL EXAM</span>
-          {gameState?.examState && (
-            <span
-              className={`text-base font-bold font-mono whitespace-nowrap ${gameState.examState.timeRemaining < 10 ? "text-destructive animate-pulse" : "text-accent"}`}
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => setExamWhiteBg((p) => !p)}
+              className={`px-2 py-1 rounded text-[10px] font-mono border transition-colors ${examWhiteBg ? "bg-white text-black border-white" : "bg-transparent text-muted-foreground border-border"}`}
             >
-              ⏱ {Math.ceil(gameState.examState.timeRemaining)}s
-            </span>
-          )}
+              {examWhiteBg ? "📷 Camera" : "⬜ White BG"}
+            </button>
+            {gameState?.examState && (
+              <span
+                className={`text-base font-bold font-mono whitespace-nowrap ${gameState.examState.timeRemaining < 10 ? "text-destructive animate-pulse" : "text-accent"}`}
+              >
+                ⏱ {Math.ceil(gameState.examState.timeRemaining)}s
+              </span>
+            )}
+          </div>
         </div>
 
-        {/* Camera + optional white underlay (one random non-bot) + PW layer */}
+        {/* Camera / White BG + PW layer */}
         <div className="relative w-full overflow-hidden bg-black" style={{ aspectRatio: "873/457" }}>
-          <video
-            ref={examVideoRef}
-            autoPlay
-            playsInline
-            muted
-            className="absolute inset-0 w-full h-full object-cover z-0"
-          />
-
-          {showPwOnWhiteBg && examLayer === "2" && <div className="absolute inset-0 z-[1] bg-white" aria-hidden />}
+          {examWhiteBg ? (
+            <div className="absolute inset-0 z-0 bg-white" />
+          ) : (
+            <video
+              ref={examVideoRef}
+              autoPlay
+              playsInline
+              muted
+              className="absolute inset-0 w-full h-full object-cover z-0"
+            />
+          )}
 
           <img
             src={assetUrl(`/PW/PW_Final_${examQuestionNum}_layer-${examLayer}.png`)}
