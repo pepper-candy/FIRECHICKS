@@ -94,7 +94,7 @@ function MapCamera({ zoomLevel = 1 }: { zoomLevel?: number }) {
     // Lower value = camera looks down (bottom edge lowers)
     const lookY_out = -1.5; // zoomed out: look slightly down to keep bottom fixed
     const lookY_default = 0; // default: look at center
-    const lookY_in = 2.5; // zoomed in: look up to keep bottom fixed
+    const lookY_in = 3.5; // zoomed in: look up to keep bottom fixed
 
     let camY, camZ, lookY;
 
