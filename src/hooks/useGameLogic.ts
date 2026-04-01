@@ -1437,6 +1437,16 @@ export function useGameLogic({ players, broadcast, gameMode, connectionMode, map
   }
 
   function endGame(gs: GameStateRef, winner: "eagle" | "chicks" | "draw", bcast: (msg: any) => void) {
+    // Award survival time bonus to chicks: +1 per 10s of non-paused game time
+    const nonPausedTime = gs.gameTime - gs.totalPauseMs / 1000;
+    for (const [, p] of gs.playerStates) {
+      if (!p.isEagle) {
+        const survivalBonus = Math.floor(nonPausedTime / 10);
+        if (survivalBonus > 0) {
+          addBreakdown(p, 'survival', 'Survival time', survivalBonus, Math.floor(nonPausedTime));
+        }
+      }
+    }
     gs.winner = winner;
     gs.phase = "gameover";
     setPhase("gameover");
