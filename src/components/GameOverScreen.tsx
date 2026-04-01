@@ -234,7 +234,7 @@ export default function GameOverScreen({
         </div>
 
         {/* Scroll indicator */}
-        <div className="absolute bottom-8 left-1/2 -translate-x-1/2 flex flex-col items-center gap-1 animate-bounce">
+        <div className="absolute bottom-8 inset-x-0 mx-auto w-fit flex flex-col items-center gap-1 animate-bounce">
           <span className="text-xs font-mono text-muted-foreground/40">scroll</span>
           <span className="text-muted-foreground/40 text-lg">▼</span>
         </div>
