@@ -77,12 +77,18 @@ export default function GameOverScreen({
   }, []);
 
   return (
-    <div
-      ref={containerRef}
-      onScroll={handleScroll}
-      className="h-dvh overflow-y-auto snap-y snap-mandatory hide-scrollbar"
-      style={{ scrollBehavior: 'smooth', background: 'hsl(0 0% 3%)' }}
-    >
+    <div className="relative h-dvh" style={{ background: 'hsl(0 0% 3%)' }}>
+      {/* Fixed fire background */}
+      <FireParticleField parallaxOffset={parallaxOffset} speedMultiplier={speedMultiplier} />
+      <div className="immersive-vignette" />
+
+      {/* Scrollable content */}
+      <div
+        ref={containerRef}
+        onScroll={handleScroll}
+        className="absolute inset-0 z-10 overflow-y-auto snap-y snap-mandatory hide-scrollbar"
+        style={{ scrollBehavior: 'smooth' }}
+      >
       {/* ── SIGHT 1: Game Over + Grade + Character Tag ── */}
       <div
         ref={(el) => { sectionRefs.current[0] = el; }}

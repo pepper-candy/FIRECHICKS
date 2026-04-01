@@ -22,7 +22,13 @@ function getTraceGradient(colorType: number): string {
  * Uses `position: fixed` so it sits behind content.
  * Pass `parallaxOffset` (px) to shift vertically for a parallax effect.
  */
-export default function FireParticleField({ parallaxOffset = 0 }: { parallaxOffset?: number }) {
+export default function FireParticleField({
+  parallaxOffset = 0,
+  speedMultiplier = 1,
+}: {
+  parallaxOffset?: number;
+  speedMultiplier?: number;
+}) {
   const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
   const lineCount = isMobile ? 28 : 44;
 
@@ -30,10 +36,10 @@ export default function FireParticleField({ parallaxOffset = 0 }: { parallaxOffs
     () =>
       Array.from({ length: lineCount }, (_, i) => {
         const colorType = i % 6;
-        const duration = 5.5 + (i % 5) * 0.35;
+        const baseDuration = 5.5 + (i % 5) * 0.35;
         const staggerWindow = 4.8;
         const delay = (i / lineCount) * staggerWindow;
-        return { id: i, colorType, duration, delay };
+        return { id: i, colorType, baseDuration, delay };
       }),
     [lineCount],
   );
@@ -43,20 +49,23 @@ export default function FireParticleField({ parallaxOffset = 0 }: { parallaxOffs
       className="fixed inset-0 z-0 flex pointer-events-none overflow-hidden"
       style={{ transform: `translateY(${parallaxOffset}px)` }}
     >
-      {traces.map((t) => (
-        <div key={t.id} className="relative h-full min-w-0 flex-1 flex justify-center">
-          <div
-            className="absolute bottom-0 w-[2px] rounded-full"
-            style={{
-              height: 'min(32vh, 220px)',
-              background: getTraceGradient(t.colorType),
-              boxShadow: '0 0 8px rgba(255, 68, 51, 0.4)',
-              animation: `flame-trace-rise ${t.duration}s linear ${t.delay}s infinite`,
-              willChange: 'transform',
-            }}
-          />
-        </div>
-      ))}
+      {traces.map((t) => {
+        const duration = t.baseDuration / Math.max(0.3, speedMultiplier);
+        return (
+          <div key={t.id} className="relative h-full min-w-0 flex-1 flex justify-center">
+            <div
+              className="absolute bottom-0 w-[2px] rounded-full"
+              style={{
+                height: 'min(32vh, 220px)',
+                background: getTraceGradient(t.colorType),
+                boxShadow: '0 0 8px rgba(255, 68, 51, 0.4)',
+                animation: `flame-trace-rise ${duration}s linear ${t.delay}s infinite`,
+                willChange: 'transform',
+              }}
+            />
+          </div>
+        );
+      })}
     </div>
   );
 }
