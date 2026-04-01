@@ -859,7 +859,7 @@ export default function Host() {
         })()}
 
         {/* Stage progress bottom */}
-        {!isEventOverlay && <StageProgressBar currentStage={snapshot.stage} stageLabel={snapshot.stageLabel} />}
+        <StageProgressBar currentStage={snapshot.stage} stageLabel={snapshot.stageLabel} />
 
         {/* Game time — click to toggle total vs play time */}
         {!isEventOverlay && (
