@@ -299,12 +299,6 @@ const Index = () => {
           style={{ "--delay": "0.4s" } as React.CSSProperties}
         >
           <ImmersiveTitle />
-          <p
-            className="text-sm text-muted-foreground font-mono max-w-md mx-auto immersive-fade-in whitespace-pre-line"
-            style={{ "--delay": "2.0s" } as React.CSSProperties}
-          >
-            {"GPA Killer wants your grade.\nFirechicks want to graduate.\nGPA Killer vs Firechicks — who survives?"}
-          </p>
         </div>
 
         {/* Buttons — staggered fade-in */}
@@ -369,8 +363,9 @@ const Index = () => {
           className="text-xs text-muted-foreground/60 font-mono text-center space-y-1 mt-8 z-10 immersive-fade-in"
           style={{ "--delay": "3.4s" } as React.CSSProperties}
         >
-          <p>Host opens the lobby on a big screen</p>
-          <p>Players join from phones with the room code</p>
+          <p>GPA Killer wants your grade.</p>
+          <p>Firechicks want to graduate.</p>
+          <p>GPA Killer vs Firechicks – who survives?</p>
         </div>
 
         <AssetLoadingIndicator />
