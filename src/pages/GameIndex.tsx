@@ -300,7 +300,6 @@ const Index = () => {
         >
           <ImmersiveTitle />
         </div>
-        </div>
 
         {/* Buttons — staggered fade-in */}
         <div className="flex flex-col gap-4 w-full max-w-xs z-10">
