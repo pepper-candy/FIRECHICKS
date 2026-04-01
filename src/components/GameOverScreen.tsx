@@ -61,11 +61,19 @@ export default function GameOverScreen({
     return () => observer.disconnect();
   }, []);
 
-  // Parallax on scroll
+  // Parallax + speed multiplier on scroll
   const handleScroll = useCallback(() => {
     if (!containerRef.current) return;
     const scrollY = containerRef.current.scrollTop;
-    setParallaxOffset(scrollY * 0.3); // bg moves 30% faster
+    const viewH = containerRef.current.clientHeight;
+    setParallaxOffset(scrollY * 0.3);
+
+    // Map scroll progress between sections to speed multiplier 1→3→1
+    const progress = viewH > 0 ? scrollY / viewH : 0; // 0 at sight1, 1 at sight2, 2 at sight3
+    // Peak speed at transition midpoints (0.5, 1.5), normal at snap points (0, 1, 2)
+    const fractional = progress % 1; // 0→1 within each transition
+    const wave = Math.sin(fractional * Math.PI); // 0→1→0 bell curve
+    setSpeedMultiplier(1 + wave * 2); // 1× → 3× → 1×
   }, []);
 
   return (
