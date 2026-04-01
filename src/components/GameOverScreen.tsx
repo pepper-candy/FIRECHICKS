@@ -272,6 +272,8 @@ export default function GameOverScreen({
           </Button>
         </div>
       </div>
+      </div>
+      </div>
     </div>
   );
 }
