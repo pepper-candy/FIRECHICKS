@@ -1617,7 +1617,7 @@ export function useGameLogic({ players, broadcast, gameMode, connectionMode, map
             const dmg = chick.health - newHealth;
             chick.damageTaken += dmg;
             player.damageDealt += dmg;
-            player.actionScore += 5;
+            addBreakdown(player, 'deal-damage', 'Deal damage', 15);
             chick.health = newHealth;
             if (chick.alive) {
               chick.invincibleUntil = Math.max(chick.invincibleUntil, invincUntil);
