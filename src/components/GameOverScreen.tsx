@@ -83,10 +83,6 @@ export default function GameOverScreen({
       className="h-dvh overflow-y-auto snap-y snap-mandatory hide-scrollbar"
       style={{ scrollBehavior: 'smooth', background: 'hsl(0 0% 3%)' }}
     >
-      {/* Fire background */}
-      <FireParticleField parallaxOffset={parallaxOffset} />
-      <div className="immersive-vignette" />
-
       {/* ── SIGHT 1: Game Over + Grade + Character Tag ── */}
       <div
         ref={(el) => { sectionRefs.current[0] = el; }}
