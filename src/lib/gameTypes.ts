@@ -6,6 +6,12 @@ export type GameStage = 0 | 1 | 2 | 3;
 export type PropType = 'speed' | 'heal' | 'fly' | 'invincible' | 'teleport' | 'cage';
 export type AnimState = 'Idle' | 'Running' | 'Victory' | 'Attack';
 
+export interface ScoreBreakdownEntry {
+  label: string;
+  points: number;
+  count: number;
+}
+
 export const STAGE_LABELS = [
   'Social Circle',
   'Get Exam Tips',
@@ -134,6 +140,11 @@ export interface PlayerGameState {
   // Cage
   cagedUntil: number;
   cageCooldownUntil: number;
+  scoreBreakdown: Record<string, ScoreBreakdownEntry>;
+  scansPerformed: number;
+  timeInZones: number;
+  tipsShared: number;
+  socialCircleCompleted: boolean;
 }
 
 export interface PlayerGameStateSerializable {
@@ -168,6 +179,11 @@ export interface PlayerGameStateSerializable {
   teleportTarget: { x: number; z: number };
   cagedUntil: number;
   cageCooldownUntil: number;
+  scoreBreakdown: Record<string, ScoreBreakdownEntry>;
+  scansPerformed: number;
+  timeInZones: number;
+  tipsShared: number;
+  socialCircleCompleted: boolean;
   // Host-calculated remaining cooldown ms (no client Date.now() needed)
   attackRemainingMs: number;
   flyRemainingMs: number;

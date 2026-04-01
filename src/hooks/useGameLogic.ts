@@ -158,6 +158,18 @@ function isBotConnId(connId: string): boolean {
   return connId.startsWith("bot-");
 }
 
+function addBreakdown(p: PlayerGameState, key: string, label: string, points: number, countDelta: number = 1) {
+  if (!p.scoreBreakdown) p.scoreBreakdown = {};
+  const entry = p.scoreBreakdown[key];
+  if (entry) {
+    entry.points += points;
+    entry.count += countDelta;
+  } else {
+    p.scoreBreakdown[key] = { label, points, count: countDelta };
+  }
+  p.actionScore += points;
+}
+
 function updateHostExamDisplay(gs: GameStateRef) {
   const exam = gs.examState;
   if (!exam) return;
@@ -358,6 +370,11 @@ export function useGameLogic({ players, broadcast, gameMode, connectionMode, map
         teleportTarget: { x: spawn.x, z: spawn.z },
         cagedUntil: 0,
         cageCooldownUntil: assign.isEagle ? Date.now() + totalRevealAndCountdown + EAGLE_AWAKE_DELAY + CAGE_COOLDOWN : 0,
+        scoreBreakdown: {},
+        scansPerformed: 0,
+        timeInZones: 0,
+        tipsShared: 0,
+        socialCircleCompleted: false,
       });
     }
 
@@ -639,6 +656,13 @@ export function useGameLogic({ players, broadcast, gameMode, connectionMode, map
           p.survivalTime = gs.gameTime;
         }
       }
+
+      // Track timeInZones for chicks in protected zones
+      for (const [, p] of gs.playerStates) {
+        if (p.isEagle || !p.alive) continue;
+        const inAnyZone = gs.buildings.some(b => b.zoneActive && !b.tipObtained && isInProtectedZone(p.position.x, p.position.z, b.id));
+        if (inAnyZone) p.timeInZones += delta;
+      }
     }
 
     // ── Bot AI updates ──
@@ -715,7 +739,8 @@ export function useGameLogic({ players, broadcast, gameMode, connectionMode, map
           if (!sharerIsBot && !receiverIsBot) continue;
 
           receiver.tips[tipIndex] = true;
-          receiver.actionScore += 5;
+          addBreakdown(receiver, 'receive-tip', 'Receive shared tip', 5);
+          sharer.tipsShared++;
           sharer.tipShareCooldownUntil = now + TIP_QR_COOLDOWN;
           broadcastRef.current({
             type: "tip-copy-notify",
@@ -746,6 +771,12 @@ export function useGameLogic({ players, broadcast, gameMode, connectionMode, map
         }
       }
       const requiredMeets = chicks.length - 1;
+      for (const c of chicks) {
+        if (!c.socialCircleCompleted && c.socialCircleMet.size >= requiredMeets) {
+          c.socialCircleCompleted = true;
+          addBreakdown(c, 'social-circle', 'Complete social circle', 5);
+        }
+      }
       if (chicks.length > 0 && chicks.every((c) => c.socialCircleMet.size >= requiredMeets)) {
         gs.stage = 1;
         gs.stageLabel = "Get Exam Tips from glowing buildings!";
@@ -808,7 +839,7 @@ export function useGameLogic({ players, broadcast, gameMode, connectionMode, map
                   chick.tips[tipIdx] = true;
                   chick.health = Math.min(STARTING_HEALTH, addSubGrades(chick.health, STAR_STUDENT_GRADE_BONUS));
                   chick.props.push({ type: "invincible", count: 1 });
-                  chick.actionScore += 10;
+                  addBreakdown(chick, 'obtain-tip', 'Obtain a tip', 10);
 
                   building.tipObtainedCount++;
                   if (building.tipObtainedCount >= neededCount) {
@@ -1051,11 +1082,12 @@ export function useGameLogic({ players, broadcast, gameMode, connectionMode, map
                   eagle.frozenUntil = now + 5000;
                 }
               }
-              p.actionScore += 3;
+              addBreakdown(p, 'mystery-box', 'Open mystery box', 10);
             } else {
               // Eagle triggers a random event
               box.triggered = true;
               gs.lastMysteryBoxSpawn = now; // restart after claim
+              addBreakdown(p, 'mystery-box', 'Open mystery box', 15);
               gs.frozenAll = true;
               gs.frozenAllUntil = now + 60000; // lifted when event ends
               // Stop eagle movement immediately so it doesn't drift after unfreeze
@@ -1248,11 +1280,11 @@ export function useGameLogic({ players, broadcast, gameMode, connectionMode, map
             if (crossings >= 3) {
               p.health = addSubGrades(p.health, 2);
               goodCount++;
-              p.actionScore += crossings * 2;
+              addBreakdown(p, 'crossy-road', 'Crossy Road', crossings * 2, crossings);
             } else if (crossings === 2) {
               p.health = addSubGrades(p.health, 1);
               goodCount++;
-              p.actionScore += crossings * 2;
+              addBreakdown(p, 'crossy-road', 'Crossy Road', crossings * 2, crossings);
             } else {
               p.health = addSubGrades(p.health, -2);
             }
@@ -1405,6 +1437,16 @@ export function useGameLogic({ players, broadcast, gameMode, connectionMode, map
   }
 
   function endGame(gs: GameStateRef, winner: "eagle" | "chicks" | "draw", bcast: (msg: any) => void) {
+    // Award survival time bonus to chicks: +1 per 10s of non-paused game time
+    const nonPausedTime = gs.gameTime - gs.totalPauseMs / 1000;
+    for (const [, p] of gs.playerStates) {
+      if (!p.isEagle) {
+        const survivalBonus = Math.floor(nonPausedTime / 10);
+        if (survivalBonus > 0) {
+          addBreakdown(p, 'survival', 'Survival time', survivalBonus, Math.floor(nonPausedTime));
+        }
+      }
+    }
     gs.winner = winner;
     gs.phase = "gameover";
     setPhase("gameover");
@@ -1575,7 +1617,7 @@ export function useGameLogic({ players, broadcast, gameMode, connectionMode, map
             const dmg = chick.health - newHealth;
             chick.damageTaken += dmg;
             player.damageDealt += dmg;
-            player.actionScore += 5;
+            addBreakdown(player, 'deal-damage', 'Deal damage', 15);
             chick.health = newHealth;
             if (chick.alive) {
               chick.invincibleUntil = Math.max(chick.invincibleUntil, invincUntil);
@@ -1616,15 +1658,17 @@ export function useGameLogic({ players, broadcast, gameMode, connectionMode, map
         const propItem = player.props.find((p) => p.type === msg.propType && p.count > 0);
         if (!propItem) return;
         propItem.count--;
-        player.actionScore += 2;
+        // scoring handled per-prop below
 
         switch (msg.propType as PropType) {
           case "speed":
             player.speedMultiplier = SPEED_BOOST_MULTIPLIER;
             player.speedMultiplierUntil = now + SPEED_BOOST_DURATION;
+            if (!player.isEagle) addBreakdown(player, 'use-prop', 'Use a prop', 3);
             break;
           case "heal":
             if (player.health < STARTING_HEALTH) player.health = applyHeal(player.health);
+            if (!player.isEagle) addBreakdown(player, 'use-prop', 'Use a prop', 3);
             break;
           case "fly":
             if (player.isEagle) {
@@ -1637,10 +1681,12 @@ export function useGameLogic({ players, broadcast, gameMode, connectionMode, map
               player.speedMultiplier = FLY_SPEED_MULTIPLIER;
               player.speedMultiplierUntil = now + FLY_DURATION;
               player.flyCooldownUntil = now + FLY_COOLDOWN;
+              addBreakdown(player, 'use-prop', 'Use prop (fly)', 3);
             }
             break;
           case "invincible":
             player.invincibleUntil = now + 3000;
+            if (!player.isEagle) addBreakdown(player, 'use-prop', 'Use a prop', 3);
             break;
           case "teleport":
             if (player.isEagle) return;
@@ -1656,6 +1702,7 @@ export function useGameLogic({ players, broadcast, gameMode, connectionMode, map
               player.invincibleUntil = now + 500;
               player.teleportPending = false;
               // propItem already decremented above
+              addBreakdown(player, 'use-prop', 'Use a prop', 3);
             }
             break;
           case "cage":
@@ -1674,7 +1721,7 @@ export function useGameLogic({ players, broadcast, gameMode, connectionMode, map
               target.frozenUntil = now + CAGE_LOCK_DURATION;
               target.invincibleUntil = now + CAGE_LOCK_DURATION + CAGE_POST_INVINCIBLE;
               player.cageCooldownUntil = now + CAGE_COOLDOWN;
-              player.actionScore += 5;
+              addBreakdown(player, 'cage', 'Cage a chick', 3);
             }
             break;
         }
@@ -1713,7 +1760,7 @@ export function useGameLogic({ players, broadcast, gameMode, connectionMode, map
           if (!b.zoneActive || b.tipObtained) continue;
           if (isInProtectedZone(player.position.x, player.position.z, b.id)) {
             b.zoneHealth = Math.max(0, b.zoneHealth - 1);
-            player.actionScore += 0.5;
+            addBreakdown(player, 'building-hp', 'Destroy building HP', 0.5);
             if (b.zoneHealth <= 0) {
               // Zone broken: tips remain obtainable, just unprotected (building stays gold via hasTip && !tipObtained)
               b.zoneActive = false;
@@ -1747,7 +1794,10 @@ export function useGameLogic({ players, broadcast, gameMode, connectionMode, map
           }
 
           player.tips[tipShare.tipIndex] = true;
-          player.actionScore += 5;
+          addBreakdown(player, 'receive-tip', 'Receive shared tip', 5);
+          player.scansPerformed++;
+          const sharerPlayer = gs.playerStates.get(tipShare.connId);
+          if (sharerPlayer) sharerPlayer.tipsShared++;
           tipShare.cooldownUntil = now + TIP_QR_COOLDOWN;
 
           // Notify both scanner and sharer to show 3s copying countdown
@@ -1781,7 +1831,7 @@ export function useGameLogic({ players, broadcast, gameMode, connectionMode, map
             const existing = player.props.find((pi) => pi.type === prop.type);
             if (existing) existing.count++;
             else player.props.push({ type: prop.type, count: 1 });
-            player.actionScore += 1;
+            addBreakdown(player, 'collect-prop', 'Collect prop spawn', 2);
           }
           break;
         }
@@ -1832,7 +1882,7 @@ export function useGameLogic({ players, broadcast, gameMode, connectionMode, map
         } else {
           gs.activeEvent.chickClicks[connId] = (gs.activeEvent.chickClicks[connId] ?? 0) + 1;
         }
-        player.actionScore += 0.1;
+        addBreakdown(player, 'hitbox', 'Hitbox tap', 0.1);
         break;
       }
 
@@ -1849,7 +1899,7 @@ export function useGameLogic({ players, broadcast, gameMode, connectionMode, map
           if (!gs.activeEvent.chickClicks[connId]) {
             gs.activeEvent.chickClicks[connId] = 1;
             player.health = addSubGrades(player.health, 1);
-            player.actionScore += 5;
+            addBreakdown(player, 'mock-exam', 'Mock Exam correct', 3);
           }
         }
         break;
@@ -1871,7 +1921,7 @@ export function useGameLogic({ players, broadcast, gameMode, connectionMode, map
         } else {
           csHop.laneIndex = Math.max(csHop.laneIndex - 1, 0);
         }
-        player.actionScore += 0.2;
+        // crossy hop scoring is handled at event end via crossings count
         break;
       }
 
@@ -1890,7 +1940,7 @@ export function useGameLogic({ players, broadcast, gameMode, connectionMode, map
             });
           }
         }
-        player.actionScore += 1;
+        addBreakdown(player, 'crossy-road', 'Crossy Road', 2);
         break;
       }
 
@@ -1911,7 +1961,7 @@ export function useGameLogic({ players, broadcast, gameMode, connectionMode, map
         const correct = FINAL_ANSWER_KEY[gs.examState.questionNum];
         if (msg.answer.toUpperCase().trim() === correct) {
           gs.examState.answered = true;
-          player.actionScore += 20;
+          addBreakdown(player, 'final-exam', 'Final Exam correct', 10);
           resolveExamWinner(gs, gameModeRef.current as "1v3" | "2v6", broadcastRef.current);
         } else {
           // Wrong: -2 sub-grades to all alive chicks, track attempt count
