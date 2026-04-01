@@ -89,7 +89,7 @@ function MapCamera({ zoomLevel = 1 }: { zoomLevel?: number }) {
     const posZ = 28 + (remapped - 0.65) * 22;
 
     // LookY using remapped value
-    const lookY = (remapped - 1) * -90;
+    const lookY = (remapped - 1) * -3 - 30;
 
     camera.position.set(0, posY, posZ);
     (camera as any).fov = 58 / Math.max(0.75, remapped);
