@@ -73,7 +73,7 @@ function CharAnimCircle({
 // ── Typewriter title ──────────────────────────────────────────────────────────
 
 function ImmersiveTitle() {
-  const text = "FIRECHICK";
+  const text = "FIRECHICKS";
   return (
     <h1 className="text-3xl md:text-5xl font-pixel tracking-wider leading-relaxed">
       {text.split("").map((char, i) => (
