@@ -761,12 +761,12 @@ export default function Host() {
         )}
 
         {/* Pause controls + Health display top-right */}
+        {!isCrossyActive && (
         <div className="absolute top-2 right-2 z-30 flex flex-col gap-1">
           <div className="flex gap-1 justify-end">
             <button
               onClick={() => {
                 if (isPaused) {
-                  // Keep game paused during 3s grab-back, then auto-unpause
                   setGrabBackUntil(Date.now() + 3000);
                   setTimeout(() => {
                     togglePause();
@@ -806,6 +806,7 @@ export default function Host() {
           </div>
           <HealthDisplay players={snapshot.players} />
         </div>
+        )}
 
         {/* PAUSED overlay — manual pause OR stage transition pause OR grab-back after resume */}
         {(() => {
