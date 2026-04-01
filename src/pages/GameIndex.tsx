@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { useFullscreen } from "@/hooks/useFullscreen";
@@ -8,6 +8,7 @@ import { useImmersive } from "@/context/ImmersiveContext";
 import { toast } from "@/components/ui/sonner";
 import { buzz } from "@/lib/haptics";
 import { ArrowDownToLine, Check, Loader2, Sparkles } from "lucide-react";
+import FireParticleField from "@/components/FireParticleField";
 
 // ── Circular progress button ──────────────────────────────────────────────────
 
@@ -89,85 +90,7 @@ function ImmersiveTitle() {
   );
 }
 
-// ── Rising fire traces (even columns, gradient strokes — few DOM nodes) ─────
-
-function getTraceGradient(colorType: number): string {
-  switch (colorType) {
-    case 0:
-      return `linear-gradient(to top,
-        rgba(255, 94, 77, 0.95) 0%,
-        rgba(255, 68, 51, 0.5) 28%,
-        rgba(204, 51, 34, 0.12) 58%,
-        transparent 100%)`;
-    case 1:
-      return `linear-gradient(to top,
-        rgba(255, 120, 77, 0.95) 0%,
-        rgba(255, 94, 77, 0.5) 28%,
-        rgba(255, 68, 51, 0.12) 58%,
-        transparent 100%)`;
-    case 2:
-      return `linear-gradient(to top,
-        rgba(255, 140, 77, 0.95) 0%,
-        rgba(255, 120, 77, 0.5) 28%,
-        rgba(255, 94, 77, 0.12) 58%,
-        transparent 100%)`;
-    case 3:
-      return `linear-gradient(to top,
-        rgba(255, 107, 53, 0.95) 0%,
-        rgba(255, 94, 77, 0.5) 28%,
-        rgba(255, 68, 51, 0.12) 58%,
-        transparent 100%)`;
-    case 4:
-      return `linear-gradient(to top,
-        rgba(255, 159, 67, 0.95) 0%,
-        rgba(255, 140, 77, 0.5) 28%,
-        rgba(255, 120, 77, 0.12) 58%,
-        transparent 100%)`;
-    default:
-      return `linear-gradient(to top,
-        rgba(255, 183, 77, 0.95) 0%,
-        rgba(255, 159, 67, 0.5) 28%,
-        rgba(255, 140, 77, 0.12) 58%,
-        transparent 100%)`;
-  }
-}
-
-function ParticleField() {
-  const isMobile = typeof window !== "undefined" && window.innerWidth < 768;
-  const lineCount = isMobile ? 28 : 44;
-  const traces = useMemo(
-    () =>
-      Array.from({ length: lineCount }, (_, i) => {
-        const colorType = i % 6;
-        const duration = 5.5 + (i % 5) * 0.35;
-        const staggerWindow = 4.8;
-        const delay = (i / lineCount) * staggerWindow;
-        return { id: i, colorType, duration, delay };
-      }),
-    [lineCount],
-  );
-
-  return (
-    <div className="fixed inset-0 z-0 flex pointer-events-none overflow-hidden">
-      {traces.map((t) => (
-        <div key={t.id} className="relative h-full min-w-0 flex-1 flex justify-center">
-          <div
-            className="absolute bottom-0 w-[2px] rounded-full"
-            style={
-              {
-                height: "min(32vh, 220px)",
-                background: getTraceGradient(t.colorType),
-                boxShadow: "0 0 8px rgba(255, 68, 51, 0.4)",
-                animation: `flame-trace-rise ${t.duration}s linear ${t.delay}s infinite`,
-                willChange: "transform",
-              } as React.CSSProperties
-            }
-          />
-        </div>
-      ))}
-    </div>
-  );
-}
+// ParticleField is now imported from @/components/FireParticleField
 // ── Main page ─────────────────────────────────────────────────────────────────
 
 const Index = () => {
@@ -266,7 +189,7 @@ const Index = () => {
           }}
         />
         {/* Fire trace field */}
-        <ParticleField />
+        <FireParticleField />
         {/* Scanline overlay */}
         <div className="immersive-scanline-overlay" />
         {/* Vignette */}
