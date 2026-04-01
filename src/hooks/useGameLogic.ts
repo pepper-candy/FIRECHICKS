@@ -656,6 +656,13 @@ export function useGameLogic({ players, broadcast, gameMode, connectionMode, map
           p.survivalTime = gs.gameTime;
         }
       }
+
+      // Track timeInZones for chicks in protected zones
+      for (const [, p] of gs.playerStates) {
+        if (p.isEagle || !p.alive) continue;
+        const inAnyZone = gs.buildings.some(b => b.zoneActive && !b.tipObtained && isInProtectedZone(p.position.x, p.position.z, b.id));
+        if (inAnyZone) p.timeInZones += delta;
+      }
     }
 
     // ── Bot AI updates ──
