@@ -739,7 +739,8 @@ export function useGameLogic({ players, broadcast, gameMode, connectionMode, map
           if (!sharerIsBot && !receiverIsBot) continue;
 
           receiver.tips[tipIndex] = true;
-          receiver.actionScore += 5;
+          addBreakdown(receiver, 'receive-tip', 'Receive shared tip', 5);
+          sharer.tipsShared++;
           sharer.tipShareCooldownUntil = now + TIP_QR_COOLDOWN;
           broadcastRef.current({
             type: "tip-copy-notify",
