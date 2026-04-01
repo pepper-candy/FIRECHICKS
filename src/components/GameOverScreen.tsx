@@ -27,8 +27,9 @@ export default function GameOverScreen({
 }: GameOverScreenProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [parallaxOffset, setParallaxOffset] = useState(0);
-  const [speedMultiplier, setSpeedMultiplier] = useState(1);
   const [sectionOpacities, setSectionOpacities] = useState([1, 0, 0]);
+  const isScrolling = useRef(false);
+  const scrollTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // IntersectionObserver for fade-in
   const sectionRefs = useRef<(HTMLDivElement | null)[]>([null, null, null]);
@@ -61,35 +62,72 @@ export default function GameOverScreen({
     return () => observer.disconnect();
   }, []);
 
-  // Parallax + speed multiplier on scroll
-  const handleScroll = useCallback(() => {
-    if (!containerRef.current) return;
-    const scrollY = containerRef.current.scrollTop;
-    const viewH = containerRef.current.clientHeight;
-    setParallaxOffset(0); // keep background stationary — no vertical shift
+  // One scroll = one section step, no skipping, no speed linkage
+  const handleWheel = useCallback((e: React.WheelEvent<HTMLDivElement>) => {
+    if (!containerRef.current || isScrolling.current) {
+      e.preventDefault();
+      return;
+    }
+    const el = containerRef.current;
+    const viewH = el.clientHeight;
+    const currentSection = Math.round(el.scrollTop / viewH);
+    const direction = e.deltaY > 0 ? 1 : -1;
+    const targetSection = Math.max(0, Math.min(2, currentSection + direction));
 
-    // Map scroll progress between sections to speed multiplier 1→3→1
-    const progress = viewH > 0 ? scrollY / viewH : 0; // 0 at sight1, 1 at sight2, 2 at sight3
-    // Peak speed at transition midpoints (0.5, 1.5), normal at snap points (0, 1, 2)
-    const fractional = progress % 1; // 0→1 within each transition
-    const wave = Math.sin(fractional * Math.PI); // 0→1→0 bell curve
-    setSpeedMultiplier(1 + wave * 0.3); // 1× → 1.3× → 1×
+    if (targetSection !== currentSection) {
+      isScrolling.current = true;
+      el.scrollTo({ top: targetSection * viewH, behavior: 'smooth' });
+      // Lock scrolling until animation completes
+      if (scrollTimeout.current) clearTimeout(scrollTimeout.current);
+      scrollTimeout.current = setTimeout(() => { isScrolling.current = false; }, 600);
+    }
+  }, []);
+
+  // Handle touch-based scrolling: intercept and snap one section at a time
+  const touchStartY = useRef(0);
+  const handleTouchStart = useCallback((e: React.TouchEvent) => {
+    touchStartY.current = e.touches[0].clientY;
+  }, []);
+
+  const handleTouchEnd = useCallback((e: React.TouchEvent) => {
+    if (!containerRef.current || isScrolling.current) return;
+    const deltaY = touchStartY.current - e.changedTouches[0].clientY;
+    if (Math.abs(deltaY) < 30) return; // too small, ignore
+
+    const el = containerRef.current;
+    const viewH = el.clientHeight;
+    const currentSection = Math.round(el.scrollTop / viewH);
+    const direction = deltaY > 0 ? 1 : -1;
+    const targetSection = Math.max(0, Math.min(2, currentSection + direction));
+
+    if (targetSection !== currentSection) {
+      isScrolling.current = true;
+      el.scrollTo({ top: targetSection * viewH, behavior: 'smooth' });
+      if (scrollTimeout.current) clearTimeout(scrollTimeout.current);
+      scrollTimeout.current = setTimeout(() => { isScrolling.current = false; }, 600);
+    }
+  }, []);
+
+  // Cleanup timeout
+  useEffect(() => {
+    return () => { if (scrollTimeout.current) clearTimeout(scrollTimeout.current); };
   }, []);
 
   return (
     <div className="relative h-dvh" style={{ background: 'hsl(0 0% 3%)' }}>
       {/* Fixed fire background — outside scroll container */}
       <div className="fixed inset-0 z-0">
-        <FireParticleField parallaxOffset={parallaxOffset} speedMultiplier={speedMultiplier} />
+        <FireParticleField parallaxOffset={parallaxOffset} speedMultiplier={1} />
         <div className="immersive-vignette" />
       </div>
 
       {/* Scrollable content */}
       <div
         ref={containerRef}
-        onScroll={handleScroll}
-        className="absolute inset-0 z-10 overflow-y-auto snap-y snap-mandatory hide-scrollbar"
-        style={{ scrollBehavior: 'smooth' }}
+        onWheel={handleWheel}
+        onTouchStart={handleTouchStart}
+        onTouchEnd={handleTouchEnd}
+        className="absolute inset-0 z-10 overflow-y-hidden snap-y snap-mandatory hide-scrollbar"
       >
       {/* ── SIGHT 1: Game Over + Grade + Character Tag ── */}
       <div

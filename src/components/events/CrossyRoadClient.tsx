@@ -155,8 +155,19 @@ export default function CrossyRoadClient({ event, isEagle, connId, nowTs, onHop,
         })}
 
         {currentLane <= 0 && (
-          <div className="h-10 bg-secondary/30 flex items-center justify-center">
+          <div className="relative h-10 bg-secondary/30 flex items-center justify-center">
             <span className="text-xs font-pixel text-muted-foreground">🏠 START — tap ⬆ to go!</span>
+            {myState && (
+              <div
+                className="absolute top-1 w-7 h-7 rounded-full bg-primary border-2 border-white flex items-center justify-center text-sm z-10"
+                style={{
+                  left: `${((((myState.xPosition % FIELD_WIDTH) + FIELD_WIDTH) % FIELD_WIDTH) / FIELD_WIDTH) * 100}%`,
+                  transform: "translateX(-50%)",
+                }}
+              >
+                🐤
+              </div>
+            )}
           </div>
         )}
       </div>
