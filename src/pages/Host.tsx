@@ -994,7 +994,7 @@ export default function Host() {
               </span>
             </div>
           )}
-        </div>
+        </div>}
 
         {/* Eagle awake countdown */}
         {!snapshot.eagleAwake && (
