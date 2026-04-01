@@ -299,12 +299,7 @@ const Index = () => {
           style={{ "--delay": "0.4s" } as React.CSSProperties}
         >
           <ImmersiveTitle />
-          <p
-            className="text-sm text-muted-foreground font-mono max-w-md mx-auto immersive-fade-in whitespace-pre-line"
-            style={{ "--delay": "2.0s" } as React.CSSProperties}
-          >
-            {"GPA Killer wants your grade.\nFirechicks want to graduate.\nGPA Killer vs Firechicks — who survives?"}
-          </p>
+        </div>
         </div>
 
         {/* Buttons — staggered fade-in */}
