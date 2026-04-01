@@ -1087,6 +1087,7 @@ export function useGameLogic({ players, broadcast, gameMode, connectionMode, map
               // Eagle triggers a random event
               box.triggered = true;
               gs.lastMysteryBoxSpawn = now; // restart after claim
+              addBreakdown(p, 'mystery-box', 'Open mystery box', 15);
               gs.frozenAll = true;
               gs.frozenAllUntil = now + 60000; // lifted when event ends
               // Stop eagle movement immediately so it doesn't drift after unfreeze
