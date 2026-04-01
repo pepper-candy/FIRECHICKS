@@ -462,6 +462,7 @@ export default function Client() {
   const [examZoom, setExamZoom] = useState(1);
   const [examOpacity, setExamOpacity] = useState(0.85);
   const examVideoRef = useRef<HTMLVideoElement>(null);
+  const [examWhiteBg, setExamWhiteBg] = useState(false);
   const examStreamRef = useRef<MediaStream | null>(null);
 
   const { isFullscreen, showImmersiveControl, enter: enterFullscreen } = useFullscreen();
