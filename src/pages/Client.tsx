@@ -450,7 +450,7 @@ export default function Client() {
     } else if (wasConnectedRef.current && !kicked) {
       // Was connected, now disconnected (host dropped) — go to arrival
       wasConnectedRef.current = false;
-      toast("Host disconnected — returning to home");
+      toast("Host Disconnected");
       navigate("/");
     }
   }, [connected, kicked, navigate]);
