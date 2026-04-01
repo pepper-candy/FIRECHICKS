@@ -630,6 +630,7 @@ export default function Host() {
   // ─── PLAYING / EXAM ──────────────────────────────────────────────────────────
   if ((phase === "playing" || phase === "exam") && snapshot) {
     const alivePlayers = Object.values(snapshot.players).filter((p) => p.alive);
+    const isCrossyActive = snapshot.activeEvent?.type === 'crossy-road' && snapshot.activeEvent?.phase === 'active';
 
     return (
       <div className="relative h-screen">
@@ -739,7 +740,7 @@ export default function Host() {
         )}
 
         {/* Tip obtain countdowns — stacked at top */}
-        {snapshot.tipObtainTimers && Object.keys(snapshot.tipObtainTimers).length > 0 && (
+        {!isCrossyActive && snapshot.tipObtainTimers && Object.keys(snapshot.tipObtainTimers).length > 0 && (
           <div className="absolute left-1/2 -translate-x-1/2 z-10 flex flex-col gap-1 items-center top-10">
             {Object.entries(snapshot.tipObtainTimers).map(([connId, timer]) => {
               const player = snapshot.players[connId];
@@ -760,12 +761,12 @@ export default function Host() {
         )}
 
         {/* Pause controls + Health display top-right */}
+        {!isCrossyActive && (
         <div className="absolute top-2 right-2 z-30 flex flex-col gap-1">
           <div className="flex gap-1 justify-end">
             <button
               onClick={() => {
                 if (isPaused) {
-                  // Keep game paused during 3s grab-back, then auto-unpause
                   setGrabBackUntil(Date.now() + 3000);
                   setTimeout(() => {
                     togglePause();
@@ -805,6 +806,7 @@ export default function Host() {
           </div>
           <HealthDisplay players={snapshot.players} />
         </div>
+        )}
 
         {/* PAUSED overlay — manual pause OR stage transition pause OR grab-back after resume */}
         {(() => {
@@ -853,9 +855,10 @@ export default function Host() {
         })()}
 
         {/* Stage progress bottom */}
-        <StageProgressBar currentStage={snapshot.stage} stageLabel={snapshot.stageLabel} />
+        {!isCrossyActive && <StageProgressBar currentStage={snapshot.stage} stageLabel={snapshot.stageLabel} />}
 
         {/* Game time — click to toggle total vs play time */}
+        {!isCrossyActive && (
         <div
           className="absolute top-2 left-2 z-10 px-3 py-1 rounded bg-card/80 border border-border font-mono text-xs cursor-pointer select-none"
           style={{ color: showPlayTime ? "hsl(0 80% 55%)" : "hsl(var(--muted-foreground))" }}
@@ -867,6 +870,7 @@ export default function Host() {
             ? `${Math.floor(snapshot.gameTime - snapshot.totalPauseMs / 1000)}s`
             : `${Math.floor(snapshot.gameTime)}s`}
         </div>
+        )}
         <button
           onClick={exportDebugLog}
           className="absolute top-2 left-28 z-10 px-2 py-1 rounded border border-border bg-card/90 hover:bg-card text-[11px] font-mono text-muted-foreground"
