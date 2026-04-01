@@ -73,7 +73,7 @@ export default function GameOverScreen({
     // Peak speed at transition midpoints (0.5, 1.5), normal at snap points (0, 1, 2)
     const fractional = progress % 1; // 0→1 within each transition
     const wave = Math.sin(fractional * Math.PI); // 0→1→0 bell curve
-    setSpeedMultiplier(1 + wave * 2); // 1× → 3× → 1×
+    setSpeedMultiplier(1 + wave * 0.3); // 1× → 1.3× → 1×
   }, []);
 
   return (
