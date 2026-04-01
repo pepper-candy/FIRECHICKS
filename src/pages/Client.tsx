@@ -1167,166 +1167,21 @@ export default function Client() {
       : `${displayColor?.name ?? 'Unknown'} Chick`;
 
     return (
-      <div className="h-dvh overflow-y-auto snap-y snap-mandatory bg-background">
-        {/* ── SIGHT 1: Game Over + Grade + Character Tag ── */}
-        <div className="snap-start h-dvh flex flex-col items-center justify-center relative px-6">
-          <div className="flex flex-col items-center gap-5">
-            <h1 className="text-2xl font-pixel text-accent">GAME OVER</h1>
-
-            <p className="text-lg font-pixel" style={{
-              color: winner === "eagle" ? "hsl(0 80% 55%)" : winner === "chicks" ? "hsl(145 80% 50%)" : "hsl(45 100% 55%)",
-            }}>
-              {winner === "eagle" ? "🦅 Eagle Wins!" : winner === "chicks" ? "🐤 Chicks Win!" : "🤝 Draw!"}
-            </p>
-
-            <div className="w-16 border-t border-border" />
-
-            {/* Grade — chick only */}
-            {myState && !isEagle && (
-              <div className="flex flex-col items-center gap-1">
-                <span className="text-sm font-mono text-muted-foreground">Your Grade</span>
-                <div className="flex items-baseline gap-2">
-                  <span className="text-5xl font-bold" style={{ color: getGradeColor(myState.health) }}>
-                    {gradeToLetter(myState.health)}
-                  </span>
-                  <span className="text-sm font-mono text-muted-foreground">({myState.health.toFixed(1)})</span>
-                </div>
-              </div>
-            )}
-
-            {/* Eagle — no grade */}
-            {isEagle && (
-              <div className="flex flex-col items-center gap-1">
-                <span className="text-sm font-mono text-muted-foreground">Your Grade</span>
-                <span className="text-3xl font-bold text-muted-foreground">N/A</span>
-              </div>
-            )}
-
-            <div className="w-16 border-t border-border" />
-
-            {/* Character Tag */}
-            <div
-              className="px-4 py-1.5 rounded-full border font-mono text-sm"
-              style={{
-                borderColor: `hsl(${displayColor?.hsl ?? '0 0% 50%'} / 0.5)`,
-                color: `hsl(${displayColor?.hsl ?? '0 0% 50%'})`,
-              }}
-            >
-              {isEagle ? '🦅' : '🐤'} {roleTag}
-            </div>
-          </div>
-
-          {/* Scroll indicator */}
-          <div className="absolute bottom-8 left-1/2 -translate-x-1/2 flex flex-col items-center gap-1 animate-bounce">
-            <span className="text-xs font-mono text-muted-foreground/50">scroll</span>
-            <span className="text-muted-foreground/50">▼</span>
-          </div>
-        </div>
-
-        {/* ── SIGHT 2: Action Score + How You Were Measured ── */}
-        <div className="snap-start h-dvh flex flex-col items-center justify-center relative px-6">
-          <div className="flex flex-col items-center gap-5 w-full max-w-sm">
-            {/* Action Score — expandable breakdown */}
-            {myState && (
-              <div className="w-full flex flex-col gap-2">
-                <button
-                  onClick={() => setBreakdownOpen(!breakdownOpen)}
-                  className="flex items-center justify-between w-full py-3 px-4 rounded-lg border border-border bg-card"
-                >
-                  <span className="text-sm font-pixel">📊 ACTION SCORE</span>
-                  <div className="flex items-center gap-2">
-                    <span className="text-2xl font-bold text-accent">{myState.actionScore.toFixed(0)}</span>
-                    <span className="text-xs text-muted-foreground">{breakdownOpen ? '▲' : 'Tap →'}</span>
-                  </div>
-                </button>
-
-                {breakdownOpen && (
-                  <div className="space-y-1.5 pl-3 border-l-2 border-accent/30 font-mono text-xs mx-2">
-                    {breakdownOrder.map((key) => {
-                      const entry = breakdown[key];
-                      const points = entry?.points ?? 0;
-                      const count = entry?.count ?? 0;
-                      const fmtPts = points % 1 ? points.toFixed(1) : points.toFixed(0);
-                      return (
-                        <div key={key} className="flex justify-between">
-                          <span className="text-muted-foreground">{entry?.label ?? key}</span>
-                          <span className={points > 0 ? 'text-foreground' : 'text-muted-foreground/40'}>
-                            +{fmtPts} ({count})
-                          </span>
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
-            )}
-
-            <div className="w-16 border-t border-border" />
-
-            {/* Hidden Metrics — chicks only */}
-            {myState && !isEagle && (
-              <div className="w-full flex flex-col gap-3 px-4 py-3 rounded-lg border border-border bg-card">
-                <span className="text-sm font-pixel">📈 HOW YOU WERE MEASURED</span>
-                <div className="space-y-2 font-mono text-xs text-muted-foreground">
-                  <div className="flex justify-between"><span>QR Scans</span><span>{myState.scansPerformed ?? 0}</span></div>
-                  <div className="flex justify-between"><span>Time in Zones</span><span>{Math.floor(myState.timeInZones ?? 0)}s</span></div>
-                  <div className="flex justify-between"><span>Tips Shared</span><span>{myState.tipsShared ?? 0}</span></div>
-                  <div className="flex justify-between"><span>Social Circle</span><span>{myState.socialCircleCompleted ? '✓' : '✗'}</span></div>
-                  <div className="w-full border-t border-border my-1" />
-                  <div className="flex justify-between font-bold text-foreground text-sm">
-                    <span>Cooperation Score</span><span>{cooperationScore}</span>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* Eagle — simpler metrics */}
-            {myState && isEagle && (
-              <div className="w-full flex flex-col gap-3 px-4 py-3 rounded-lg border border-border bg-card">
-                <span className="text-sm font-pixel">📈 YOUR IMPACT</span>
-                <div className="space-y-2 font-mono text-xs text-muted-foreground">
-                  <div className="flex justify-between"><span>Damage Dealt</span><span>{breakdown['deal-damage']?.count ?? 0}</span></div>
-                  <div className="flex justify-between"><span>Chicks Caged</span><span>{breakdown['cage']?.count ?? 0}</span></div>
-                  <div className="flex justify-between"><span>Props Used</span><span>{breakdown['use-prop']?.count ?? 0}</span></div>
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* Scroll indicator */}
-          <div className="absolute bottom-8 left-1/2 -translate-x-1/2 flex flex-col items-center gap-1 animate-bounce">
-            <span className="text-xs font-mono text-muted-foreground/50">scroll</span>
-            <span className="text-muted-foreground/50">▼</span>
-          </div>
-        </div>
-
-        {/* ── SIGHT 3: Result + Quote + Leave ── */}
-        <div className="snap-start h-dvh flex flex-col items-center justify-center relative px-6">
-          <div className="flex flex-col items-center gap-6">
-            {/* Team Result */}
-            {amWinner && !isDraw && <p className="text-2xl font-pixel text-primary text-glow-green">🎉 YOU WIN!</p>}
-            {isDraw && <p className="text-2xl font-pixel" style={{ color: 'hsl(45 100% 55%)' }}>🤝 It's a Draw!</p>}
-            {!amWinner && !isDraw && <p className="text-2xl font-pixel text-destructive">You Lose</p>}
-
-            <div className="w-16 border-t border-border" />
-
-            <p className="text-center text-sm font-mono text-muted-foreground/70 italic px-4 leading-relaxed max-w-xs">
-              "In this game, your value was calculated by your actions.
-              <br />
-              Sound familiar?"
-            </p>
-
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => { disconnect(); navigate("/"); }}
-              className="text-xs font-mono mt-4"
-            >
-              LEAVE
-            </Button>
-          </div>
-        </div>
-      </div>
+      <GameOverScreen
+        winner={winner}
+        amWinner={amWinner}
+        isDraw={isDraw}
+        isEagle={isEagle}
+        myState={myState}
+        displayColor={displayColor}
+        roleTag={roleTag}
+        breakdown={breakdown}
+        breakdownOrder={breakdownOrder}
+        breakdownOpen={breakdownOpen}
+        setBreakdownOpen={setBreakdownOpen}
+        cooperationScore={cooperationScore}
+        onLeave={() => { disconnect(); navigate("/"); }}
+      />
     );
   }
 
