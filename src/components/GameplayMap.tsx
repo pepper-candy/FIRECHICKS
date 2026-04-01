@@ -768,6 +768,7 @@ export default function GameplayMap({
               baseEmissive={buildingEmissive}
               immersive={immersive}
               lightMode={hasEdges}
+              hideOverlays={hideOverlays}
             />
           );
         })}
