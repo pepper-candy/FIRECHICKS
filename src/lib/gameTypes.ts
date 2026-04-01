@@ -140,6 +140,11 @@ export interface PlayerGameState {
   // Cage
   cagedUntil: number;
   cageCooldownUntil: number;
+  scoreBreakdown: Record<string, ScoreBreakdownEntry>;
+  scansPerformed: number;
+  timeInZones: number;
+  tipsShared: number;
+  socialCircleCompleted: boolean;
 }
 
 export interface PlayerGameStateSerializable {
