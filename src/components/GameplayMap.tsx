@@ -81,23 +81,27 @@ function MapCamera({ zoomLevel = 1 }: { zoomLevel?: number }) {
   useEffect(() => {
     const clamped = Math.max(0.65, Math.min(1.5, zoomLevel));
 
-    // Map zoom level to camera angle:
-    // zoom 0.65 → angle 0.9 rad (angled)
-    // zoom 1.5  → angle 1.4 rad (more bird view)
-    const angle = 0.9 + ((clamped - 0.65) * (1.4 - 0.9)) / (1.5 - 0.65);
+    const MAP_HALF = 28;
+    const BASE_FOV = 58;
 
-    // Camera distance from center
-    const distance = 60;
+    const fovDeg = BASE_FOV / Math.max(0.75, clamped);
+    const halfFovRad = (fovDeg * Math.PI) / 180 / 2;
 
-    // Calculate camera position from angle
-    const camY = distance * Math.sin(angle);
-    const camZ = distance * Math.cos(angle);
+    // Map zoom level to camera angle (radians)
+    // Zoom 0.65 → angle 0.82 rad (more side view)
+    // Zoom 1.0  → angle 0.93 rad
+    // Zoom 1.5  → angle 1.05 rad (more top-down)
+    const angleToCenter = 0.82 + ((clamped - 0.65) * (1.05 - 0.82)) / (1.5 - 0.65);
+
+    // Distance from camera to center to keep bottom edge fixed
+    const distToCenter = MAP_HALF / (Math.tan(halfFovRad) * Math.cos(angleToCenter) - Math.sin(angleToCenter));
+
+    const camY = distToCenter * Math.sin(angleToCenter);
+    const camZ = distToCenter * Math.cos(angleToCenter);
 
     camera.position.set(0, camY, camZ);
-    (camera as any).fov = 58 / Math.max(0.75, clamped);
+    (camera as any).fov = fovDeg;
     (camera as any).updateProjectionMatrix?.();
-
-    // Look at center of map
     camera.lookAt(0, 0, 0);
   }, [camera, zoomLevel]);
   return null;
