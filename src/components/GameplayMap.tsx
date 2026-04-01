@@ -81,43 +81,20 @@ function MapCamera({ zoomLevel = 1 }: { zoomLevel?: number }) {
   useEffect(() => {
     const clamped = Math.max(0.65, Math.min(1.5, zoomLevel));
 
-    // Zoom in/out positions
-    const posY_out = 65;
-    const posZ_out = 52;
-    const posY_default = 56;
-    const posZ_default = 42;
-    const posY_in = 44;
-    const posZ_in = 30;
+    // As zoom increases, camera moves farther (dolly back)
+    const posY = 40 + (clamped - 0.65) * 25;
+    const posZ = 28 + (clamped - 0.65) * 22;
 
-    // lookAt Y controls vertical pan
-    // Higher value = camera looks up (bottom edge rises)
-    // Lower value = camera looks down (bottom edge lowers)
-    const lookY_out = -3; // zoomed out: look slightly down to keep bottom fixed
-    const lookY_default = 0; // default: look at center
-    const lookY_in = 5; // zoomed in: look up to keep bottom fixed
+    // LookAt Y controls vertical pan
+    const lookY = (clamped - 1) * 3; // 0 at default, up to 1.5 at max zoom
 
-    let camY, camZ, lookY;
-
-    if (clamped < 1) {
-      const t = (1 - clamped) / (1 - 0.65);
-      camY = posY_default + (posY_out - posY_default) * t;
-      camZ = posZ_default + (posZ_out - posZ_default) * t;
-      lookY = lookY_default + (lookY_out - lookY_default) * t;
-    } else {
-      const t = (clamped - 1) / (1.5 - 1);
-      camY = posY_default + (posY_in - posY_default) * t;
-      camZ = posZ_default + (posZ_in - posZ_default) * t;
-      lookY = lookY_default + (lookY_in - lookY_default) * t;
-    }
-
-    camera.position.set(0, camY, camZ);
+    camera.position.set(0, posY, posZ);
     (camera as any).fov = 58 / Math.max(0.75, clamped);
     (camera as any).updateProjectionMatrix?.();
     camera.lookAt(0, lookY, 0);
   }, [camera, zoomLevel]);
   return null;
 }
-
 // ─── Nature Obstacles ──────────────────────────────────────────────────────────
 
 function Tree({ position, scale = 1 }: { position: { x: number; z: number }; scale?: number }) {
