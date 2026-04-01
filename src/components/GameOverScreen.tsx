@@ -27,6 +27,7 @@ export default function GameOverScreen({
 }: GameOverScreenProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [parallaxOffset, setParallaxOffset] = useState(0);
+  const [speedMultiplier, setSpeedMultiplier] = useState(1);
   const [sectionOpacities, setSectionOpacities] = useState([1, 0, 0]);
 
   // IntersectionObserver for fade-in
@@ -60,24 +61,34 @@ export default function GameOverScreen({
     return () => observer.disconnect();
   }, []);
 
-  // Parallax on scroll
+  // Parallax + speed multiplier on scroll
   const handleScroll = useCallback(() => {
     if (!containerRef.current) return;
     const scrollY = containerRef.current.scrollTop;
-    setParallaxOffset(scrollY * 0.3); // bg moves 30% faster
+    const viewH = containerRef.current.clientHeight;
+    setParallaxOffset(scrollY * 0.3);
+
+    // Map scroll progress between sections to speed multiplier 1→3→1
+    const progress = viewH > 0 ? scrollY / viewH : 0; // 0 at sight1, 1 at sight2, 2 at sight3
+    // Peak speed at transition midpoints (0.5, 1.5), normal at snap points (0, 1, 2)
+    const fractional = progress % 1; // 0→1 within each transition
+    const wave = Math.sin(fractional * Math.PI); // 0→1→0 bell curve
+    setSpeedMultiplier(1 + wave * 2); // 1× → 3× → 1×
   }, []);
 
   return (
-    <div
-      ref={containerRef}
-      onScroll={handleScroll}
-      className="h-dvh overflow-y-auto snap-y snap-mandatory hide-scrollbar"
-      style={{ scrollBehavior: 'smooth', background: 'hsl(0 0% 3%)' }}
-    >
-      {/* Fire background */}
-      <FireParticleField parallaxOffset={parallaxOffset} />
+    <div className="relative h-dvh" style={{ background: 'hsl(0 0% 3%)' }}>
+      {/* Fixed fire background */}
+      <FireParticleField parallaxOffset={parallaxOffset} speedMultiplier={speedMultiplier} />
       <div className="immersive-vignette" />
 
+      {/* Scrollable content */}
+      <div
+        ref={containerRef}
+        onScroll={handleScroll}
+        className="absolute inset-0 z-10 overflow-y-auto snap-y snap-mandatory hide-scrollbar"
+        style={{ scrollBehavior: 'smooth' }}
+      >
       {/* ── SIGHT 1: Game Over + Grade + Character Tag ── */}
       <div
         ref={(el) => { sectionRefs.current[0] = el; }}
@@ -261,6 +272,9 @@ export default function GameOverScreen({
           </Button>
         </div>
       </div>
+      {/* end scroll container */}
+      </div>
+    {/* end outer wrapper */}
     </div>
   );
 }
