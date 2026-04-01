@@ -1921,7 +1921,7 @@ export function useGameLogic({ players, broadcast, gameMode, connectionMode, map
         } else {
           csHop.laneIndex = Math.max(csHop.laneIndex - 1, 0);
         }
-        player.actionScore += 0.2;
+        // crossy hop scoring is handled at event end via crossings count
         break;
       }
 
