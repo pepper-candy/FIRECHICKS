@@ -621,7 +621,14 @@ export default function Client() {
             });
           }, 5000);
         }
-      } else if (msg.type === "exam-start") {
+    } else if (msg.type === "exam-wrong") {
+        const left = msg.attemptsLeft as number;
+        if (left > 0) {
+          toast.error(`❌ Wrong answer! ${left} attempt${left > 1 ? 's' : ''} remaining`);
+        } else {
+          toast.error("❌ Wrong answer! No attempts remaining");
+        }
+    } else if (msg.type === "exam-start") {
         const myExam = msg.assignments?.[connIdRef.current];
         if (myExam && myExam.questionNum > 0) {
           setExamLayer(myExam.layer);

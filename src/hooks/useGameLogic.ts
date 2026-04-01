@@ -1681,17 +1681,17 @@ export function useGameLogic({ players, broadcast, gameMode, connectionMode, map
           if (tipShare.connId === connId) return; // can't scan own tip
           if (now < tipShare.cooldownUntil) return; // on cooldown
 
+          // Reject if scanner already has this tip (prevent occupying quota)
+          if (player.tips[tipShare.tipIndex]) return;
+
           // Proximity check: scanner must be near sharer
           const sharer = gs.playerStates.get(tipShare.connId);
           if (sharer && !checkOverlap(player.position.x, player.position.z, sharer.position.x, sharer.position.z, TIP_SHARE_RADIUS)) {
             return; // too far
           }
 
-          const alreadyHasTip = player.tips[tipShare.tipIndex];
-          if (!alreadyHasTip) {
-            player.tips[tipShare.tipIndex] = true;
-            player.actionScore += 5;
-          }
+          player.tips[tipShare.tipIndex] = true;
+          player.actionScore += 5;
           tipShare.cooldownUntil = now + TIP_QR_COOLDOWN;
 
           // Notify both scanner and sharer to show 3s copying countdown
