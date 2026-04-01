@@ -1398,7 +1398,12 @@ function GameOverCeremony({ snapshot, gameMode }: { snapshot: GameStateSnapshot;
                       <td className="py-2 text-center text-muted-foreground">
                         {p.isEagle ? `+${p.damageDealt.toFixed(1)}` : `-${p.damageTaken.toFixed(1)}`}
                       </td>
-                      <td className="py-2 text-center text-foreground font-bold">{p.actionScore.toFixed(0)}</td>
+                      <td className="py-2 text-center text-foreground font-bold">
+                        <span className="inline-flex items-center gap-1">
+                          {p.actionScore.toFixed(0)}
+                          <ScoreBreakdownModal player={p} />
+                        </span>
+                      </td>
                       <td className="py-2 text-center">
                         {result === "draw" ? (
                           <span

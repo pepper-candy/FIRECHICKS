@@ -1149,31 +1149,115 @@ export default function Client() {
     const winner = directWinner ?? gameState?.winner;
     const amWinner = (winner === "eagle" && isEagle) || (winner === "chicks" && !isEagle);
     const isDraw = winner === "draw";
+
+    const breakdown = myState?.scoreBreakdown ?? {};
+    const breakdownOrder = isEagle
+      ? ['deal-damage', 'use-prop', 'cage', 'mystery-box', 'building-hp', 'hitbox', 'crossy-road']
+      : ['obtain-tip', 'receive-tip', 'collect-prop', 'use-prop', 'mystery-box', 'crossy-road', 'mock-exam', 'final-exam', 'social-circle', 'survival', 'hitbox'];
+
+    const cooperationScore = myState && !isEagle ? (
+      (myState.scansPerformed ?? 0) +
+      ((myState.tipsShared ?? 0) * 5) +
+      ((myState.socialCircleCompleted ?? false) ? 10 : 0) +
+      Math.floor((myState.timeInZones ?? 0) / 5)
+    ) : 0;
+
     return (
-      <div className="flex flex-col items-center justify-center h-dvh overflow-hidden gap-6 p-4">
-        <h1 className="text-2xl font-pixel text-accent">GAME OVER</h1>
-        {gameState && (
-          <p
-            className="text-lg font-pixel"
-            style={{
-              color:
-                winner === "eagle" ? "hsl(0 80% 55%)" : winner === "chicks" ? "hsl(145 80% 50%)" : "hsl(45 100% 55%)",
-            }}
-          >
-            {winner === "eagle" ? "🦅 Eagle Wins!" : winner === "chicks" ? "🐤 Chicks Win!" : "🤝 Draw!"}
-          </p>
-        )}
-        {myState && (
+      <div className="flex flex-col h-dvh overflow-auto p-4 gap-4">
+        <h1 className="text-2xl font-pixel text-accent text-center">GAME OVER</h1>
+
+        <p className="text-lg font-pixel text-center" style={{
+          color: winner === "eagle" ? "hsl(0 80% 55%)" : winner === "chicks" ? "hsl(145 80% 50%)" : "hsl(45 100% 55%)",
+        }}>
+          {winner === "eagle" ? "🦅 Eagle Wins!" : winner === "chicks" ? "🐤 Chicks Win!" : "🤝 Draw!"}
+        </p>
+
+        <div className="w-full border-t border-border" />
+
+        {/* Grade */}
+        {myState && !isEagle && (
           <div className="flex flex-col items-center gap-1">
-            <span className="text-4xl font-bold" style={{ color: isEagle ? 'hsl(var(--muted-foreground))' : getGradeColor(myState.health) }}>
-              {isEagle ? 'N/A' : gradeToLetter(myState.health)}
-            </span>
-            <span className="text-sm font-mono text-muted-foreground">Your final grade</span>
+            <span className="text-sm font-mono text-muted-foreground">Your Grade</span>
+            <div className="flex items-baseline gap-2">
+              <span className="text-4xl font-bold" style={{ color: getGradeColor(myState.health) }}>
+                {gradeToLetter(myState.health)}
+              </span>
+              <span className="text-sm font-mono text-muted-foreground">({myState.health.toFixed(1)})</span>
+            </div>
           </div>
         )}
-        {isDraw && <p className="text-lg font-pixel" style={{ color: 'hsl(45 100% 55%)' }}>🤝 It's a Draw!</p>}
-        {amWinner && !isDraw && <p className="text-lg font-pixel text-primary text-glow-green">🎉 YOU WIN!</p>}
-        <Button variant="outline" size="sm" onClick={() => { disconnect(); navigate("/"); }} className="text-xs font-mono">
+
+        {myState && !isEagle && <div className="w-full border-t border-border" />}
+
+        {/* Action Score — expandable breakdown */}
+        {myState && (
+          <div className="flex flex-col gap-2">
+            <button
+              onClick={() => setBreakdownOpen(!breakdownOpen)}
+              className="flex items-center justify-between w-full py-2"
+            >
+              <span className="text-sm font-pixel">📊 ACTION SCORE</span>
+              <div className="flex items-center gap-2">
+                <span className="text-xl font-bold">{myState.actionScore.toFixed(0)}</span>
+                <span className="text-xs text-muted-foreground">{breakdownOpen ? '▲' : 'Tap →'}</span>
+              </div>
+            </button>
+
+            {breakdownOpen && (
+              <div className="space-y-1 pl-2 border-l-2 border-accent/30 font-mono text-xs">
+                {breakdownOrder.map((key) => {
+                  const entry = breakdown[key];
+                  const points = entry?.points ?? 0;
+                  const count = entry?.count ?? 0;
+                  const fmtPts = points % 1 ? points.toFixed(1) : points.toFixed(0);
+                  return (
+                    <div key={key} className="flex justify-between">
+                      <span className="text-muted-foreground">{entry?.label ?? key}</span>
+                      <span className={points > 0 ? 'text-foreground' : 'text-muted-foreground/40'}>
+                        +{fmtPts} ({count})
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        )}
+
+        <div className="w-full border-t border-border" />
+
+        {/* Hidden Metrics — chicks only */}
+        {myState && !isEagle && (
+          <div className="flex flex-col gap-2">
+            <span className="text-sm font-pixel">📈 HOW YOU WERE MEASURED</span>
+            <div className="space-y-1 font-mono text-xs text-muted-foreground">
+              <div className="flex justify-between"><span>QR Scans</span><span>{myState.scansPerformed ?? 0}</span></div>
+              <div className="flex justify-between"><span>Time in Zones</span><span>{Math.floor(myState.timeInZones ?? 0)}s</span></div>
+              <div className="flex justify-between"><span>Tips Shared</span><span>{myState.tipsShared ?? 0}</span></div>
+              <div className="flex justify-between"><span>Social Circle</span><span>{myState.socialCircleCompleted ? '✓' : '✗'}</span></div>
+              <div className="flex justify-between font-bold text-foreground">
+                <span>Cooperation Score</span><span>{cooperationScore}</span>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {myState && !isEagle && <div className="w-full border-t border-border" />}
+
+        {/* Team Result */}
+        <div className="text-center">
+          {amWinner && !isDraw && <p className="text-lg font-pixel text-primary text-glow-green">🎉 YOU WIN!</p>}
+          {isDraw && <p className="text-lg font-pixel" style={{ color: 'hsl(45 100% 55%)' }}>🤝 It's a Draw!</p>}
+          {!amWinner && !isDraw && <p className="text-lg font-pixel text-destructive">You Lose</p>}
+        </div>
+
+        <div className="w-full border-t border-border" />
+
+        <p className="text-center text-xs font-mono text-muted-foreground/70 italic px-4">
+          "Your actions were measured. What system is measuring you right now?"
+        </p>
+
+        <Button variant="outline" size="sm" onClick={() => { disconnect(); navigate("/"); }} className="text-xs font-mono mx-auto mt-2">
           LEAVE
         </Button>
       </div>

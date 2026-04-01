@@ -35,6 +35,11 @@ const mockChickPlayer = (connId: string, colorIndex: number, chickColor: string,
   attackRemainingMs: 0,
   flyRemainingMs: 0,
   cageRemainingMs: 0,
+  scoreBreakdown: {},
+  scansPerformed: 0,
+  timeInZones: 0,
+  tipsShared: 0,
+  socialCircleCompleted: false,
   ...overrides,
 });
 

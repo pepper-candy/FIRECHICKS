@@ -1961,7 +1961,7 @@ export function useGameLogic({ players, broadcast, gameMode, connectionMode, map
         const correct = FINAL_ANSWER_KEY[gs.examState.questionNum];
         if (msg.answer.toUpperCase().trim() === correct) {
           gs.examState.answered = true;
-          player.actionScore += 20;
+          addBreakdown(player, 'final-exam', 'Final Exam correct', 10);
           resolveExamWinner(gs, gameModeRef.current as "1v3" | "2v6", broadcastRef.current);
         } else {
           // Wrong: -2 sub-grades to all alive chicks, track attempt count
