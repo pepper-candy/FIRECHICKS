@@ -52,7 +52,7 @@ export default function CrossyRoadHost({ event, players, gameMode }: Props) {
 
       {/* Instructions + Eagle speed */}
       <div className="text-xs font-mono text-muted-foreground text-center space-y-0.5">
-        <p>🦅 Speed: <span className="text-accent font-bold">{speedBoost.toFixed(1)}×</span> · Chicks hop through 5 lanes · 3+ crossings = +2 grades</p>
+        <p>🦅 Speed: <span className="text-accent font-bold">{speedBoost.toFixed(1)}×</span> · Chicks hop through 5 lanes · 2 crossings = +1 · 3+ = +2</p>
       </div>
 
       {/* Lane visualization */}
