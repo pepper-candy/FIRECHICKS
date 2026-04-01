@@ -392,13 +392,13 @@ export default function Host() {
 
         {/* Header row */}
         <div className="flex items-center justify-between flex-wrap gap-2 z-10">
-          <h1
-            className={`text-sm md:text-base text-primary tracking-wider font-pixel ${isImmersive ? "ceremony-title-glow" : "text-glow-green"}`}
-          >
-            LOBBY
-          </h1>
+          <div className="flex items-center gap-2">
+            <h1
+              className={`text-sm md:text-base text-primary tracking-wider font-pixel ${isImmersive ? "ceremony-title-glow" : "text-glow-green"}`}
+            >
+              LOBBY
+            </h1>
 
-          <div className="flex items-center gap-2 font-mono text-xs flex-wrap">
             {/* Game mode toggle (only when not full) */}
             {!isFull && (
               <button
@@ -413,6 +413,9 @@ export default function Host() {
                 {gameMode}
               </button>
             )}
+          </div>
+
+          <div className="flex items-center gap-2 font-mono text-xs flex-wrap">
 
             {/* Map selector */}
             <Select value={String(mapId)} onValueChange={(v) => setMapId(Number(v) as MapId)}>
