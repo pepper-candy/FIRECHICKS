@@ -442,6 +442,18 @@ export default function Client() {
   const prevCagedUntilRef = useRef<number>(0);
   const prevDamageDealtRef = useRef<number>(0);
 
+  // If host disconnects while client is in lobby/game, navigate to arrival page
+  const wasConnectedRef = useRef(false);
+  useEffect(() => {
+    if (connected) {
+      wasConnectedRef.current = true;
+    } else if (wasConnectedRef.current && !kicked) {
+      // Was connected, now disconnected (host dropped) — go to arrival
+      wasConnectedRef.current = false;
+      toast("Host disconnected — returning to home");
+      navigate("/");
+    }
+  }, [connected, kicked, navigate]);
 
   // Tips state — QR now displays in scanner box, not tip box
   const [tipQrCodes, setTipQrCodes] = useState<[string | null, string | null]>([null, null]);
