@@ -365,7 +365,7 @@ const Index = () => {
         >
           <p>GPA-Killers want your grade.</p>
           <p>Firechicks want to graduate.</p>
-          <p>GPA Killer vs Firechicks – who survives?</p>
+          <p>GPA-Killers vs Firechicks – who survives?</p>
         </div>
 
         <AssetLoadingIndicator />
