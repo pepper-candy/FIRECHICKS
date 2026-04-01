@@ -855,7 +855,7 @@ export default function Host() {
         })()}
 
         {/* Stage progress bottom */}
-        <StageProgressBar currentStage={snapshot.stage} stageLabel={snapshot.stageLabel} />
+        {!isCrossyActive && <StageProgressBar currentStage={snapshot.stage} stageLabel={snapshot.stageLabel} />}
 
         {/* Game time — click to toggle total vs play time */}
         <div
