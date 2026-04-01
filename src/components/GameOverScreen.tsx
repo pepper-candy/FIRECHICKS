@@ -272,8 +272,9 @@ export default function GameOverScreen({
           </Button>
         </div>
       </div>
+      {/* end scroll container */}
       </div>
-      </div>
+    {/* end outer wrapper */}
     </div>
   );
 }
