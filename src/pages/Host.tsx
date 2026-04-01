@@ -60,7 +60,7 @@ function EventOverlay({
             <span className="font-mono text-lg font-bold text-primary">{timeLeft}s</span>
           </div>
           <div className="w-full border-2 border-accent/30 rounded-xl overflow-hidden bg-card shadow-lg">
-            <img src={assetUrl(`/PW/PW_Mock_${event.questionNum}_layer-1.png`)} alt="Layer 1" className="w-full" />
+            <img src={assetUrl(`/PW/PW_Mock_${event.questionNum}_layer-1.png`)} alt="Layer 1" className="w-full bg-white" />
           </div>
           <p className="text-xs font-mono text-muted-foreground">Players check their phones for layer 2!</p>
         </div>
