@@ -171,6 +171,12 @@ function updateHostExamDisplay(gs: GameStateRef) {
     (id) => !isBotConnId(id) && gs.playerStates.get(id)?.alive,
   );
 
+  const soloExam = exam.layer2ConnIds.length === 0;
+  if (soloExam) {
+    exam.hostDisplayLayer = layer1Alive ? "1" : "none";
+    return;
+  }
+
   // Non-bot humans alive: help the missing side on the host TV.
   if (layer1NonBotAlive && !layer2NonBotAlive) {
     exam.hostDisplayLayer = "2";
@@ -882,12 +888,13 @@ export function useGameLogic({ players, broadcast, gameMode, connectionMode, map
         updateHostExamDisplay(gs);
         gs.examState.timeRemaining -= delta;
 
-        // Check if all alive chicks have submitted — advance early
+        // Check if all alive chicks have submitted — advance early.
+        // Skip solo exams so the last surviving chick can keep using the remaining attempts.
         const aliveChickIds = Array.from<PlayerGameState>(gs.playerStates.values())
           .filter((p) => !p.isEagle && p.alive)
           .map((p) => p.connId);
         const submitted = gs.examState.submittedConnIds ?? [];
-        if (aliveChickIds.length > 0 && aliveChickIds.every((id) => submitted.includes(id))) {
+        if (aliveChickIds.length > 1 && aliveChickIds.every((id) => submitted.includes(id))) {
           // All chicks answered — don't wait for timer
           gs.examState.timeRemaining = 0;
         }
@@ -1369,9 +1376,9 @@ export function useGameLogic({ players, broadcast, gameMode, connectionMode, map
       layer1ConnId: layer1Player.connId,
       layer2ConnIds: layer2Players.map((p) => p.connId),
       answered: false,
-      layer1Dead: soloExam, // If solo, show layer 1 on host screen
+      layer1Dead: false,
       anyAnswerSubmitted: false,
-      hostDisplayLayer: soloExam ? "2" : "none",
+      hostDisplayLayer: soloExam ? "1" : "none",
       examWhiteBgConnId,
     };
     gs.stageLabel = "FINAL EXAM — Solve together!";
