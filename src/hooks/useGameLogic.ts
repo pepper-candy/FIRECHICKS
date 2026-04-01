@@ -771,6 +771,12 @@ export function useGameLogic({ players, broadcast, gameMode, connectionMode, map
         }
       }
       const requiredMeets = chicks.length - 1;
+      for (const c of chicks) {
+        if (!c.socialCircleCompleted && c.socialCircleMet.size >= requiredMeets) {
+          c.socialCircleCompleted = true;
+          addBreakdown(c, 'social-circle', 'Complete social circle', 5);
+        }
+      }
       if (chicks.length > 0 && chicks.every((c) => c.socialCircleMet.size >= requiredMeets)) {
         gs.stage = 1;
         gs.stageLabel = "Get Exam Tips from glowing buildings!";
