@@ -606,7 +606,7 @@ export default function Host() {
             >
               {countSec}
             </div>
-            <p className="text-xs font-mono text-muted-foreground/50 tracking-widest">EAGLE VS CHICK</p>
+            <p className="text-xs font-mono text-muted-foreground/50 tracking-widest">FIRECHICKS</p>
           </div>
         </div>
       );
