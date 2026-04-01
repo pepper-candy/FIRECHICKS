@@ -894,7 +894,7 @@ export default function Host() {
         </button>
         <button
           onClick={exportDebugLog}
-          className="absolute top-2 left-30 z-10 px-2 py-1 rounded border border-border bg-card/90 hover:bg-card text-muted-foreground"
+          className="absolute top-2 left-[6.5rem] z-10 px-2 py-1 rounded border border-border bg-card/90 hover:bg-card text-muted-foreground"
           title="Download host debug log"
         >
           <Download className="w-3.5 h-3.5" />
