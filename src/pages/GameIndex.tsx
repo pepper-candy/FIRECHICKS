@@ -351,14 +351,6 @@ const Index = () => {
 
         </div>
 
-        {/* Watermark */}
-        <div
-          className="absolute bottom-6 left-1/2 text-[10px] font-mono tracking-[0.3em] uppercase text-muted-foreground/40 whitespace-nowrap z-10"
-          style={{ animation: "immersive-watermark-rotate 8s ease-in-out infinite" }}
-        >
-          The Power of Interfaces
-        </div>
-
         <div
           className="text-xs text-muted-foreground/60 font-mono text-center space-y-1 mt-8 z-10 immersive-fade-in"
           style={{ "--delay": "3.4s" } as React.CSSProperties}
@@ -366,6 +358,14 @@ const Index = () => {
           <p>GPA Killer wants your grade.</p>
           <p>Firechicks want to graduate.</p>
           <p>GPA Killer vs Firechicks – who survives?</p>
+        </div>
+
+        {/* Watermark */}
+        <div
+          className="text-[10px] font-mono tracking-[0.3em] uppercase text-muted-foreground/40 whitespace-nowrap z-10 mt-6"
+          style={{ animation: "immersive-watermark-rotate 8s ease-in-out infinite" }}
+        >
+          The Power of Interfaces
         </div>
 
         <AssetLoadingIndicator />
