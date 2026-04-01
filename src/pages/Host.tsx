@@ -630,6 +630,7 @@ export default function Host() {
   // ─── PLAYING / EXAM ──────────────────────────────────────────────────────────
   if ((phase === "playing" || phase === "exam") && snapshot) {
     const alivePlayers = Object.values(snapshot.players).filter((p) => p.alive);
+    const isCrossyActive = snapshot.activeEvent?.type === 'crossy-road' && snapshot.activeEvent?.phase === 'active';
 
     return (
       <div className="relative h-screen">
