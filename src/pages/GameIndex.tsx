@@ -8,6 +8,7 @@ import { useImmersive } from "@/context/ImmersiveContext";
 import { toast } from "@/components/ui/sonner";
 import { buzz } from "@/lib/haptics";
 import { ArrowDownToLine, Check, Loader2, Sparkles } from "lucide-react";
+import FireParticleField from "@/components/FireParticleField";
 
 // ── Circular progress button ──────────────────────────────────────────────────
 
