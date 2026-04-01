@@ -15,7 +15,7 @@ import NetworkPerformancePanel from "@/components/NetworkPerformancePanel";
 import CrossyRoadHost from "@/components/events/CrossyRoadHost";
 import { PLAYER_COLORS, MAX_PLAYERS_1V3, MAX_PLAYERS_2V6 } from "@/lib/playerColors";
 import { gradeToLetter, getGradeColor } from "@/lib/gradeSystem";
-import { X, Flame, Zap, Trophy, Star, ChevronDown, Palette, Sun, Pause, Play, Bot, Settings, Download } from "lucide-react";
+import { X, Flame, Zap, Trophy, Star, ChevronDown, Palette, Sun, Pause, Play, Bot } from "lucide-react";
 import type { GameMode } from "@/lib/gameTypes";
 import CharacterViewer from "@/components/CharacterViewer";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -170,7 +170,6 @@ export default function Host() {
   const [gameMode, setGameMode] = useState<GameMode>("1v3");
   const [startClickAt, setStartClickAt] = useState<number | null>(null);
   const [zoomLevel, setZoomLevel] = useState(1);
-  const [settingsPanelOpen, setSettingsPanelOpen] = useState(false);
   const [themeMode, setThemeMode] = useState<"dark" | "semi" | "light">("semi");
   const [mapId, setMapId] = useState<MapId>(1);
   const [themeHue, setThemeHue] = useState<number | undefined>(undefined);
@@ -392,18 +391,18 @@ export default function Host() {
 
         {/* Header row */}
         <div className="flex items-center justify-between flex-wrap gap-2 z-10">
-          <div className="flex items-center gap-2">
-            <h1
-              className={`text-sm md:text-base text-primary tracking-wider font-pixel ${isImmersive ? "ceremony-title-glow" : "text-glow-green"}`}
-            >
-              LOBBY
-            </h1>
+          <h1
+            className={`text-sm md:text-base text-primary tracking-wider font-pixel ${isImmersive ? "ceremony-title-glow" : "text-glow-green"}`}
+          >
+            LOBBY
+          </h1>
 
+          <div className="flex items-center gap-2 font-mono text-xs flex-wrap">
             {/* Game mode toggle (only when not full) */}
             {!isFull && (
               <button
                 onClick={handleGameModeToggle}
-                className={`flex items-center gap-1 px-3 py-1.5 rounded border font-pixel text-xs transition-all pl-[8px] pr-[10px] ${
+                className={`flex items-center gap-1 px-3 py-1.5 rounded border font-pixel text-xs transition-all ${
                   gameMode === "2v6"
                     ? "border-accent bg-accent/10 text-accent hover:bg-accent/20"
                     : "border-primary bg-primary/10 text-primary hover:bg-primary/20"
@@ -413,9 +412,11 @@ export default function Host() {
                 {gameMode}
               </button>
             )}
-          </div>
 
-          <div className="flex items-center gap-2 font-mono text-xs flex-wrap">
+            {/* Room code */}
+            <div className="px-2 py-1 rounded border border-border bg-card text-xs">
+              ROOM: <span className="text-accent font-bold tracking-widest">{roomCode}</span>
+            </div>
 
             {/* Map selector */}
             <Select value={String(mapId)} onValueChange={(v) => setMapId(Number(v) as MapId)}>
@@ -445,11 +446,6 @@ export default function Host() {
                 </SelectItem>
               </SelectContent>
             </Select>
-
-            {/* Room code */}
-            <div className="px-2 py-1 rounded border border-border bg-card text-xs">
-              ROOM: <span className="text-accent font-bold tracking-widest">{roomCode}</span>
-            </div>
 
             <span className="text-muted-foreground">
               {playerCount}/{maxPlayers}
@@ -889,20 +885,13 @@ export default function Host() {
           </div>
         }
         <button
-          onClick={() => setSettingsPanelOpen((p) => !p)}
-          className="absolute top-2 left-20 z-10 px-2 py-1 rounded border border-border bg-card/90 hover:bg-card text-muted-foreground"
-          title="Toggle settings panel"
-        >
-          <Settings className="w-3.5 h-3.5" />
-        </button>
-        <button
           onClick={exportDebugLog}
-          className="absolute top-2 left-[6.5rem] z-10 py-1 rounded border border-border bg-card/90 hover:bg-card text-muted-foreground px-[8px] mx-[13px]"
+          className="absolute top-2 left-28 z-10 px-2 py-1 rounded border border-border bg-card/90 hover:bg-card text-[11px] font-mono text-muted-foreground"
           title="Download host debug log"
         >
-          <Download className="w-3.5 h-3.5" />
+          ⬇ LOG
         </button>
-        {settingsPanelOpen && <div className="absolute left-2 top-12 z-10 px-2 py-2 rounded bg-card/85 border border-border w-44">
+        <div className="absolute left-2 top-12 z-10 px-2 py-2 rounded bg-card/85 border border-border w-44">
           <div className="flex items-center justify-between text-[10px] font-mono text-muted-foreground mb-1">
             <span>Zoom</span>
             <span>{zoomLevel.toFixed(2)}x</span>
@@ -997,7 +986,7 @@ export default function Host() {
               </span>
             </div>
           )}
-        </div>}
+        </div>
 
         {/* Eagle awake countdown */}
         {!snapshot.eagleAwake && (
