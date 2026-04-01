@@ -6,6 +6,12 @@ export type GameStage = 0 | 1 | 2 | 3;
 export type PropType = 'speed' | 'heal' | 'fly' | 'invincible' | 'teleport' | 'cage';
 export type AnimState = 'Idle' | 'Running' | 'Victory' | 'Attack';
 
+export interface ScoreBreakdownEntry {
+  label: string;
+  points: number;
+  count: number;
+}
+
 export const STAGE_LABELS = [
   'Social Circle',
   'Get Exam Tips',
