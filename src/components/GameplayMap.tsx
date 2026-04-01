@@ -81,15 +81,18 @@ function MapCamera({ zoomLevel = 1 }: { zoomLevel?: number }) {
   useEffect(() => {
     const clamped = Math.max(0.65, Math.min(1.5, zoomLevel));
 
-    // As zoom increases, camera moves farther (dolly back)
-    const posY = 40 + (clamped - 0.65) * 25;
-    const posZ = 28 + (clamped - 0.65) * 22;
+    // Remap zoom: user zoom 1.35 becomes internal zoom 1.0
+    const remapped = clamped / 1.35;
 
-    // LookAt Y controls vertical pan
-    const lookY = (clamped - 1) * -30; // 0 at default, up to 1.5 at max zoom
+    // Dolly back formula using remapped value
+    const posY = 40 + (remapped - 0.65) * 25;
+    const posZ = 28 + (remapped - 0.65) * 22;
+
+    // LookY using remapped value
+    const lookY = (remapped - 1) * -30;
 
     camera.position.set(0, posY, posZ);
-    (camera as any).fov = 58 / Math.max(0.75, clamped);
+    (camera as any).fov = 58 / Math.max(0.75, remapped);
     (camera as any).updateProjectionMatrix?.();
     camera.lookAt(0, lookY, 0);
   }, [camera, zoomLevel]);
