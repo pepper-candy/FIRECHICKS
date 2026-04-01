@@ -896,22 +896,23 @@ export function useGameLogic({ players, broadcast, gameMode, connectionMode, map
           gs.examState.timeRemaining = 0;
           gs.examState.answered = true; // prevent re-entry
 
-          // Apply attack-equivalent damage to all alive chicks (same as a valid eagle hit)
+          // Apply remaining wrong-answer penalties to reach total of 3
+          const alreadyWrong = gs.examState.wrongCount ?? 0;
+          const remainingPenalties = Math.max(0, 3 - alreadyWrong);
           let mostSerious: "hurt" | "dead" = "hurt";
-          for (const [, p] of gs.playerStates) {
-            if (p.isEagle || !p.alive) continue;
-            const newHealth = applyDamage(p.health);
-            const dmg = p.health - newHealth;
-            p.damageTaken += dmg;
-            p.health = newHealth;
-            if (isDead(p.health)) {
-              p.alive = false;
-              p.health = 0;
-              mostSerious = "dead";
-              if (gs.examState.layer1ConnId === p.connId && !gs.examState.layer1Dead) {
-                gs.examState.layer1Dead = true;
+          for (let i = 0; i < remainingPenalties; i++) {
+            for (const [, p] of gs.playerStates) {
+              if (p.isEagle || !p.alive) continue;
+              p.health = addSubGrades(p.health, -2);
+              if (isDead(p.health)) {
+                p.alive = false;
+                p.health = 0;
+                mostSerious = "dead";
+                if (gs.examState.layer1ConnId === p.connId && !gs.examState.layer1Dead) {
+                  gs.examState.layer1Dead = true;
+                }
+                currentBroadcast({ type: "you-died", connId: p.connId });
               }
-              currentBroadcast({ type: "you-died", connId: p.connId });
             }
           }
           updateHostExamDisplay(gs);
