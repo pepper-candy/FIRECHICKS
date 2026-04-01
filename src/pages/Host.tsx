@@ -1101,7 +1101,9 @@ function GameOverCeremony({ snapshot, gameMode }: { snapshot: GameStateSnapshot;
 
   const mvpColor = mvp ? PLAYER_COLORS[mvp.colorIndex] : null;
   const teamName =
-    winner === "eagle" ? "🦅 GPA Killers Win!" : winner === "chicks" ? "🐤 Fire Chicks Win!" : "🤝 Draw!";
+    winner === "eagle"
+      ? (gameMode === '2v6' ? "🦅 GPA Killers Win!" : "🦅 GPA Killer Wins!")
+      : winner === "chicks" ? "🐤 Fire Chicks Win!" : "🤝 Draw!";
 
   // Immersive floating particles for ceremony
   const ceremonyParticles = useMemo(
