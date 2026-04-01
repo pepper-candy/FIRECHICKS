@@ -306,7 +306,7 @@ function MapParticles() {
 }
 
 // ─── Building ──────────────────────────────────────────────────────────────────
-function Building({ position, size, tipSiteActive, zoneActive, zoneHealth, baseColor, baseEmissive, immersive, lightMode }: {
+function Building({ position, size, tipSiteActive, zoneActive, zoneHealth, baseColor, baseEmissive, immersive, lightMode, hideOverlays }: {
   position: { x: number; z: number };
   size: { w: number; h: number; d: number };
   tipSiteActive?: boolean;
@@ -316,6 +316,7 @@ function Building({ position, size, tipSiteActive, zoneActive, zoneHealth, baseC
   baseEmissive?: string;
   immersive?: boolean;
   lightMode?: boolean;
+  hideOverlays?: boolean;
 }) {
   const pulseRef = useRef(0);
   useFrame((_, delta) => { pulseRef.current += delta * 2; });
@@ -351,7 +352,7 @@ function Building({ position, size, tipSiteActive, zoneActive, zoneHealth, baseC
           <meshStandardMaterial color="#ffd700" emissive="#ffd700" emissiveIntensity={0.3} transparent opacity={0.15} side={THREE.DoubleSide} wireframe={false} />
         </mesh>
       )}
-      {zoneActive && zoneHealth !== undefined && (
+      {zoneActive && zoneHealth !== undefined && !hideOverlays && (
         <Html position={[0, size.h + 2, 0]} center zIndexRange={[100, 0]}>
           <div style={{ background: 'rgba(0,0,0,0.7)', border: '1px solid #ffd700', borderRadius: 4, padding: '2px 6px', color: '#ffd700', fontSize: 11, fontFamily: 'monospace', whiteSpace: 'nowrap', pointerEvents: 'none' }}>
             🛡 {zoneHealth}/50
@@ -767,6 +768,7 @@ export default function GameplayMap({
               baseEmissive={buildingEmissive}
               immersive={immersive}
               lightMode={hasEdges}
+              hideOverlays={hideOverlays}
             />
           );
         })}
