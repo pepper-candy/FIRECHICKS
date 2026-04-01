@@ -1561,12 +1561,12 @@ export default function Client() {
         </div>
 
         {/* Health */}
-        {gamePhase === "playing" && myState && (
+        {gamePhase === "playing" && myState && !isEagle && (
           <div className="flex items-center gap-1 px-2 py-1 rounded bg-card border border-border">
-            <span className="text-base font-bold font-mono" style={{ color: isEagle ? 'hsl(var(--muted-foreground))' : getGradeColor(myState.health) }}>
-              {isEagle ? 'N/A' : gradeToLetter(myState.health)}
+            <span className="text-base font-bold font-mono" style={{ color: getGradeColor(myState.health) }}>
+              {gradeToLetter(myState.health)}
             </span>
-            {!isEagle && <span className="text-[10px] text-muted-foreground">{myState.health.toFixed(1)}</span>}
+            <span className="text-[10px] text-muted-foreground">{myState.health.toFixed(1)}</span>
             {myState.isStarStudent && <span className="text-accent">⭐</span>}
           </div>
         )}
