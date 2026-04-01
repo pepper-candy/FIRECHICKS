@@ -92,9 +92,9 @@ function MapCamera({ zoomLevel = 1 }: { zoomLevel?: number }) {
     // lookAt Y controls vertical pan
     // Higher value = camera looks up (bottom edge rises)
     // Lower value = camera looks down (bottom edge lowers)
-    const lookY_out = -1.5; // zoomed out: look slightly down to keep bottom fixed
+    const lookY_out = -3; // zoomed out: look slightly down to keep bottom fixed
     const lookY_default = 0; // default: look at center
-    const lookY_in = 3.5; // zoomed in: look up to keep bottom fixed
+    const lookY_in = 5; // zoomed in: look up to keep bottom fixed
 
     let camY, camZ, lookY;
 
