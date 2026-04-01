@@ -1280,11 +1280,11 @@ export function useGameLogic({ players, broadcast, gameMode, connectionMode, map
             if (crossings >= 3) {
               p.health = addSubGrades(p.health, 2);
               goodCount++;
-              p.actionScore += crossings * 2;
+              addBreakdown(p, 'crossy-road', 'Crossy Road', crossings * 2, crossings);
             } else if (crossings === 2) {
               p.health = addSubGrades(p.health, 1);
               goodCount++;
-              p.actionScore += crossings * 2;
+              addBreakdown(p, 'crossy-road', 'Crossy Road', crossings * 2, crossings);
             } else {
               p.health = addSubGrades(p.health, -2);
             }
