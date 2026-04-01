@@ -1899,7 +1899,7 @@ export function useGameLogic({ players, broadcast, gameMode, connectionMode, map
           if (!gs.activeEvent.chickClicks[connId]) {
             gs.activeEvent.chickClicks[connId] = 1;
             player.health = addSubGrades(player.health, 1);
-            player.actionScore += 5;
+            addBreakdown(player, 'mock-exam', 'Mock Exam correct', 3);
           }
         }
         break;
