@@ -210,6 +210,7 @@ interface Props {
   themeHue?: number;
   immersive?: boolean;
   themeMode?: 'dark' | 'semi' | 'light';
+  hideOverlays?: boolean;
 }
 
 // Helper: derive themed colors from a hue (0-360)
