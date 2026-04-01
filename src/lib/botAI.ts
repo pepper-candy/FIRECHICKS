@@ -29,7 +29,7 @@ const PROP_USE_DELAY = 1000; // wait 1s before using newly available prop
 const TELEPORT_MARGIN = 2;
 const BUILDING_APPROACH_OFFSET = 3.8;
 /** Throttle for eagle `hitbox-click` on building shields (independent of movement reaction delay). */
-const EAGLE_ZONE_HITBOX_INTERVAL_MS = 200;
+const EAGLE_ZONE_HITBOX_INTERVAL_MS = 143;
 
 export interface BotDecision {
   joystick: { x: number; y: number };
