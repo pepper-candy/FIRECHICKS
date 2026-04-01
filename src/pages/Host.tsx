@@ -629,10 +629,11 @@ export default function Host() {
   // ─── PLAYING / EXAM ──────────────────────────────────────────────────────────
   if ((phase === "playing" || phase === "exam") && snapshot) {
     const alivePlayers = Object.values(snapshot.players).filter((p) => p.alive);
-    const isEventOverlay = !!snapshot.activeEvent && (snapshot.activeEvent.type === 'crossy-road' || snapshot.activeEvent.type === 'hitbox');
+    const isEventOverlay = !!snapshot.activeEvent && (snapshot.activeEvent.type === 'crossy-road' || snapshot.activeEvent.type === 'hitbox' || snapshot.activeEvent.type === 'mock-exam');
     const stageTransActiveForHide = snapshot.stageTransitionUntil > 0 && Date.now() < snapshot.stageTransitionUntil;
     const manualGrabBackForHide = !stageTransActiveForHide && grabBackUntil > Date.now();
-    const shouldHideOverlays = isEventOverlay || isPaused || stageTransActiveForHide || manualGrabBackForHide;
+    const isFinalExam = phase === "exam";
+    const shouldHideOverlays = isEventOverlay || isFinalExam || isPaused || stageTransActiveForHide || manualGrabBackForHide;
 
     return (
       <div className="relative h-screen">
