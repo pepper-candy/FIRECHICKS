@@ -765,7 +765,7 @@ export default function Host() {
         )}
 
         {/* Pause controls + Health display top-right */}
-        {!isEventOverlay && (
+        {(
         <div className="absolute top-2 right-2 z-30 flex flex-col gap-1">
           <div className="flex gap-1 justify-end">
             <button
