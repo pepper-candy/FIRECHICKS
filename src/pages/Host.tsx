@@ -858,6 +858,7 @@ export default function Host() {
         {!isCrossyActive && <StageProgressBar currentStage={snapshot.stage} stageLabel={snapshot.stageLabel} />}
 
         {/* Game time — click to toggle total vs play time */}
+        {!isCrossyActive && (
         <div
           className="absolute top-2 left-2 z-10 px-3 py-1 rounded bg-card/80 border border-border font-mono text-xs cursor-pointer select-none"
           style={{ color: showPlayTime ? "hsl(0 80% 55%)" : "hsl(var(--muted-foreground))" }}
@@ -869,6 +870,7 @@ export default function Host() {
             ? `${Math.floor(snapshot.gameTime - snapshot.totalPauseMs / 1000)}s`
             : `${Math.floor(snapshot.gameTime)}s`}
         </div>
+        )}
         <button
           onClick={exportDebugLog}
           className="absolute top-2 left-28 z-10 px-2 py-1 rounded border border-border bg-card/90 hover:bg-card text-[11px] font-mono text-muted-foreground"
