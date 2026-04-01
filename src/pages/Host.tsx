@@ -1284,6 +1284,9 @@ function GameOverCeremony({ snapshot, gameMode }: { snapshot: GameStateSnapshot;
       {isImmersive && <CeremonyParticles />}
       {isImmersive && <div className="immersive-vignette" />}
       <div className="h-[50vh] min-h-0 w-full relative flex flex-col justify-end pb-4 shrink-0">
+        <p className="text-center text-xs sm:text-sm font-mono text-muted-foreground italic px-6 pt-3 pb-1 z-10">
+          "In this game, your value was calculated by your actions. Sound familiar?"
+        </p>
         <div className="flex-1 min-h-0 w-full">
           <Canvas
             className="h-full w-full"
