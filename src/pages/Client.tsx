@@ -1164,8 +1164,8 @@ export default function Client() {
         )}
         {myState && (
           <div className="flex flex-col items-center gap-1">
-            <span className="text-4xl font-bold" style={{ color: getGradeColor(myState.health) }}>
-              {gradeToLetter(myState.health)}
+            <span className="text-4xl font-bold" style={{ color: isEagle ? 'hsl(var(--muted-foreground))' : getGradeColor(myState.health) }}>
+              {isEagle ? 'N/A' : gradeToLetter(myState.health)}
             </span>
             <span className="text-sm font-mono text-muted-foreground">Your final grade</span>
           </div>
