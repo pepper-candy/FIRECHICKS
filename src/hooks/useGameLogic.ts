@@ -1831,7 +1831,7 @@ export function useGameLogic({ players, broadcast, gameMode, connectionMode, map
             const existing = player.props.find((pi) => pi.type === prop.type);
             if (existing) existing.count++;
             else player.props.push({ type: prop.type, count: 1 });
-            player.actionScore += 1;
+            addBreakdown(player, 'collect-prop', 'Collect prop spawn', 2);
           }
           break;
         }
