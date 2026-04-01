@@ -1338,10 +1338,16 @@ export default function Client() {
             <>
               {isEagle ? (
                 <p className="text-lg font-pixel text-muted-foreground">Results announced</p>
-              ) : myCrossings >= 1 ? (
-                <p className="text-2xl font-pixel" style={{ color: "hsl(145 80% 50%)" }}>🏁 {myCrossings} crossings! +2 grades</p>
+               ) : myCrossings >= 1 ? (
+                <div className="flex flex-col items-center gap-2">
+                  <span className="text-6xl">🏁</span>
+                  <p className="text-sm font-pixel text-muted-foreground">{myCrossings} crossing{myCrossings !== 1 ? 's' : ''} · <span style={{ color: "hsl(145 80% 50%)" }}>+2 grades</span></p>
+                </div>
               ) : (
-                <p className="text-2xl font-pixel" style={{ color: "hsl(0 80% 55%)" }}>💥 {myCrossings} crossing{myCrossings !== 1 ? 's' : ''} — -2 grades</p>
+                <div className="flex flex-col items-center gap-2">
+                  <span className="text-6xl">💥</span>
+                  <p className="text-sm font-pixel text-muted-foreground">{myCrossings} crossing{myCrossings !== 1 ? 's' : ''} · <span style={{ color: "hsl(0 80% 55%)" }}>-2 grades</span></p>
+                </div>
               )}
             </>
           ) : (
