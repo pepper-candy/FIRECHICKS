@@ -993,12 +993,57 @@ export function useGameLogic({ players, broadcast, gameMode, connectionMode, map
           if (!p.alive) continue;
           if (checkOverlap(p.position.x, p.position.z, box.position.x, box.position.z, 1.5)) {
             if (!p.isEagle) {
-              // Chick gets 3 speed props
+              // Chick gets a random reward from the mystery box
               box.collected = true;
               gs.lastMysteryBoxSpawn = now; // restart after claim
-              const existing = p.props.find((pi) => pi.type === "speed");
-              if (existing) existing.count += 3;
-              else p.props.push({ type: "speed", count: 3 });
+              const roll = Math.random();
+              if (roll < 0.125) {
+                // 1 invincible to ALL chicks (12.5%)
+                for (const [, cp] of gs.playerStates) {
+                  if (!cp.isEagle && cp.alive) {
+                    const inv = cp.props.find((pi) => pi.type === "invincible");
+                    if (inv) inv.count += 1;
+                    else cp.props.push({ type: "invincible", count: 1 });
+                  }
+                }
+              } else if (roll < 0.25) {
+                // 1 teleport to ALL chicks (12.5%)
+                for (const [, cp] of gs.playerStates) {
+                  if (!cp.isEagle && cp.alive) {
+                    const tel = cp.props.find((pi) => pi.type === "teleport");
+                    if (tel) tel.count += 1;
+                    else cp.props.push({ type: "teleport", count: 1 });
+                  }
+                }
+              } else if (roll < 0.5) {
+                // 2 heal to ALL chicks (25%)
+                for (const [, cp] of gs.playerStates) {
+                  if (!cp.isEagle && cp.alive) {
+                    const heal = cp.props.find((pi) => pi.type === "heal");
+                    if (heal) heal.count += 2;
+                    else cp.props.push({ type: "heal", count: 2 });
+                  }
+                }
+              } else if (roll < 0.875) {
+                // 3 speed to ALL chicks (37.5%)
+                for (const [, cp] of gs.playerStates) {
+                  if (!cp.isEagle && cp.alive) {
+                    const spd = cp.props.find((pi) => pi.type === "speed");
+                    if (spd) spd.count += 3;
+                    else cp.props.push({ type: "speed", count: 3 });
+                  }
+                }
+              } else {
+                // 1 cage to obtainer only — cages the eagle for 5s, no cooldown (12.5%)
+                const eagles = Array.from<PlayerGameState>(gs.playerStates.values()).filter(
+                  (ep) => ep.isEagle && ep.alive,
+                );
+                for (const eagle of eagles) {
+                  eagle.cagedUntil = now + 5000;
+                  eagle.frozen = true;
+                  eagle.frozenUntil = now + 5000;
+                }
+              }
               p.actionScore += 3;
             } else {
               // Eagle triggers a random event
