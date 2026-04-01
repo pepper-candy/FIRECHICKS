@@ -50,22 +50,21 @@ function EventOverlay({
     .reduce((sum: number, p: any) => sum + (event.eagleClicks[p.connId] ?? 0), 0);
   const timeLeft = Math.max(0, Math.ceil((event.endAt - now) / 1000));
 
-  // Mock exam active: show layer 1 full-screen centered with white bg — via portal
+  // Mock exam active: show layer 1 inline (tags hidden via hideOverlays)
   if (event.phase === "active" && event.type === "mock-exam" && event.questionNum) {
-    return createPortal(
-      <div className="fixed inset-0 flex items-center justify-center bg-white" style={{ zIndex: 9998 }}>
+    return (
+      <div className="absolute inset-0 z-30 flex items-center justify-center bg-background/80 backdrop-blur-sm">
         <div className="flex flex-col items-center gap-4 max-w-2xl w-full px-6">
           <div className="flex items-center justify-between w-full">
-            <h2 className="text-lg font-pixel text-gray-800">📝 MOCK EXAM</h2>
-            <span className="font-mono text-lg font-bold text-gray-800">{timeLeft}s</span>
+            <h2 className="text-lg font-pixel text-accent">📝 MOCK EXAM</h2>
+            <span className="font-mono text-lg font-bold text-primary">{timeLeft}s</span>
           </div>
-          <div className="w-full border-2 border-gray-300 rounded-xl overflow-hidden bg-white shadow-lg">
+          <div className="w-full border-2 border-accent/30 rounded-xl overflow-hidden bg-card shadow-lg">
             <img src={assetUrl(`/PW/PW_Mock_${event.questionNum}_layer-1.png`)} alt="Layer 1" className="w-full" />
           </div>
-          <p className="text-xs font-mono text-gray-500">Players check their phones for layer 2!</p>
+          <p className="text-xs font-mono text-muted-foreground">Players check their phones for layer 2!</p>
         </div>
-      </div>,
-      document.body,
+      </div>
     );
   }
 
@@ -630,10 +629,11 @@ export default function Host() {
   // ─── PLAYING / EXAM ──────────────────────────────────────────────────────────
   if ((phase === "playing" || phase === "exam") && snapshot) {
     const alivePlayers = Object.values(snapshot.players).filter((p) => p.alive);
-    const isEventOverlay = !!snapshot.activeEvent && (snapshot.activeEvent.type === 'crossy-road' || snapshot.activeEvent.type === 'hitbox');
+    const isEventOverlay = !!snapshot.activeEvent && (snapshot.activeEvent.type === 'crossy-road' || snapshot.activeEvent.type === 'hitbox' || snapshot.activeEvent.type === 'mock-exam');
     const stageTransActiveForHide = snapshot.stageTransitionUntil > 0 && Date.now() < snapshot.stageTransitionUntil;
     const manualGrabBackForHide = !stageTransActiveForHide && grabBackUntil > Date.now();
-    const shouldHideOverlays = isEventOverlay || isPaused || stageTransActiveForHide || manualGrabBackForHide;
+    const isFinalExam = phase === "exam";
+    const shouldHideOverlays = isEventOverlay || isFinalExam || isPaused || stageTransActiveForHide || manualGrabBackForHide;
 
     return (
       <div className="relative h-screen">
@@ -744,7 +744,7 @@ export default function Host() {
         )}
 
         {/* Tip obtain countdowns — stacked at top */}
-        {!isEventOverlay && snapshot.tipObtainTimers && Object.keys(snapshot.tipObtainTimers).length > 0 && (
+        {snapshot.tipObtainTimers && Object.keys(snapshot.tipObtainTimers).length > 0 && (
           <div className="absolute left-1/2 -translate-x-1/2 z-10 flex flex-col gap-1 items-center top-10">
             {Object.entries(snapshot.tipObtainTimers).map(([connId, timer]) => {
               const player = snapshot.players[connId];
@@ -765,7 +765,7 @@ export default function Host() {
         )}
 
         {/* Pause controls + Health display top-right */}
-        {!isEventOverlay && (
+        {(
         <div className="absolute top-2 right-2 z-30 flex flex-col gap-1">
           <div className="flex gap-1 justify-end">
             <button
@@ -859,10 +859,10 @@ export default function Host() {
         })()}
 
         {/* Stage progress bottom */}
-        {!isEventOverlay && <StageProgressBar currentStage={snapshot.stage} stageLabel={snapshot.stageLabel} />}
+        <StageProgressBar currentStage={snapshot.stage} stageLabel={snapshot.stageLabel} />
 
         {/* Game time — click to toggle total vs play time */}
-        {!isEventOverlay && (
+        {(
         <div
           className="absolute top-2 left-2 z-10 px-3 py-1 rounded bg-card/80 border border-border font-mono text-xs cursor-pointer select-none"
           style={{ color: showPlayTime ? "hsl(0 80% 55%)" : "hsl(var(--muted-foreground))" }}
