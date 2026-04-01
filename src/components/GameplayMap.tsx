@@ -210,6 +210,7 @@ interface Props {
   themeHue?: number;
   immersive?: boolean;
   themeMode?: 'dark' | 'semi' | 'light';
+  hideOverlays?: boolean;
 }
 
 // Helper: derive themed colors from a hue (0-360)
@@ -684,6 +685,7 @@ export default function GameplayMap({
   themeHue,
   immersive = false,
   themeMode = 'dark',
+  hideOverlays = false,
 }: Props) {
   const playerList = Object.values(players);
   const mapVariant = useMemo(() => getMapVariant(mapId), [mapId]);
@@ -780,17 +782,17 @@ export default function GameplayMap({
         ))}
 
         {/* Prop spawns */}
-        {propSpawns?.filter((p) => p.active).map((spawn) => (
+        {!hideOverlays && propSpawns?.filter((p) => p.active).map((spawn) => (
           <PropMarker key={spawn.id} spawn={spawn} />
         ))}
 
         {/* Mystery boxes */}
-        {mysteryBoxes?.map((box) => (
+        {!hideOverlays && mysteryBoxes?.map((box) => (
           <MysteryBoxMarker key={box.id} box={box} immersive={immersive} />
         ))}
 
         {/* Characters */}
-        {playerList.map((p) => (
+        {!hideOverlays && playerList.map((p) => (
           <GameCharacter
             key={p.connId}
             player={p}
@@ -802,19 +804,19 @@ export default function GameplayMap({
         ))}
 
         {/* Teleport target dots */}
-        {playerList.filter((p) => p.teleportPending && p.alive).map((p) => {
+        {!hideOverlays && playerList.filter((p) => p.teleportPending && p.alive).map((p) => {
           const color = PLAYER_COLORS[p.colorIndex];
           return color ? <TeleportDot key={`tp-${p.connId}`} position={p.teleportTarget} hsl={color.hsl} /> : null;
         })}
 
         {/* Tip share radius circles */}
-        {activeTipShareConnIds?.map((connId) => {
+        {!hideOverlays && activeTipShareConnIds?.map((connId) => {
           const p = players[connId];
           return p ? <TipShareRadiusCircle key={`tsr-${connId}`} position={p.position} /> : null;
         })}
 
         {/* Eagle awake countdown */}
-        {eagleAwake === false && (
+        {!hideOverlays && eagleAwake === false && (
           <mesh position={[0, 0.5, 0]}>
             <cylinderGeometry args={[1.5, 1.5, 0.1, 24]} />
             <meshStandardMaterial color="#ff4444" emissive="#ff0000" emissiveIntensity={0.8} transparent opacity={0.4} />
@@ -822,7 +824,7 @@ export default function GameplayMap({
         )}
 
         {/* Exam stage indicator + host skip */}
-        {examState && !examState.answered && (
+        {!hideOverlays && examState && !examState.answered && (
           <Html position={[0, 8, 0]} center zIndexRange={[100, 0]}>
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8, pointerEvents: 'none' }}>
               <div style={{ background: 'rgba(0,0,0,0.8)', border: '2px solid #ffd700', borderRadius: 6, padding: '4px 10px', color: '#ffd700', fontSize: 13, fontFamily: 'monospace', fontWeight: 'bold', whiteSpace: 'nowrap' }}>
