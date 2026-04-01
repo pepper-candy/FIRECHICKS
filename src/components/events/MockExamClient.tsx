@@ -55,9 +55,11 @@ export default function MockExamClient({
 }: Props) {
   if (isEagle) {
     return (
-      <div className="flex flex-col items-center justify-center h-full gap-4 p-4">
-        <p className="text-sm font-mono text-muted-foreground text-center">
-          🦅 Watch the host screen — layer 1 is displayed there!
+      <div className="flex flex-col items-center justify-center h-full p-6 gap-6">
+        <div className="text-4xl">🦅</div>
+        <p className="text-lg font-pixel text-destructive text-center">DISTRACT THE CHICKS!</p>
+        <p className="text-sm font-mono text-muted-foreground text-center max-w-xs">
+          The chicks are doing their exam now. Make noise, distract them in real life!
         </p>
       </div>
     );
