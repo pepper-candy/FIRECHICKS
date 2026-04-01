@@ -48,7 +48,7 @@ export default function CharacterReveal({ colorIndex, isEagle }: Props) {
       const t = Math.min(1, elapsed / duration);
       // Smooth easing: ease-in-out
       const eased = t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
-      setAngle(-eased * totalRotation);
+      setAngle(startOffset - eased * totalRotation);
       setProgress(t);
       setRemaining(Math.max(0, Math.ceil((duration - elapsed) / 1000)));
       if (t < 1) {
