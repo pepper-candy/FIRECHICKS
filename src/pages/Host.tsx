@@ -15,7 +15,7 @@ import NetworkPerformancePanel from "@/components/NetworkPerformancePanel";
 import CrossyRoadHost from "@/components/events/CrossyRoadHost";
 import { PLAYER_COLORS, MAX_PLAYERS_1V3, MAX_PLAYERS_2V6 } from "@/lib/playerColors";
 import { gradeToLetter, getGradeColor } from "@/lib/gradeSystem";
-import { X, Flame, Zap, Trophy, Star, ChevronDown, Palette, Sun, Pause, Play, Bot } from "lucide-react";
+import { X, Flame, Zap, Trophy, Star, ChevronDown, Palette, Sun, Pause, Play, Bot, Settings, Download } from "lucide-react";
 import type { GameMode } from "@/lib/gameTypes";
 import CharacterViewer from "@/components/CharacterViewer";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -170,6 +170,7 @@ export default function Host() {
   const [gameMode, setGameMode] = useState<GameMode>("1v3");
   const [startClickAt, setStartClickAt] = useState<number | null>(null);
   const [zoomLevel, setZoomLevel] = useState(1);
+  const [settingsPanelOpen, setSettingsPanelOpen] = useState(false);
   const [themeMode, setThemeMode] = useState<"dark" | "semi" | "light">("semi");
   const [mapId, setMapId] = useState<MapId>(1);
   const [themeHue, setThemeHue] = useState<number | undefined>(undefined);
@@ -885,13 +886,20 @@ export default function Host() {
           </div>
         }
         <button
+          onClick={() => setSettingsPanelOpen((p) => !p)}
+          className="absolute top-2 left-20 z-10 px-2 py-1 rounded border border-border bg-card/90 hover:bg-card text-muted-foreground"
+          title="Toggle settings panel"
+        >
+          <Settings className="w-3.5 h-3.5" />
+        </button>
+        <button
           onClick={exportDebugLog}
-          className="absolute top-2 left-28 z-10 px-2 py-1 rounded border border-border bg-card/90 hover:bg-card text-[11px] font-mono text-muted-foreground"
+          className="absolute top-2 left-30 z-10 px-2 py-1 rounded border border-border bg-card/90 hover:bg-card text-muted-foreground"
           title="Download host debug log"
         >
-          ⬇ LOG
+          <Download className="w-3.5 h-3.5" />
         </button>
-        <div className="absolute left-2 top-12 z-10 px-2 py-2 rounded bg-card/85 border border-border w-44">
+        {settingsPanelOpen && <div className="absolute left-2 top-12 z-10 px-2 py-2 rounded bg-card/85 border border-border w-44">
           <div className="flex items-center justify-between text-[10px] font-mono text-muted-foreground mb-1">
             <span>Zoom</span>
             <span>{zoomLevel.toFixed(2)}x</span>
@@ -986,7 +994,7 @@ export default function Host() {
               </span>
             </div>
           )}
-        </div>
+        </div>}
 
         {/* Eagle awake countdown */}
         {!snapshot.eagleAwake && (
