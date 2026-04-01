@@ -1323,7 +1323,7 @@ export default function Client() {
       return (
         <div className="flex flex-col items-center justify-center h-dvh overflow-hidden gap-4">
           <h2 className="text-xl font-pixel text-accent">
-            {isHitbox ? "👊 HITBOX" : isCrossy ? "🐔 CROSSY ROAD" : "📝 MOCK EXAM"} RESULT
+            {isHitbox ? "👊 HITBOX" : (isCrossy ? "🐔 CROSSY ROAD RESULT" : "📝 MOCK EXAM RESULT")}
           </h2>
           {isHitbox ? (
             <>
