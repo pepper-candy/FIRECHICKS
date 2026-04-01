@@ -189,7 +189,7 @@ const Index = () => {
           }}
         />
         {/* Fire trace field */}
-        <ParticleField />
+        <FireParticleField />
         {/* Scanline overlay */}
         <div className="immersive-scanline-overlay" />
         {/* Vignette */}
