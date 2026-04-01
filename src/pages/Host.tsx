@@ -413,6 +413,11 @@ export default function Host() {
                 {gameMode}
               </button>
             )}
+
+            {/* Room code */}
+            <div className="px-2 py-1 rounded border border-border bg-card text-xs font-mono">
+              ROOM: <span className="text-accent font-bold tracking-widest">{roomCode}</span>
+            </div>
           </div>
 
           <div className="flex items-center gap-2 font-mono text-xs flex-wrap">
@@ -446,10 +451,6 @@ export default function Host() {
               </SelectContent>
             </Select>
 
-            {/* Room code */}
-            <div className="px-2 py-1 rounded border border-border bg-card text-xs">
-              ROOM: <span className="text-accent font-bold tracking-widest">{roomCode}</span>
-            </div>
 
             <span className="text-muted-foreground">
               {playerCount}/{maxPlayers}
