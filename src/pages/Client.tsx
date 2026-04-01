@@ -1,4 +1,5 @@
 import { useState, useCallback, useEffect, useRef } from "react";
+import { toast } from "sonner";
 import { useFullscreen } from "@/hooks/useFullscreen";
 import { useClientRoom, useDiscoverRooms, type ConnectionMode } from "@/hooks/useGameRoom";
 import { PLAYER_COLORS, EAGLE_COLOR_INDICES } from "@/lib/playerColors";
