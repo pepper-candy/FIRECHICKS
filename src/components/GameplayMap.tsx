@@ -79,21 +79,28 @@ function SemiLightLighting() {
 function MapCamera({ zoomLevel = 1 }: { zoomLevel?: number }) {
   const { camera } = useThree();
   useEffect(() => {
-    const clamped = Math.max(0.65, Math.min(1.5, zoomLevel));
+    const clamped = Math.max(1, Math.min(2, zoomLevel));
 
-    // Remap zoom: user zoom 1.35 becomes internal zoom 1.0
-    const remapped = clamped / 1.35;
+    // Base camera parameters at zoom = 1
+    const baseY = 56;
+    const baseZ = 42;
+    const basePitch = Math.atan2(baseY, baseZ); // ~0.927 rad (~53°)
 
-    // Dolly back formula using remapped value
-    const posY = 40 + (remapped - 0.65) * 25;
-    const posZ = 28 + (remapped - 0.65) * 22;
+    // Distance scales inversely with zoom
+    const dist = Math.sqrt(baseY * baseY + baseZ * baseZ) / clamped;
 
-    // LookY using remapped value
-    const lookY = (remapped - 1) * -20 - 8;
+    // Adjust pitch: as zoom increases, pitch becomes steeper
+    const newPitch = Math.min(1.3, Math.max(0.6, basePitch * (1 / clamped)));
 
-    camera.position.set(0, posY, posZ);
-    (camera as any).fov = 58 / Math.max(0.75, remapped);
+    const camY = dist * Math.sin(newPitch);
+    const camZ = dist * Math.cos(newPitch);
+
+    camera.position.set(0, camY, camZ);
+    (camera as any).fov = 58 / Math.max(0.75, clamped);
     (camera as any).updateProjectionMatrix?.();
+
+    // Look at ground level; shift slightly up when zoomed in
+    const lookY = Math.min(1.5, (clamped - 1) * 2);
     camera.lookAt(0, lookY, 0);
   }, [camera, zoomLevel]);
   return null;

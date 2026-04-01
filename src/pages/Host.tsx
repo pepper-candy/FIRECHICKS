@@ -898,9 +898,9 @@ export default function Host() {
           </div>
           <input
             type="range"
-            min={0.5}
-            max={2.0}
-            step={0.25}
+            min={1}
+            max={2}
+            step={0.025}
             value={zoomLevel}
             onChange={(e) => setZoomLevel(Number(e.target.value))}
             className="w-full"
