@@ -60,7 +60,11 @@ function EventOverlay({
             <span className="font-mono text-lg font-bold text-primary">{timeLeft}s</span>
           </div>
           <div className="w-full border-2 border-accent/30 rounded-xl overflow-hidden bg-card shadow-lg">
-            <img src={assetUrl(`/PW/PW_Mock_${event.questionNum}_layer-1.png`)} alt="Layer 1" className="w-full bg-white" />
+            <img
+              src={assetUrl(`/PW/PW_Mock_${event.questionNum}_layer-1.png`)}
+              alt="Layer 1"
+              className="w-full bg-white"
+            />
           </div>
           <p className="text-xs font-mono text-muted-foreground">Players check their phones for layer 2!</p>
         </div>
@@ -629,11 +633,16 @@ export default function Host() {
   // ─── PLAYING / EXAM ──────────────────────────────────────────────────────────
   if ((phase === "playing" || phase === "exam") && snapshot) {
     const alivePlayers = Object.values(snapshot.players).filter((p) => p.alive);
-    const isEventOverlay = !!snapshot.activeEvent && (snapshot.activeEvent.type === 'crossy-road' || snapshot.activeEvent.type === 'hitbox' || snapshot.activeEvent.type === 'mock-exam');
+    const isEventOverlay =
+      !!snapshot.activeEvent &&
+      (snapshot.activeEvent.type === "crossy-road" ||
+        snapshot.activeEvent.type === "hitbox" ||
+        snapshot.activeEvent.type === "mock-exam");
     const stageTransActiveForHide = snapshot.stageTransitionUntil > 0 && Date.now() < snapshot.stageTransitionUntil;
     const manualGrabBackForHide = !stageTransActiveForHide && grabBackUntil > Date.now();
     const isFinalExam = phase === "exam";
-    const shouldHideOverlays = isEventOverlay || isFinalExam || isPaused || stageTransActiveForHide || manualGrabBackForHide;
+    const shouldHideOverlays =
+      isEventOverlay || isFinalExam || isPaused || stageTransActiveForHide || manualGrabBackForHide;
 
     return (
       <div className="relative h-screen">
@@ -765,52 +774,52 @@ export default function Host() {
         )}
 
         {/* Pause controls + Health display top-right */}
-        {(
-        <div className="absolute top-2 right-2 z-30 flex flex-col gap-1">
-          <div className="flex gap-1 justify-end">
-            <button
-              onClick={() => {
-                if (isPaused) {
-                  setGrabBackUntil(Date.now() + 3000);
-                  setTimeout(() => {
+        {
+          <div className="absolute top-2 right-2 z-30 flex flex-col gap-1">
+            <div className="flex gap-1 justify-end">
+              <button
+                onClick={() => {
+                  if (isPaused) {
+                    setGrabBackUntil(Date.now() + 3000);
+                    setTimeout(() => {
+                      togglePause();
+                      setIsPaused(false);
+                      setGrabBackUntil(0);
+                    }, 3000);
+                  } else {
                     togglePause();
-                    setIsPaused(false);
-                    setGrabBackUntil(0);
-                  }, 3000);
-                } else {
-                  togglePause();
-                  setIsPaused(true);
-                }
-              }}
-              className={`flex items-center gap-1 px-2 py-1 rounded border text-[10px] font-mono transition-all ${
-                isPaused
-                  ? "border-accent bg-accent/20 text-accent"
-                  : "border-border bg-card/80 text-muted-foreground hover:text-foreground"
-              }`}
-              title={isPaused ? "Resume game" : "Pause game"}
-            >
-              {isPaused ? <Play className="w-3 h-3" /> : <Pause className="w-3 h-3" />}
-              {isPaused ? "PLAY" : "PAUSE"}
-            </button>
-            <button
-              onClick={() => {
-                const v = toggleBotsPause();
-                setIsBotsPaused(v);
-              }}
-              className={`flex items-center gap-1 px-2 py-1 rounded border text-[10px] font-mono transition-all ${
-                isBotsPaused
-                  ? "border-accent bg-accent/20 text-accent"
-                  : "border-border bg-card/80 text-muted-foreground hover:text-foreground"
-              }`}
-              title={isBotsPaused ? "Resume bots" : "Pause bots"}
-            >
-              <Bot className="w-3 h-3" />
-              {isBotsPaused ? "BOTS ▶" : "BOTS ⏸"}
-            </button>
+                    setIsPaused(true);
+                  }
+                }}
+                className={`flex items-center gap-1 px-2 py-1 rounded border text-[10px] font-mono transition-all ${
+                  isPaused
+                    ? "border-accent bg-accent/20 text-accent"
+                    : "border-border bg-card/80 text-muted-foreground hover:text-foreground"
+                }`}
+                title={isPaused ? "Resume game" : "Pause game"}
+              >
+                {isPaused ? <Play className="w-3 h-3" /> : <Pause className="w-3 h-3" />}
+                {isPaused ? "PLAY" : "PAUSE"}
+              </button>
+              <button
+                onClick={() => {
+                  const v = toggleBotsPause();
+                  setIsBotsPaused(v);
+                }}
+                className={`flex items-center gap-1 px-2 py-1 rounded border text-[10px] font-mono transition-all ${
+                  isBotsPaused
+                    ? "border-accent bg-accent/20 text-accent"
+                    : "border-border bg-card/80 text-muted-foreground hover:text-foreground"
+                }`}
+                title={isBotsPaused ? "Resume bots" : "Pause bots"}
+              >
+                <Bot className="w-3 h-3" />
+                {isBotsPaused ? "BOTS ▶" : "BOTS ⏸"}
+              </button>
+            </div>
+            <HealthDisplay players={snapshot.players} />
           </div>
-          <HealthDisplay players={snapshot.players} />
-        </div>
-        )}
+        }
 
         {/* PAUSED overlay — manual pause OR stage transition pause OR grab-back after resume */}
         {(() => {
@@ -862,19 +871,19 @@ export default function Host() {
         <StageProgressBar currentStage={snapshot.stage} stageLabel={snapshot.stageLabel} />
 
         {/* Game time — click to toggle total vs play time */}
-        {(
-        <div
-          className="absolute top-2 left-2 z-10 px-3 py-1 rounded bg-card/80 border border-border font-mono text-xs cursor-pointer select-none"
-          style={{ color: showPlayTime ? "hsl(0 80% 55%)" : "hsl(var(--muted-foreground))" }}
-          onClick={() => setShowPlayTime((p) => !p)}
-          title={showPlayTime ? "Play time (excluding pauses) — click for total" : "Total time — click for play time"}
-        >
-          ⏱{" "}
-          {showPlayTime
-            ? `${Math.floor(snapshot.gameTime - snapshot.totalPauseMs / 1000)}s`
-            : `${Math.floor(snapshot.gameTime)}s`}
-        </div>
-        )}
+        {
+          <div
+            className="absolute top-2 left-2 z-10 px-3 py-1 rounded bg-card/80 border border-border font-mono text-xs cursor-pointer select-none"
+            style={{ color: showPlayTime ? "hsl(0 80% 55%)" : "hsl(var(--muted-foreground))" }}
+            onClick={() => setShowPlayTime((p) => !p)}
+            title={showPlayTime ? "Play time (excluding pauses) — click for total" : "Total time — click for play time"}
+          >
+            ⏱{" "}
+            {showPlayTime
+              ? `${Math.floor(snapshot.gameTime - snapshot.totalPauseMs / 1000)}s`
+              : `${Math.floor(snapshot.gameTime)}s`}
+          </div>
+        }
         <button
           onClick={exportDebugLog}
           className="absolute top-2 left-28 z-10 px-2 py-1 rounded border border-border bg-card/90 hover:bg-card text-[11px] font-mono text-muted-foreground"
@@ -889,9 +898,9 @@ export default function Host() {
           </div>
           <input
             type="range"
-            min={0.6}
-            max={1.5}
-            step={0.05}
+            min={0.5}
+            max={2.0}
+            step={0.25}
             value={zoomLevel}
             onChange={(e) => setZoomLevel(Number(e.target.value))}
             className="w-full"
@@ -996,7 +1005,9 @@ export default function Host() {
               <div className="flex flex-col items-center gap-4 max-w-2xl w-full px-6">
                 <div className="flex items-center justify-between w-full">
                   <h2 className="text-lg font-pixel text-gray-800">📝 FINAL EXAM</h2>
-                  <span className="font-mono text-lg font-bold text-gray-800">{Math.ceil(snapshot.examState.timeRemaining)}s</span>
+                  <span className="font-mono text-lg font-bold text-gray-800">
+                    {Math.ceil(snapshot.examState.timeRemaining)}s
+                  </span>
                 </div>
                 <div className="w-full border-2 border-gray-300 rounded-xl overflow-hidden bg-white shadow-lg">
                   <img
@@ -1102,8 +1113,12 @@ function GameOverCeremony({ snapshot, gameMode }: { snapshot: GameStateSnapshot;
   const mvpColor = mvp ? PLAYER_COLORS[mvp.colorIndex] : null;
   const teamName =
     winner === "eagle"
-      ? (gameMode === '2v6' ? "🦅 GPA Killers Win!" : "🦅 GPA Killer Wins!")
-      : winner === "chicks" ? "🐤 Fire Chicks Win!" : "🤝 Draw!";
+      ? gameMode === "2v6"
+        ? "🦅 GPA Killers Win!"
+        : "🦅 GPA Killer Wins!"
+      : winner === "chicks"
+        ? "🐤 Fire Chicks Win!"
+        : "🤝 Draw!";
 
   // Immersive floating particles for ceremony
   const ceremonyParticles = useMemo(
@@ -1407,7 +1422,9 @@ function GameOverCeremony({ snapshot, gameMode }: { snapshot: GameStateSnapshot;
                             {letter}
                           </span>
                         )}
-                        {!p.isEagle && <span className="text-[9px] text-muted-foreground block">{p.health.toFixed(1)}</span>}
+                        {!p.isEagle && (
+                          <span className="text-[9px] text-muted-foreground block">{p.health.toFixed(1)}</span>
+                        )}
                       </td>
                       <td className="py-2 text-center text-muted-foreground">{Math.floor(p.survivalTime)}s</td>
                       <td className="py-2 text-center text-muted-foreground">
