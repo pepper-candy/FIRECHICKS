@@ -1330,7 +1330,7 @@ function GameOverCeremony({ snapshot, gameMode }: { snapshot: GameStateSnapshot;
                   <th className="py-2 text-center">Grade</th>
                   <th className="py-2 text-center">Survival</th>
                   <th className="py-2 text-center">Damage</th>
-                  <th className="py-2 text-center">Score</th>
+                  <th className="py-2 text-center">Action Score</th>
                   <th className="py-2 text-center">Result</th>
                 </tr>
               </thead>
