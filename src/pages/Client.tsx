@@ -1379,7 +1379,7 @@ export default function Client() {
               onClick={() => setExamWhiteBg((p) => !p)}
               className={`px-2 py-1 rounded text-[10px] font-mono border transition-colors ${examWhiteBg ? "bg-white text-black border-white" : "bg-transparent text-muted-foreground border-border"}`}
             >
-              {examWhiteBg ? "📷 Camera" : "⬜ White BG"}
+              {examWhiteBg ? "📷 Transparent" : "⬜ White BG"}
             </button>
             {gameState?.examState && (
               <span
@@ -1393,17 +1393,14 @@ export default function Client() {
 
         {/* Camera / White BG + PW layer */}
         <div className="relative w-full overflow-hidden bg-black" style={{ aspectRatio: "873/457" }}>
-          {examWhiteBg ? (
-            <div className="absolute inset-0 z-0 bg-white" />
-          ) : (
-            <video
-              ref={examVideoRef}
-              autoPlay
-              playsInline
-              muted
-              className="absolute inset-0 w-full h-full object-cover z-0"
-            />
-          )}
+          <video
+            ref={examVideoRef}
+            autoPlay
+            playsInline
+            muted
+            className="absolute inset-0 w-full h-full object-cover z-0"
+          />
+          {examWhiteBg && <div className="absolute inset-0 z-[1] bg-white" />}
 
           <img
             src={assetUrl(`/PW/PW_Final_${examQuestionNum}_layer-${examLayer}.png`)}
