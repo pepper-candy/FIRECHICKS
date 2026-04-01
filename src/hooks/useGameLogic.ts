@@ -1702,7 +1702,7 @@ export function useGameLogic({ players, broadcast, gameMode, connectionMode, map
           });
 
           // Check if all alive chicks now have both tips
-          if (!alreadyHasTip && gs.stage === 2) {
+          if (gs.stage === 2) {
             const aliveChicks = Array.from<PlayerGameState>(gs.playerStates.values()).filter(
               (p) => !p.isEagle && p.alive,
             );
