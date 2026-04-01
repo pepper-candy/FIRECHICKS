@@ -403,7 +403,7 @@ export default function Host() {
             {!isFull && (
               <button
                 onClick={handleGameModeToggle}
-                className={`flex items-center gap-1 px-3 py-1.5 rounded border font-pixel text-xs transition-all ${
+                className={`flex items-center gap-1 px-3 py-1.5 rounded border font-pixel text-xs transition-all pl-[8px] pr-[10px] ${
                   gameMode === "2v6"
                     ? "border-accent bg-accent/10 text-accent hover:bg-accent/20"
                     : "border-primary bg-primary/10 text-primary hover:bg-primary/20"
