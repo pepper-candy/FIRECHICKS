@@ -24,6 +24,7 @@ import CrossyRoadClient from "@/components/events/CrossyRoadClient";
 import { useNavigate } from "react-router-dom";
 import { ZONE_RADIUS } from "@/lib/gameplayMapData";
 import { buzz } from "@/lib/haptics";
+import GameOverScreen from "@/components/GameOverScreen";
 
 // ─── Props Button (inline for compact layout) ──────────────────────────────────
 const PROP_COLORS: Record<PropType, string> = {
