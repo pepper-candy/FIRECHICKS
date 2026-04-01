@@ -27,8 +27,9 @@ export default function GameOverScreen({
 }: GameOverScreenProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [parallaxOffset, setParallaxOffset] = useState(0);
-  const [speedMultiplier, setSpeedMultiplier] = useState(1);
   const [sectionOpacities, setSectionOpacities] = useState([1, 0, 0]);
+  const isScrolling = useRef(false);
+  const scrollTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // IntersectionObserver for fade-in
   const sectionRefs = useRef<(HTMLDivElement | null)[]>([null, null, null]);
