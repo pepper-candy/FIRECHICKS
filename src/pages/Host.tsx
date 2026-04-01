@@ -1363,7 +1363,7 @@ function GameOverCeremony({ snapshot, gameMode }: { snapshot: GameStateSnapshot;
                       </td>
                       <td className="py-2 text-center">
                         {p.isEagle ? (
-                          <span className="text-lg text-muted-foreground font-sans">N/A</span>
+                          <span className="text-lg text-muted-foreground font-sans font-bold">N/A</span>
                         ) : isImmersive ? (
                           <span
                             className="text-2xl font-bold ceremony-grade-bounce"
