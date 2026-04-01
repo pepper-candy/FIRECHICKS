@@ -306,7 +306,7 @@ function MapParticles() {
 }
 
 // ─── Building ──────────────────────────────────────────────────────────────────
-function Building({ position, size, tipSiteActive, zoneActive, zoneHealth, baseColor, baseEmissive, immersive, lightMode }: {
+function Building({ position, size, tipSiteActive, zoneActive, zoneHealth, baseColor, baseEmissive, immersive, lightMode, hideOverlays }: {
   position: { x: number; z: number };
   size: { w: number; h: number; d: number };
   tipSiteActive?: boolean;
