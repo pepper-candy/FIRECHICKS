@@ -78,9 +78,11 @@ export default function GameOverScreen({
 
   return (
     <div className="relative h-dvh" style={{ background: 'hsl(0 0% 3%)' }}>
-      {/* Fixed fire background */}
-      <FireParticleField parallaxOffset={parallaxOffset} speedMultiplier={speedMultiplier} />
-      <div className="immersive-vignette" />
+      {/* Fixed fire background — outside scroll container */}
+      <div className="fixed inset-0 z-0">
+        <FireParticleField parallaxOffset={parallaxOffset} speedMultiplier={speedMultiplier} />
+        <div className="immersive-vignette" />
+      </div>
 
       {/* Scrollable content */}
       <div
