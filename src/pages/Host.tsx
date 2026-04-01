@@ -862,7 +862,7 @@ export default function Host() {
         <StageProgressBar currentStage={snapshot.stage} stageLabel={snapshot.stageLabel} />
 
         {/* Game time — click to toggle total vs play time */}
-        {!isEventOverlay && (
+        {(
         <div
           className="absolute top-2 left-2 z-10 px-3 py-1 rounded bg-card/80 border border-border font-mono text-xs cursor-pointer select-none"
           style={{ color: showPlayTime ? "hsl(0 80% 55%)" : "hsl(var(--muted-foreground))" }}
