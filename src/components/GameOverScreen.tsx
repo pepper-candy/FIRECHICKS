@@ -66,7 +66,7 @@ export default function GameOverScreen({
     if (!containerRef.current) return;
     const scrollY = containerRef.current.scrollTop;
     const viewH = containerRef.current.clientHeight;
-    setParallaxOffset(scrollY * 0.3);
+    setParallaxOffset(0); // keep background stationary — no vertical shift
 
     // Map scroll progress between sections to speed multiplier 1→3→1
     const progress = viewH > 0 ? scrollY / viewH : 0; // 0 at sight1, 1 at sight2, 2 at sight3
