@@ -1354,10 +1354,16 @@ export default function Client() {
             <>
               {isEagle ? (
                 <p className="text-lg font-pixel text-muted-foreground">Results announced</p>
-              ) : myMockCorrect ? (
-                <p className="text-2xl font-pixel" style={{ color: "hsl(145 80% 50%)" }}>✅ Correct! +1 grade</p>
+               ) : myMockCorrect ? (
+                <div className="flex flex-col items-center gap-2">
+                  <span className="text-6xl">✅</span>
+                  <p className="text-sm font-pixel text-muted-foreground"><span style={{ color: "hsl(145 80% 50%)" }}>+1 grade</span></p>
+                </div>
               ) : (
-                <p className="text-2xl font-pixel" style={{ color: "hsl(0 80% 55%)" }}>❌ Wrong! -2 grades</p>
+                <div className="flex flex-col items-center gap-2">
+                  <span className="text-6xl">❌</span>
+                  <p className="text-sm font-pixel text-muted-foreground"><span style={{ color: "hsl(0 80% 55%)" }}>-2 grades</span></p>
+                </div>
               )}
             </>
           )}
