@@ -1185,7 +1185,7 @@ export function useGameLogic({ players, broadcast, gameMode, connectionMode, map
             }
           }
         } else if (ev.type === "crossy-road" && ev.crossyPlayerStates) {
-          // Crossy Road scoring: 1+ crossings = +2, 0 = -2
+          // Crossy Road scoring: 3+ crossings = +2, 2 crossings = +1, <2 = -2
           let goodCount = 0;
           let totalChicks = 0;
           for (const [, p] of gs.playerStates) {
@@ -1193,8 +1193,12 @@ export function useGameLogic({ players, broadcast, gameMode, connectionMode, map
             totalChicks++;
             const cs = ev.crossyPlayerStates[p.connId];
             const crossings = cs?.crossings ?? 0;
-            if (crossings >= 1) {
+            if (crossings >= 3) {
               p.health = addSubGrades(p.health, 2);
+              goodCount++;
+              p.actionScore += crossings * 2;
+            } else if (crossings === 2) {
+              p.health = addSubGrades(p.health, 1);
               goodCount++;
               p.actionScore += crossings * 2;
             } else {

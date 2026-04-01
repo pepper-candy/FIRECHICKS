@@ -194,7 +194,7 @@ export default function CrossyRoadClient({ event, isEagle, connId, nowTs, onHop,
         <p>🐤 Tap ⬆ to hop up through 5 lanes, ⬇ to go back</p>
         <p>🔥 Dodge red obstacles — hits reset you to lane start</p>
         <p>
-          🏁 Reach the top with 3+ crossings = <span className="text-accent font-bold">+2 grades!</span>
+          🏁 2 crossings = <span className="text-accent font-bold">+1 grade</span> · 3+ = <span className="text-accent font-bold">+2 grades!</span>
         </p>
       </div>
     </div>
