@@ -316,6 +316,7 @@ function Building({ position, size, tipSiteActive, zoneActive, zoneHealth, baseC
   baseEmissive?: string;
   immersive?: boolean;
   lightMode?: boolean;
+  hideOverlays?: boolean;
 }) {
   const pulseRef = useRef(0);
   useFrame((_, delta) => { pulseRef.current += delta * 2; });
