@@ -839,7 +839,7 @@ export function useGameLogic({ players, broadcast, gameMode, connectionMode, map
                   chick.tips[tipIdx] = true;
                   chick.health = Math.min(STARTING_HEALTH, addSubGrades(chick.health, STAR_STUDENT_GRADE_BONUS));
                   chick.props.push({ type: "invincible", count: 1 });
-                  chick.actionScore += 10;
+                  addBreakdown(chick, 'obtain-tip', 'Obtain a tip', 10);
 
                   building.tipObtainedCount++;
                   if (building.tipObtainedCount >= neededCount) {
