@@ -1082,7 +1082,7 @@ export function useGameLogic({ players, broadcast, gameMode, connectionMode, map
                   eagle.frozenUntil = now + 5000;
                 }
               }
-              p.actionScore += 3;
+              addBreakdown(p, 'mystery-box', 'Open mystery box', 10);
             } else {
               // Eagle triggers a random event
               box.triggered = true;
