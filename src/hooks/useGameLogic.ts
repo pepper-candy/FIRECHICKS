@@ -2076,20 +2076,59 @@ export function useGameLogic({ players, broadcast, gameMode, connectionMode, map
   const onVideoComplete = useCallback(() => {
     const gs = gameStateRef.current as GameStateRef | null;
     if (!gs) return;
-    const now = Date.now();
-    const fromEagleHitVideo = gs.pendingEagleFreezeAfterVideo;
 
-    gs.frozenAll = false;
-    gs.frozenAllUntil = 0;
     gs.videoPlaying = null;
     setVideoPlaying(null);
 
-    // Exam timeout video completed — resolve winner now
+    // Exam timeout video completed — resolve winner now (no replay)
     if (gs.pendingExamEndAfterVideo) {
       gs.pendingExamEndAfterVideo = false;
+      gs.frozenAll = false;
+      gs.frozenAllUntil = 0;
       resolveExamWinner(gs, gameModeRef.current as "1v3" | "2v6", broadcastRef.current);
       return;
     }
+
+    // Eagle hit video → start replay countdown (game stays frozen)
+    if (gs.pendingEagleFreezeAfterVideo && (gs as any)._pendingReplayData) {
+      const replayData = (gs as any)._pendingReplayData as ReplayData;
+      delete (gs as any)._pendingReplayData;
+      gs.replayCountdown = {
+        secondsLeft: 3,
+        replayData,
+      };
+      // Keep frozenAll = true, start countdown timer
+      const startTime = Date.now();
+      const countdownInterval = setInterval(() => {
+        const gsInner = gameStateRef.current as GameStateRef | null;
+        if (!gsInner || !gsInner.replayCountdown) {
+          clearInterval(countdownInterval);
+          return;
+        }
+        const elapsed = Date.now() - startTime;
+        gsInner.replayCountdown.secondsLeft = Math.max(0, 3 - elapsed / 1000);
+        if (elapsed >= REPLAY_COUNTDOWN_DURATION) {
+          clearInterval(countdownInterval);
+          onReplayCountdownComplete();
+        }
+      }, 50);
+      return;
+    }
+
+    // Fallback (no replay data) — just unfreeze
+    gs.frozenAll = false;
+    gs.frozenAllUntil = 0;
+    gs.pendingEagleFreezeAfterVideo = false;
+  }, []);
+
+  const onReplayCountdownComplete = useCallback(() => {
+    const gs = gameStateRef.current as GameStateRef | null;
+    if (!gs) return;
+    const now = Date.now();
+
+    gs.replayCountdown = null;
+    gs.frozenAll = false;
+    gs.frozenAllUntil = 0;
 
     if (gs.pendingEagleFreezeAfterVideo) {
       gs.pendingEagleFreezeAfterVideo = false;
@@ -2098,22 +2137,20 @@ export function useGameLogic({ players, broadcast, gameMode, connectionMode, map
           p.frozen = true;
           p.frozenUntil = now + FREEZE_DURATION;
           p.attackCooldownUntil = now + FREEZE_DURATION + ATTACK_COOLDOWN;
-          // Disable fly until attack is re-enabled (~18s total from hit)
           p.flyCooldownUntil = Math.max(p.flyCooldownUntil, now + FREEZE_DURATION + ATTACK_COOLDOWN);
         }
       }
     }
 
-    if (fromEagleHitVideo) {
-      const until = now + POST_HIT_VIDEO_CHICK_INVINC_MS;
-      for (const [, p] of gs.playerStates) {
-        if (!p.isEagle && p.alive) {
-          p.invincibleUntil = Math.max(p.invincibleUntil, until);
-        }
+    // Post-video chick invincibility
+    const until = now + POST_HIT_VIDEO_CHICK_INVINC_MS;
+    for (const [, p] of gs.playerStates) {
+      if (!p.isEagle && p.alive) {
+        p.invincibleUntil = Math.max(p.invincibleUntil, until);
       }
     }
 
-    // Check win condition: only auto-end when ALL chicks dead
+    // Check win condition
     const aliveChicks = Array.from<PlayerGameState>(gs.playerStates.values()).filter((p) => !p.isEagle && p.alive);
     if (aliveChicks.length === 0) {
       endGame(gs, "eagle", broadcastRef.current);
