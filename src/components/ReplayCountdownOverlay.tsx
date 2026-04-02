@@ -232,7 +232,7 @@ export default function ReplayCountdownOverlay({ replayData, secondsLeft }: Prop
           </Canvas>
           {/* REPLAY label */}
           <div className="absolute top-3 left-4 px-3 py-1 rounded bg-destructive/80 text-destructive-foreground font-pixel text-xs tracking-widest">
-            ⏪ REPLAY
+            REPLAY
           </div>
         </div>
 
