@@ -21,27 +21,19 @@ function ReplayCamera({ replayData }: { replayData: ReplayData }) {
   const { camera } = useThree();
   const { attackerConnId, victimConnIds, frames, attackTime, attackerFacingAngle } = replayData;
 
-  // Camera offset: opposite of eagle's facing direction (behind the eagle)
+  // Camera offset: opposite of eagle's facing direction
   const behindDir = useMemo(() => {
     const angle = attackerFacingAngle + Math.PI; // opposite
     return { x: Math.sin(angle), z: Math.cos(angle) };
-  }, [attackerFacingAngle]);
-
-  // Right direction vector (perpendicular to facing angle) - shifts lookAt target rightward
-  const rightDir = useMemo(() => {
-    const angle = attackerFacingAngle;
-    return { x: Math.cos(angle), z: -Math.sin(angle) };
   }, [attackerFacingAngle]);
 
   useFrame(() => {
     if (frames.length === 0) return;
     const elapsed = Math.min(3, (Date.now() - startTime.current) / 1000);
 
-    // Replay starts 1.5s before attack
     const replayStartTime = attackTime - 1500;
     const targetTime = replayStartTime + elapsed * 1000;
 
-    // Find closest frame
     let currentFrame = frames[frames.length - 1];
     for (const f of frames) {
       if (f.time >= targetTime) {
@@ -54,26 +46,19 @@ function ReplayCamera({ replayData }: { replayData: ReplayData }) {
     const victim = victimConnIds.length > 0 ? currentFrame.players[victimConnIds[0]] : null;
     if (!eagle) return;
 
-    // Offset lookAt target to the right of the character
-    const offsetX = rightDir.x * 4;
-    const offsetZ = rightDir.z * 4;
-
     if (elapsed < 1.5) {
-      // Wide shot from behind eagle
       camera.position.set(eagle.x + behindDir.x * 10, 12, eagle.z + behindDir.z * 10);
-      camera.lookAt(eagle.x + offsetX, 0, eagle.z + offsetZ);
+      camera.lookAt(eagle.x, 0, eagle.z);
     } else if (elapsed < 2.0) {
-      // Attack moment — closer, still from behind
       camera.position.set(eagle.x + behindDir.x * 5, 6, eagle.z + behindDir.z * 5);
-      camera.lookAt(eagle.x + offsetX, 1, eagle.z + offsetZ);
+      camera.lookAt(eagle.x, 1, eagle.z);
     } else {
-      // Zoom-in static — focus on eagle/victim midpoint
       const t = Math.min(1, (elapsed - 2.0) / 1.0);
       const dist = 4 - t * 1.5;
       const tx = victim ? (eagle.x + victim.x) / 2 : eagle.x;
       const tz = victim ? (eagle.z + victim.z) / 2 : eagle.z;
       camera.position.set(tx + behindDir.x * dist, 3 + (1 - t) * 2, tz + behindDir.z * dist);
-      camera.lookAt(tx + offsetX, 1, tz + offsetZ);
+      camera.lookAt(tx, 1, tz);
     }
   });
 
@@ -235,38 +220,61 @@ export default function ReplayCountdownOverlay({ replayData, secondsLeft }: Prop
   return createPortal(
     <div className="fixed inset-0 flex items-center justify-center bg-background/90" style={{ zIndex: 2147483647 }}>
       <div className="relative w-[85vw] h-[65vh] max-w-[1200px] max-h-[700px] rounded-lg shadow-2xl overflow-hidden border border-border bg-card">
-        {/* Left side — Replay (trapezoid via clip-path) */}
-        <div className="absolute inset-0" style={{ clipPath: "polygon(0 0, 100% 0, 80% 100%, 0 100%)" }}>
+        {/* Left Top Countdown */}
+        <div
+          className="absolute"
+          style={{
+            top: "5%",
+            left: "2%",
+          }}
+        >
+          <div className="flex flex-col items-center gap-1">
+            <span className="text-xs font-pixel tracking-[0.3em] text-muted-foreground uppercase">Resuming</span>
+            <div
+              key={countdownNum}
+              className="font-pixel leading-none"
+              style={{
+                fontSize: "clamp(4rem, 10vw, 8rem)",
+                color: "hsl(var(--primary))",
+                textShadow: "0 0 40px hsl(var(--primary) / 0.6), 0 0 80px hsl(var(--primary) / 0.3)",
+                animation: "pulse 1s ease-in-out infinite",
+              }}
+            >
+              {countdownNum > 0 ? countdownNum : ""}
+            </div>
+          </div>
+        </div>
+
+        {/* SVG diagonal line divider 1 */}
+        <svg className="absolute inset-0 w-full h-full pointer-events-none" preserveAspectRatio="none">
+          <line x1="20%" y1="0" x2="5%" y2="100%" stroke="hsl(var(--border))" strokeWidth="3" />
+        </svg>
+
+        {/* Replay area */}
+        <div className="absolute inset-0" style={{ clipPath: "polygon(20% 0, 95% 0, 80% 100%, 5% 100%)" }}>
           <Canvas camera={{ position: initialCamPos, fov: 45 }} className="w-full h-full">
             <ReplayScene replayData={replayData} />
           </Canvas>
-          {/* REPLAY label */}
           <div className="absolute top-3 left-4 px-3 py-1 rounded bg-destructive/80 text-destructive-foreground font-pixel text-xs tracking-widest">
             REPLAY
           </div>
         </div>
 
-        {/* SVG diagonal line divider */}
+        {/* SVG diagonal line divider 2 */}
         <svg className="absolute inset-0 w-full h-full pointer-events-none" preserveAspectRatio="none">
-          <line x1="100%" y1="0" x2="80%" y2="100%" stroke="hsl(var(--border))" strokeWidth="3" />
+          <line x1="95%" y1="0" x2="80%" y2="100%" stroke="hsl(var(--border))" strokeWidth="3" />
         </svg>
 
-        {/* Right side — Countdown */}
+        {/* Right Bottom Countdown */}
         <div
-          className="absolute inset-0 flex items-center justify-center"
-          style={{ clipPath: "polygon(100% 0, 100% 0, 100% 100%, 80% 100%)" }}
+          className="absolute"
+          style={{
+            bottom: "5%",
+            right: "2%",
+          }}
         >
-          <div
-            className="flex flex-col items-center gap-4"
-            style={{
-              position: "absolute",
-              top: "95%",
-              transform: "translateY(-50%)",
-              left: "auto",
-              right: "2%",
-            }}
-          >
-            <span className="text-sm font-pixel tracking-[0.3em] text-muted-foreground uppercase">Resuming</span>
+          <div className="flex flex-col items-center gap-1">
+            <span className="text-xs font-pixel tracking-[0.3em] text-muted-foreground uppercase">Resuming</span>
             <div
               key={countdownNum}
               className="font-pixel leading-none"
