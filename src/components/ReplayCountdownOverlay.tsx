@@ -21,10 +21,16 @@ function ReplayCamera({ replayData }: { replayData: ReplayData }) {
   const { camera } = useThree();
   const { attackerConnId, victimConnIds, frames, attackTime, attackerFacingAngle } = replayData;
 
-  // Camera offset: opposite of eagle's facing direction
+  // Camera offset: opposite of eagle's facing direction (behind the eagle)
   const behindDir = useMemo(() => {
     const angle = attackerFacingAngle + Math.PI; // opposite
     return { x: Math.sin(angle), z: Math.cos(angle) };
+  }, [attackerFacingAngle]);
+
+  // Right direction vector (perpendicular to facing angle) - shifts lookAt target rightward
+  const rightDir = useMemo(() => {
+    const angle = attackerFacingAngle;
+    return { x: Math.cos(angle), z: -Math.sin(angle) };
   }, [attackerFacingAngle]);
 
   useFrame(() => {
@@ -48,14 +54,18 @@ function ReplayCamera({ replayData }: { replayData: ReplayData }) {
     const victim = victimConnIds.length > 0 ? currentFrame.players[victimConnIds[0]] : null;
     if (!eagle) return;
 
+    // Offset lookAt target to the right of the character
+    const offsetX = rightDir.x * 4;
+    const offsetZ = rightDir.z * 4;
+
     if (elapsed < 1.5) {
       // Wide shot from behind eagle
       camera.position.set(eagle.x + behindDir.x * 10, 12, eagle.z + behindDir.z * 10);
-      camera.lookAt(eagle.x, 0, eagle.z);
+      camera.lookAt(eagle.x + offsetX, 0, eagle.z + offsetZ);
     } else if (elapsed < 2.0) {
       // Attack moment — closer, still from behind
       camera.position.set(eagle.x + behindDir.x * 5, 6, eagle.z + behindDir.z * 5);
-      camera.lookAt(eagle.x, 1, eagle.z);
+      camera.lookAt(eagle.x + offsetX, 1, eagle.z + offsetZ);
     } else {
       // Zoom-in static — focus on eagle/victim midpoint
       const t = Math.min(1, (elapsed - 2.0) / 1.0);
@@ -63,7 +73,7 @@ function ReplayCamera({ replayData }: { replayData: ReplayData }) {
       const tx = victim ? (eagle.x + victim.x) / 2 : eagle.x;
       const tz = victim ? (eagle.z + victim.z) / 2 : eagle.z;
       camera.position.set(tx + behindDir.x * dist, 3 + (1 - t) * 2, tz + behindDir.z * dist);
-      camera.lookAt(tx, 1, tz);
+      camera.lookAt(tx + offsetX, 1, tz + offsetZ);
     }
   });
 
