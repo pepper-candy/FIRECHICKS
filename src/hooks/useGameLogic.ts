@@ -255,6 +255,11 @@ export function useGameLogic({ players, broadcast, gameMode, connectionMode, map
   const [videoPlaying, setVideoPlaying] = useState<"hurt" | "dead" | null>(null);
   const frameRef = useRef<number>(0);
   const lastTickRef = useRef<number>(0);
+  const positionHistoryRef = useRef<PositionHistoryBuffer>({
+    frames: new Array(POSITION_HISTORY_MAX),
+    writeIndex: 0,
+    count: 0,
+  });
   const handleClientMessageRef = useRef<((connId: string, msg: any) => void) | null>(null);
   // Used by the host to drag/teleport players by their name tags.
   const hostDragBackupRef = useRef<
