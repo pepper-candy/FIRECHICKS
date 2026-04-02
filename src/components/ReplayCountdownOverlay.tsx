@@ -54,7 +54,7 @@ function ReplayCamera({ replayData }: { replayData: ReplayData }) {
       camera.lookAt(eagle.x, 1, eagle.z);
     } else {
       const t = Math.min(1, (elapsed - 2.0) / 1.0);
-      const dist = 4 - t * 1.5;
+      const dist = 4 - t * 1.3;
       const tx = victim ? (eagle.x + victim.x) / 2 : eagle.x;
       const tz = victim ? (eagle.z + victim.z) / 2 : eagle.z;
       camera.position.set(tx + behindDir.x * dist, 3 + (1 - t) * 2, tz + behindDir.z * dist);
@@ -255,7 +255,7 @@ export default function ReplayCountdownOverlay({ replayData, secondsLeft }: Prop
           <Canvas camera={{ position: initialCamPos, fov: 45 }} className="w-full h-full">
             <ReplayScene replayData={replayData} />
           </Canvas>
-          <div className="absolute top-3 left-4 px-3 py-1 rounded bg-destructive/80 text-destructive-foreground font-pixel text-xs tracking-widest">
+          <div className="absolute top-3 left-4 px-3 py-1 rounded bg-destructive/80 text-destructive-foreground font-pixel text-xs tracking-widest z-20">
             REPLAY
           </div>
         </div>
