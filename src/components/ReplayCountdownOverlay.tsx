@@ -1,4 +1,4 @@
-import { useRef, useMemo, Suspense } from 'react';
+import { useRef, useMemo, useState, Suspense } from 'react';
 import { createPortal } from 'react-dom';
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import * as THREE from 'three';
@@ -30,13 +30,11 @@ function ReplayCamera({ replayData }: { replayData: ReplayData }) {
     if (frames.length === 0) return;
     const elapsed = Math.min(3, (Date.now() - startTime.current) / 1000);
 
-    // Apply view offset once we have size
+    // Apply view offset once we have size — render only in left 75% of canvas
     if (!offsetApplied.current && size.width > 0) {
       const cam = camera as THREE.PerspectiveCamera;
-      // Shift the view so center of camera maps to ~33% from left of usable area.
-      // Usable area is ~75% of full width. We want subject at 2/3 of that = 50% of full.
-      // So offset the center rightward by ~15% of canvas width.
-      cam.setViewOffset(size.width, size.height, -size.width * 0.15, 0, size.width, size.height);
+      const leftWidth = size.width * 0.75;
+      cam.setViewOffset(size.width, size.height, 0, 0, leftWidth, size.height);
       cam.updateProjectionMatrix();
       offsetApplied.current = true;
     }
@@ -100,7 +98,8 @@ function ReplayCharacters({ replayData }: { replayData: ReplayData }) {
   const groupRef = useRef<THREE.Group>(null);
   const { frames, attackTime, attackerConnId } = replayData;
 
-  const positionsRef = useRef<Record<string, { x: number; z: number; facingAngle: number; isMoving: boolean; chickColor: ChickColor; isEagle: boolean; alive: boolean }>>({});
+  const positionsRef = useRef<Record<string, { x: number; z: number; facingAngle: number; isMoving: boolean; isAttacking: boolean; chickColor: ChickColor; isEagle: boolean; alive: boolean }>>({});
+  const [animStates, setAnimStates] = useState<Record<string, string>>({});
 
   useFrame(() => {
     if (frames.length === 0) return;
@@ -128,23 +127,34 @@ function ReplayCharacters({ replayData }: { replayData: ReplayData }) {
     const t = dt > 0 ? Math.min(1, (targetTime - frameA.time) / dt) : 0;
 
     const newPositions: typeof positionsRef.current = {};
+    const newAnims: Record<string, string> = {};
     const allIds = new Set([...Object.keys(frameA.players), ...Object.keys(frameB.players)]);
     for (const id of allIds) {
       const a = frameA.players[id];
       const b = frameB.players[id];
       const src = b ?? a;
       if (!src || !src.alive) continue;
+      const isAttacking = src.isAttacking ?? false;
+      const isMoving = src.isMoving ?? false;
       newPositions[id] = {
         x: a && b ? a.x + (b.x - a.x) * t : src.x,
         z: a && b ? a.z + (b.z - a.z) * t : src.z,
         facingAngle: src.facingAngle,
-        isMoving: src.isMoving,
+        isMoving,
+        isAttacking,
         chickColor: src.chickColor,
         isEagle: src.isEagle,
         alive: src.alive,
       };
+      newAnims[id] = isAttacking ? 'Attack' : (isMoving ? 'Running' : 'Idle');
     }
     positionsRef.current = newPositions;
+
+    // Update anim states for React re-render (throttled)
+    setAnimStates(prev => {
+      const changed = Object.keys(newAnims).some(id => prev[id] !== newAnims[id]);
+      return changed ? newAnims : prev;
+    });
 
     // Update group children positions
     if (groupRef.current) {
@@ -184,12 +194,12 @@ function ReplayCharacters({ replayData }: { replayData: ReplayData }) {
       {playerIds.map(id => {
         const p = initialPlayers[id];
         if (!p) return null;
-        const isAttacker = id === attackerConnId;
+        const anim = (animStates[id] ?? (p.isAttacking ? 'Attack' : (p.isMoving ? 'Running' : 'Idle'))) as 'Idle' | 'Running' | 'Attack' | 'Victory';
         return (
           <group key={id} position={[p.x, 0, p.z]}>
             <CharacterViewer
               color={p.chickColor as ChickColor}
-              animState={isAttacker ? 'Running' : (p.isMoving ? 'Running' : 'Idle')}
+              animState={anim}
               facingAngle={p.facingAngle}
             />
           </group>
@@ -251,12 +261,12 @@ export default function ReplayCountdownOverlay({ replayData, secondsLeft }: Prop
           <line x1="80%" y1="0" x2="65%" y2="100%" stroke="hsl(var(--border))" strokeWidth="3" />
         </svg>
 
-        {/* Right side — Countdown positioned at 75% from left (1/4 from right) */}
+        {/* Right side — Countdown */}
         <div
-          className="absolute inset-0 flex items-center justify-center"
+          className="absolute inset-0 flex items-center justify-center pointer-events-none"
           style={{ clipPath: 'polygon(80% 0, 100% 0, 100% 100%, 65% 100%)' }}
         >
-          <div className="flex flex-col items-center gap-4" style={{ position: 'absolute', left: '75%', transform: 'translateX(-50%)' }}>
+          <div className="flex flex-col items-center gap-4" style={{ position: 'absolute', right: '8%', top: '50%', transform: 'translateY(-50%)' }}>
             <span className="text-sm font-pixel tracking-[0.3em] text-muted-foreground uppercase">Resuming</span>
             <div
               key={countdownNum}
