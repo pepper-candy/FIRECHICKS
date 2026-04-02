@@ -1,4 +1,4 @@
-import { useRef, useEffect, useMemo, useState, Suspense } from 'react';
+import { useRef, useMemo, Suspense } from 'react';
 import { createPortal } from 'react-dom';
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import * as THREE from 'three';
@@ -11,17 +11,28 @@ interface Props {
   secondsLeft: number;
 }
 
-// Camera that follows the eagle with cinematic phases
+// Total replay duration = 3s
+// Phase 1 (0–1.5s): wide shot from behind eagle, replaying 1.5s before attack
+// Phase 2 (1.5–2.0s): attack moment, closer
+// Phase 3 (2.0–3.0s): zoom-in static on eagle/victim area
+
 function ReplayCamera({ replayData }: { replayData: ReplayData }) {
   const startTime = useRef(Date.now());
   const { camera } = useThree();
-  const { attackerConnId, victimConnIds, frames, attackTime } = replayData;
+  const { attackerConnId, victimConnIds, frames, attackTime, attackerFacingAngle } = replayData;
+
+  // Camera offset: opposite of eagle's facing direction
+  const behindDir = useMemo(() => {
+    const angle = attackerFacingAngle + Math.PI; // opposite
+    return { x: Math.sin(angle), z: Math.cos(angle) };
+  }, [attackerFacingAngle]);
 
   useFrame(() => {
     if (frames.length === 0) return;
     const elapsed = Math.min(3, (Date.now() - startTime.current) / 1000);
 
-    const replayStartTime = attackTime - 3000;
+    // Replay starts 1.5s before attack
+    const replayStartTime = attackTime - 1500;
     const targetTime = replayStartTime + elapsed * 1000;
 
     // Find closest frame
@@ -35,17 +46,32 @@ function ReplayCamera({ replayData }: { replayData: ReplayData }) {
     if (!eagle) return;
 
     if (elapsed < 1.5) {
-      camera.position.set(eagle.x + 8, 12, eagle.z + 10);
+      // Wide shot from behind eagle
+      camera.position.set(
+        eagle.x + behindDir.x * 10,
+        12,
+        eagle.z + behindDir.z * 10
+      );
       camera.lookAt(eagle.x, 0, eagle.z);
     } else if (elapsed < 2.0) {
-      camera.position.set(eagle.x + 4, 6, eagle.z + 5);
+      // Attack moment — closer, still from behind
+      camera.position.set(
+        eagle.x + behindDir.x * 5,
+        6,
+        eagle.z + behindDir.z * 5
+      );
       camera.lookAt(eagle.x, 1, eagle.z);
     } else {
+      // Zoom-in static — focus on eagle/victim midpoint
       const t = Math.min(1, (elapsed - 2.0) / 1.0);
-      const dist = 5 - t * 2;
+      const dist = 4 - t * 1.5;
       const tx = victim ? (eagle.x + victim.x) / 2 : eagle.x;
       const tz = victim ? (eagle.z + victim.z) / 2 : eagle.z;
-      camera.position.set(tx + dist * 0.7, 3 + (1 - t) * 2, tz + dist);
+      camera.position.set(
+        tx + behindDir.x * dist,
+        3 + (1 - t) * 2,
+        tz + behindDir.z * dist
+      );
       camera.lookAt(tx, 1, tz);
     }
   });
@@ -59,17 +85,13 @@ function ReplayCharacters({ replayData }: { replayData: ReplayData }) {
   const groupRef = useRef<THREE.Group>(null);
   const { frames, attackTime, attackerConnId } = replayData;
 
-  // Store latest positions in refs for smooth updates
   const positionsRef = useRef<Record<string, { x: number; z: number; facingAngle: number; isMoving: boolean; chickColor: ChickColor; isEagle: boolean; alive: boolean }>>({});
-  const inAttackPhaseRef = useRef(false);
 
   useFrame(() => {
     if (frames.length === 0) return;
     const elapsed = Math.min(3, (Date.now() - startTime.current) / 1000);
-    const replayStartTime = attackTime - 3000;
+    const replayStartTime = attackTime - 1500;
     const targetTime = replayStartTime + elapsed * 1000;
-
-    inAttackPhaseRef.current = elapsed >= 1.5 && elapsed < 2.0;
 
     // Find interpolation frames
     let frameA = frames[0];
@@ -180,10 +202,13 @@ function ReplayScene({ replayData }: { replayData: ReplayData }) {
 export default function ReplayCountdownOverlay({ replayData, secondsLeft }: Props) {
   const countdownNum = Math.ceil(secondsLeft);
 
-  const initialPos = useMemo(() => {
+  const initialCamPos = useMemo(() => {
     const firstFrame = replayData.frames[0];
     const eagle = firstFrame?.players[replayData.attackerConnId];
-    return eagle ? { x: eagle.x, z: eagle.z } : { x: 0, z: 0 };
+    const angle = (replayData.attackerFacingAngle ?? 0) + Math.PI;
+    const ex = eagle?.x ?? 0;
+    const ez = eagle?.z ?? 0;
+    return [ex + Math.sin(angle) * 10, 12, ez + Math.cos(angle) * 10] as [number, number, number];
   }, [replayData]);
 
   return createPortal(
@@ -195,7 +220,7 @@ export default function ReplayCountdownOverlay({ replayData, secondsLeft }: Prop
           style={{ clipPath: 'polygon(0 0, 70% 0, 55% 100%, 0 100%)' }}
         >
           <Canvas
-            camera={{ position: [initialPos.x + 8, 12, initialPos.z + 10], fov: 45 }}
+            camera={{ position: initialCamPos, fov: 45 }}
             className="w-full h-full"
           >
             <ReplayScene replayData={replayData} />
@@ -216,14 +241,16 @@ export default function ReplayCountdownOverlay({ replayData, secondsLeft }: Prop
           className="absolute inset-0 flex items-center justify-center"
           style={{ clipPath: 'polygon(70% 0, 100% 0, 100% 100%, 55% 100%)' }}
         >
-          <div className="flex flex-col items-center gap-4 translate-x-[10%]">
-            <span className="text-xs font-pixel tracking-[0.3em] text-muted-foreground">RESUMING</span>
+          <div className="flex flex-col items-center gap-4" style={{ marginLeft: '15%' }}>
+            <span className="text-sm font-pixel tracking-[0.3em] text-muted-foreground uppercase">Resuming</span>
             <div
               key={countdownNum}
-              className="text-[10rem] font-pixel leading-none animate-pulse"
+              className="font-pixel leading-none"
               style={{
-                color: 'hsl(var(--accent))',
-                textShadow: '0 0 60px hsl(var(--accent) / 0.8), 0 0 120px hsl(var(--accent) / 0.4)',
+                fontSize: 'clamp(6rem, 15vw, 12rem)',
+                color: 'hsl(var(--primary))',
+                textShadow: '0 0 40px hsl(var(--primary) / 0.6), 0 0 80px hsl(var(--primary) / 0.3)',
+                animation: 'pulse 1s ease-in-out infinite',
               }}
             >
               {countdownNum > 0 ? countdownNum : ''}
