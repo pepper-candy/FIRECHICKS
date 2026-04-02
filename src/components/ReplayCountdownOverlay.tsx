@@ -254,16 +254,16 @@ export default function ReplayCountdownOverlay({ replayData, secondsLeft }: Prop
         {/* Right side — Countdown */}
         <div
           className="absolute inset-0 flex items-center justify-center"
-          style={{ clipPath: "polygon(70% 0, 100% 0, 100% 100%, 60% 100%)" }}
+          style={{ clipPath: "polygon(100% 0, 100% 0, 100% 100%, 20% 100%)" }}
         >
           <div
             className="flex flex-col items-center gap-4"
             style={{
               position: "absolute",
-              top: "70%",
+              top: "80%",
               transform: "translateY(-50%)",
               left: "auto",
-              right: "3%",
+              right: "5%",
             }}
           >
             <span className="text-sm font-pixel tracking-[0.3em] text-muted-foreground uppercase">Resuming</span>
