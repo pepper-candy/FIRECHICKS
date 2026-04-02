@@ -10,6 +10,7 @@ import GameplayMap from "@/components/GameplayMap";
 import HealthDisplay from "@/components/HealthDisplay";
 import StageProgressBar from "@/components/StageProgressBar";
 import VideoOverlay, { preloadVideos } from "@/components/VideoOverlay";
+import ReplayCountdownOverlay from "@/components/ReplayCountdownOverlay";
 import StageTransition from "@/components/StageTransition";
 import NetworkPerformancePanel from "@/components/NetworkPerformancePanel";
 import CrossyRoadHost from "@/components/events/CrossyRoadHost";
@@ -1055,6 +1056,14 @@ export default function Host() {
 
         {/* VideoOverlay LAST so it renders on top of everything */}
         <VideoOverlay video={videoPlaying} onComplete={onVideoComplete} />
+
+        {/* Replay countdown overlay (after video, before game resumes) */}
+        {snapshot.replayCountdown && (
+          <ReplayCountdownOverlay
+            replayData={snapshot.replayCountdown.replayData}
+            secondsLeft={snapshot.replayCountdown.secondsLeft}
+          />
+        )}
       </div>
     );
   }

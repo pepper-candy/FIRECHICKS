@@ -87,6 +87,7 @@ export function createMockSnapshot(overrides?: Partial<GameStateSnapshot>): Game
     stageTransitionUntil: 0,
     activeTipShareConnIds: [],
     totalPauseMs: 0,
+    replayCountdown: null,
     ...overrides,
   };
 }

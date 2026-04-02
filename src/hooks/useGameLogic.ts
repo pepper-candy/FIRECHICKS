@@ -12,6 +12,9 @@ import type {
   BuildingState,
   ClientMessage,
   PropType,
+  ReplayFrame,
+  ReplayData,
+  ReplayCountdownState,
 } from "@/lib/gameTypes";
 import { serializePlayerState } from "@/lib/gameTypes";
 import { PLAYER_COLORS, EAGLE_COLOR_INDICES } from "@/lib/playerColors";
@@ -75,6 +78,8 @@ const COUNTDOWN_DURATION = 3;
 const CAGE_COOLDOWN = 30000;
 const CAGE_LOCK_DURATION = 10000;
 const CAGE_POST_INVINCIBLE = 3000;
+const REPLAY_COUNTDOWN_DURATION = 3000;
+const POSITION_HISTORY_MAX = 300; // ~5s at 60fps
 
 // Answer keys
 const FINAL_ANSWER_KEY: Record<number, string> = {
@@ -152,6 +157,14 @@ interface GameStateRef {
   stageTransitionUntil: number;
   totalPauseMs: number;
   stageTransitionPauseApplied: boolean;
+  replayCountdown: ReplayCountdownState | null;
+}
+
+// Circular buffer for position recording
+interface PositionHistoryBuffer {
+  frames: ReplayFrame[];
+  writeIndex: number;
+  count: number;
 }
 
 function isBotConnId(connId: string): boolean {
@@ -242,6 +255,11 @@ export function useGameLogic({ players, broadcast, gameMode, connectionMode, map
   const [videoPlaying, setVideoPlaying] = useState<"hurt" | "dead" | null>(null);
   const frameRef = useRef<number>(0);
   const lastTickRef = useRef<number>(0);
+  const positionHistoryRef = useRef<PositionHistoryBuffer>({
+    frames: new Array(POSITION_HISTORY_MAX),
+    writeIndex: 0,
+    count: 0,
+  });
   const handleClientMessageRef = useRef<((connId: string, msg: any) => void) | null>(null);
   // Used by the host to drag/teleport players by their name tags.
   const hostDragBackupRef = useRef<
@@ -425,6 +443,7 @@ export function useGameLogic({ players, broadcast, gameMode, connectionMode, map
       stageTransitionUntil: 0,
       totalPauseMs: 0,
       stageTransitionPauseApplied: false,
+      replayCountdown: null,
     };
 
     setPhase("reveal");
@@ -663,6 +682,28 @@ export function useGameLogic({ players, broadcast, gameMode, connectionMode, map
         const inAnyZone = gs.buildings.some(b => b.zoneActive && !b.tipObtained && isInProtectedZone(p.position.x, p.position.z, b.id));
         if (inAnyZone) p.timeInZones += delta;
       }
+    }
+
+    // ── Record position history for replay ──
+    {
+      const buf = positionHistoryRef.current;
+      const framePlayers: Record<string, import("@/lib/gameTypes").ReplayFramePlayer> = {};
+      for (const [id, p] of gs.playerStates) {
+        framePlayers[id] = {
+          x: p.position.x,
+          z: p.position.z,
+          facingAngle: p.facingAngle,
+          isMoving: p.isMoving,
+          isAttacking: p.isAttacking,
+          chickColor: p.chickColor,
+          colorIndex: p.colorIndex,
+          isEagle: p.isEagle,
+          alive: p.alive,
+        };
+      }
+      buf.frames[buf.writeIndex] = { time: now, players: framePlayers };
+      buf.writeIndex = (buf.writeIndex + 1) % POSITION_HISTORY_MAX;
+      if (buf.count < POSITION_HISTORY_MAX) buf.count++;
     }
 
     // ── Bot AI updates ──
@@ -1508,6 +1549,7 @@ export function useGameLogic({ players, broadcast, gameMode, connectionMode, map
       stageTransitionUntil: gs.stageTransitionUntil ?? 0,
       activeTipShareConnIds: Array.from(gs.activeTipShares.values()).map((ts: TipShare) => ts.connId),
       totalPauseMs: gs.totalPauseMs ?? 0,
+      replayCountdown: (gs as any).replayCountdown ?? null,
     };
 
     setSnapshot(snap);
@@ -1647,6 +1689,24 @@ export function useGameLogic({ players, broadcast, gameMode, connectionMode, map
           gs.videoPlaying = mostSerious;
           gs.pendingEagleFreezeAfterVideo = true;
           setVideoPlaying(mostSerious);
+
+          // Snapshot replay data from position history (last 3s)
+          {
+            const buf = positionHistoryRef.current;
+            const cutoff = now - 3000;
+            const replayFrames: ReplayFrame[] = [];
+            for (let i = 0; i < buf.count; i++) {
+              const idx = (buf.writeIndex - buf.count + i + POSITION_HISTORY_MAX) % POSITION_HISTORY_MAX;
+              const f = buf.frames[idx];
+              if (f && f.time >= cutoff) replayFrames.push(f);
+            }
+            (gs as any)._pendingReplayData = {
+              frames: replayFrames,
+              attackerConnId: connId,
+              victimConnIds: hitChicks.map(c => c.connId),
+              attackTime: now,
+            } as ReplayData;
+          }
         }
         break;
       }
@@ -2016,20 +2076,59 @@ export function useGameLogic({ players, broadcast, gameMode, connectionMode, map
   const onVideoComplete = useCallback(() => {
     const gs = gameStateRef.current as GameStateRef | null;
     if (!gs) return;
-    const now = Date.now();
-    const fromEagleHitVideo = gs.pendingEagleFreezeAfterVideo;
 
-    gs.frozenAll = false;
-    gs.frozenAllUntil = 0;
     gs.videoPlaying = null;
     setVideoPlaying(null);
 
-    // Exam timeout video completed — resolve winner now
+    // Exam timeout video completed — resolve winner now (no replay)
     if (gs.pendingExamEndAfterVideo) {
       gs.pendingExamEndAfterVideo = false;
+      gs.frozenAll = false;
+      gs.frozenAllUntil = 0;
       resolveExamWinner(gs, gameModeRef.current as "1v3" | "2v6", broadcastRef.current);
       return;
     }
+
+    // Eagle hit video → start replay countdown (game stays frozen)
+    if (gs.pendingEagleFreezeAfterVideo && (gs as any)._pendingReplayData) {
+      const replayData = (gs as any)._pendingReplayData as ReplayData;
+      delete (gs as any)._pendingReplayData;
+      gs.replayCountdown = {
+        secondsLeft: 3,
+        replayData,
+      };
+      // Keep frozenAll = true, start countdown timer
+      const startTime = Date.now();
+      const countdownInterval = setInterval(() => {
+        const gsInner = gameStateRef.current as GameStateRef | null;
+        if (!gsInner || !gsInner.replayCountdown) {
+          clearInterval(countdownInterval);
+          return;
+        }
+        const elapsed = Date.now() - startTime;
+        gsInner.replayCountdown.secondsLeft = Math.max(0, 3 - elapsed / 1000);
+        if (elapsed >= REPLAY_COUNTDOWN_DURATION) {
+          clearInterval(countdownInterval);
+          onReplayCountdownComplete();
+        }
+      }, 50);
+      return;
+    }
+
+    // Fallback (no replay data) — just unfreeze
+    gs.frozenAll = false;
+    gs.frozenAllUntil = 0;
+    gs.pendingEagleFreezeAfterVideo = false;
+  }, []);
+
+  const onReplayCountdownComplete = useCallback(() => {
+    const gs = gameStateRef.current as GameStateRef | null;
+    if (!gs) return;
+    const now = Date.now();
+
+    gs.replayCountdown = null;
+    gs.frozenAll = false;
+    gs.frozenAllUntil = 0;
 
     if (gs.pendingEagleFreezeAfterVideo) {
       gs.pendingEagleFreezeAfterVideo = false;
@@ -2038,22 +2137,20 @@ export function useGameLogic({ players, broadcast, gameMode, connectionMode, map
           p.frozen = true;
           p.frozenUntil = now + FREEZE_DURATION;
           p.attackCooldownUntil = now + FREEZE_DURATION + ATTACK_COOLDOWN;
-          // Disable fly until attack is re-enabled (~18s total from hit)
           p.flyCooldownUntil = Math.max(p.flyCooldownUntil, now + FREEZE_DURATION + ATTACK_COOLDOWN);
         }
       }
     }
 
-    if (fromEagleHitVideo) {
-      const until = now + POST_HIT_VIDEO_CHICK_INVINC_MS;
-      for (const [, p] of gs.playerStates) {
-        if (!p.isEagle && p.alive) {
-          p.invincibleUntil = Math.max(p.invincibleUntil, until);
-        }
+    // Post-video chick invincibility
+    const until = now + POST_HIT_VIDEO_CHICK_INVINC_MS;
+    for (const [, p] of gs.playerStates) {
+      if (!p.isEagle && p.alive) {
+        p.invincibleUntil = Math.max(p.invincibleUntil, until);
       }
     }
 
-    // Check win condition: only auto-end when ALL chicks dead
+    // Check win condition
     const aliveChicks = Array.from<PlayerGameState>(gs.playerStates.values()).filter((p) => !p.isEagle && p.alive);
     if (aliveChicks.length === 0) {
       endGame(gs, "eagle", broadcastRef.current);
