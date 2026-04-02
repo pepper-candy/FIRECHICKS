@@ -263,7 +263,7 @@ export default function ReplayCountdownOverlay({ replayData, secondsLeft }: Prop
               top: "70%",
               transform: "translateY(-50%)",
               left: "auto",
-              right: "1%",
+              right: "3%",
             }}
           >
             <span className="text-sm font-pixel tracking-[0.3em] text-muted-foreground uppercase">Resuming</span>
@@ -271,7 +271,7 @@ export default function ReplayCountdownOverlay({ replayData, secondsLeft }: Prop
               key={countdownNum}
               className="font-pixel leading-none"
               style={{
-                fontSize: "clamp(10rem, 25vw, 20rem)",
+                fontSize: "clamp(4rem, 10vw, 8rem)",
                 color: "hsl(var(--primary))",
                 textShadow: "0 0 40px hsl(var(--primary) / 0.6), 0 0 80px hsl(var(--primary) / 0.3)",
                 animation: "pulse 1s ease-in-out infinite",
