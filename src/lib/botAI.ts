@@ -303,7 +303,7 @@ function eagleRaySteer(
   const wx0 = desiredJoy.x / len0;
   const wz0 = desiredJoy.y / len0;
   const baseAngle = Math.atan2(wx0, wz0);
-  const offsets = [0, -0.5, 0.5, -1.0, 1.0, -1.5, 1.5, Math.PI];
+  const offsets = [0, -0.5, 0.5, -1.0, 1.0, -1.5, 1.5, -2.0, 2.0, Math.PI];
   let bestJoy = desiredJoy;
   let bestScore = -1;
   for (const off of offsets) {
@@ -316,6 +316,18 @@ function eagleRaySteer(
       bestJoy = { x: wx * magnitude, y: wz * magnitude };
     }
   }
+
+  // Corner / edge escape: if near map boundary AND stuck (best clearance < 1), bias toward center
+  const edgeDist = Math.min(MAP_HALF - Math.abs(from.x), MAP_HALF - Math.abs(from.z));
+  if (edgeDist < 4 && bestScore < 1.5) {
+    const cx = -from.x;
+    const cz = -from.z;
+    const cLen = Math.hypot(cx, cz);
+    if (cLen > 0.1) {
+      return { x: (cx / cLen) * magnitude, y: (cz / cLen) * magnitude };
+    }
+  }
+
   return bestJoy;
 }
 
