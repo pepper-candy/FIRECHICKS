@@ -449,17 +449,16 @@ export function useGameLogic({ players, broadcast, gameMode, connectionMode, map
       replayCountdown: null,
     };
 
-    setPhase("reveal");
-    broadcastRef.current({ type: "game-start", assignments: assigns });
-
-    setTimeout(() => {
-      const gsInner = gameStateRef.current as GameStateRef | null;
-      if (!gsInner) return;
-      gsInner.phase = "countdown";
-      gsInner.countdownTime = COUNTDOWN_DURATION;
-      gsInner.startTime = Date.now();
-      setPhase("countdown");
+    if (devModeRef.current) {
+      // Dev mode: skip reveal, go straight to countdown then playing
+      gameStateRef.current.phase = "countdown";
+      gameStateRef.current.countdownTime = 0;
+      gameStateRef.current.startTime = Date.now();
+      setPhase("playing");
+      gameStateRef.current.phase = "playing";
+      broadcastRef.current({ type: "game-start", assignments: assigns });
       (broadcastRef.current as (msg: any) => void)({ type: "phase-change", phase: "countdown" });
+      (broadcastRef.current as (msg: any) => void)({ type: "phase-change", phase: "playing" });
 
       lastTickRef.current = performance.now();
       const tick = (time: number) => {
@@ -469,7 +468,29 @@ export function useGameLogic({ players, broadcast, gameMode, connectionMode, map
         frameRef.current = requestAnimationFrame(tick);
       };
       frameRef.current = requestAnimationFrame(tick);
-    }, REVEAL_DURATION);
+    } else {
+      setPhase("reveal");
+      broadcastRef.current({ type: "game-start", assignments: assigns });
+
+      setTimeout(() => {
+        const gsInner = gameStateRef.current as GameStateRef | null;
+        if (!gsInner) return;
+        gsInner.phase = "countdown";
+        gsInner.countdownTime = COUNTDOWN_DURATION;
+        gsInner.startTime = Date.now();
+        setPhase("countdown");
+        (broadcastRef.current as (msg: any) => void)({ type: "phase-change", phase: "countdown" });
+
+        lastTickRef.current = performance.now();
+        const tick = (time: number) => {
+          const delta = (time - lastTickRef.current) / 1000;
+          lastTickRef.current = time;
+          updateGameState(delta);
+          frameRef.current = requestAnimationFrame(tick);
+        };
+        frameRef.current = requestAnimationFrame(tick);
+      }, REVEAL_DURATION);
+    }
   }, []);
 
   // ─── Main Game Loop ───────────────────────────────────────────────────────────
