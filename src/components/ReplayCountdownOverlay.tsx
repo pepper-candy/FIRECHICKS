@@ -250,10 +250,10 @@ export default function ReplayCountdownOverlay({ replayData, secondsLeft }: Prop
             className="flex flex-col items-center gap-4"
             style={{
               position: "absolute",
-              top: "66.66%",
+              top: "60%",
               transform: "translateY(-50%)",
               left: "auto",
-              right: "8%",
+              right: "12%",
             }}
           >
             <span className="text-sm font-pixel tracking-[0.3em] text-muted-foreground uppercase">Resuming</span>
