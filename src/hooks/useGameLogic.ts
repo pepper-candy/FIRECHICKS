@@ -78,6 +78,8 @@ const COUNTDOWN_DURATION = 3;
 const CAGE_COOLDOWN = 30000;
 const CAGE_LOCK_DURATION = 10000;
 const CAGE_POST_INVINCIBLE = 3000;
+const REPLAY_COUNTDOWN_DURATION = 3000;
+const POSITION_HISTORY_MAX = 300; // ~5s at 60fps
 
 // Answer keys
 const FINAL_ANSWER_KEY: Record<number, string> = {
