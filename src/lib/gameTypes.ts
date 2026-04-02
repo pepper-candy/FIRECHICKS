@@ -272,6 +272,7 @@ export interface ReplayData {
   attackerConnId: string;
   victimConnIds: string[];
   attackTime: number;
+  attackerFacingAngle: number;
 }
 
 export interface ReplayCountdownState {
