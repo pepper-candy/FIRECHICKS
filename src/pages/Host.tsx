@@ -717,7 +717,15 @@ export default function Host() {
                             <group position={[p.position.x, 0, p.position.z]}>
                               <CharacterViewer
                                 color={p.chickColor as any}
-                                animState={p.isMoving ? "Running" : "Idle"}
+                                animState={
+                                  p.frozen
+                                    ? "Idle"
+                                    : p.isAttacking || (p.isEagle && p.speedMultiplier >= 3)
+                                      ? "Attack"
+                                      : p.isMoving
+                                        ? "Running"
+                                        : "Idle"
+                                }
                                 facingAngle={p.facingAngle}
                               />
                             </group>
