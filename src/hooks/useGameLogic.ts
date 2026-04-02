@@ -12,6 +12,9 @@ import type {
   BuildingState,
   ClientMessage,
   PropType,
+  ReplayFrame,
+  ReplayData,
+  ReplayCountdownState,
 } from "@/lib/gameTypes";
 import { serializePlayerState } from "@/lib/gameTypes";
 import { PLAYER_COLORS, EAGLE_COLOR_INDICES } from "@/lib/playerColors";
