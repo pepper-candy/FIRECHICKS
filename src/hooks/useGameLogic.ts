@@ -1689,6 +1689,24 @@ export function useGameLogic({ players, broadcast, gameMode, connectionMode, map
           gs.videoPlaying = mostSerious;
           gs.pendingEagleFreezeAfterVideo = true;
           setVideoPlaying(mostSerious);
+
+          // Snapshot replay data from position history (last 3s)
+          {
+            const buf = positionHistoryRef.current;
+            const cutoff = now - 3000;
+            const replayFrames: ReplayFrame[] = [];
+            for (let i = 0; i < buf.count; i++) {
+              const idx = (buf.writeIndex - buf.count + i + POSITION_HISTORY_MAX) % POSITION_HISTORY_MAX;
+              const f = buf.frames[idx];
+              if (f && f.time >= cutoff) replayFrames.push(f);
+            }
+            (gs as any)._pendingReplayData = {
+              frames: replayFrames,
+              attackerConnId: connId,
+              victimConnIds: hitChicks.map(c => c.connId),
+              attackTime: now,
+            } as ReplayData;
+          }
         }
         break;
       }
