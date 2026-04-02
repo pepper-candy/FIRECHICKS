@@ -684,6 +684,28 @@ export function useGameLogic({ players, broadcast, gameMode, connectionMode, map
       }
     }
 
+    // ── Record position history for replay ──
+    {
+      const buf = positionHistoryRef.current;
+      const framePlayers: Record<string, import("@/lib/gameTypes").ReplayFramePlayer> = {};
+      for (const [id, p] of gs.playerStates) {
+        framePlayers[id] = {
+          x: p.position.x,
+          z: p.position.z,
+          facingAngle: p.facingAngle,
+          isMoving: p.isMoving,
+          isAttacking: p.isAttacking,
+          chickColor: p.chickColor,
+          colorIndex: p.colorIndex,
+          isEagle: p.isEagle,
+          alive: p.alive,
+        };
+      }
+      buf.frames[buf.writeIndex] = { time: now, players: framePlayers };
+      buf.writeIndex = (buf.writeIndex + 1) % POSITION_HISTORY_MAX;
+      if (buf.count < POSITION_HISTORY_MAX) buf.count++;
+    }
+
     // ── Bot AI updates ──
     for (const [connId, p] of gs.playerStates) {
       const lobbyPlayer = currentPlayers.get(connId);
