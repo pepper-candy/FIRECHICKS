@@ -180,7 +180,7 @@ function ReplayCharacters({ replayData }: { replayData: ReplayData }) {
           <group key={id} position={[p.x, 0, p.z]}>
             <CharacterViewer
               color={p.chickColor as ChickColor}
-              animState={isAttacker ? "Running" : p.isMoving ? "Running" : "Idle"}
+              animState={isAttacker && p.isAttacking ? "Attack" : p.isMoving ? "Running" : "Idle"}
               facingAngle={p.facingAngle}
             />
           </group>
