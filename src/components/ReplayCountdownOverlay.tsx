@@ -253,7 +253,7 @@ export default function ReplayCountdownOverlay({ replayData, secondsLeft }: Prop
               top: "70%",
               transform: "translateY(-50%)",
               left: "auto",
-              right: "2%",
+              right: "0%",
             }}
           >
             <span className="text-sm font-pixel tracking-[0.3em] text-muted-foreground uppercase">Resuming</span>
