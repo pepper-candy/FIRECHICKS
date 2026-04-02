@@ -1684,16 +1684,11 @@ export function useGameLogic({ players, broadcast, gameMode, connectionMode, map
           }
           updateHostExamDisplay(gs);
 
-          gs.frozenAll = true;
-          gs.frozenAllUntil = now + 60000; // lifted by video completion
-          gs.videoPlaying = mostSerious;
-          gs.pendingEagleFreezeAfterVideo = true;
-          setVideoPlaying(mostSerious);
-
-          // Snapshot replay data from position history (last 3s)
+          // Snapshot replay data immediately (last 1.5s before attack)
+          const eagleFacing = player.facingAngle;
           {
             const buf = positionHistoryRef.current;
-            const cutoff = now - 3000;
+            const cutoff = now - 1500;
             const replayFrames: ReplayFrame[] = [];
             for (let i = 0; i < buf.count; i++) {
               const idx = (buf.writeIndex - buf.count + i + POSITION_HISTORY_MAX) % POSITION_HISTORY_MAX;
@@ -1705,8 +1700,21 @@ export function useGameLogic({ players, broadcast, gameMode, connectionMode, map
               attackerConnId: connId,
               victimConnIds: hitChicks.map(c => c.connId),
               attackTime: now,
+              attackerFacingAngle: eagleFacing,
             } as ReplayData;
           }
+
+          // Delay freeze + video by 0.7s so attack motion is captured
+          gs.pendingEagleFreezeAfterVideo = true;
+          const videoType = mostSerious;
+          setTimeout(() => {
+            const gsInner = gameStateRef.current as GameStateRef | null;
+            if (!gsInner) return;
+            gsInner.frozenAll = true;
+            gsInner.frozenAllUntil = Date.now() + 60000;
+            gsInner.videoPlaying = videoType;
+            setVideoPlaying(videoType);
+          }, 700);
         }
         break;
       }
