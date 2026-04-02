@@ -256,6 +256,7 @@ export interface ReplayFramePlayer {
   facingAngle: number;
   isMoving: boolean;
   isAttacking: boolean;
+  speedMultiplier: number;
   chickColor: ChickColor;
   colorIndex: number;
   isEagle: boolean;

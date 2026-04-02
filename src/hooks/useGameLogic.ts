@@ -719,6 +719,7 @@ export function useGameLogic({ players, broadcast, gameMode, connectionMode, map
           facingAngle: p.facingAngle,
           isMoving: p.isMoving,
           isAttacking: p.isAttacking,
+          speedMultiplier: p.speedMultiplier,
           chickColor: p.chickColor,
           colorIndex: p.colorIndex,
           isEagle: p.isEagle,
