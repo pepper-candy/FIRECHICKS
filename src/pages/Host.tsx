@@ -1055,6 +1055,14 @@ export default function Host() {
 
         {/* VideoOverlay LAST so it renders on top of everything */}
         <VideoOverlay video={videoPlaying} onComplete={onVideoComplete} />
+
+        {/* Replay countdown overlay (after video, before game resumes) */}
+        {snapshot.replayCountdown && (
+          <ReplayCountdownOverlay
+            replayData={snapshot.replayCountdown.replayData}
+            secondsLeft={snapshot.replayCountdown.secondsLeft}
+          />
+        )}
       </div>
     );
   }
