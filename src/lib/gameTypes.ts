@@ -248,6 +248,36 @@ export type ClientMessage =
   | { type: 'teleport-set'; x: number; z: number }
   | { type: 'teleport-confirm' };
 
+// ─── Replay types ─────────────────────────────────────────────────────────────
+export interface ReplayFramePlayer {
+  x: number;
+  z: number;
+  facingAngle: number;
+  isMoving: boolean;
+  isAttacking: boolean;
+  chickColor: ChickColor;
+  colorIndex: number;
+  isEagle: boolean;
+  alive: boolean;
+}
+
+export interface ReplayFrame {
+  time: number;
+  players: Record<string, ReplayFramePlayer>;
+}
+
+export interface ReplayData {
+  frames: ReplayFrame[];
+  attackerConnId: string;
+  victimConnIds: string[];
+  attackTime: number;
+}
+
+export interface ReplayCountdownState {
+  secondsLeft: number;
+  replayData: ReplayData;
+}
+
 export function serializePlayerState(p: PlayerGameState, now?: number): PlayerGameStateSerializable {
   const t = now ?? Date.now();
   return {
