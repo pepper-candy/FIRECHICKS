@@ -1,10 +1,10 @@
-import { useRef, useMemo, useState, Suspense } from 'react';
-import { createPortal } from 'react-dom';
-import { Canvas, useFrame, useThree } from '@react-three/fiber';
-import * as THREE from 'three';
-import CharacterViewer from '@/components/CharacterViewer';
-import type { ReplayData, ReplayFramePlayer } from '@/lib/gameTypes';
-import type { ChickColor } from '@/components/CharacterViewer';
+import { useRef, useMemo, Suspense } from "react";
+import { createPortal } from "react-dom";
+import { Canvas, useFrame, useThree } from "@react-three/fiber";
+import * as THREE from "three";
+import CharacterViewer from "@/components/CharacterViewer";
+import type { ReplayData, ReplayFramePlayer } from "@/lib/gameTypes";
+import type { ChickColor } from "@/components/CharacterViewer";
 
 interface Props {
   replayData: ReplayData;
@@ -18,26 +18,18 @@ interface Props {
 
 function ReplayCamera({ replayData }: { replayData: ReplayData }) {
   const startTime = useRef(Date.now());
-  const { camera, size } = useThree();
-  const { attackerConnId, victimConnIds, frames, attackTime } = replayData;
+  const { camera } = useThree();
+  const { attackerConnId, victimConnIds, frames, attackTime, attackerFacingAngle } = replayData;
 
-  // Apply view offset so the focal point sits at ~1/3 from the right of the usable canvas area.
-  // The right 25% of the canvas is obscured by the countdown panel, so shift the
-  // camera frustum to the right so the subject ends up at roughly 2/3 of the visible region.
-  const offsetApplied = useRef(false);
+  // Camera offset: opposite of eagle's facing direction
+  const behindDir = useMemo(() => {
+    const angle = attackerFacingAngle + Math.PI; // opposite
+    return { x: Math.sin(angle), z: Math.cos(angle) };
+  }, [attackerFacingAngle]);
 
   useFrame(() => {
     if (frames.length === 0) return;
     const elapsed = Math.min(3, (Date.now() - startTime.current) / 1000);
-
-    // Apply view offset once we have size — render only in left 75% of canvas
-    if (!offsetApplied.current && size.width > 0) {
-      const cam = camera as THREE.PerspectiveCamera;
-      const leftWidth = size.width * 0.75;
-      cam.setViewOffset(size.width, size.height, 0, 0, leftWidth, size.height);
-      cam.updateProjectionMatrix();
-      offsetApplied.current = true;
-    }
 
     // Replay starts 1.5s before attack
     const replayStartTime = attackTime - 1500;
@@ -46,45 +38,31 @@ function ReplayCamera({ replayData }: { replayData: ReplayData }) {
     // Find closest frame
     let currentFrame = frames[frames.length - 1];
     for (const f of frames) {
-      if (f.time >= targetTime) { currentFrame = f; break; }
+      if (f.time >= targetTime) {
+        currentFrame = f;
+        break;
+      }
     }
 
     const eagle = currentFrame.players[attackerConnId];
     const victim = victimConnIds.length > 0 ? currentFrame.players[victimConnIds[0]] : null;
     if (!eagle) return;
 
-    // Dynamic camera direction: follows eagle's current facing angle (third-person behind)
-    const behindAngle = eagle.facingAngle + Math.PI;
-    const bx = Math.sin(behindAngle);
-    const bz = Math.cos(behindAngle);
-
     if (elapsed < 1.5) {
-      // Wide shot from behind eagle, following eagle's facing
-      camera.position.set(
-        eagle.x + bx * 10,
-        12,
-        eagle.z + bz * 10
-      );
+      // Wide shot from behind eagle
+      camera.position.set(eagle.x + behindDir.x * 10, 12, eagle.z + behindDir.z * 10);
       camera.lookAt(eagle.x, 0, eagle.z);
     } else if (elapsed < 2.0) {
-      // Attack moment — closer, still following facing
-      camera.position.set(
-        eagle.x + bx * 5,
-        6,
-        eagle.z + bz * 5
-      );
+      // Attack moment — closer, still from behind
+      camera.position.set(eagle.x + behindDir.x * 5, 6, eagle.z + behindDir.z * 5);
       camera.lookAt(eagle.x, 1, eagle.z);
     } else {
-      // Zoom-in — focus on eagle/victim midpoint
+      // Zoom-in static — focus on eagle/victim midpoint
       const t = Math.min(1, (elapsed - 2.0) / 1.0);
       const dist = 4 - t * 1.5;
       const tx = victim ? (eagle.x + victim.x) / 2 : eagle.x;
       const tz = victim ? (eagle.z + victim.z) / 2 : eagle.z;
-      camera.position.set(
-        tx + bx * dist,
-        3 + (1 - t) * 2,
-        tz + bz * dist
-      );
+      camera.position.set(tx + behindDir.x * dist, 3 + (1 - t) * 2, tz + behindDir.z * dist);
       camera.lookAt(tx, 1, tz);
     }
   });
@@ -98,8 +76,20 @@ function ReplayCharacters({ replayData }: { replayData: ReplayData }) {
   const groupRef = useRef<THREE.Group>(null);
   const { frames, attackTime, attackerConnId } = replayData;
 
-  const positionsRef = useRef<Record<string, { x: number; z: number; facingAngle: number; isMoving: boolean; isAttacking: boolean; chickColor: ChickColor; isEagle: boolean; alive: boolean }>>({});
-  const [animStates, setAnimStates] = useState<Record<string, string>>({});
+  const positionsRef = useRef<
+    Record<
+      string,
+      {
+        x: number;
+        z: number;
+        facingAngle: number;
+        isMoving: boolean;
+        chickColor: ChickColor;
+        isEagle: boolean;
+        alive: boolean;
+      }
+    >
+  >({});
 
   useFrame(() => {
     if (frames.length === 0) return;
@@ -116,7 +106,11 @@ function ReplayCharacters({ replayData }: { replayData: ReplayData }) {
         frameB = frames[i + 1];
         break;
       }
-      if (frames[i].time >= targetTime) { frameA = frames[i]; frameB = frames[i]; break; }
+      if (frames[i].time >= targetTime) {
+        frameA = frames[i];
+        frameB = frames[i];
+        break;
+      }
     }
     if (targetTime >= frames[frames.length - 1].time) {
       frameA = frames[frames.length - 1];
@@ -127,34 +121,23 @@ function ReplayCharacters({ replayData }: { replayData: ReplayData }) {
     const t = dt > 0 ? Math.min(1, (targetTime - frameA.time) / dt) : 0;
 
     const newPositions: typeof positionsRef.current = {};
-    const newAnims: Record<string, string> = {};
     const allIds = new Set([...Object.keys(frameA.players), ...Object.keys(frameB.players)]);
     for (const id of allIds) {
       const a = frameA.players[id];
       const b = frameB.players[id];
       const src = b ?? a;
       if (!src || !src.alive) continue;
-      const isAttacking = src.isAttacking ?? false;
-      const isMoving = src.isMoving ?? false;
       newPositions[id] = {
         x: a && b ? a.x + (b.x - a.x) * t : src.x,
         z: a && b ? a.z + (b.z - a.z) * t : src.z,
         facingAngle: src.facingAngle,
-        isMoving,
-        isAttacking,
+        isMoving: src.isMoving,
         chickColor: src.chickColor,
         isEagle: src.isEagle,
         alive: src.alive,
       };
-      newAnims[id] = isAttacking ? 'Attack' : (isMoving ? 'Running' : 'Idle');
     }
     positionsRef.current = newPositions;
-
-    // Update anim states for React re-render (throttled)
-    setAnimStates(prev => {
-      const changed = Object.keys(newAnims).some(id => prev[id] !== newAnims[id]);
-      return changed ? newAnims : prev;
-    });
 
     // Update group children positions
     if (groupRef.current) {
@@ -183,7 +166,10 @@ function ReplayCharacters({ replayData }: { replayData: ReplayData }) {
     const result: Record<string, ReplayFramePlayer> = {};
     for (const id of playerIds) {
       for (const f of frames) {
-        if (f.players[id]) { result[id] = f.players[id]; break; }
+        if (f.players[id]) {
+          result[id] = f.players[id];
+          break;
+        }
       }
     }
     return result;
@@ -191,15 +177,15 @@ function ReplayCharacters({ replayData }: { replayData: ReplayData }) {
 
   return (
     <group ref={groupRef}>
-      {playerIds.map(id => {
+      {playerIds.map((id) => {
         const p = initialPlayers[id];
         if (!p) return null;
-        const anim = (animStates[id] ?? (p.isAttacking ? 'Attack' : (p.isMoving ? 'Running' : 'Idle'))) as 'Idle' | 'Running' | 'Attack' | 'Victory';
+        const isAttacker = id === attackerConnId;
         return (
           <group key={id} position={[p.x, 0, p.z]}>
             <CharacterViewer
               color={p.chickColor as ChickColor}
-              animState={anim}
+              animState={isAttacker ? "Running" : p.isMoving ? "Running" : "Idle"}
               facingAngle={p.facingAngle}
             />
           </group>
@@ -215,7 +201,7 @@ function ReplayScene({ replayData }: { replayData: ReplayData }) {
       <ambientLight intensity={0.7} color="#fffaf0" />
       <directionalLight position={[20, 35, 15]} intensity={1.6} color="#fff5e0" />
       <directionalLight position={[-15, 20, -10]} intensity={0.4} color="#b0d0ff" />
-      <gridHelper args={[60, 60, '#333', '#222']} />
+      <gridHelper args={[60, 60, "#333", "#222"]} />
       <ReplayCamera replayData={replayData} />
       <Suspense fallback={null}>
         <ReplayCharacters replayData={replayData} />
@@ -239,15 +225,9 @@ export default function ReplayCountdownOverlay({ replayData, secondsLeft }: Prop
   return createPortal(
     <div className="fixed inset-0 flex items-center justify-center bg-background/90" style={{ zIndex: 2147483647 }}>
       <div className="relative w-[85vw] h-[65vh] max-w-[1200px] max-h-[700px] rounded-lg shadow-2xl overflow-hidden border border-border bg-card">
-        {/* Left side — Replay (trapezoid, right edge at 80%/65% so center ~37.5% ≈ 3/8 from left) */}
-        <div
-          className="absolute inset-0"
-          style={{ clipPath: 'polygon(0 0, 80% 0, 65% 100%, 0 100%)' }}
-        >
-          <Canvas
-            camera={{ position: initialCamPos, fov: 45 }}
-            className="w-full h-full"
-          >
+        {/* Left side — Replay (trapezoid via clip-path) */}
+        <div className="absolute inset-0" style={{ clipPath: "polygon(0 0, 70% 0, 55% 100%, 0 100%)" }}>
+          <Canvas camera={{ position: initialCamPos, fov: 45 }} className="w-full h-full">
             <ReplayScene replayData={replayData} />
           </Canvas>
           {/* REPLAY label */}
@@ -258,32 +238,41 @@ export default function ReplayCountdownOverlay({ replayData, secondsLeft }: Prop
 
         {/* SVG diagonal line divider */}
         <svg className="absolute inset-0 w-full h-full pointer-events-none" preserveAspectRatio="none">
-          <line x1="80%" y1="0" x2="65%" y2="100%" stroke="hsl(var(--border))" strokeWidth="3" />
+          <line x1="70%" y1="0" x2="55%" y2="100%" stroke="hsl(var(--border))" strokeWidth="3" />
         </svg>
 
         {/* Right side — Countdown */}
         <div
-          className="absolute inset-0 flex items-center justify-center pointer-events-none"
-          style={{ clipPath: 'polygon(80% 0, 100% 0, 100% 100%, 65% 100%)' }}
+          className="absolute inset-0 flex items-center justify-center"
+          style={{ clipPath: "polygon(70% 0, 100% 0, 100% 100%, 55% 100%)" }}
         >
-          <div className="flex flex-col items-center gap-4" style={{ position: 'absolute', right: '8%', top: '50%', transform: 'translateY(-50%)' }}>
+          <div
+            className="flex flex-col items-center gap-4"
+            style={{
+              position: "absolute",
+              top: "66.66%",
+              transform: "translateY(-50%)",
+              left: "auto",
+              right: "8%",
+            }}
+          >
             <span className="text-sm font-pixel tracking-[0.3em] text-muted-foreground uppercase">Resuming</span>
             <div
               key={countdownNum}
               className="font-pixel leading-none"
               style={{
-                fontSize: 'clamp(6rem, 15vw, 12rem)',
-                color: 'hsl(var(--primary))',
-                textShadow: '0 0 40px hsl(var(--primary) / 0.6), 0 0 80px hsl(var(--primary) / 0.3)',
-                animation: 'pulse 1s ease-in-out infinite',
+                fontSize: "clamp(6rem, 15vw, 12rem)",
+                color: "hsl(var(--primary))",
+                textShadow: "0 0 40px hsl(var(--primary) / 0.6), 0 0 80px hsl(var(--primary) / 0.3)",
+                animation: "pulse 1s ease-in-out infinite",
               }}
             >
-              {countdownNum > 0 ? countdownNum : ''}
+              {countdownNum > 0 ? countdownNum : ""}
             </div>
           </div>
         </div>
       </div>
     </div>,
-    document.body
+    document.body,
   );
 }
