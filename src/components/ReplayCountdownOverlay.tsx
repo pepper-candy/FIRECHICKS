@@ -214,10 +214,10 @@ export default function ReplayCountdownOverlay({ replayData, secondsLeft }: Prop
   return createPortal(
     <div className="fixed inset-0 flex items-center justify-center bg-background/90" style={{ zIndex: 2147483647 }}>
       <div className="relative w-[85vw] h-[65vh] max-w-[1200px] max-h-[700px] rounded-lg shadow-2xl overflow-hidden border border-border bg-card">
-        {/* Left side — Replay (trapezoid via clip-path) */}
+        {/* Left side — Replay (trapezoid, right edge at 80%/65% so center ~37.5% ≈ 3/8 from left) */}
         <div
           className="absolute inset-0"
-          style={{ clipPath: 'polygon(0 0, 70% 0, 55% 100%, 0 100%)' }}
+          style={{ clipPath: 'polygon(0 0, 80% 0, 65% 100%, 0 100%)' }}
         >
           <Canvas
             camera={{ position: initialCamPos, fov: 45 }}
@@ -233,15 +233,15 @@ export default function ReplayCountdownOverlay({ replayData, secondsLeft }: Prop
 
         {/* SVG diagonal line divider */}
         <svg className="absolute inset-0 w-full h-full pointer-events-none" preserveAspectRatio="none">
-          <line x1="70%" y1="0" x2="55%" y2="100%" stroke="hsl(var(--border))" strokeWidth="3" />
+          <line x1="80%" y1="0" x2="65%" y2="100%" stroke="hsl(var(--border))" strokeWidth="3" />
         </svg>
 
-        {/* Right side — Countdown */}
+        {/* Right side — Countdown positioned at 75% from left (1/4 from right) */}
         <div
           className="absolute inset-0 flex items-center justify-center"
-          style={{ clipPath: 'polygon(70% 0, 100% 0, 100% 100%, 55% 100%)' }}
+          style={{ clipPath: 'polygon(80% 0, 100% 0, 100% 100%, 65% 100%)' }}
         >
-          <div className="flex flex-col items-center gap-4" style={{ marginLeft: '15%' }}>
+          <div className="flex flex-col items-center gap-4" style={{ position: 'absolute', left: '75%', transform: 'translateX(-50%)' }}>
             <span className="text-sm font-pixel tracking-[0.3em] text-muted-foreground uppercase">Resuming</span>
             <div
               key={countdownNum}

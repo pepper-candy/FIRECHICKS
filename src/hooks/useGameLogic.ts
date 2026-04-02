@@ -1704,7 +1704,7 @@ export function useGameLogic({ players, broadcast, gameMode, connectionMode, map
             } as ReplayData;
           }
 
-          // Delay freeze + video by 0.7s so attack motion is captured
+          // Delay freeze + video by 0.2s so attack motion is captured
           gs.pendingEagleFreezeAfterVideo = true;
           const videoType = mostSerious;
           setTimeout(() => {
@@ -1714,7 +1714,7 @@ export function useGameLogic({ players, broadcast, gameMode, connectionMode, map
             gsInner.frozenAllUntil = Date.now() + 60000;
             gsInner.videoPlaying = videoType;
             setVideoPlaying(videoType);
-          }, 700);
+          }, 200);
         }
         break;
       }
