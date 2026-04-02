@@ -603,9 +603,23 @@ function updateEagleBot(
     return { joystick: smoothJoystick(s), messages };
   }
 
-  // Pick target — always nearest (no chase-timeout retargeting)
+  // Pick target — coordinate between multiple eagles so they don't all chase the same chick.
   validTargets.sort((a, b) => dist(bot.position, a.position) - dist(bot.position, b.position));
-  const target = validTargets[0];
+  const otherEagles = Array.from(allPlayers.values()).filter(
+    (p) => p.isEagle && p.alive && p.connId !== bot.connId,
+  );
+  let target = validTargets[0];
+  if (otherEagles.length > 0 && validTargets.length > 1) {
+    // Check if another eagle is already closer to validTargets[0]
+    const otherEagleStates = otherEagles.map((e) => botStates.get(e.connId));
+    const otherTargetingNearest = otherEagles.some((e) => {
+      const d = dist(e.position, validTargets[0].position);
+      return d < dist(bot.position, validTargets[0].position);
+    });
+    if (otherTargetingNearest) {
+      target = validTargets[1]; // Take the second-closest chick
+    }
+  }
 
   const d = dist(bot.position, target.position);
 
