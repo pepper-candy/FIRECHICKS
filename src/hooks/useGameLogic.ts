@@ -120,6 +120,7 @@ interface UseGameLogicProps {
   gameMode: "1v3" | "2v6";
   connectionMode: ConnectionMode;
   mapId?: import('@/lib/mapVariants').MapId;
+  devMode?: boolean;
 }
 
 // Named type for the full game state reference — avoids TypeScript `unknown` inference issues
@@ -217,7 +218,9 @@ function updateHostExamDisplay(gs: GameStateRef) {
 }
 
 // ─── Hook ─────────────────────────────────────────────────────────────────────
-export function useGameLogic({ players, broadcast, gameMode, connectionMode, mapId = 1 }: UseGameLogicProps) {
+export function useGameLogic({ players, broadcast, gameMode, connectionMode, mapId = 1, devMode = false }: UseGameLogicProps) {
+  const devModeRef = useRef(devMode);
+  useEffect(() => { devModeRef.current = devMode; }, [devMode]);
   const [phase, setPhase] = useState<GamePhase>("lobby");
   const [assignments, setAssignments] = useState<
     Record<string, { colorIndex: number; isEagle: boolean; chickColor: ChickColor }>
@@ -446,17 +449,16 @@ export function useGameLogic({ players, broadcast, gameMode, connectionMode, map
       replayCountdown: null,
     };
 
-    setPhase("reveal");
-    broadcastRef.current({ type: "game-start", assignments: assigns });
-
-    setTimeout(() => {
-      const gsInner = gameStateRef.current as GameStateRef | null;
-      if (!gsInner) return;
-      gsInner.phase = "countdown";
-      gsInner.countdownTime = COUNTDOWN_DURATION;
-      gsInner.startTime = Date.now();
-      setPhase("countdown");
+    if (devModeRef.current) {
+      // Dev mode: skip reveal, go straight to countdown then playing
+      gameStateRef.current.phase = "countdown";
+      gameStateRef.current.countdownTime = 0;
+      gameStateRef.current.startTime = Date.now();
+      setPhase("playing");
+      gameStateRef.current.phase = "playing";
+      broadcastRef.current({ type: "game-start", assignments: assigns });
       (broadcastRef.current as (msg: any) => void)({ type: "phase-change", phase: "countdown" });
+      (broadcastRef.current as (msg: any) => void)({ type: "phase-change", phase: "playing" });
 
       lastTickRef.current = performance.now();
       const tick = (time: number) => {
@@ -466,7 +468,29 @@ export function useGameLogic({ players, broadcast, gameMode, connectionMode, map
         frameRef.current = requestAnimationFrame(tick);
       };
       frameRef.current = requestAnimationFrame(tick);
-    }, REVEAL_DURATION);
+    } else {
+      setPhase("reveal");
+      broadcastRef.current({ type: "game-start", assignments: assigns });
+
+      setTimeout(() => {
+        const gsInner = gameStateRef.current as GameStateRef | null;
+        if (!gsInner) return;
+        gsInner.phase = "countdown";
+        gsInner.countdownTime = COUNTDOWN_DURATION;
+        gsInner.startTime = Date.now();
+        setPhase("countdown");
+        (broadcastRef.current as (msg: any) => void)({ type: "phase-change", phase: "countdown" });
+
+        lastTickRef.current = performance.now();
+        const tick = (time: number) => {
+          const delta = (time - lastTickRef.current) / 1000;
+          lastTickRef.current = time;
+          updateGameState(delta);
+          frameRef.current = requestAnimationFrame(tick);
+        };
+        frameRef.current = requestAnimationFrame(tick);
+      }, REVEAL_DURATION);
+    }
   }, []);
 
   // ─── Main Game Loop ───────────────────────────────────────────────────────────
@@ -821,7 +845,7 @@ export function useGameLogic({ players, broadcast, gameMode, connectionMode, map
       if (chicks.length > 0 && chicks.every((c) => c.socialCircleMet.size >= requiredMeets)) {
         gs.stage = 1;
         gs.stageLabel = "Get Exam Tips from glowing buildings!";
-        gs.stageTransitionUntil = now + 8000;
+        gs.stageTransitionUntil = devModeRef.current ? 0 : now + 8000;
         for (const b of gs.buildings) {
           if (b.hasTip) {
             b.glowing = true;
@@ -895,7 +919,7 @@ export function useGameLogic({ players, broadcast, gameMode, connectionMode, map
                   if (gs.stage === 1) {
                     gs.stage = 2;
                     gs.stageLabel = "Stage 2 & 3: Share Exam Tips with everyone!";
-                    gs.stageTransitionUntil = now + 8000;
+                    gs.stageTransitionUntil = devModeRef.current ? 0 : now + 8000;
                   }
                 }
               }
@@ -912,7 +936,7 @@ export function useGameLogic({ players, broadcast, gameMode, connectionMode, map
         if (aliveChicks.length > 0 && aliveChicks.every((c) => c.tips[0] && c.tips[1])) {
           gs.stage = 3;
           gs.stageLabel = "Run to any building to start the Final Exam!";
-          gs.stageTransitionUntil = now + 8000;
+          gs.stageTransitionUntil = devModeRef.current ? 0 : now + 8000;
         }
       }
     }

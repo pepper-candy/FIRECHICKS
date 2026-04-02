@@ -168,6 +168,7 @@ function PlayerFocusCamera({ target }: { target: { x: number; z: number } }) {
 // ─── Host Component ──────────────────────────────────────────────────────────
 export default function Host() {
   const [mode, setMode] = useState<ConnectionMode>("webrtc");
+  const [devMode, setDevMode] = useState(false);
   const [gameMode, setGameMode] = useState<GameMode>("1v3");
   const [startClickAt, setStartClickAt] = useState<number | null>(null);
   const [zoomLevel, setZoomLevel] = useState(1);
@@ -221,7 +222,7 @@ export default function Host() {
     hostSkipExam,
     togglePause,
     toggleBotsPause,
-  } = useGameLogic({ players, broadcast, gameMode, connectionMode: mode, mapId });
+  } = useGameLogic({ players, broadcast, gameMode, connectionMode: mode, mapId, devMode });
 
   const [isPaused, setIsPaused] = useState(false);
   const [isBotsPaused, setIsBotsPaused] = useState(false);
@@ -395,7 +396,13 @@ export default function Host() {
         <div className="flex items-center justify-between flex-wrap gap-2 z-10">
           <div className="flex items-center gap-2">
             <h1
-              className={`text-sm md:text-base text-primary tracking-wider font-pixel ${isImmersive ? "ceremony-title-glow" : "text-glow-green"}`}
+              onClick={() => setDevMode(d => !d)}
+              className={`text-sm md:text-base tracking-wider font-pixel cursor-pointer select-none ${
+                devMode
+                  ? "text-red-500"
+                  : isImmersive ? "text-primary ceremony-title-glow" : "text-primary text-glow-green"
+              }`}
+              title={devMode ? "Dev mode ON — click to disable" : "Click to enable dev mode"}
             >
               LOBBY
             </h1>
