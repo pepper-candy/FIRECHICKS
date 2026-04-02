@@ -58,7 +58,10 @@ function ReplayCamera({ replayData }: { replayData: ReplayData }) {
   return null;
 }
 
-function getAnimForPlayer(p: ReplayFramePlayer, isAttacker: boolean): AnimState {
+function getAnimForPlayer(p: ReplayFramePlayer, isAttacker: boolean, elapsedMs: number, attackTime: number, replayStartTime: number): AnimState {
+  // After the attack moment (1.5s into replay), keep the eagle attacker in Attack animation
+  const attackMomentInReplay = attackTime - replayStartTime;
+  if (isAttacker && elapsedMs >= attackMomentInReplay) return "Attack";
   const isFlying = p.isEagle && (p.speedMultiplier ?? 1) >= FLY_SPEED_MULTIPLIER;
   if (p.isAttacking || isFlying) return "Attack";
   if (p.isMoving) return "Running";
