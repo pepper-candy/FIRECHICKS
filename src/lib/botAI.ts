@@ -575,15 +575,7 @@ function updateEagleBot(
     return { joystick: smoothJoystick(s), messages };
   }
 
-  const pendingBoxes = mysteryBoxes.filter((b) => !b.collected && !b.triggered && now < b.activeAt);
-  if (pendingBoxes.length > 0) {
-    pendingBoxes.sort((a, b) => dist(bot.position, a.position) - dist(bot.position, b.position));
-    const targetBox = pendingBoxes[0];
-    const boxDist = dist(bot.position, targetBox.position);
-    const boxJoy = joystickToTarget(bot.position, targetBox.position, Math.min(1, Math.max(0.45, boxDist / 25)));
-    s.targetJoystick = avoidObstacles(bot.position, boxJoy);
-    return { joystick: smoothJoystick(s), messages };
-  }
+  // NOTE: Do NOT chase pending (inactive) mystery boxes — eagles were getting stuck waiting at them.
 
   // Find valid targets
   const chicks = Array.from(allPlayers.values()).filter(
