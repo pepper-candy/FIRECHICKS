@@ -211,6 +211,7 @@ export interface GameStateSnapshot {
   stageTransitionUntil: number;
   activeTipShareConnIds: string[];
   totalPauseMs: number;
+  replayCountdown: ReplayCountdownState | null;
 }
 
 // Messages host → client
