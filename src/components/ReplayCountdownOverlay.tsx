@@ -224,8 +224,8 @@ export default function ReplayCountdownOverlay({ replayData, secondsLeft }: Prop
         <div
           className="absolute"
           style={{
-            top: "5%",
-            left: "2%",
+            top: "6%",
+            left: "4%",
           }}
         >
           <div className="flex flex-col items-center gap-1">
@@ -270,7 +270,7 @@ export default function ReplayCountdownOverlay({ replayData, secondsLeft }: Prop
           className="absolute"
           style={{
             bottom: "5%",
-            right: "2%",
+            right: "3%",
           }}
         >
           <div className="flex flex-col items-center gap-1">
