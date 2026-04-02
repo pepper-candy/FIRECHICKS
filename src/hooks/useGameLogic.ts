@@ -120,6 +120,7 @@ interface UseGameLogicProps {
   gameMode: "1v3" | "2v6";
   connectionMode: ConnectionMode;
   mapId?: import('@/lib/mapVariants').MapId;
+  devMode?: boolean;
 }
 
 // Named type for the full game state reference — avoids TypeScript `unknown` inference issues
@@ -217,7 +218,9 @@ function updateHostExamDisplay(gs: GameStateRef) {
 }
 
 // ─── Hook ─────────────────────────────────────────────────────────────────────
-export function useGameLogic({ players, broadcast, gameMode, connectionMode, mapId = 1 }: UseGameLogicProps) {
+export function useGameLogic({ players, broadcast, gameMode, connectionMode, mapId = 1, devMode = false }: UseGameLogicProps) {
+  const devModeRef = useRef(devMode);
+  useEffect(() => { devModeRef.current = devMode; }, [devMode]);
   const [phase, setPhase] = useState<GamePhase>("lobby");
   const [assignments, setAssignments] = useState<
     Record<string, { colorIndex: number; isEagle: boolean; chickColor: ChickColor }>
