@@ -18,18 +18,28 @@ interface Props {
 
 function ReplayCamera({ replayData }: { replayData: ReplayData }) {
   const startTime = useRef(Date.now());
-  const { camera } = useThree();
-  const { attackerConnId, victimConnIds, frames, attackTime, attackerFacingAngle } = replayData;
+  const { camera, size } = useThree();
+  const { attackerConnId, victimConnIds, frames, attackTime } = replayData;
 
-  // Camera offset: opposite of eagle's facing direction
-  const behindDir = useMemo(() => {
-    const angle = attackerFacingAngle + Math.PI; // opposite
-    return { x: Math.sin(angle), z: Math.cos(angle) };
-  }, [attackerFacingAngle]);
+  // Apply view offset so the focal point sits at ~1/3 from the right of the usable canvas area.
+  // The right 25% of the canvas is obscured by the countdown panel, so shift the
+  // camera frustum to the right so the subject ends up at roughly 2/3 of the visible region.
+  const offsetApplied = useRef(false);
 
   useFrame(() => {
     if (frames.length === 0) return;
     const elapsed = Math.min(3, (Date.now() - startTime.current) / 1000);
+
+    // Apply view offset once we have size
+    if (!offsetApplied.current && size.width > 0) {
+      const cam = camera as THREE.PerspectiveCamera;
+      // Shift the view so center of camera maps to ~33% from left of usable area.
+      // Usable area is ~75% of full width. We want subject at 2/3 of that = 50% of full.
+      // So offset the center rightward by ~15% of canvas width.
+      cam.setViewOffset(size.width, size.height, -size.width * 0.15, 0, size.width, size.height);
+      cam.updateProjectionMatrix();
+      offsetApplied.current = true;
+    }
 
     // Replay starts 1.5s before attack
     const replayStartTime = attackTime - 1500;
@@ -45,32 +55,37 @@ function ReplayCamera({ replayData }: { replayData: ReplayData }) {
     const victim = victimConnIds.length > 0 ? currentFrame.players[victimConnIds[0]] : null;
     if (!eagle) return;
 
+    // Dynamic camera direction: follows eagle's current facing angle (third-person behind)
+    const behindAngle = eagle.facingAngle + Math.PI;
+    const bx = Math.sin(behindAngle);
+    const bz = Math.cos(behindAngle);
+
     if (elapsed < 1.5) {
-      // Wide shot from behind eagle
+      // Wide shot from behind eagle, following eagle's facing
       camera.position.set(
-        eagle.x + behindDir.x * 10,
+        eagle.x + bx * 10,
         12,
-        eagle.z + behindDir.z * 10
+        eagle.z + bz * 10
       );
       camera.lookAt(eagle.x, 0, eagle.z);
     } else if (elapsed < 2.0) {
-      // Attack moment — closer, still from behind
+      // Attack moment — closer, still following facing
       camera.position.set(
-        eagle.x + behindDir.x * 5,
+        eagle.x + bx * 5,
         6,
-        eagle.z + behindDir.z * 5
+        eagle.z + bz * 5
       );
       camera.lookAt(eagle.x, 1, eagle.z);
     } else {
-      // Zoom-in static — focus on eagle/victim midpoint
+      // Zoom-in — focus on eagle/victim midpoint
       const t = Math.min(1, (elapsed - 2.0) / 1.0);
       const dist = 4 - t * 1.5;
       const tx = victim ? (eagle.x + victim.x) / 2 : eagle.x;
       const tz = victim ? (eagle.z + victim.z) / 2 : eagle.z;
       camera.position.set(
-        tx + behindDir.x * dist,
+        tx + bx * dist,
         3 + (1 - t) * 2,
-        tz + behindDir.z * dist
+        tz + bz * dist
       );
       camera.lookAt(tx, 1, tz);
     }
