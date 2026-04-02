@@ -54,7 +54,7 @@ function ReplayCamera({ replayData }: { replayData: ReplayData }) {
       camera.lookAt(eagle.x, 1, eagle.z);
     } else {
       const t = Math.min(1, (elapsed - 2.0) / 1.0);
-      const dist = 4 - t * 1.3;
+      const dist = 4 - t * 1;
       const tx = victim ? (eagle.x + victim.x) / 2 : eagle.x;
       const tz = victim ? (eagle.z + victim.z) / 2 : eagle.z;
       camera.position.set(tx + behindDir.x * dist, 3 + (1 - t) * 2, tz + behindDir.z * dist);
