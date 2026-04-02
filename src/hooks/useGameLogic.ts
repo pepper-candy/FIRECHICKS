@@ -845,7 +845,7 @@ export function useGameLogic({ players, broadcast, gameMode, connectionMode, map
       if (chicks.length > 0 && chicks.every((c) => c.socialCircleMet.size >= requiredMeets)) {
         gs.stage = 1;
         gs.stageLabel = "Get Exam Tips from glowing buildings!";
-        gs.stageTransitionUntil = now + 8000;
+        gs.stageTransitionUntil = devModeRef.current ? 0 : now + 8000;
         for (const b of gs.buildings) {
           if (b.hasTip) {
             b.glowing = true;
@@ -919,7 +919,7 @@ export function useGameLogic({ players, broadcast, gameMode, connectionMode, map
                   if (gs.stage === 1) {
                     gs.stage = 2;
                     gs.stageLabel = "Stage 2 & 3: Share Exam Tips with everyone!";
-                    gs.stageTransitionUntil = now + 8000;
+                    gs.stageTransitionUntil = devModeRef.current ? 0 : now + 8000;
                   }
                 }
               }
@@ -936,7 +936,7 @@ export function useGameLogic({ players, broadcast, gameMode, connectionMode, map
         if (aliveChicks.length > 0 && aliveChicks.every((c) => c.tips[0] && c.tips[1])) {
           gs.stage = 3;
           gs.stageLabel = "Run to any building to start the Final Exam!";
-          gs.stageTransitionUntil = now + 8000;
+          gs.stageTransitionUntil = devModeRef.current ? 0 : now + 8000;
         }
       }
     }
