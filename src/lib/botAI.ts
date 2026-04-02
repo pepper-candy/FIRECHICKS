@@ -303,7 +303,7 @@ function eagleRaySteer(
   const wx0 = desiredJoy.x / len0;
   const wz0 = desiredJoy.y / len0;
   const baseAngle = Math.atan2(wx0, wz0);
-  const offsets = [0, -0.5, 0.5, -1.0, 1.0, -1.5, 1.5, Math.PI];
+  const offsets = [0, -0.5, 0.5, -1.0, 1.0, -1.5, 1.5, -2.0, 2.0, Math.PI];
   let bestJoy = desiredJoy;
   let bestScore = -1;
   for (const off of offsets) {
@@ -316,6 +316,18 @@ function eagleRaySteer(
       bestJoy = { x: wx * magnitude, y: wz * magnitude };
     }
   }
+
+  // Corner / edge escape: if near map boundary AND stuck (best clearance < 1), bias toward center
+  const edgeDist = Math.min(MAP_HALF - Math.abs(from.x), MAP_HALF - Math.abs(from.z));
+  if (edgeDist < 4 && bestScore < 1.5) {
+    const cx = -from.x;
+    const cz = -from.z;
+    const cLen = Math.hypot(cx, cz);
+    if (cLen > 0.1) {
+      return { x: (cx / cLen) * magnitude, y: (cz / cLen) * magnitude };
+    }
+  }
+
   return bestJoy;
 }
 
@@ -575,15 +587,7 @@ function updateEagleBot(
     return { joystick: smoothJoystick(s), messages };
   }
 
-  const pendingBoxes = mysteryBoxes.filter((b) => !b.collected && !b.triggered && now < b.activeAt);
-  if (pendingBoxes.length > 0) {
-    pendingBoxes.sort((a, b) => dist(bot.position, a.position) - dist(bot.position, b.position));
-    const targetBox = pendingBoxes[0];
-    const boxDist = dist(bot.position, targetBox.position);
-    const boxJoy = joystickToTarget(bot.position, targetBox.position, Math.min(1, Math.max(0.45, boxDist / 25)));
-    s.targetJoystick = avoidObstacles(bot.position, boxJoy);
-    return { joystick: smoothJoystick(s), messages };
-  }
+  // NOTE: Do NOT chase pending (inactive) mystery boxes — eagles were getting stuck waiting at them.
 
   // Find valid targets
   const chicks = Array.from(allPlayers.values()).filter(
@@ -611,9 +615,23 @@ function updateEagleBot(
     return { joystick: smoothJoystick(s), messages };
   }
 
-  // Pick target — always nearest (no chase-timeout retargeting)
+  // Pick target — coordinate between multiple eagles so they don't all chase the same chick.
   validTargets.sort((a, b) => dist(bot.position, a.position) - dist(bot.position, b.position));
-  const target = validTargets[0];
+  const otherEagles = Array.from(allPlayers.values()).filter(
+    (p) => p.isEagle && p.alive && p.connId !== bot.connId,
+  );
+  let target = validTargets[0];
+  if (otherEagles.length > 0 && validTargets.length > 1) {
+    // Check if another eagle is already closer to validTargets[0]
+    const otherEagleStates = otherEagles.map((e) => botStates.get(e.connId));
+    const otherTargetingNearest = otherEagles.some((e) => {
+      const d = dist(e.position, validTargets[0].position);
+      return d < dist(bot.position, validTargets[0].position);
+    });
+    if (otherTargetingNearest) {
+      target = validTargets[1]; // Take the second-closest chick
+    }
+  }
 
   const d = dist(bot.position, target.position);
 

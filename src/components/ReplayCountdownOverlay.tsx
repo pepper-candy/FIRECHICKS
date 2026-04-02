@@ -58,7 +58,10 @@ function ReplayCamera({ replayData }: { replayData: ReplayData }) {
   return null;
 }
 
-function getAnimForPlayer(p: ReplayFramePlayer, isAttacker: boolean): AnimState {
+function getAnimForPlayer(p: ReplayFramePlayer, isAttacker: boolean, elapsedMs: number, attackTime: number, replayStartTime: number): AnimState {
+  // After the attack moment (1.5s into replay), keep the eagle attacker in Attack animation
+  const attackMomentInReplay = attackTime - replayStartTime;
+  if (isAttacker && elapsedMs >= attackMomentInReplay) return "Attack";
   const isFlying = p.isEagle && (p.speedMultiplier ?? 1) >= FLY_SPEED_MULTIPLIER;
   if (p.isAttacking || isFlying) return "Attack";
   if (p.isMoving) return "Running";
@@ -115,7 +118,7 @@ function ReplayCharacters({ replayData }: { replayData: ReplayData }) {
         }
 
         const isAttacker = id === attackerConnId;
-        newAnims[id] = getAnimForPlayer(src, isAttacker);
+        newAnims[id] = getAnimForPlayer(src, isAttacker, elapsed * 1000, attackTime, replayStartTime);
         childIdx++;
       }
     }
@@ -155,7 +158,7 @@ function ReplayCharacters({ replayData }: { replayData: ReplayData }) {
         const p = initialPlayers[id];
         if (!p) return null;
         const isAttacker = id === attackerConnId;
-        const anim = animStates[id] ?? getAnimForPlayer(p, isAttacker);
+        const anim = animStates[id] ?? getAnimForPlayer(p, isAttacker, 0, attackTime, attackTime - 1500);
         return (
           <group key={id} position={[p.x, 0, p.z]}>
             <CharacterViewer
