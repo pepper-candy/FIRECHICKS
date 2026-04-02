@@ -158,7 +158,7 @@ function ReplayCharacters({ replayData }: { replayData: ReplayData }) {
         const p = initialPlayers[id];
         if (!p) return null;
         const isAttacker = id === attackerConnId;
-        const anim = animStates[id] ?? getAnimForPlayer(p, isAttacker);
+        const anim = animStates[id] ?? getAnimForPlayer(p, isAttacker, 0, attackTime, attackTime - 1500);
         return (
           <group key={id} position={[p.x, 0, p.z]}>
             <CharacterViewer
