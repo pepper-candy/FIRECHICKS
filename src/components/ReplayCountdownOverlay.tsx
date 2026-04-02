@@ -118,7 +118,7 @@ function ReplayCharacters({ replayData }: { replayData: ReplayData }) {
         }
 
         const isAttacker = id === attackerConnId;
-        newAnims[id] = getAnimForPlayer(src, isAttacker);
+        newAnims[id] = getAnimForPlayer(src, isAttacker, elapsed * 1000, attackTime, replayStartTime);
         childIdx++;
       }
     }
