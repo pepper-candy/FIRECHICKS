@@ -157,6 +157,14 @@ interface GameStateRef {
   stageTransitionUntil: number;
   totalPauseMs: number;
   stageTransitionPauseApplied: boolean;
+  replayCountdown: ReplayCountdownState | null;
+}
+
+// Circular buffer for position recording
+interface PositionHistoryBuffer {
+  frames: ReplayFrame[];
+  writeIndex: number;
+  count: number;
 }
 
 function isBotConnId(connId: string): boolean {
