@@ -226,7 +226,7 @@ export default function ReplayCountdownOverlay({ replayData, secondsLeft }: Prop
     <div className="fixed inset-0 flex items-center justify-center bg-background/90" style={{ zIndex: 2147483647 }}>
       <div className="relative w-[85vw] h-[65vh] max-w-[1200px] max-h-[700px] rounded-lg shadow-2xl overflow-hidden border border-border bg-card">
         {/* Left side — Replay (trapezoid via clip-path) */}
-        <div className="absolute inset-0" style={{ clipPath: "polygon(0 0, 80% 0, 65% 100%, 0 100%)" }}>
+        <div className="absolute inset-0" style={{ clipPath: "polygon(0 0, 70% 0, 60% 100%, 0 100%)" }}>
           <Canvas camera={{ position: initialCamPos, fov: 45 }} className="w-full h-full">
             <ReplayScene replayData={replayData} />
           </Canvas>
@@ -238,13 +238,13 @@ export default function ReplayCountdownOverlay({ replayData, secondsLeft }: Prop
 
         {/* SVG diagonal line divider */}
         <svg className="absolute inset-0 w-full h-full pointer-events-none" preserveAspectRatio="none">
-          <line x1="80%" y1="0" x2="65%" y2="100%" stroke="hsl(var(--border))" strokeWidth="3" />
+          <line x1="70%" y1="0" x2="60%" y2="100%" stroke="hsl(var(--border))" strokeWidth="3" />
         </svg>
 
         {/* Right side — Countdown */}
         <div
           className="absolute inset-0 flex items-center justify-center"
-          style={{ clipPath: "polygon(80% 0, 100% 0, 100% 100%, 65% 100%)" }}
+          style={{ clipPath: "polygon(70% 0, 100% 0, 100% 100%, 60% 100%)" }}
         >
           <div
             className="flex flex-col items-center gap-4"
@@ -253,7 +253,7 @@ export default function ReplayCountdownOverlay({ replayData, secondsLeft }: Prop
               top: "70%",
               transform: "translateY(-50%)",
               left: "auto",
-              right: "0%",
+              right: "1%",
             }}
           >
             <span className="text-sm font-pixel tracking-[0.3em] text-muted-foreground uppercase">Resuming</span>
