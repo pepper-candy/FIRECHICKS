@@ -1,4 +1,4 @@
-import { useRef, useMemo, useState, Suspense } from "react";
+import { useRef, useMemo, Suspense } from "react";
 import { createPortal } from "react-dom";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import * as THREE from "three";
@@ -59,7 +59,6 @@ function ReplayCamera({ replayData }: { replayData: ReplayData }) {
 }
 
 function getAnimForPlayer(p: ReplayFramePlayer, isAttacker: boolean, elapsedMs: number, attackTime: number, replayStartTime: number): AnimState {
-  // After the attack moment (1.5s into replay), keep the eagle attacker in Attack animation
   const attackMomentInReplay = attackTime - replayStartTime;
   if (isAttacker && elapsedMs >= attackMomentInReplay) return "Attack";
   const isFlying = p.isEagle && (p.speedMultiplier ?? 1) >= FLY_SPEED_MULTIPLIER;
@@ -72,8 +71,9 @@ function ReplayCharacters({ replayData }: { replayData: ReplayData }) {
   const startTime = useRef(Date.now());
   const groupRef = useRef<THREE.Group>(null);
   const { frames, attackTime, attackerConnId } = replayData;
-
-  const [animStates, setAnimStates] = useState<Record<string, AnimState>>({});
+  // Use ref to avoid re-render every frame — CharacterViewer handles its own anim transitions
+  const animStatesRef = useRef<Record<string, AnimState>>({});
+  const lastAnimKey = useRef("");
 
   useFrame(() => {
     if (frames.length === 0) return;
@@ -98,7 +98,6 @@ function ReplayCharacters({ replayData }: { replayData: ReplayData }) {
     const dt = frameB.time - frameA.time;
     const t = dt > 0 ? Math.min(1, (targetTime - frameA.time) / dt) : 0;
 
-    const newAnims: Record<string, AnimState> = {};
     const allIds = new Set([...Object.keys(frameA.players), ...Object.keys(frameB.players)]);
 
     if (groupRef.current) {
@@ -118,18 +117,10 @@ function ReplayCharacters({ replayData }: { replayData: ReplayData }) {
         }
 
         const isAttacker = id === attackerConnId;
-        newAnims[id] = getAnimForPlayer(src, isAttacker, elapsed * 1000, attackTime, replayStartTime);
+        animStatesRef.current[id] = getAnimForPlayer(src, isAttacker, elapsed * 1000, attackTime, replayStartTime);
         childIdx++;
       }
     }
-
-    setAnimStates(prev => {
-      let changed = false;
-      for (const k in newAnims) {
-        if (prev[k] !== newAnims[k]) { changed = true; break; }
-      }
-      return changed ? newAnims : prev;
-    });
   });
 
   const playerIds = useMemo(() => {
@@ -158,7 +149,7 @@ function ReplayCharacters({ replayData }: { replayData: ReplayData }) {
         const p = initialPlayers[id];
         if (!p) return null;
         const isAttacker = id === attackerConnId;
-        const anim = animStates[id] ?? getAnimForPlayer(p, isAttacker, 0, attackTime, attackTime - 1500);
+        const anim = animStatesRef.current[id] ?? getAnimForPlayer(p, isAttacker, 0, attackTime, attackTime - 1500);
         return (
           <group key={id} position={[p.x, 0, p.z]}>
             <CharacterViewer
@@ -249,7 +240,7 @@ export default function ReplayCountdownOverlay({ replayData, secondsLeft }: Prop
           <div className="flex flex-col items-center gap-1">
             <span className="text-xs font-pixel tracking-[0.3em] text-muted-foreground uppercase">Resuming</span>
             <div
-              key={countdownNum}
+              key={`r-${countdownNum}`}
               className="font-pixel leading-none"
               style={{
                 fontSize: "clamp(4rem, 10vw, 8rem)",
