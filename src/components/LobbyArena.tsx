@@ -9,8 +9,6 @@ import * as THREE from "three";
 
 interface Props {
   players: Map<string, PlayerState>;
-  /** Callback when a player scans a lobby prop. Host handles granting. */
-  onLobbyPropScan?: (connId: string, propType: 'speed' | 'heal') => void;
 }
 
 const SPEED = 5;
