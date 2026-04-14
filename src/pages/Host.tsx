@@ -531,8 +531,8 @@ export default function Host() {
 
   // ─── REVEAL ──────────────────────────────────────────────────────────────────
   if (phase === "reveal") {
-    const revealCountdown = startClickAt ? Math.max(0, 10 - (revealNow - startClickAt) / 1000) : 10;
-    const revealSec = Math.ceil(revealCountdown);
+    const revealElapsed = startClickAt ? (revealNow - startClickAt) / 1000 : 0;
+    const revealSec = Math.max(8, 14 - Math.floor(revealElapsed));
 
     if (isImmersive) {
       return (
@@ -602,43 +602,38 @@ export default function Host() {
     if (isImmersive) {
       return (
         <div className="relative flex flex-col items-center justify-center h-screen overflow-hidden bg-black">
-          <div className="immersive-vignette" />
-          <div className="immersive-scanline-overlay" style={{ opacity: 0.4 }} />
-          {/* Pulsing edge strips colored to team green */}
-          <div className="absolute inset-y-0 left-0 w-1.5 bg-primary/50 host-edge-pulse" />
-          <div className="absolute inset-y-0 right-0 w-1.5 bg-primary/50 host-edge-pulse" />
-
-          <div className="z-10 flex flex-col items-center gap-6">
-            <h1
-              className="text-2xl font-pixel text-primary tracking-[0.3em] immersive-fade-in"
-              style={{ "--delay": "0s", textShadow: "0 0 30px hsl(var(--primary) / 0.7)" } as React.CSSProperties}
-            >
-              GAME STARTING
-            </h1>
-            {/* key resets the CSS animation on every integer tick */}
-            <div
-              key={countSec}
-              className="text-[14rem] font-pixel text-accent leading-none host-countdown-pop"
-              style={{ textShadow: "0 0 80px hsl(var(--accent) / 1), 0 0 160px hsl(var(--accent) / 0.5)" }}
-            >
-              {countSec}
-            </div>
-            <p className="text-xs font-mono text-muted-foreground/50 tracking-widest">FIRECHICKS</p>
+          <video
+            src={assetUrl("/Animations/Entrance.mp4")}
+            className="absolute inset-0 w-full h-full object-cover"
+            autoPlay
+            playsInline
+            muted
+          />
+          <div className="absolute inset-0 bg-black/30" />
+          <div className="immersive-vignette z-10" />
+          <div className="immersive-scanline-overlay z-10" style={{ opacity: 0.35 }} />
+          <div className="z-20 flex flex-col items-center gap-3">
+            <h1 className="text-2xl font-pixel text-primary tracking-[0.3em]">GAME STARTING</h1>
+            <p className="text-xs font-mono text-muted-foreground/70 tracking-widest">
+              ENTRANCE {countSec}
+            </p>
           </div>
         </div>
       );
     }
 
     return (
-      <div className="flex flex-col items-center justify-center h-screen gap-4 p-4">
-        <h1 className="text-xl font-pixel text-primary text-glow-green">GET READY</h1>
-        <div
-          className="text-8xl font-pixel text-accent animate-pulse"
-          style={{ textShadow: "0 0 30px hsl(var(--accent) / 0.8)" }}
-        >
-          {countSec}
-        </div>
-        <p className="text-sm font-mono text-muted-foreground">Game starting soon!</p>
+      <div className="relative flex flex-col items-center justify-center h-screen gap-4 p-4 overflow-hidden">
+        <video
+          src={assetUrl("/Animations/Entrance.mp4")}
+          className="absolute inset-0 w-full h-full object-cover"
+          autoPlay
+          playsInline
+          muted
+        />
+        <div className="absolute inset-0 bg-black/35" />
+        <h1 className="z-10 text-xl font-pixel text-primary text-glow-green">GAME STARTING</h1>
+        <p className="z-10 text-sm font-mono text-muted-foreground">Entrance playing... {countSec}</p>
       </div>
     );
   }
@@ -1532,4 +1527,4 @@ function GameOverCeremony({ snapshot, gameMode }: { snapshot: GameStateSnapshot;
   );
 }
 
-const COUNTDOWN_DURATION_DISPLAY = 3;
+const COUNTDOWN_DURATION_DISPLAY = 7;

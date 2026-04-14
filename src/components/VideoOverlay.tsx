@@ -55,7 +55,11 @@ export default function VideoOverlay({ video, onComplete }: Props) {
 
 /** Preload videos (call once on host) */
 export function preloadVideos() {
-  const vids = [assetUrl('/Animations/Hurt.mp4'), assetUrl('/Animations/Dead.mp4')];
+  const vids = [
+    assetUrl('/Animations/Hurt.mp4'),
+    assetUrl('/Animations/Dead.mp4'),
+    assetUrl('/Animations/Entrance.mp4'),
+  ];
   vids.forEach((src) => {
     const link = document.createElement('link');
     link.rel = 'preload';
