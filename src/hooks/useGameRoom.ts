@@ -898,7 +898,7 @@ function useClientSupabase(roomCode: string) {
         hostMsgCallbackRef.current?.(msg);
       })
       .on('broadcast', { event: 'ping' }, (payload) => {
-        if (idleRef.current) return;
+        // Always respond to pings regardless of idle state for connection health
         const { ts } = payload.payload as { ts: number };
         channel.send({ type: 'broadcast', event: 'pong', payload: { clientId: clientIdRef.current, ts } });
       })
@@ -956,9 +956,24 @@ function useClientSupabase(roomCode: string) {
 }
 
 // ─── Public hooks ───────────────────────────────────────────
+const NOOP_HOST = {
+  roomCode: '', players: new Map(), kickPlayer: () => {}, kickAllPlayers: () => {},
+  broadcast: () => {}, onClientMessage: () => {}, usedColors: { current: new Set<number>() },
+  gameModeRef: { current: '1v3' as const }, takeoverCodes: {}, sendToClient: () => {},
+  addBot: () => {}, removeBot: () => {}, fillBots: () => {}, removeBots: () => {},
+};
+
+const NOOP_CLIENT = {
+  connected: false, connect: () => {}, sendJoystick: () => {}, disconnect: () => {},
+  colorIndex: -1, roomFull: false, kicked: false, clientId: '', setIdle: () => {},
+  sendToHost: () => {}, onHostMessage: () => {}, requestColorSwap: () => {},
+  usedColors: new Set<number>(),
+};
+
 export function useHostRoom(mode: ConnectionMode = 'webrtc') {
   const webrtc = useHostWebRTC();
   const supa = useHostSupabase();
+  // Both hooks run (React rules), but only the active one's state is used
   return mode === 'webrtc' ? webrtc : supa;
 }
 
