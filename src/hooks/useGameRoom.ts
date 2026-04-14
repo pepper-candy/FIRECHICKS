@@ -956,20 +956,31 @@ function useClientSupabase(roomCode: string) {
 }
 
 // ─── Public hooks ───────────────────────────────────────────
+const NOOP_HOST = {
+  roomCode: '', players: new Map(), kickPlayer: () => {}, kickAllPlayers: () => {},
+  broadcast: () => {}, onClientMessage: () => {}, usedColors: { current: new Set<number>() },
+  gameModeRef: { current: '1v3' as const }, takeoverCodes: {}, sendToClient: () => {},
+  addBot: () => {}, removeBot: () => {}, fillBots: () => {}, removeBots: () => {},
+};
+
+const NOOP_CLIENT = {
+  connected: false, connect: () => {}, sendJoystick: () => {}, disconnect: () => {},
+  colorIndex: -1, roomFull: false, kicked: false, clientId: '', setIdle: () => {},
+  sendToHost: () => {}, onHostMessage: () => {}, requestColorSwap: () => {},
+  usedColors: new Set<number>(),
+};
+
 export function useHostRoom(mode: ConnectionMode = 'webrtc') {
-  // Only instantiate the active mode to avoid duplicate connections
-  if (mode === 'supabase') {
-    return useHostSupabase();
-  }
-  return useHostWebRTC();
+  const webrtc = useHostWebRTC();
+  const supa = useHostSupabase();
+  // Both hooks run (React rules), but only the active one's state is used
+  return mode === 'webrtc' ? webrtc : supa;
 }
 
 export function useClientRoom(roomCode: string, mode: ConnectionMode = 'webrtc') {
-  // Only instantiate the active mode to avoid duplicate connections
-  if (mode === 'supabase') {
-    return useClientSupabase(roomCode);
-  }
-  return useClientWebRTC(roomCode);
+  const webrtc = useClientWebRTC(roomCode);
+  const supa = useClientSupabase(roomCode);
+  return mode === 'webrtc' ? webrtc : supa;
 }
 
 // ─── Room discovery ─────────────────────────────────────────
