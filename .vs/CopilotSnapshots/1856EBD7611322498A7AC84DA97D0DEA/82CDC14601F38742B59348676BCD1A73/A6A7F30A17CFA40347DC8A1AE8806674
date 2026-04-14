@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+﻿import { useState, useEffect, useRef, useCallback } from 'react';
 import Peer, { DataConnection } from 'peerjs';
 import { supabase } from '@/integrations/supabase/client';
 import type { RealtimeChannel } from '@supabase/supabase-js';
@@ -858,10 +858,6 @@ function useClientSupabase(roomCode: string) {
       config: { broadcast: { self: false } },
     });
 
-    // Add a timeout to validate that a host is actually using this room code
-    let validationTimeoutId: NodeJS.Timeout | null = null;
-    let hostValidated = false;
-
     channel
       .on('broadcast', { event: 'assign-color' }, (payload) => {
         const { clientId, colorIndex: ci } = payload.payload as { clientId: string; colorIndex: number };
@@ -891,11 +887,9 @@ function useClientSupabase(roomCode: string) {
         }
       })
       .on('broadcast', { event: 'host-message' }, (payload) => {
-        hostValidated = true;
         hostMsgCallbackRef.current?.(payload.payload);
       })
       .on('broadcast', { event: 'host-direct' }, (payload) => {
-        hostValidated = true;
         const { targetId, ...msg } = payload.payload as { targetId: string; [key: string]: any };
         if (targetId !== clientIdRef.current) return;
         if (msg.type === 'takeover-accepted') {
@@ -904,25 +898,12 @@ function useClientSupabase(roomCode: string) {
         hostMsgCallbackRef.current?.(msg);
       })
       .on('broadcast', { event: 'ping' }, (payload) => {
-        hostValidated = true;
         // Always respond to pings regardless of idle state for connection health
         const { ts } = payload.payload as { ts: number };
         channel.send({ type: 'broadcast', event: 'pong', payload: { clientId: clientIdRef.current, ts } });
       })
       .subscribe((status) => {
         if (status === 'SUBSCRIBED') {
-          // Set a validation timeout: if no host message is received within 5 seconds, disconnect
-          validationTimeoutId = setTimeout(() => {
-            if (!hostValidated && channelRef.current === channel) {
-              // No host activity detected — invalid room code
-              channel.unsubscribe();
-              channelRef.current = null;
-              setConnected(false);
-              // Notify via a kicked event to show error
-              setKicked(true);
-            }
-          }, 5000);
-
           setConnected(true);
           channel.send({ type: 'broadcast', event: 'client-join', payload: { clientId: clientIdRef.current, ...(takeoverCode ? { takeoverCode } : {}) } });
         }

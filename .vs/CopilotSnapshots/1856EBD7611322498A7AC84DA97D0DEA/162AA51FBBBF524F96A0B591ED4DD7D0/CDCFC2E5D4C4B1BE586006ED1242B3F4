@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+﻿import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { useFullscreen } from "@/hooks/useFullscreen";
@@ -6,6 +6,7 @@ import AssetLoadingIndicator from "@/components/AssetLoadingIndicator";
 import { useAssetLoading } from "@/context/AssetLoadingContext";
 import { useImmersive } from "@/context/ImmersiveContext";
 import { toast } from "@/components/ui/sonner";
+import { buzz } from "@/lib/haptics";
 import { ArrowDownToLine, Check, Loader2, Sparkles } from "lucide-react";
 import FireParticleField from "@/components/FireParticleField";
 
@@ -382,6 +383,14 @@ const Index = () => {
           className="h-14 text-sm font-pixel border-accent text-accent hover:bg-accent/10"
         >
           🐔 CROSSY ROAD
+        </Button>
+
+        <Button
+          onPointerDown={() => buzz(120)}
+          variant="outline"
+          className="h-14 text-sm font-pixel border-primary/40 text-primary hover:bg-primary/10"
+        >
+          📳 HAPTIC TEST
         </Button>
       </div>
 

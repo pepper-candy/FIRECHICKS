@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+﻿import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { useFullscreen } from "@/hooks/useFullscreen";
@@ -6,6 +6,7 @@ import AssetLoadingIndicator from "@/components/AssetLoadingIndicator";
 import { useAssetLoading } from "@/context/AssetLoadingContext";
 import { useImmersive } from "@/context/ImmersiveContext";
 import { toast } from "@/components/ui/sonner";
+import { buzz } from "@/lib/haptics";
 import { ArrowDownToLine, Check, Loader2, Sparkles } from "lucide-react";
 import FireParticleField from "@/components/FireParticleField";
 
