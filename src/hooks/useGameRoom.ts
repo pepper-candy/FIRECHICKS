@@ -898,7 +898,7 @@ function useClientSupabase(roomCode: string) {
         hostMsgCallbackRef.current?.(msg);
       })
       .on('broadcast', { event: 'ping' }, (payload) => {
-        if (idleRef.current) return;
+        // Always respond to pings regardless of idle state for connection health
         const { ts } = payload.payload as { ts: number };
         channel.send({ type: 'broadcast', event: 'pong', payload: { clientId: clientIdRef.current, ts } });
       })
