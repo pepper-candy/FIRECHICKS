@@ -957,15 +957,19 @@ function useClientSupabase(roomCode: string) {
 
 // ─── Public hooks ───────────────────────────────────────────
 export function useHostRoom(mode: ConnectionMode = 'webrtc') {
-  const webrtc = useHostWebRTC();
-  const supa = useHostSupabase();
-  return mode === 'webrtc' ? webrtc : supa;
+  // Only instantiate the active mode to avoid duplicate connections
+  if (mode === 'supabase') {
+    return useHostSupabase();
+  }
+  return useHostWebRTC();
 }
 
 export function useClientRoom(roomCode: string, mode: ConnectionMode = 'webrtc') {
-  const webrtc = useClientWebRTC(roomCode);
-  const supa = useClientSupabase(roomCode);
-  return mode === 'webrtc' ? webrtc : supa;
+  // Only instantiate the active mode to avoid duplicate connections
+  if (mode === 'supabase') {
+    return useClientSupabase(roomCode);
+  }
+  return useClientWebRTC(roomCode);
 }
 
 // ─── Room discovery ─────────────────────────────────────────
