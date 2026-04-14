@@ -532,7 +532,7 @@ export default function Host() {
   // ─── REVEAL ──────────────────────────────────────────────────────────────────
   if (phase === "reveal") {
     const revealElapsed = startClickAt ? (revealNow - startClickAt) / 1000 : 0;
-    const revealSec = Math.max(8, 14 - Math.floor(revealElapsed));
+    const revealSec = Math.max(1, 7 - Math.floor(revealElapsed));
 
     if (isImmersive) {
       return (
@@ -614,9 +614,13 @@ export default function Host() {
           <div className="immersive-scanline-overlay z-10" style={{ opacity: 0.35 }} />
           <div className="z-20 flex flex-col items-center gap-3">
             <h1 className="text-2xl font-pixel text-primary tracking-[0.3em]">GAME STARTING</h1>
-            <p className="text-xs font-mono text-muted-foreground/70 tracking-widest">
-              ENTRANCE {countSec}
-            </p>
+            <div
+  key={countSec}
+  className="text-[8rem] font-pixel text-accent leading-none host-countdown-pop"
+  style={{ textShadow: "0 0 60px hsl(var(--accent) / 0.9), 0 0 120px hsl(var(--accent) / 0.4)" }}
+>
+  {countSec}
+</div>
           </div>
         </div>
       );
