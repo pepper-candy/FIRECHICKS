@@ -257,7 +257,7 @@ function useHostWebRTC(enabled: boolean, opts?: WebRtcOptions) {
     let pingInterval: number | null = null;
 
     void (async () => {
-      const rtcConfig = await buildPeerRtcConfig(opts);
+      const rtcConfig = await buildPeerRtcConfig({ forceRelay: opts?.forceRelay });
       if (cancelled) return;
 
       peer = new Peer(`${PEER_PREFIX}${code}`, {
@@ -420,7 +420,7 @@ function useHostWebRTC(enabled: boolean, opts?: WebRtcOptions) {
       connsRef.current.clear();
       peer?.destroy();
     };
-  }, [enabled, removePlayer, handleColorSwap, opts]);
+  }, [enabled, removePlayer, handleColorSwap, opts?.forceRelay]);
 
   const addBot = useCallback((connId: string, colorIndex: number) => {
     usedColorsRef.current.add(colorIndex);
@@ -824,7 +824,7 @@ function useClientWebRTC(roomCode: string, enabled: boolean, opts?: WebRtcOption
     inputLockedRef.current = false;
     joystickRef.current = { x: 0, y: 0 };
 
-    const rtcConfig = await buildPeerRtcConfig(opts);
+    const rtcConfig = await buildPeerRtcConfig({ forceRelay: opts?.forceRelay });
 
     const peer = new Peer(undefined as any, {
       config: rtcConfig,
@@ -889,7 +889,7 @@ function useClientWebRTC(roomCode: string, enabled: boolean, opts?: WebRtcOption
         if (intervalRef.current) clearInterval(intervalRef.current);
       });
     });
-  }, [enabled, roomCode, opts]);
+  }, [enabled, roomCode, opts?.forceRelay]);
 
   const doDisconnect = useCallback(() => {
     if (intervalRef.current) clearInterval(intervalRef.current);
