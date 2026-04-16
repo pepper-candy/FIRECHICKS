@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Vercel Serverless Function
  * Route: /api/create-room
  *
@@ -7,17 +7,6 @@
 import { neon } from '@neondatabase/serverless';
 
 export default async function handler(req: any, res: any) {
-  // Enable CORS
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
-
-  if (req.method === 'OPTIONS') {
-    res.statusCode = 200;
-    res.end();
-    return;
-  }
-
   if (req.method !== 'POST') {
     res.statusCode = 405;
     res.setHeader('Allow', 'POST');
@@ -40,7 +29,7 @@ export default async function handler(req: any, res: any) {
     const hostId = req.body?.hostId || 'host_' + Date.now();
 
     await sql`INSERT INTO rooms (code, host_id) VALUES (${code}, ${hostId})`;
-
+    
     res.statusCode = 200;
     res.setHeader('Content-Type', 'application/json');
     res.end(JSON.stringify({ code }));
@@ -48,6 +37,6 @@ export default async function handler(req: any, res: any) {
     console.error('Create room error:', error);
     res.statusCode = 500;
     res.setHeader('Content-Type', 'application/json');
-    res.end(JSON.stringify({ error: 'Failed to create room', details: String(error) }));
+    res.end(JSON.stringify({ error: 'Failed to create room' }));
   }
 }

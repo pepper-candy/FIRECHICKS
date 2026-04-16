@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+﻿import { useState, useEffect, useRef, useCallback } from 'react';
 import Peer, { DataConnection } from 'peerjs';
 import { supabase } from '@/integrations/supabase/client';
 import type { RealtimeChannel } from '@supabase/supabase-js';
@@ -416,7 +416,7 @@ function useHostWebRTC(enabled: boolean, opts?: WebRtcOptions) {
         connsRef.current.forEach((conn) => {
           try { conn.send(JSON.stringify({ type: 'ping', ts })); } catch {}
         });
-      }, 2000);
+      }, 500);
     })();
 
     return () => {
@@ -1441,44 +1441,22 @@ export function useFetchRoomsFromAPI() {
   const [rooms, setRooms] = useState<string[]>([]);
 
   useEffect(() => {
-    let isMounted = true;
-
     const fetchRooms = async () => {
       try {
         const res = await fetch('/api/rooms');
-
-        if (!res.ok) {
-          console.warn(`API returned status ${res.statusCode} for /api/rooms`);
-          return;
-        }
-
         const data = await res.json();
-
-        if (!isMounted) return;
-
         if (Array.isArray(data)) {
           const roomCodes = data.map((r: any) => r.code).filter(Boolean);
           setRooms(roomCodes);
-        } else {
-          console.warn('API /api/rooms returned non-array response:', data);
         }
       } catch (error) {
-        if (isMounted) {
-          console.error('Failed to fetch rooms from API:', error);
-        }
+        console.error('Failed to fetch rooms from API:', error);
       }
     };
 
-    // Fetch immediately on mount
     fetchRooms();
-
-    // Then poll every 3 seconds
     const interval = setInterval(fetchRooms, 3000);
-
-    return () => {
-      isMounted = false;
-      clearInterval(interval);
-    };
+    return () => clearInterval(interval);
   }, []);
 
   return rooms;

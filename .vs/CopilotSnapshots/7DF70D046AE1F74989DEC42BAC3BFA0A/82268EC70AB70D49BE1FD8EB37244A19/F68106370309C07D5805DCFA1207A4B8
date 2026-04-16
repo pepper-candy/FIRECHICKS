@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+﻿import { useState, useEffect, useRef, useCallback } from 'react';
 import Peer, { DataConnection } from 'peerjs';
 import { supabase } from '@/integrations/supabase/client';
 import type { RealtimeChannel } from '@supabase/supabase-js';
@@ -416,7 +416,7 @@ function useHostWebRTC(enabled: boolean, opts?: WebRtcOptions) {
         connsRef.current.forEach((conn) => {
           try { conn.send(JSON.stringify({ type: 'ping', ts })); } catch {}
         });
-      }, 2000);
+      }, 500);
     })();
 
     return () => {
