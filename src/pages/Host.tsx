@@ -3,7 +3,7 @@ import { createPortal } from "react-dom";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { OrbitControls } from "@react-three/drei";
 import type { GameEvent, GameStateSnapshot } from "@/lib/gameTypes";
-import { useHostRoom, useAdvertiseRoom, useWebRTCRoomBroadcast, type ConnectionMode } from "@/hooks/useGameRoom";
+import { rebroadcastWebRTCRoom, useHostRoom, useAdvertiseRoom, useWebRTCRoomBroadcast, type ConnectionMode } from "@/hooks/useGameRoom";
 import { useGameLogic } from "@/hooks/useGameLogic";
 import LobbyArena from "@/components/LobbyArena";
 import GameplayMap from "@/components/GameplayMap";
@@ -226,6 +226,7 @@ export default function Host() {
     hostDragUpdate,
     hostDragEnd,
     hostSkipExam,
+    hostSkipActiveEvent,
     togglePause,
     toggleBotsPause,
   } = useGameLogic({ players, broadcast, gameMode, connectionMode: effectiveMode, mapId, devMode });
@@ -429,9 +430,19 @@ export default function Host() {
             )}
 
             {/* Room code */}
-            <div className="px-2 py-1 rounded border border-border bg-card font-mono text-sm">
+            <button
+              type="button"
+              onClick={() => {
+                if (!isImmersive) return;
+                void rebroadcastWebRTCRoom(roomCode);
+              }}
+              className={`px-2 py-1 rounded border border-border bg-card font-mono text-sm ${
+                isImmersive ? "hover:bg-card/80 cursor-pointer active:scale-[0.99] transition-all" : "cursor-default"
+              }`}
+              title={isImmersive ? "Click to rebroadcast room (immersive)" : undefined}
+            >
               ROOM: <span className="text-accent font-bold tracking-widest">{roomCode}</span>
-            </div>
+            </button>
           </div>
 
           <div className="flex items-center gap-2 font-mono text-xs flex-wrap">
@@ -797,6 +808,18 @@ export default function Host() {
         {
           <div className="absolute top-2 right-2 z-30 flex flex-col gap-1">
             <div className="flex gap-1 justify-end">
+              {(snapshot.activeEvent || phase === "exam") && (
+                <button
+                  onClick={() => {
+                    if (phase === "exam") hostSkipExam();
+                    else hostSkipActiveEvent();
+                  }}
+                  className="flex items-center gap-1 px-2 py-1 rounded border text-[10px] font-mono transition-all border-destructive/60 bg-destructive/15 text-destructive hover:bg-destructive/25"
+                  title="Skip current event/exam"
+                >
+                  SKIP
+                </button>
+              )}
               <button
                 onClick={() => {
                   if (isPaused) {

@@ -1161,7 +1161,7 @@ export function useGameLogic({ players, broadcast, gameMode, connectionMode, map
               const eagleLobby = currentPlayers.get(p.connId);
               if (eagleLobby) (eagleLobby as any).joystick = { x: 0, y: 0 };
               const rand = Math.random();
-              const eventType = rand < 0.33 ? "mock-exam" : rand < 0.66 ? "hitbox" : "crossy-road";
+              const eventType = rand < 0.4 ? "mock-exam" : rand < 0.7 ? "hitbox" : "crossy-road";
               const questionNum = Math.floor(Math.random() * 4) + 1;
               const eventDuration = eventType === "hitbox" ? EVENT_HITBOX_DURATION : eventType === "mock-exam" ? EVENT_MOCK_DURATION : EVENT_CROSSY_DURATION;
 
@@ -1668,6 +1668,21 @@ export function useGameLogic({ players, broadcast, gameMode, connectionMode, map
       return;
     }
 
+    const getHistoricalPosition = (targetConnId: string, targetTimeMs: number): { x: number; z: number } | null => {
+      const buf = positionHistoryRef.current;
+      // Scan backward from newest to oldest, pick first frame at/before target time.
+      for (let i = 0; i < buf.count; i++) {
+        const idx = (buf.writeIndex - 1 - i + POSITION_HISTORY_MAX) % POSITION_HISTORY_MAX;
+        const f = buf.frames[idx];
+        if (!f) continue;
+        if (f.time > targetTimeMs) continue;
+        const fp = f.players?.[targetConnId];
+        if (!fp) return null;
+        return { x: fp.x, z: fp.z };
+      }
+      return null;
+    };
+
     switch (msg.type) {
       // ── Attack ──
       case "attack-press": {
@@ -1682,18 +1697,28 @@ export function useGameLogic({ players, broadcast, gameMode, connectionMode, map
         player.attackAnimUntil = now + ATTACK_ANIM_DURATION;
 
         const hitChicks: PlayerGameState[] = [];
+        const victimLookbackMs = 200;
+        const targetTime = now - victimLookbackMs;
         for (const [, p] of gs.playerStates) {
           if (p.isEagle || !p.alive) continue;
           if (p.invincibleUntil > now) continue;
 
+          const effectivePos = getHistoricalPosition(p.connId, targetTime) ?? p.position;
+
           // Check if chick is fully inside a protected zone
           const inZone = gs.buildings.some(
-            (b) => b.zoneActive && !b.tipObtained && isInProtectedZone(p.position.x, p.position.z, b.id),
+            (b) => b.zoneActive && !b.tipObtained && isInProtectedZone(effectivePos.x, effectivePos.z, b.id),
           );
           if (inZone) continue;
 
           if (
-            checkOverlap(player.position.x, player.position.z, p.position.x, p.position.z, ATTACK_OVERLAP_THRESHOLD)
+            checkOverlap(
+              player.position.x,
+              player.position.z,
+              effectivePos.x,
+              effectivePos.z,
+              ATTACK_OVERLAP_THRESHOLD,
+            )
           ) {
             hitChicks.push(p);
           }
@@ -2221,6 +2246,21 @@ export function useGameLogic({ players, broadcast, gameMode, connectionMode, map
     resolveExamWinner(gs, gameModeRef.current as "1v3" | "2v6", broadcastRef.current);
   }, []);
 
+  /** Host-only: end an active mystery-box event immediately (minigames). */
+  const hostSkipActiveEvent = useCallback(() => {
+    const gs = gameStateRef.current as GameStateRef | null;
+    if (!gs || !gs.activeEvent) return;
+    const now = Date.now();
+    const ev = gs.activeEvent;
+    if (ev.phase === "result") return;
+
+    // Force the event into "active" and immediately expire it so the normal lifecycle resolves results.
+    ev.phase = "active";
+    ev.startedAt = Math.min(ev.startedAt, now - 3000);
+    ev.endAt = now;
+    gs.eventCountdown = 0;
+  }, []);
+
   // ─── Cleanup ─────────────────────────────────────────────────────────────────
   useEffect(() => {
     return () => {
@@ -2251,6 +2291,7 @@ export function useGameLogic({ players, broadcast, gameMode, connectionMode, map
     hostDragUpdate,
     hostDragEnd,
     hostSkipExam,
+    hostSkipActiveEvent,
     togglePause,
     toggleBotsPause,
   };

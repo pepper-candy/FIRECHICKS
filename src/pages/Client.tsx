@@ -417,6 +417,7 @@ export default function Client() {
   } | null>(null);
   const [gameState, setGameState] = useState<GameStateSnapshot | null>(null);
   const [isDead, setIsDead] = useState(false);
+  const [showFTranscript, setShowFTranscript] = useState(false);
   const [directWinner, setDirectWinner] = useState<"eagle" | "chicks" | "draw" | null>(null);
   const [breakdownOpen, setBreakdownOpen] = useState(false);
   const [colorChosen, setColorChosen] = useState(false);
@@ -459,7 +460,8 @@ export default function Client() {
     }
   }, [clientInputLocked, setInputLocked]);
 
-  // If host disconnects while client is in lobby/game, navigate to arrival page
+  // If host disconnects while client is in lobby/game, navigate to arrival page.
+  // Exception: if the client is already on a transcript/results screen, keep them there.
   const wasConnectedRef = useRef(false);
   useEffect(() => {
     if (connected) {
@@ -469,6 +471,10 @@ export default function Client() {
         disconnectRedirectTimeoutRef.current = null;
       }
     } else if (wasConnectedRef.current && !kicked) {
+      if (gamePhase === "gameover" || showFTranscript) {
+        // Stay on transcript/results even if host disconnects.
+        return;
+      }
       const waitMs = Math.max(0, disconnectGraceUntilRef.current - Date.now());
       if (disconnectRedirectTimeoutRef.current !== null) {
         window.clearTimeout(disconnectRedirectTimeoutRef.current);
@@ -486,7 +492,14 @@ export default function Client() {
         disconnectRedirectTimeoutRef.current = null;
       }
     };
-  }, [connected, kicked, navigate]);
+  }, [connected, kicked, navigate, gamePhase, showFTranscript]);
+
+  // Reset local F-transcript when returning to lobby / new game phases.
+  useEffect(() => {
+    if (gamePhase === "lobby" || gamePhase === "reveal" || gamePhase === "countdown") {
+      setShowFTranscript(false);
+    }
+  }, [gamePhase]);
 
   // Tips state — QR now displays in scanner box, not tip box
   const [tipQrCodes, setTipQrCodes] = useState<[string | null, string | null]>([null, null]);
@@ -1172,20 +1185,55 @@ export default function Client() {
 
   // ─── DEAD ────────────────────────────────────────────────────────────────────
   if (isDead && gamePhase !== "gameover") {
+    if (showFTranscript) {
+      const breakdown = myState?.scoreBreakdown ?? {};
+      const breakdownOrder = isEagle
+        ? ['deal-damage', 'use-prop', 'cage', 'mystery-box', 'building-hp', 'hitbox', 'crossy-road']
+        : ['obtain-tip', 'receive-tip', 'collect-prop', 'use-prop', 'mystery-box', 'crossy-road', 'mock-exam', 'final-exam', 'social-circle', 'survival', 'hitbox'];
+      const cooperationScore = myState && !isEagle ? (
+        (myState.scansPerformed ?? 0) +
+        ((myState.tipsShared ?? 0) * 5) +
+        ((myState.socialCircleCompleted ?? false) ? 10 : 0) +
+        Math.floor((myState.timeInZones ?? 0) / 5)
+      ) : 0;
+      const roleTag = isEagle
+        ? `${displayColor?.name ?? 'Unknown'} Eagle`
+        : `${displayColor?.name ?? 'Unknown'} Chick`;
+
+      return (
+        <GameOverScreen
+          winner={undefined}
+          amWinner={false}
+          isDraw={false}
+          isEagle={isEagle}
+          myState={myState}
+          displayColor={displayColor}
+          roleTag={roleTag}
+          breakdown={breakdown}
+          breakdownOrder={breakdownOrder}
+          breakdownOpen={breakdownOpen}
+          setBreakdownOpen={setBreakdownOpen}
+          cooperationScore={cooperationScore}
+          hideWinnerLine={true}
+          resultNodeOverride={<p className="text-2xl font-pixel text-destructive">F doesn't define you.</p>}
+          onLeave={() => { disconnect(); navigate("/"); }}
+        />
+      );
+    }
     return (
       <div className="flex flex-col items-center justify-center h-dvh overflow-hidden gap-6">
         <div className="text-9xl font-pixel text-destructive" style={{ textShadow: "0 0 30px hsl(0 80% 55% / 0.8)" }}>
           F
         </div>
         <p className="text-xl font-mono text-destructive tracking-widest">ELIMINATED</p>
-        <p className="text-xs text-muted-foreground font-mono">Better luck next time...</p>
+        <p className="text-xs text-muted-foreground font-mono">The system wasn't built for you to win.</p>
         <Button
           variant="outline"
           size="sm"
-          onClick={() => { disconnect(); navigate("/"); }}
+          onClick={() => setShowFTranscript(true)}
           className="mt-4 text-xs font-mono text-destructive border-destructive/30"
         >
-          LEAVE
+          NEXT
         </Button>
       </div>
     );
@@ -1623,53 +1671,56 @@ export default function Client() {
       {invincibleRemainingSec > 0 && <InvincibleRipple />}
       {/* Status bar */}
       <div className="flex items-center justify-between">
-        {/* Fullscreen toggle when not already fullscreen */}
-        {showImmersiveControl && !isFullscreen && (
-          <button
-            onClick={enterFullscreen}
-            className="text-[10px] font-mono text-primary/60 hover:text-primary px-1.5 py-0.5 rounded border border-primary/20 hover:border-primary/40 transition-all"
-            title="Enter fullscreen"
-          >
-            ⛶
-          </button>
-        )}
-        <div className="flex items-center gap-2 text-xs font-mono">
-          {displayColor && (
-            <div
-              className="w-3 h-3 rounded-full"
-              style={{
-                backgroundColor: `hsl(${displayColor.hsl})`,
-                boxShadow: `0 0 8px hsl(${displayColor.hsl} / 0.5)`,
-              }}
-            />
+        {/* Left cluster */}
+        <div className="flex items-center gap-2">
+          {/* Fullscreen toggle when not already fullscreen */}
+          {showImmersiveControl && !isFullscreen && (
+            <button
+              onClick={enterFullscreen}
+              className="text-[10px] font-mono text-primary/60 hover:text-primary px-1.5 py-0.5 rounded border border-primary/20 hover:border-primary/40 transition-all"
+              title="Enter fullscreen"
+            >
+              ⛶
+            </button>
           )}
-          <div className="flex items-center gap-1">
-            <div className="w-2 h-2 rounded-full bg-primary" />
-            <span className="text-primary">LIVE</span>
+          <div className="flex items-center gap-2 text-xs font-mono">
+            {displayColor && (
+              <div
+                className="w-3 h-3 rounded-full"
+                style={{
+                  backgroundColor: `hsl(${displayColor.hsl})`,
+                  boxShadow: `0 0 8px hsl(${displayColor.hsl} / 0.5)`,
+                }}
+              />
+            )}
+            <div className="flex items-center gap-1">
+              <div className="w-2 h-2 rounded-full bg-primary" />
+              <span className="text-primary">LIVE</span>
+            </div>
+            {!isImmersive && <span className="text-muted-foreground/60">({mode})</span>}
           </div>
-          {!isImmersive && <span className="text-muted-foreground/60">({mode})</span>}
         </div>
 
-        {/* Health */}
-        {gamePhase === "playing" && myState && !isEagle && (
-          <div className="flex items-center gap-1 px-2 py-1 rounded bg-card border border-border">
-            <span className="text-base font-bold font-mono" style={{ color: getGradeColor(myState.health) }}>
-              {gradeToLetter(myState.health)}
-            </span>
-            <span className="text-[10px] text-muted-foreground">{myState.health.toFixed(1)}</span>
-            {myState.isStarStudent && <span className="text-accent">⭐</span>}
-          </div>
-        )}
-
-        {/* Disconnect */}
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={() => { disconnect(); navigate("/"); }}
-          className="text-[10px] font-mono text-muted-foreground/60 h-6 px-2"
-        >
-          ✕
-        </Button>
+        {/* Right cluster (grade + exit) */}
+        <div className="flex items-center gap-2">
+          {gamePhase === "playing" && myState && !isEagle && (
+            <div className="flex items-center gap-1 px-2 py-1 rounded bg-card border border-border">
+              <span className="text-base font-bold font-mono" style={{ color: getGradeColor(myState.health) }}>
+                {gradeToLetter(myState.health)}
+              </span>
+              <span className="text-[10px] text-muted-foreground">{myState.health.toFixed(1)}</span>
+              {myState.isStarStudent && <span className="text-accent">⭐</span>}
+            </div>
+          )}
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => { disconnect(); navigate("/"); }}
+            className="text-[10px] font-mono text-muted-foreground/60 h-6 px-2"
+          >
+            ✕
+          </Button>
+        </div>
       </div>
 
       {/* ── EAGLE LAYOUT ── */}

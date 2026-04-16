@@ -18,12 +18,16 @@ interface GameOverScreenProps {
   setBreakdownOpen: (v: boolean) => void;
   cooperationScore: number;
   onLeave: () => void;
+  hideWinnerLine?: boolean;
+  resultNodeOverride?: React.ReactNode;
 }
 
 export default function GameOverScreen({
   winner, amWinner, isDraw, isEagle, myState,
   displayColor, roleTag, breakdown, breakdownOrder,
   breakdownOpen, setBreakdownOpen, cooperationScore, onLeave,
+  hideWinnerLine = false,
+  resultNodeOverride,
 }: GameOverScreenProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [parallaxOffset, setParallaxOffset] = useState(0);
@@ -142,11 +146,21 @@ export default function GameOverScreen({
         <div className="flex flex-col items-center gap-5">
           <h1 className="text-2xl font-pixel text-accent ceremony-title-glow">GAME OVER</h1>
 
-          <p className="text-lg font-pixel" style={{
-            color: winner === 'eagle' ? 'hsl(0 80% 55%)' : winner === 'chicks' ? 'hsl(var(--primary))' : 'hsl(var(--accent))',
-          }}>
-            {winner === 'eagle' ? '🦅 Eagle Wins!' : winner === 'chicks' ? '🐤 Chicks Win!' : '🤝 Draw!'}
-          </p>
+          {!hideWinnerLine && (
+            <p
+              className="text-lg font-pixel"
+              style={{
+                color:
+                  winner === 'eagle'
+                    ? 'hsl(0 80% 55%)'
+                    : winner === 'chicks'
+                      ? 'hsl(var(--primary))'
+                      : 'hsl(var(--accent))',
+              }}
+            >
+              {winner === 'eagle' ? '🦅 Eagle Wins!' : winner === 'chicks' ? '🐤 Chicks Win!' : '🤝 Draw!'}
+            </p>
+          )}
 
           <div className="w-16 border-t border-border/30" />
 
@@ -290,9 +304,13 @@ export default function GameOverScreen({
       >
         <div className="flex flex-col items-center gap-6">
           {/* Team Result */}
-          {amWinner && !isDraw && <p className="text-2xl font-pixel text-primary text-glow-green">🎉 YOU WIN!</p>}
-          {isDraw && <p className="text-2xl font-pixel text-accent ceremony-title-glow">🤝 It's a Draw!</p>}
-          {!amWinner && !isDraw && <p className="text-2xl font-pixel text-destructive">You Lose</p>}
+          {resultNodeOverride ?? (
+            <>
+              {amWinner && !isDraw && <p className="text-2xl font-pixel text-primary text-glow-green">🎉 YOU WIN!</p>}
+              {isDraw && <p className="text-2xl font-pixel text-accent ceremony-title-glow">🤝 It's a Draw!</p>}
+              {!amWinner && !isDraw && <p className="text-2xl font-pixel text-destructive">You Lose</p>}
+            </>
+          )}
 
           <div className="w-16 border-t border-border/30" />
 
