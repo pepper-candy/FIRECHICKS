@@ -27,6 +27,90 @@ function getIceServers() {
   return DEFAULT_ICE_SERVERS;
 }
 
+type IceServer = RTCIceServer;
+
+let turnIceServersCache: IceServer[] | null | undefined = undefined;
+let turnIceServersInFlight: Promise<IceServer[] | null> | null = null;
+
+async function fetchTurnIceServers(): Promise<IceServer[] | null> {
+  if (turnIceServersCache !== undefined) return turnIceServersCache;
+  if (turnIceServersInFlight) return turnIceServersInFlight;
+
+  turnIceServersInFlight = (async () => {
+    const controller = new AbortController();
+    const timeoutId = window.setTimeout(() => controller.abort(), 3500);
+    try {
+      const resp = await fetch('/api/turn-credentials', {
+        method: 'GET',
+        headers: { Accept: 'application/json' },
+        signal: controller.signal,
+      });
+      if (!resp.ok) {
+        turnIceServersCache = null;
+        return null;
+      }
+      const data = (await resp.json()) as { iceServers?: IceServer[] };
+      if (!Array.isArray(data.iceServers) || data.iceServers.length === 0) {
+        turnIceServersCache = null;
+        return null;
+      }
+      turnIceServersCache = data.iceServers;
+      return data.iceServers;
+    } catch {
+      turnIceServersCache = null;
+      return null;
+    } finally {
+      clearTimeout(timeoutId);
+      turnIceServersInFlight = null;
+    }
+  })();
+
+  return turnIceServersInFlight;
+}
+
+function dedupeIceServers(servers: IceServer[]): IceServer[] {
+  const seen = new Set<string>();
+  const out: IceServer[] = [];
+  for (const s of servers) {
+    const key = JSON.stringify(s);
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push(s);
+  }
+  return out;
+}
+
+async function getIceServersWithTurn(): Promise<IceServer[]> {
+  const base = getIceServers() as IceServer[];
+  const turn = await fetchTurnIceServers();
+  return dedupeIceServers(turn ? [...turn, ...base] : [...base]);
+}
+
+type WebRtcOptions = {
+  /**
+   * When true, prefer TURN-only relay in WebRTC config.
+   * Safety: only applied when Cloudflare TURN credentials were successfully fetched.
+   */
+  forceRelay?: boolean;
+};
+
+async function buildPeerRtcConfig(opts?: WebRtcOptions): Promise<RTCConfiguration> {
+  const base = getIceServers() as IceServer[];
+  const turn = await fetchTurnIceServers();
+  const iceServers = dedupeIceServers(turn ? [...turn, ...base] : [...base]);
+
+  const cfg: RTCConfiguration = {
+    iceServers,
+    iceCandidatePoolSize: 4,
+  };
+
+  if (opts?.forceRelay && turn && turn.length > 0) {
+    cfg.iceTransportPolicy = 'relay';
+  }
+
+  return cfg;
+}
+
 export interface JoystickData {
   x: number;
   y: number;
@@ -59,7 +143,7 @@ function allocateColor(usedColors: Set<number>, excludeIndices: number[] = []): 
 }
 
 // ─── HOST: WebRTC ───────────────────────────────────────────
-function useHostWebRTC(enabled: boolean) {
+function useHostWebRTC(enabled: boolean, opts?: WebRtcOptions) {
   const [roomCode, setRoomCode] = useState('');
   const [players, setPlayers] = useState<Map<string, PlayerState>>(new Map());
   const peerRef = useRef<Peer | null>(null);
@@ -168,98 +252,103 @@ function useHostWebRTC(enabled: boolean) {
     const code = generateRoomCode();
     setRoomCode(code);
 
-    const peer = new Peer(`${PEER_PREFIX}${code}`, {
-      config: {
-        iceServers: getIceServers(),
-        iceCandidatePoolSize: 4,
-      },
-    });
-    peerRef.current = peer;
+    let cancelled = false;
+    let peer: Peer | null = null;
+    let pingInterval: number | null = null;
 
-    peer.on('connection', (conn) => {
-      const newConnId = conn.peer;
-      const takeoverCode = (conn.metadata as any)?.takeoverCode as string | undefined;
+    void (async () => {
+      const rtcConfig = await buildPeerRtcConfig(opts);
+      if (cancelled) return;
 
-      // Resolve effective connId and validate takeover before 'open'
-      let effectiveConnId = newConnId;
-      let isValidTakeover = false;
-      if (takeoverCode) {
-        for (const [oldId, slotData] of slotDataRef.current.entries()) {
-          if (slotData.code === takeoverCode) {
-            effectiveConnId = oldId;
-            isValidTakeover = true;
-            break;
+      peer = new Peer(`${PEER_PREFIX}${code}`, {
+        config: rtcConfig,
+      });
+      peerRef.current = peer;
+
+      peer.on('connection', (conn) => {
+        const newConnId = conn.peer;
+        const takeoverCode = (conn.metadata as any)?.takeoverCode as string | undefined;
+
+        // Resolve effective connId and validate takeover before 'open'
+        let effectiveConnId = newConnId;
+        let isValidTakeover = false;
+        if (takeoverCode) {
+          for (const [oldId, slotData] of slotDataRef.current.entries()) {
+            if (slotData.code === takeoverCode) {
+              effectiveConnId = oldId;
+              isValidTakeover = true;
+              break;
+            }
           }
         }
-      }
 
-      conn.on('open', () => {
-        if (isValidTakeover) {
-          // Reconnect: rebind new connection to old slot
-          connsRef.current.get(effectiveConnId)?.close();
-          connsRef.current.set(effectiveConnId, conn);
-          const slotData = slotDataRef.current.get(effectiveConnId)!;
-          // Restore color (was freed on disconnect)
-          usedColorsRef.current.add(slotData.colorIndex);
-          connColorMapRef.current.set(effectiveConnId, slotData.colorIndex);
-          setPlayers((prev) => {
-            const next = new Map(prev);
-            next.set(effectiveConnId, { joystick: { x: 0, y: 0 }, colorIndex: slotData.colorIndex, ping: 0, lastPongAt: Date.now() });
-            return next;
-          });
-          // Invalidate old code, issue fresh one
-          const newCode = recordSlot(effectiveConnId, slotData.colorIndex);
-          conn.send(JSON.stringify({ type: 'takeover-accepted', colorIndex: slotData.colorIndex, connId: effectiveConnId }));
-          conn.send(JSON.stringify({ type: 'used-colors', colors: Array.from(usedColorsRef.current) }));
-          conn.send(JSON.stringify({ type: 'game-mode', gameMode: gameModeRef.current }));
-          void newCode; // used via slotDataRef side-effect
-        } else {
-          const mode = gameModeRef.current;
-          const maxSlots = mode === '2v6' ? MAX_PLAYERS_2V6 : MAX_PLAYERS_1V3;
-          if (usedColorsRef.current.size >= maxSlots) {
-            // Try to replace a bot
-            const botEntry = Array.from(connColorMapRef.current.entries()).find(([id]) => id.startsWith('bot-'));
-            if (botEntry) {
-              const [botId, botColor] = botEntry;
-              usedColorsRef.current.delete(botColor);
-              connColorMapRef.current.delete(botId);
-              slotDataRef.current.delete(botId);
-              setTakeoverCodes((prev) => {
-                if (!(botId in prev)) return prev;
-                const next = { ...prev };
-                delete next[botId];
-                return next;
-              });
-              setPlayers((prev) => { const next = new Map(prev); next.delete(botId); return next; });
-            } else {
+        conn.on('open', () => {
+          if (isValidTakeover) {
+            // Reconnect: rebind new connection to old slot
+            connsRef.current.get(effectiveConnId)?.close();
+            connsRef.current.set(effectiveConnId, conn);
+            const slotData = slotDataRef.current.get(effectiveConnId)!;
+            // Restore color (was freed on disconnect)
+            usedColorsRef.current.add(slotData.colorIndex);
+            connColorMapRef.current.set(effectiveConnId, slotData.colorIndex);
+            setPlayers((prev) => {
+              const next = new Map(prev);
+              next.set(effectiveConnId, { joystick: { x: 0, y: 0 }, colorIndex: slotData.colorIndex, ping: 0, lastPongAt: Date.now() });
+              return next;
+            });
+            // Invalidate old code, issue fresh one
+            const newCode = recordSlot(effectiveConnId, slotData.colorIndex);
+            conn.send(JSON.stringify({ type: 'takeover-accepted', colorIndex: slotData.colorIndex, connId: effectiveConnId }));
+            conn.send(JSON.stringify({ type: 'used-colors', colors: Array.from(usedColorsRef.current) }));
+            conn.send(JSON.stringify({ type: 'game-mode', gameMode: gameModeRef.current }));
+            void newCode; // used via slotDataRef side-effect
+          } else {
+            const mode = gameModeRef.current;
+            const maxSlots = mode === '2v6' ? MAX_PLAYERS_2V6 : MAX_PLAYERS_1V3;
+            if (usedColorsRef.current.size >= maxSlots) {
+              // Try to replace a bot
+              const botEntry = Array.from(connColorMapRef.current.entries()).find(([id]) => id.startsWith('bot-'));
+              if (botEntry) {
+                const [botId, botColor] = botEntry;
+                usedColorsRef.current.delete(botColor);
+                connColorMapRef.current.delete(botId);
+                slotDataRef.current.delete(botId);
+                setTakeoverCodes((prev) => {
+                  if (!(botId in prev)) return prev;
+                  const next = { ...prev };
+                  delete next[botId];
+                  return next;
+                });
+                setPlayers((prev) => { const next = new Map(prev); next.delete(botId); return next; });
+              } else {
+                conn.send(JSON.stringify({ type: 'room-full' }));
+                setTimeout(() => conn.close(), 200);
+                return;
+              }
+            }
+            const excludeIndices = mode === '2v6' ? [] : (EAGLE_COLOR_INDICES as unknown as number[]);
+            const colorIndex = allocateColor(usedColorsRef.current, excludeIndices);
+            if (colorIndex === null) {
               conn.send(JSON.stringify({ type: 'room-full' }));
               setTimeout(() => conn.close(), 200);
               return;
             }
-          }
-          const excludeIndices = mode === '2v6' ? [] : (EAGLE_COLOR_INDICES as unknown as number[]);
-          const colorIndex = allocateColor(usedColorsRef.current, excludeIndices);
-          if (colorIndex === null) {
-            conn.send(JSON.stringify({ type: 'room-full' }));
-            setTimeout(() => conn.close(), 200);
-            return;
-          }
 
-          usedColorsRef.current.add(colorIndex);
-          connColorMapRef.current.set(effectiveConnId, colorIndex);
-          connsRef.current.set(effectiveConnId, conn);
+            usedColorsRef.current.add(colorIndex);
+            connColorMapRef.current.set(effectiveConnId, colorIndex);
+            connsRef.current.set(effectiveConnId, conn);
 
-          conn.send(JSON.stringify({ type: 'assign-color', colorIndex }));
-          conn.send(JSON.stringify({ type: 'used-colors', colors: Array.from(usedColorsRef.current) }));
-          conn.send(JSON.stringify({ type: 'game-mode', gameMode: gameModeRef.current }));
-          setPlayers((prev) => {
-            const next = new Map(prev);
-            next.set(effectiveConnId, { joystick: { x: 0, y: 0 }, colorIndex, ping: 0, lastPongAt: Date.now() });
-            return next;
-          });
-          recordSlot(effectiveConnId, colorIndex);
-        }
-      });
+            conn.send(JSON.stringify({ type: 'assign-color', colorIndex }));
+            conn.send(JSON.stringify({ type: 'used-colors', colors: Array.from(usedColorsRef.current) }));
+            conn.send(JSON.stringify({ type: 'game-mode', gameMode: gameModeRef.current }));
+            setPlayers((prev) => {
+              const next = new Map(prev);
+              next.set(effectiveConnId, { joystick: { x: 0, y: 0 }, colorIndex, ping: 0, lastPongAt: Date.now() });
+              return next;
+            });
+            recordSlot(effectiveConnId, colorIndex);
+          }
+        });
 
       conn.on('data', (data) => {
         if (data instanceof ArrayBuffer) {
@@ -312,24 +401,26 @@ function useHostWebRTC(enabled: boolean) {
         }
       });
 
-      conn.on('close', () => removePlayer(effectiveConnId));
-      conn.on('error', () => removePlayer(effectiveConnId));
-    });
-
-    const pingInterval = window.setInterval(() => {
-      const ts = Date.now();
-      connsRef.current.forEach((conn) => {
-        try { conn.send(JSON.stringify({ type: 'ping', ts })); } catch {}
+        conn.on('close', () => removePlayer(effectiveConnId));
+        conn.on('error', () => removePlayer(effectiveConnId));
       });
-    }, 2000);
+
+      pingInterval = window.setInterval(() => {
+        const ts = Date.now();
+        connsRef.current.forEach((conn) => {
+          try { conn.send(JSON.stringify({ type: 'ping', ts })); } catch {}
+        });
+      }, 2000);
+    })();
 
     return () => {
-      clearInterval(pingInterval);
+      cancelled = true;
+      if (pingInterval) clearInterval(pingInterval);
       connsRef.current.forEach((c) => c.close());
       connsRef.current.clear();
-      peer.destroy();
+      peer?.destroy();
     };
-  }, [enabled, removePlayer, handleColorSwap]);
+  }, [enabled, removePlayer, handleColorSwap, opts]);
 
   const addBot = useCallback((connId: string, colorIndex: number) => {
     usedColorsRef.current.add(colorIndex);
@@ -700,7 +791,7 @@ function useHostSupabase(enabled: boolean) {
 }
 
 // ─── CLIENT: WebRTC ─────────────────────────────────────────
-function useClientWebRTC(roomCode: string, enabled: boolean) {
+function useClientWebRTC(roomCode: string, enabled: boolean, opts?: WebRtcOptions) {
   const [connected, setConnected] = useState(false);
   const [colorIndex, setColorIndex] = useState<number>(-1);
   const [clientId, setClientId] = useState<string>("");
@@ -716,7 +807,7 @@ function useClientWebRTC(roomCode: string, enabled: boolean) {
   const colorIndexRef = useRef(-1);
   const hostMsgCallbackRef = useRef<((msg: any) => void) | null>(null);
 
-  const connect = useCallback((overrideCode?: string, takeoverCode?: string) => {
+  const connect = useCallback(async (overrideCode?: string, takeoverCode?: string) => {
     if (!enabled) return;
     const targetCode = overrideCode || roomCode;
     if (!targetCode) return;
@@ -733,11 +824,10 @@ function useClientWebRTC(roomCode: string, enabled: boolean) {
     inputLockedRef.current = false;
     joystickRef.current = { x: 0, y: 0 };
 
+    const rtcConfig = await buildPeerRtcConfig(opts);
+
     const peer = new Peer(undefined as any, {
-      config: {
-        iceServers: getIceServers(),
-        iceCandidatePoolSize: 4,
-      },
+      config: rtcConfig,
     });
     peerRef.current = peer;
 
@@ -799,7 +889,7 @@ function useClientWebRTC(roomCode: string, enabled: boolean) {
         if (intervalRef.current) clearInterval(intervalRef.current);
       });
     });
-  }, [enabled, roomCode]);
+  }, [enabled, roomCode, opts]);
 
   const doDisconnect = useCallback(() => {
     if (intervalRef.current) clearInterval(intervalRef.current);
@@ -1040,14 +1130,14 @@ const NOOP_CLIENT = {
   usedColors: new Set<number>(),
 };
 
-export function useHostRoom(mode: ConnectionMode = 'webrtc') {
-  const webrtc = useHostWebRTC(mode === 'webrtc');
+export function useHostRoom(mode: ConnectionMode = 'webrtc', opts?: WebRtcOptions) {
+  const webrtc = useHostWebRTC(mode === 'webrtc', opts);
   const supa = useHostSupabase(mode === 'supabase');
   return mode === 'webrtc' ? webrtc : supa;
 }
 
-export function useClientRoom(roomCode: string, mode: ConnectionMode = 'webrtc') {
-  const webrtc = useClientWebRTC(roomCode, mode === 'webrtc');
+export function useClientRoom(roomCode: string, mode: ConnectionMode = 'webrtc', opts?: WebRtcOptions) {
+  const webrtc = useClientWebRTC(roomCode, mode === 'webrtc', opts);
   const supa = useClientSupabase(roomCode, mode === 'supabase');
   return mode === 'webrtc' ? webrtc : supa;
 }

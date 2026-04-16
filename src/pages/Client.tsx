@@ -25,6 +25,7 @@ import { useNavigate } from "react-router-dom";
 import { ZONE_RADIUS } from "@/lib/gameplayMapData";
 import { buzz } from "@/lib/haptics";
 import GameOverScreen from "@/components/GameOverScreen";
+import { useImmersive } from "@/context/ImmersiveContext";
 
 // ─── Props Button (inline for compact layout) ──────────────────────────────────
 const PROP_COLORS: Record<PropType, string> = {
@@ -372,6 +373,7 @@ function TipsBox({
 // ─── Main Client Component ────────────────────────────────────────────────────
 export default function Client() {
   const navigate = useNavigate();
+  const { isImmersive } = useImmersive();
   const [code, setCode] = useState(() => {
     try {
       return localStorage.getItem("firechick:lastRoomCode") ?? "";
@@ -381,6 +383,7 @@ export default function Client() {
   });
   const [mode, setMode] = useState<ConnectionMode>("webrtc");
   const [connecting, setConnecting] = useState(false);
+  const effectiveMode: ConnectionMode = isImmersive ? "webrtc" : mode;
   const {
     connected,
     connect,
@@ -396,8 +399,8 @@ export default function Client() {
     onHostMessage,
     requestColorSwap,
     usedColors,
-  } = useClientRoom(code, mode);
-  const discoveredRooms = useDiscoverRooms(mode);
+  } = useClientRoom(code, effectiveMode, { forceRelay: isImmersive });
+  const discoveredRooms = useDiscoverRooms(effectiveMode);
 
   const [wasKicked, setWasKicked] = useState(false);
   const [roomFullDismissed, setRoomFullDismissed] = useState(false);
@@ -509,6 +512,10 @@ export default function Client() {
   const examStreamRef = useRef<MediaStream | null>(null);
 
   const { isFullscreen, showImmersiveControl, enter: enterFullscreen } = useFullscreen();
+  useEffect(() => {
+    if (!isImmersive) return;
+    if (mode !== "webrtc") setMode("webrtc");
+  }, [isImmersive, mode]);
 
   // ── Prevent body scroll / overscroll bounce on mobile ──────────────────────
   useEffect(() => {
@@ -908,7 +915,7 @@ export default function Client() {
 
       const providedRoom = (roomCode || code).trim().toUpperCase();
       const fallbackRoom = rememberedRoomCode.trim().toUpperCase();
-      const hasTakeover = rejoinCode.trim().length >= 5;
+      const hasTakeover = !isImmersive && rejoinCode.trim().length >= 5;
       const targetRoom = providedRoom || (hasTakeover ? fallbackRoom : "");
       if (targetRoom.length >= 6) {
         setConnecting(true);
@@ -917,15 +924,15 @@ export default function Client() {
         setWasKicked(false);
         setRoomFullDismissed(false);
         setColorChosen(false);
-        connect(targetRoom, hasTakeover ? rejoinCode.trim().toUpperCase() : undefined);
+        await connect(targetRoom, hasTakeover ? rejoinCode.trim().toUpperCase() : undefined);
       }
     },
-    [code, connect, enterFullscreen, rejoinCode, rememberedRoomCode, connecting],
+    [code, connect, enterFullscreen, rejoinCode, rememberedRoomCode, connecting, isImmersive],
   );
   const hasRejoinCode = rejoinCode.trim().length >= 5;
   const hasRoomCode = code.trim().length >= 6;
   const hasFallbackRoom = rememberedRoomCode.trim().length >= 6;
-  const canConnect = hasRoomCode || (hasRejoinCode && hasFallbackRoom);
+  const canConnect = hasRoomCode || (!isImmersive && hasRejoinCode && hasFallbackRoom);
 
   // ── Eagle-in-zone detection (for hitbox visual cue)
   const isInZone =
@@ -1028,59 +1035,51 @@ export default function Client() {
             {connecting ? "CONNECTING..." : "CONNECT"}
           </Button>
 
-          {code.length >= 6 && (
-            <div
-              className={`text-center text-lg font-pixel tracking-wider py-2 px-3 rounded border-2 ${
-                mode === "webrtc"
-                  ? "border-primary text-primary bg-primary/5"
-                  : "border-secondary text-secondary bg-secondary/5"
-              }`}
-            >
-              {code}
-            </div>
-          )}
-
-          {/* Rejoin code section */}
-          <button
-            onClick={() => setShowRejoinInput(v => !v)}
-            className="text-[11px] font-mono text-muted-foreground hover:text-foreground text-center"
-          >
-            {showRejoinInput ? "▲ Hide rejoin code" : "▼ Reconnect with code"}
-          </button>
-          {showRejoinInput && (
+          {!isImmersive && (
             <>
-              <Input
-                value={rejoinCode}
-                onChange={(e) => setRejoinCode(e.target.value.toUpperCase())}
-                placeholder="REJOIN CODE (from host)"
-                maxLength={5}
-                className="text-center text-sm tracking-[0.2em] font-mono bg-card border-border uppercase"
-              />
-              {hasRejoinCode && !hasRoomCode && !hasFallbackRoom && (
-                <p className="text-[10px] font-mono text-muted-foreground text-center">
-                  Enter room code once first. Next reconnect can use rejoin code only.
-                </p>
+              {/* Rejoin code section */}
+              <button
+                onClick={() => setShowRejoinInput(v => !v)}
+                className="text-[11px] font-mono text-muted-foreground hover:text-foreground text-center"
+              >
+                {showRejoinInput ? "▲ Hide rejoin code" : "▼ Reconnect with code"}
+              </button>
+              {showRejoinInput && (
+                <>
+                  <Input
+                    value={rejoinCode}
+                    onChange={(e) => setRejoinCode(e.target.value.toUpperCase())}
+                    placeholder="REJOIN CODE (from host)"
+                    maxLength={5}
+                    className="text-center text-sm tracking-[0.2em] font-mono bg-card border-border uppercase"
+                  />
+                  {hasRejoinCode && !hasRoomCode && !hasFallbackRoom && (
+                    <p className="text-[10px] font-mono text-muted-foreground text-center">
+                      Enter room code once first. Next reconnect can use rejoin code only.
+                    </p>
+                  )}
+                </>
               )}
+
+              <div className="flex items-center justify-between px-2 py-3 rounded border border-border bg-card">
+                <Label className="text-xs font-mono text-muted-foreground cursor-pointer">
+                  {mode === "webrtc" ? (
+                    <span>
+                      <span className="text-primary">WebRTC</span> — Same network
+                    </span>
+                  ) : (
+                    <span>
+                      <span className="text-secondary">Supabase</span> — Remote play
+                    </span>
+                  )}
+                </Label>
+                <Switch
+                  checked={mode === "supabase"}
+                  onCheckedChange={(checked) => setMode(checked ? "supabase" : "webrtc")}
+                />
+              </div>
             </>
           )}
-
-          <div className="flex items-center justify-between px-2 py-3 rounded border border-border bg-card">
-            <Label className="text-xs font-mono text-muted-foreground cursor-pointer">
-              {mode === "webrtc" ? (
-                <span>
-                  <span className="text-primary">WebRTC</span> — Same network
-                </span>
-              ) : (
-                <span>
-                  <span className="text-secondary">Supabase</span> — Remote play
-                </span>
-              )}
-            </Label>
-            <Switch
-              checked={mode === "supabase"}
-              onCheckedChange={(checked) => setMode(checked ? "supabase" : "webrtc")}
-            />
-          </div>
 
           {discoveredRooms.length > 0 && (
             <div className="flex flex-col gap-2 mt-2">

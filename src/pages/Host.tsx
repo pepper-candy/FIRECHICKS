@@ -179,10 +179,16 @@ export default function Host() {
   const [colorPickerOpen, setColorPickerOpen] = useState(false);
   const [revealNow, setRevealNow] = useState(Date.now());
   const [focusPanelOpen, setFocusPanelOpen] = useState(false);
+  const { isImmersive } = useImmersive();
+  const effectiveMode: ConnectionMode = isImmersive ? "webrtc" : mode;
   // Stage transition toast notification
   const [stageToast, setStageToast] = useState<{ stage: number; key: number } | null>(null);
   const dismissStageToast = useCallback(() => setStageToast(null), []);
   const prevStageRef = useRef<number | null>(null);
+  useEffect(() => {
+    if (!isImmersive) return;
+    if (mode !== "webrtc") setMode("webrtc");
+  }, [isImmersive, mode]);
   const {
     roomCode,
     players,
@@ -194,7 +200,7 @@ export default function Host() {
     takeoverCodes,
     fillBots,
     removeBots,
-  } = useHostRoom(mode);
+  } = useHostRoom(effectiveMode, { forceRelay: isImmersive });
   const [revealedCodes, setRevealedCodes] = useState<Set<string>>(new Set());
   const [botsAdded, setBotsAdded] = useState(false);
   const debugLogRef = useRef<string[]>([]);
@@ -222,7 +228,7 @@ export default function Host() {
     hostSkipExam,
     togglePause,
     toggleBotsPause,
-  } = useGameLogic({ players, broadcast, gameMode, connectionMode: mode, mapId, devMode });
+  } = useGameLogic({ players, broadcast, gameMode, connectionMode: effectiveMode, mapId, devMode });
 
   const [isPaused, setIsPaused] = useState(false);
   const [isBotsPaused, setIsBotsPaused] = useState(false);
@@ -243,7 +249,7 @@ export default function Host() {
     return () => clearInterval(id);
   }, [grabBackUntil]);
 
-  useAdvertiseRoom(roomCode, phase === "lobby", mode);
+  useAdvertiseRoom(roomCode, phase === "lobby", effectiveMode);
   useWebRTCRoomBroadcast(roomCode);
 
   // Register client message handler
@@ -328,7 +334,6 @@ export default function Host() {
   const playerCount = players.size;
   const maxPlayers = gameMode === "1v3" ? MAX_PLAYERS_1V3 : MAX_PLAYERS_2V6;
   const isFull = playerCount === maxPlayers;
-  const { isImmersive } = useImmersive();
 
   // ─── Damage glitch (immersive) ────────────────────────────────────────────────
   const [hostGlitching, setHostGlitching] = useState(false);
@@ -445,20 +450,22 @@ export default function Host() {
               </SelectContent>
             </Select>
 
-            {/* Connection mode */}
-            <Select value={mode} onValueChange={handleConnectionModeChange}>
-              <SelectTrigger className="h-7 w-[120px] text-xs font-mono bg-card border-border">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="webrtc" className="text-xs font-mono">
-                  <span className="text-primary">WebRTC</span>
-                </SelectItem>
-                <SelectItem value="supabase" className="text-xs font-mono">
-                  <span className="text-secondary">Supabase</span>
-                </SelectItem>
-              </SelectContent>
-            </Select>
+            {/* Connection mode (hidden in immersive) */}
+            {!isImmersive && (
+              <Select value={mode} onValueChange={handleConnectionModeChange}>
+                <SelectTrigger className="h-7 w-[120px] text-xs font-mono bg-card border-border">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="webrtc" className="text-xs font-mono">
+                    <span className="text-primary">WebRTC</span>
+                  </SelectItem>
+                  <SelectItem value="supabase" className="text-xs font-mono">
+                    <span className="text-secondary">Supabase</span>
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+            )}
 
 
             <span className="text-muted-foreground">
