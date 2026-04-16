@@ -2,6 +2,7 @@ import { useState, useCallback, useEffect, useRef } from "react";
 import { toast } from "sonner";
 import { useFullscreen } from "@/hooks/useFullscreen";
 import { useClientRoom, useDiscoverRooms, type ConnectionMode } from "@/hooks/useGameRoom";
+import { useFetchRoomsFromAPI } from "@/hooks/useGameRoom";
 import { PLAYER_COLORS, EAGLE_COLOR_INDICES } from "@/lib/playerColors";
 import { gradeToLetter, getGradeColor } from "@/lib/gradeSystem";
 import Thumbstick from "@/components/Thumbstick";
@@ -401,6 +402,8 @@ export default function Client() {
     usedColors,
   } = useClientRoom(code, effectiveMode, { forceRelay: isImmersive });
   const discoveredRooms = useDiscoverRooms(effectiveMode);
+  const apiRooms = useFetchRoomsFromAPI();
+  const roomList = apiRooms.length > 0 ? apiRooms : discoveredRooms;
 
   const [wasKicked, setWasKicked] = useState(false);
   const [roomFullDismissed, setRoomFullDismissed] = useState(false);
@@ -1104,11 +1107,11 @@ export default function Client() {
             </>
           )}
 
-          {discoveredRooms.length > 0 && (
+          {roomList.length > 0 && (
             <div className="flex flex-col gap-2 mt-2">
               <p className="text-xs text-muted-foreground font-mono text-center">ACTIVE ROOMS</p>
               <div className="flex flex-wrap gap-2 justify-center">
-                {discoveredRooms.map((rc) => (
+                {roomList.map((rc) => (
                   <Button
                     key={rc}
                     variant="outline"

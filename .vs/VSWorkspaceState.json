@@ -7,6 +7,6 @@
     "\\src\\hooks",
     "\\supabase"
   ],
-  "SelectedNode": "\\vite.config_for_local_host.ts",
+  "SelectedNode": "\\vitest.config.ts",
   "PreviewInSolutionExplorer": false
 }

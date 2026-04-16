@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+﻿import { useState, useEffect, useRef, useCallback } from 'react';
 import Peer, { DataConnection } from 'peerjs';
 import { supabase } from '@/integrations/supabase/client';
 import type { RealtimeChannel } from '@supabase/supabase-js';
@@ -607,165 +607,131 @@ function useHostSupabase(enabled: boolean) {
       return;
     }
 
-    let alive = true;
+    const code = generateRoomCode();
+    setRoomCode(code);
 
-    // Create room via API instead of generating locally
-    (async () => {
-      try {
-        const res = await fetch('/api/create-room', { 
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ hostId: 'host_' + Date.now() })
+    const channel = supabase.channel(`game-room-${code}`, {
+      config: { broadcast: { self: false } },
+    });
+
+    channel
+      .on('broadcast', { event: 'joystick' }, (payload) => {
+        const { clientId, x, y } = payload.payload as { clientId: string; x: number; y: number };
+        const resolvedId = clientAliasRef.current.get(clientId) ?? clientId;
+        setPlayers((prev) => {
+          const next = new Map(prev);
+          const existing = next.get(resolvedId);
+          if (existing) next.set(resolvedId, { ...existing, joystick: { x, y } });
+          return next;
         });
-        const data = await res.json();
-        const code = data.code;
-        if (!code) {
-          console.error('Failed to create room: no code in response');
-          return;
-        }
+      })
+      .on('broadcast', { event: 'client-join' }, (payload) => {
+        const { clientId, takeoverCode } = payload.payload as { clientId: string; takeoverCode?: string };
 
-        if (!alive) return;
-        setRoomCode(code);
-
-        const channel = supabase.channel(`game-room-${code}`, {
-          config: { broadcast: { self: false } },
-        });
-
-        channel
-          .on('broadcast', { event: 'joystick' }, (payload) => {
-            const { clientId, x, y } = payload.payload as { clientId: string; x: number; y: number };
-            const resolvedId = clientAliasRef.current.get(clientId) ?? clientId;
-            setPlayers((prev) => {
-              const next = new Map(prev);
-              const existing = next.get(resolvedId);
-              if (existing) next.set(resolvedId, { ...existing, joystick: { x, y } });
-              return next;
-            });
-          })
-          .on('broadcast', { event: 'client-join' }, (payload) => {
-            const { clientId, takeoverCode } = payload.payload as { clientId: string; takeoverCode?: string };
-
-            // Validate takeover
-            if (takeoverCode) {
-              for (const [oldId, slotData] of slotDataRef.current.entries()) {
-                if (slotData.code === takeoverCode) {
-                  // Reconnect: remap new clientId to old slot
-                  clientAliasRef.current.set(clientId, oldId);
-                  currentClientRef.current.set(oldId, clientId);
-                  usedColorsRef.current.add(slotData.colorIndex);
-                  clientColorMapRef.current.set(oldId, slotData.colorIndex);
-                  setPlayers((prev) => {
-                    const next = new Map(prev);
-                    next.set(oldId, { joystick: { x: 0, y: 0 }, colorIndex: slotData.colorIndex, ping: 0, lastPongAt: Date.now() });
-                    return next;
-                  });
-                  // Invalidate old code
-                  const newCode = recordSlot(oldId, slotData.colorIndex);
-                  void newCode;
-                  channel.send({ type: 'broadcast', event: 'host-direct', payload: { targetId: clientId, type: 'takeover-accepted', colorIndex: slotData.colorIndex, connId: oldId } });
-                  channel.send({ type: 'broadcast', event: 'used-colors', payload: { colors: Array.from(usedColorsRef.current) } });
-                  channel.send({ type: 'broadcast', event: 'host-direct', payload: { targetId: clientId, type: 'game-mode', gameMode: gameModeRef.current } });
-                  return;
-                }
-              }
-              // Invalid code — fall through to normal join
-            }
-
-            const mode = gameModeRef.current;
-            const maxSlots = mode === '2v6' ? MAX_PLAYERS_2V6 : MAX_PLAYERS_1V3;
-            if (usedColorsRef.current.size >= maxSlots) {
-              // Try to replace a bot
-              const botEntry = Array.from(clientColorMapRef.current.entries()).find(([id]) => id.startsWith('bot-'));
-              if (botEntry) {
-                const [botId, botColor] = botEntry;
-                usedColorsRef.current.delete(botColor);
-                clientColorMapRef.current.delete(botId);
-                slotDataRef.current.delete(botId);
-                setTakeoverCodes((prev) => {
-                  if (!(botId in prev)) return prev;
-                  const next = { ...prev };
-                  delete next[botId];
-                  return next;
-                });
-                setPlayers((prev) => { const next = new Map(prev); next.delete(botId); return next; });
-              } else {
-                channel.send({ type: 'broadcast', event: 'room-full', payload: { clientId } });
-                return;
-              }
-            }
-            const excludeIndices = mode === '2v6' ? [] : (EAGLE_COLOR_INDICES as unknown as number[]);
-            const colorIndex = allocateColor(usedColorsRef.current, excludeIndices);
-            if (colorIndex === null) {
-              channel.send({ type: 'broadcast', event: 'room-full', payload: { clientId } });
+        // Validate takeover
+        if (takeoverCode) {
+          for (const [oldId, slotData] of slotDataRef.current.entries()) {
+            if (slotData.code === takeoverCode) {
+              // Reconnect: remap new clientId to old slot
+              clientAliasRef.current.set(clientId, oldId);
+              currentClientRef.current.set(oldId, clientId);
+              usedColorsRef.current.add(slotData.colorIndex);
+              clientColorMapRef.current.set(oldId, slotData.colorIndex);
+              setPlayers((prev) => {
+                const next = new Map(prev);
+                next.set(oldId, { joystick: { x: 0, y: 0 }, colorIndex: slotData.colorIndex, ping: 0, lastPongAt: Date.now() });
+                return next;
+              });
+              // Invalidate old code
+              const newCode = recordSlot(oldId, slotData.colorIndex);
+              void newCode;
+              channel.send({ type: 'broadcast', event: 'host-direct', payload: { targetId: clientId, type: 'takeover-accepted', colorIndex: slotData.colorIndex, connId: oldId } });
+              channel.send({ type: 'broadcast', event: 'used-colors', payload: { colors: Array.from(usedColorsRef.current) } });
+              channel.send({ type: 'broadcast', event: 'host-direct', payload: { targetId: clientId, type: 'game-mode', gameMode: gameModeRef.current } });
               return;
             }
-            usedColorsRef.current.add(colorIndex);
-            clientColorMapRef.current.set(clientId, colorIndex);
-            currentClientRef.current.set(clientId, clientId);
-            setPlayers((prev) => {
-              const next = new Map(prev);
-              next.set(clientId, { joystick: { x: 0, y: 0 }, colorIndex, ping: 0, lastPongAt: Date.now() });
-              return next;
-            });
-            recordSlot(clientId, colorIndex);
-            channel.send({ type: 'broadcast', event: 'assign-color', payload: { clientId, colorIndex } });
-            channel.send({ type: 'broadcast', event: 'used-colors', payload: { colors: Array.from(usedColorsRef.current) } });
-            channel.send({ type: 'broadcast', event: 'host-direct', payload: { targetId: clientId, type: 'game-mode', gameMode: gameModeRef.current } });
-          })
-          .on('broadcast', { event: 'client-leave' }, (payload) => {
-            const { clientId } = payload.payload as { clientId: string };
-            removePlayer(resolveClientId(clientId));
-          })
-          .on('broadcast', { event: 'color-swap' }, (payload) => {
-            const { clientId, requestedColor } = payload.payload as { clientId: string; requestedColor: number };
-            handleColorSwap(resolveClientId(clientId), requestedColor);
-          })
-          .on('broadcast', { event: 'client-action' }, (payload) => {
-            const { clientId, ...msg } = payload.payload as { clientId: string; [key: string]: any };
-            // Resolve alias: new clientId may map to old connId for game logic
-            const resolvedId = clientAliasRef.current.get(clientId) ?? clientId;
-            clientMsgCallbackRef.current?.(resolvedId, msg);
-          })
-          .on('broadcast', { event: 'pong' }, (payload) => {
-            const { clientId, ts } = payload.payload as { clientId: string; ts: number };
-            const resolvedId = resolveClientId(clientId);
-            const rtt = Date.now() - ts;
-            setPlayers((prev) => {
-              const next = new Map(prev);
-              const existing = next.get(resolvedId);
-              if (existing) next.set(resolvedId, { ...existing, ping: rtt, lastPongAt: Date.now() });
-              return next;
-            });
-          })
-          .subscribe();
-
-        if (!alive) {
-          channel.unsubscribe();
-          return;
+          }
+          // Invalid code — fall through to normal join
         }
 
-        channelRef.current = channel;
+        const mode = gameModeRef.current;
+        const maxSlots = mode === '2v6' ? MAX_PLAYERS_2V6 : MAX_PLAYERS_1V3;
+        if (usedColorsRef.current.size >= maxSlots) {
+          // Try to replace a bot
+          const botEntry = Array.from(clientColorMapRef.current.entries()).find(([id]) => id.startsWith('bot-'));
+          if (botEntry) {
+            const [botId, botColor] = botEntry;
+            usedColorsRef.current.delete(botColor);
+            clientColorMapRef.current.delete(botId);
+            slotDataRef.current.delete(botId);
+            setTakeoverCodes((prev) => {
+              if (!(botId in prev)) return prev;
+              const next = { ...prev };
+              delete next[botId];
+              return next;
+            });
+            setPlayers((prev) => { const next = new Map(prev); next.delete(botId); return next; });
+          } else {
+            channel.send({ type: 'broadcast', event: 'room-full', payload: { clientId } });
+            return;
+          }
+        }
+        const excludeIndices = mode === '2v6' ? [] : (EAGLE_COLOR_INDICES as unknown as number[]);
+        const colorIndex = allocateColor(usedColorsRef.current, excludeIndices);
+        if (colorIndex === null) {
+          channel.send({ type: 'broadcast', event: 'room-full', payload: { clientId } });
+          return;
+        }
+        usedColorsRef.current.add(colorIndex);
+        clientColorMapRef.current.set(clientId, colorIndex);
+        currentClientRef.current.set(clientId, clientId);
+        setPlayers((prev) => {
+          const next = new Map(prev);
+          next.set(clientId, { joystick: { x: 0, y: 0 }, colorIndex, ping: 0, lastPongAt: Date.now() });
+          return next;
+        });
+        recordSlot(clientId, colorIndex);
+        channel.send({ type: 'broadcast', event: 'assign-color', payload: { clientId, colorIndex } });
+        channel.send({ type: 'broadcast', event: 'used-colors', payload: { colors: Array.from(usedColorsRef.current) } });
+        channel.send({ type: 'broadcast', event: 'host-direct', payload: { targetId: clientId, type: 'game-mode', gameMode: gameModeRef.current } });
+      })
+      .on('broadcast', { event: 'client-leave' }, (payload) => {
+        const { clientId } = payload.payload as { clientId: string };
+        removePlayer(resolveClientId(clientId));
+      })
+      .on('broadcast', { event: 'color-swap' }, (payload) => {
+        const { clientId, requestedColor } = payload.payload as { clientId: string; requestedColor: number };
+        handleColorSwap(resolveClientId(clientId), requestedColor);
+      })
+      .on('broadcast', { event: 'client-action' }, (payload) => {
+        const { clientId, ...msg } = payload.payload as { clientId: string; [key: string]: any };
+        // Resolve alias: new clientId may map to old connId for game logic
+        const resolvedId = clientAliasRef.current.get(clientId) ?? clientId;
+        clientMsgCallbackRef.current?.(resolvedId, msg);
+      })
+      .on('broadcast', { event: 'pong' }, (payload) => {
+        const { clientId, ts } = payload.payload as { clientId: string; ts: number };
+        const resolvedId = resolveClientId(clientId);
+        const rtt = Date.now() - ts;
+        setPlayers((prev) => {
+          const next = new Map(prev);
+          const existing = next.get(resolvedId);
+          if (existing) next.set(resolvedId, { ...existing, ping: rtt, lastPongAt: Date.now() });
+          return next;
+        });
+      })
+      .subscribe();
 
-        const pingInterval = window.setInterval(() => {
-          if (!pingDiagnosticsEnabledRef.current) return;
-          channel.send({ type: 'broadcast', event: 'ping', payload: { ts: Date.now() } });
-        }, 500);
+    channelRef.current = channel;
 
-        // Store interval for cleanup in the outer scope
-        (window as any).__supabaseHostPingInterval = pingInterval;
-      } catch (error) {
-        console.error('Failed to create room:', error);
-      }
-    })();
+    const pingInterval = window.setInterval(() => {
+      if (!pingDiagnosticsEnabledRef.current) return;
+      channel.send({ type: 'broadcast', event: 'ping', payload: { ts: Date.now() } });
+    }, 500);
 
     return () => {
-      alive = false;
-      const pingInterval = (window as any).__supabaseHostPingInterval;
-      if (pingInterval) {
-        clearInterval(pingInterval);
-        delete (window as any).__supabaseHostPingInterval;
-      }
-      channelRef.current?.unsubscribe();
+      clearInterval(pingInterval);
+      channel.unsubscribe();
     };
   }, [enabled, removePlayer, handleColorSwap, resolveClientId]);
 
@@ -1430,34 +1396,5 @@ export function useDiscoverRooms(mode: ConnectionMode) {
       supabase.removeChannel(webrtcChannel);
     };
   }, [mode]);
-  return rooms;
-}
-
-/**
- * Fetches rooms from Neon Postgres database via API endpoint
- * Polls the API every 3 seconds to get active rooms
- */
-export function useFetchRoomsFromAPI() {
-  const [rooms, setRooms] = useState<string[]>([]);
-
-  useEffect(() => {
-    const fetchRooms = async () => {
-      try {
-        const res = await fetch('/api/rooms');
-        const data = await res.json();
-        if (Array.isArray(data)) {
-          const roomCodes = data.map((r: any) => r.code).filter(Boolean);
-          setRooms(roomCodes);
-        }
-      } catch (error) {
-        console.error('Failed to fetch rooms from API:', error);
-      }
-    };
-
-    fetchRooms();
-    const interval = setInterval(fetchRooms, 3000);
-    return () => clearInterval(interval);
-  }, []);
-
   return rooms;
 }
