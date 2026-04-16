@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+﻿import { useState, useEffect, useRef, useCallback } from 'react';
 import Peer, { DataConnection } from 'peerjs';
 import { supabase } from '@/integrations/supabase/client';
 import type { RealtimeChannel } from '@supabase/supabase-js';
@@ -1097,12 +1097,12 @@ export function useWebRTCRoomBroadcast(roomCode: string) {
       }
     });
 
-    // Re-track periodically to keep WebRTC broadcast alive - use 5s to reduce network overhead
+    // Re-track periodically to keep WebRTC broadcast alive
     const heartbeat = window.setInterval(async () => {
       if (alive) {
         try { await channel.track({ roomCode, ts: Date.now(), source: 'webrtc' }); } catch {}
       }
-    }, 5_000);
+    }, 2_000);
 
     return () => {
       alive = false;

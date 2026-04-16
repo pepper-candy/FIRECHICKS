@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+﻿import { useState, useEffect, useRef, useCallback } from 'react';
 import Peer, { DataConnection } from 'peerjs';
 import { supabase } from '@/integrations/supabase/client';
 import type { RealtimeChannel } from '@supabase/supabase-js';
@@ -1050,31 +1050,30 @@ const WEBRTC_BROADCAST_CHANNEL = 'webrtc-rooms'; // For WebRTC broadcast persist
  */
 export function useAdvertiseRoom(roomCode: string, isLobby: boolean, _mode: ConnectionMode) {
   useEffect(() => {
-    if (!roomCode || !isLobby) {
-      // If not in lobby, don't advertise to this channel
-      return;
-    }
-
+    if (!roomCode) return;
     const channel = supabase.channel(LOBBY_CHANNEL, { config: { presence: { key: `host-${roomCode}` } } });
     let alive = true;
 
     channel.subscribe(async (status) => {
       if (status === 'SUBSCRIBED' && alive) {
-        await channel.track({ roomCode, ts: Date.now() });
+        // Only advertise in Supabase during lobby phase
+        if (isLobby) {
+          await channel.track({ roomCode, ts: Date.now() });
+        }
       }
     });
 
-    // Re-track periodically to keep presence alive
+    // Re-track periodically during lobby phase
     const heartbeat = window.setInterval(async () => {
-      if (alive) {
+      if (alive && isLobby) {
         try { await channel.track({ roomCode, ts: Date.now() }); } catch {}
       }
-    }, 5_000);
+    }, 2_000);
 
     return () => {
       alive = false;
       clearInterval(heartbeat);
-      channel.untrack();
+      if (isLobby) channel.untrack();
       supabase.removeChannel(channel);
     };
   }, [roomCode, isLobby]);
@@ -1097,12 +1096,12 @@ export function useWebRTCRoomBroadcast(roomCode: string) {
       }
     });
 
-    // Re-track periodically to keep WebRTC broadcast alive - use 5s to reduce network overhead
+    // Re-track periodically to keep WebRTC broadcast alive
     const heartbeat = window.setInterval(async () => {
       if (alive) {
         try { await channel.track({ roomCode, ts: Date.now(), source: 'webrtc' }); } catch {}
       }
-    }, 5_000);
+    }, 2_000);
 
     return () => {
       alive = false;

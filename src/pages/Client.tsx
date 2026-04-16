@@ -380,6 +380,7 @@ export default function Client() {
     }
   });
   const [mode, setMode] = useState<ConnectionMode>("webrtc");
+  const [connecting, setConnecting] = useState(false);
   const {
     connected,
     connect,
@@ -533,6 +534,16 @@ export default function Client() {
   useEffect(() => {
     if (kicked) setWasKicked(true);
   }, [kicked]);
+  useEffect(() => {
+    if (connected) {
+      setConnecting(false);
+    }
+  }, [connected]);
+  useEffect(() => {
+    if (kicked || roomFull) {
+      setConnecting(false);
+    }
+  }, [kicked, roomFull]);
   useEffect(() => {
     if (!connected) return;
     const room = code.trim().toUpperCase();
@@ -892,11 +903,15 @@ export default function Client() {
   }, [sendToHost, examAnswer]);
   const handleJoin = useCallback(
     async (roomCode?: string) => {
+      // Guard against multiple simultaneous connection attempts
+      if (connecting) return;
+
       const providedRoom = (roomCode || code).trim().toUpperCase();
       const fallbackRoom = rememberedRoomCode.trim().toUpperCase();
       const hasTakeover = rejoinCode.trim().length >= 5;
       const targetRoom = providedRoom || (hasTakeover ? fallbackRoom : "");
       if (targetRoom.length >= 6) {
+        setConnecting(true);
         await enterFullscreen();
         if (roomCode || !code) setCode(targetRoom);
         setWasKicked(false);
@@ -905,7 +920,7 @@ export default function Client() {
         connect(targetRoom, hasTakeover ? rejoinCode.trim().toUpperCase() : undefined);
       }
     },
-    [code, connect, enterFullscreen, rejoinCode, rememberedRoomCode],
+    [code, connect, enterFullscreen, rejoinCode, rememberedRoomCode, connecting],
   );
   const hasRejoinCode = rejoinCode.trim().length >= 5;
   const hasRoomCode = code.trim().length >= 6;
@@ -1007,11 +1022,23 @@ export default function Client() {
 
           <Button
             onClick={() => handleJoin()}
-            disabled={!canConnect}
+            disabled={!canConnect || connecting}
             className="h-12 text-sm font-pixel bg-secondary hover:bg-secondary/80 text-secondary-foreground"
           >
-            CONNECT
+            {connecting ? "CONNECTING..." : "CONNECT"}
           </Button>
+
+          {code.length >= 6 && (
+            <div
+              className={`text-center text-lg font-pixel tracking-wider py-2 px-3 rounded border-2 ${
+                mode === "webrtc"
+                  ? "border-primary text-primary bg-primary/5"
+                  : "border-secondary text-secondary bg-secondary/5"
+              }`}
+            >
+              {code}
+            </div>
+          )}
 
           {/* Rejoin code section */}
           <button
@@ -1068,7 +1095,11 @@ export default function Client() {
                       setCode(rc);
                       handleJoin(rc);
                     }}
-                    className="font-mono text-xs tracking-widest text-accent border-accent/30 hover:bg-accent/10"
+                    className={`font-mono text-xs tracking-widest ${
+                      mode === "supabase"
+                        ? "text-secondary border-secondary/30 hover:bg-secondary/10"
+                        : "text-accent border-accent/30 hover:bg-accent/10"
+                    }`}
                   >
                     {rc}
                   </Button>

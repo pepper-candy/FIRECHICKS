@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, Suspense, useRef, useMemo } from "react";
+﻿import { useState, useEffect, useCallback, Suspense, useRef, useMemo } from "react";
 import { createPortal } from "react-dom";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { OrbitControls } from "@react-three/drei";
@@ -243,8 +243,7 @@ export default function Host() {
     return () => clearInterval(id);
   }, [grabBackUntil]);
 
-  useAdvertiseRoom(roomCode, phase === "lobby", mode);
-  useWebRTCRoomBroadcast(roomCode);
+  useAdvertiseRoom(phase === "lobby" ? roomCode : "", mode);
 
   // Register client message handler
   useEffect(() => {

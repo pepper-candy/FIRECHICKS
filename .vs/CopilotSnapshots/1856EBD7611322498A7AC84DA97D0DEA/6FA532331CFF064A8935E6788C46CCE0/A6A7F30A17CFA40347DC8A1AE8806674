@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+﻿import { useState, useEffect, useRef, useCallback } from 'react';
 import Peer, { DataConnection } from 'peerjs';
 import { supabase } from '@/integrations/supabase/client';
 import type { RealtimeChannel } from '@supabase/supabase-js';
@@ -1041,20 +1041,10 @@ export function useClientRoom(roomCode: string, mode: ConnectionMode = 'webrtc')
 
 // ─── Room discovery ─────────────────────────────────────────
 const LOBBY_CHANNEL = 'game-lobby';
-const WEBRTC_BROADCAST_CHANNEL = 'webrtc-rooms'; // For WebRTC broadcast persistence
 
-/**
- * Advertises room code:
- * - Supabase: Only during lobby phase (clears on game start for cleaner lobby list)
- * - WebRTC: Continuously broadcasts to Supabase for rejoin scenarios
- */
-export function useAdvertiseRoom(roomCode: string, isLobby: boolean, _mode: ConnectionMode) {
+export function useAdvertiseRoom(roomCode: string, _mode: ConnectionMode) {
   useEffect(() => {
-    if (!roomCode || !isLobby) {
-      // If not in lobby, don't advertise to this channel
-      return;
-    }
-
+    if (!roomCode) return;
     const channel = supabase.channel(LOBBY_CHANNEL, { config: { presence: { key: `host-${roomCode}` } } });
     let alive = true;
 
@@ -1069,40 +1059,7 @@ export function useAdvertiseRoom(roomCode: string, isLobby: boolean, _mode: Conn
       if (alive) {
         try { await channel.track({ roomCode, ts: Date.now() }); } catch {}
       }
-    }, 5_000);
-
-    return () => {
-      alive = false;
-      clearInterval(heartbeat);
-      channel.untrack();
-      supabase.removeChannel(channel);
-    };
-  }, [roomCode, isLobby]);
-}
-
-/**
- * Broadcasts room code via WebRTC to Supabase for persistence during active game (rejoin support)
- * This runs independently and keeps the room discoverable even after game starts
- */
-export function useWebRTCRoomBroadcast(roomCode: string) {
-  useEffect(() => {
-    if (!roomCode) return;
-    const channel = supabase.channel(WEBRTC_BROADCAST_CHANNEL, { config: { presence: { key: `webrtc-${roomCode}` } } });
-    let alive = true;
-
-    channel.subscribe(async (status) => {
-      if (status === 'SUBSCRIBED' && alive) {
-        // Broadcast room code via WebRTC channel (persistent, including during gameplay)
-        await channel.track({ roomCode, ts: Date.now(), source: 'webrtc' });
-      }
-    });
-
-    // Re-track periodically to keep WebRTC broadcast alive - use 5s to reduce network overhead
-    const heartbeat = window.setInterval(async () => {
-      if (alive) {
-        try { await channel.track({ roomCode, ts: Date.now(), source: 'webrtc' }); } catch {}
-      }
-    }, 5_000);
+    }, 15_000);
 
     return () => {
       alive = false;
@@ -1113,70 +1070,28 @@ export function useWebRTCRoomBroadcast(roomCode: string) {
   }, [roomCode]);
 }
 
-/**
- * Discovers rooms from both sources:
- * - Supabase LOBBY_CHANNEL: Active lobby rooms only (cleared on game start)
- * - Supabase WEBRTC_BROADCAST_CHANNEL: All rooms including active games (for rejoin)
- * - Deduplicates and combines both lists
- */
 export function useDiscoverRooms(mode: ConnectionMode) {
   const [rooms, setRooms] = useState<string[]>([]);
   useEffect(() => {
+    // Only discover in Supabase mode
     if (mode !== "supabase") {
       setRooms([]);
       return;
     }
 
-    const discoveredRooms = new Set<string>();
+    const channel = supabase.channel(LOBBY_CHANNEL, { config: { presence: { key: `discover-${Math.random().toString(36).slice(2, 6)}` } } });
 
-    // Channel 1: Discover lobby rooms (clears on game start)
-    const lobbyChannel = supabase.channel(LOBBY_CHANNEL, { 
-      config: { presence: { key: `discover-lobby-${Math.random().toString(36).slice(2, 6)}` } } 
-    });
-
-    const updateRooms = () => {
-      discoveredRooms.clear();
-
-      // Get rooms from lobby channel (active lobby rooms)
-      const lobbyState = lobbyChannel.presenceState();
-      const lobbyCodes = Object.values(lobbyState)
+    channel.on('presence', { event: 'sync' }, () => {
+      const state = channel.presenceState();
+      const codes = Object.values(state)
         .flat()
         .map((p: any) => p.roomCode as string)
         .filter(Boolean);
-      lobbyCodes.forEach(code => discoveredRooms.add(code));
-
-      // Get rooms from WebRTC broadcast channel (all rooms, including active games)
-      const webrtcState = webrtcChannel.presenceState();
-      const webrtcCodes = Object.values(webrtcState)
-        .flat()
-        .map((p: any) => p.roomCode as string)
-        .filter(Boolean);
-      webrtcCodes.forEach(code => discoveredRooms.add(code));
-
-      // Update state with deduplicated combined list
-      setRooms(Array.from(discoveredRooms).sort());
-    };
-
-    lobbyChannel.on('presence', { event: 'sync' }, updateRooms);
-    lobbyChannel.on('presence', { event: 'join' }, updateRooms);
-    lobbyChannel.on('presence', { event: 'leave' }, updateRooms);
-
-    // Channel 2: Discover WebRTC broadcasts (persistent, includes active games)
-    const webrtcChannel = supabase.channel(WEBRTC_BROADCAST_CHANNEL, { 
-      config: { presence: { key: `discover-webrtc-${Math.random().toString(36).slice(2, 6)}` } } 
+      setRooms([...new Set(codes)]);
     });
 
-    webrtcChannel.on('presence', { event: 'sync' }, updateRooms);
-    webrtcChannel.on('presence', { event: 'join' }, updateRooms);
-    webrtcChannel.on('presence', { event: 'leave' }, updateRooms);
-
-    lobbyChannel.subscribe();
-    webrtcChannel.subscribe();
-
-    return () => {
-      supabase.removeChannel(lobbyChannel);
-      supabase.removeChannel(webrtcChannel);
-    };
+    channel.subscribe();
+    return () => { supabase.removeChannel(channel); };
   }, [mode]);
   return rooms;
 }
