@@ -223,3 +223,42 @@ After implementation, validate:
   - F-page NEXT flow correctly routes to F-specific transcript without breaking eventual normal game-over transcript behavior.
   - Minigame distribution feels closer to 40/30/30 and questions appear uniformly random over multiple sessions.
 
+## 11. Implementation checklist by todo
+
+- **reduce-broadcast-and-input-rate**
+  - [ ] Throttle WebRTC `doBroadcastState` calls with a min interval (50–66 ms) while keeping host UI updates unchanged.
+  - [ ] Add joystick deadzone + slower `JOYSTICK_SEND_INTERVAL` and verify control feel.
+  - [ ] Increase WebRTC ping interval (e.g. to 5s) and adjust `NetworkPerformancePanel` thresholds if needed.
+  - [ ] Capture before/after message counts or TURN bandwidth for a representative session.
+- **immersive-roomcode-rebroadcast**
+  - [ ] Make the lobby `ROOM: {roomCode}` box clickable in immersive mode.
+  - [ ] Add a helper to re-track the room on `WEBRTC_BROADCAST_CHANNEL` and/or Cloudflare discovery.
+  - [ ] Verify that clicking the box makes the room reappear in Active Rooms for new clients.
+- **fix-event-countdown-30s**
+  - [ ] Ensure client countdown derives from host `activeEvent.endAt` (+/- 3s) and starts at ~30s.
+  - [ ] Remove/align any 20s mobile-specific durations.
+  - [ ] Confirm countdown sync between host and client across reconnects.
+- **transcript-persistence-on-disconnect**
+  - [ ] Gate disconnect redirect logic so it does not fire when `gamePhase === 'gameover'` / transcript is visible.
+  - [ ] Confirm early-phase disconnect still redirects with a toast.
+- **attack-latency-compensation**
+  - [ ] Use `positionHistoryRef` to compute an effective victim position within 0.2s before `attack-press`.
+  - [ ] Fall back gracefully when history is sparse.
+  - [ ] Play test under artificial latency to confirm near-misses within 200 ms register as hits but late presses still miss.
+- **hud-score-reposition**
+  - [ ] Refactor the client HUD so the grade display sits next to the exit/cross button at top-right.
+  - [ ] Test on notch and non-notch devices to ensure the center-top is visually clear and text isn’t clipped.
+- **f-page-next-flow**
+  - [ ] Change F-page copy to “The system wasn't built for you to win.” and button label to NEXT.
+  - [ ] Implement the F-specific transcript screen that reuses the existing result layout with modified copy and “F doesn't define you.” in red.
+  - [ ] Decide and implement behavior when the game ends while the player is on the F-transcript (stay vs. sync).
+  - [ ] Regression check for the default end-game transcript when the player never hits F.
+- **todo-1776367826110-suwwuoaau (SKIP button)**
+  - [ ] Add a SKIP button to host UI for minigames and final exam in the top-right control cluster.
+  - [ ] Wire SKIP to set event countdown to 0 and broadcast the resulting state change to clients.
+  - [ ] Ensure final exam SKIP transitions directly to endgame without penalties.
+- **event-and-question-randomization**
+  - [ ] Adjust event randomization to 40/30/30 (mock/hitbox/crossy).
+  - [ ] Ensure mock and final exam question indices are chosen via a uniform random generator.
+  - [ ] Run long test sessions and spot-check logged distributions for events and questions.
+

@@ -11,7 +11,8 @@ function generateRoomCode(): string {
 }
 
 const PEER_PREFIX = 'evsc-';
-const JOYSTICK_SEND_INTERVAL = 33;
+const JOYSTICK_SEND_INTERVAL = 45;
+const JOYSTICK_DEADZONE = 0.04;
 const DEFAULT_ICE_SERVERS = [
   { urls: 'stun:stun.l.google.com:19302' },
   { urls: 'stun:stun1.l.google.com:19302' },
@@ -410,7 +411,7 @@ function useHostWebRTC(enabled: boolean, opts?: WebRtcOptions) {
         connsRef.current.forEach((conn) => {
           try { conn.send(JSON.stringify({ type: 'ping', ts })); } catch {}
         });
-      }, 2000);
+      }, 5000);
     })();
 
     return () => {
@@ -802,6 +803,7 @@ function useClientWebRTC(roomCode: string, enabled: boolean, opts?: WebRtcOption
   const connRef = useRef<DataConnection | null>(null);
   const joystickRef = useRef<JoystickData>({ x: 0, y: 0 });
   const intervalRef = useRef<number | null>(null);
+  const lastSentJoystickRef = useRef<JoystickData>({ x: 0, y: 0 });
   const idleRef = useRef(true);
   const inputLockedRef = useRef(false);
   const colorIndexRef = useRef(-1);
@@ -844,7 +846,21 @@ function useClientWebRTC(roomCode: string, enabled: boolean, opts?: WebRtcOption
         setConnected(true);
         intervalRef.current = window.setInterval(() => {
           if (colorIndexRef.current >= 0 && !idleRef.current && !inputLockedRef.current) {
-            try { conn.send({ type: 'joystick', colorIndex: colorIndexRef.current, x: joystickRef.current.x, y: joystickRef.current.y }); } catch {}
+            const next = joystickRef.current;
+            const last = lastSentJoystickRef.current;
+            const dx = next.x - last.x;
+            const dy = next.y - last.y;
+            const movedEnough = Math.hypot(dx, dy) >= JOYSTICK_DEADZONE;
+            if (!movedEnough) return;
+            try {
+              conn.send({
+                type: 'joystick',
+                colorIndex: colorIndexRef.current,
+                x: next.x,
+                y: next.y,
+              });
+              lastSentJoystickRef.current = next;
+            } catch {}
           }
         }, JOYSTICK_SEND_INTERVAL);
       });
@@ -910,7 +926,20 @@ function useClientWebRTC(roomCode: string, enabled: boolean, opts?: WebRtcOption
   const sendJoystick = useCallback((data: JoystickData) => {
     joystickRef.current = data;
     if (!idleRef.current && !inputLockedRef.current && connRef.current && colorIndexRef.current >= 0) {
-      try { connRef.current.send({ type: 'joystick', colorIndex: colorIndexRef.current, x: data.x, y: data.y }); } catch {}
+      const last = lastSentJoystickRef.current;
+      const dx = data.x - last.x;
+      const dy = data.y - last.y;
+      const movedEnough = Math.hypot(dx, dy) >= JOYSTICK_DEADZONE;
+      if (!movedEnough) return;
+      try {
+        connRef.current.send({
+          type: 'joystick',
+          colorIndex: colorIndexRef.current,
+          x: data.x,
+          y: data.y,
+        });
+        lastSentJoystickRef.current = data;
+      } catch {}
     }
   }, []);
 

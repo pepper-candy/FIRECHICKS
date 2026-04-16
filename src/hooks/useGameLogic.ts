@@ -1596,8 +1596,11 @@ export function useGameLogic({ players, broadcast, gameMode, connectionMode, map
 
     const nowMs = Date.now();
     const inReplayWindow = Boolean(hostSnap.videoPlaying || hostSnap.replayCountdown);
-    const minIntervalMs = inReplayWindow ? 66 : connectionModeRef.current === "supabase" ? 66 : 0;
-    if (minIntervalMs === 0 || nowMs - lastNetworkStateBroadcastAtRef.current >= minIntervalMs) {
+    const isSupabase = connectionModeRef.current === "supabase";
+    // Throttle network broadcasts for both transport modes to reduce TURN / signaling load.
+    const baseIntervalMs = isSupabase ? 66 : 50;
+    const minIntervalMs = inReplayWindow ? 66 : baseIntervalMs;
+    if (nowMs - lastNetworkStateBroadcastAtRef.current >= minIntervalMs) {
       lastNetworkStateBroadcastAtRef.current = nowMs;
       bcast({ type: "game-state", state: networkSnap });
     }
