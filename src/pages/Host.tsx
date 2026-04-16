@@ -1,9 +1,10 @@
 import { useState, useEffect, useCallback, Suspense, useRef, useMemo } from "react";
+import { toast } from "sonner";
 import { createPortal } from "react-dom";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { OrbitControls } from "@react-three/drei";
 import type { GameEvent, GameStateSnapshot } from "@/lib/gameTypes";
-import { rebroadcastWebRTCRoom, useHostRoom, useAdvertiseRoom, useWebRTCRoomBroadcast, type ConnectionMode } from "@/hooks/useGameRoom";
+import { useHostRoom, useAdvertiseRoom, useWebRTCRoomBroadcast, type ConnectionMode } from "@/hooks/useGameRoom";
 import { useGameLogic } from "@/hooks/useGameLogic";
 import LobbyArena from "@/components/LobbyArena";
 import GameplayMap from "@/components/GameplayMap";
@@ -251,7 +252,7 @@ export default function Host() {
   }, [grabBackUntil]);
 
   useAdvertiseRoom(roomCode, phase === "lobby", effectiveMode);
-  useWebRTCRoomBroadcast(roomCode);
+  const rebroadcastNow = useWebRTCRoomBroadcast(roomCode);
 
   // Register client message handler
   useEffect(() => {
@@ -432,9 +433,10 @@ export default function Host() {
             {/* Room code */}
             <button
               type="button"
-              onClick={() => {
+              onClick={async () => {
                 if (!isImmersive) return;
-                void rebroadcastWebRTCRoom(roomCode);
+                const ok = await rebroadcastNow();
+                toast(ok ? "Room rebroadcasted" : "Room rebroadcast failed");
               }}
               className={`px-2 py-1 rounded border border-border bg-card font-mono text-sm ${
                 isImmersive ? "hover:bg-card/80 cursor-pointer active:scale-[0.99] transition-all" : "cursor-default"

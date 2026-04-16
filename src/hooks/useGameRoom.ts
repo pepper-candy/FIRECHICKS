@@ -1176,39 +1176,6 @@ const LOBBY_CHANNEL = 'game-lobby';
 const WEBRTC_BROADCAST_CHANNEL = 'webrtc-rooms'; // For WebRTC broadcast persistence
 
 /**
- * Best-effort immediate rebroadcast for cases where presence temporarily drops.
- * This is safe to call repeatedly; it uses a short-lived channel.
- */
-export async function rebroadcastWebRTCRoom(roomCode: string): Promise<void> {
-  if (!roomCode) return;
-  const channel = supabase.channel(WEBRTC_BROADCAST_CHANNEL, { config: { presence: { key: `webrtc-rebroadcast-${roomCode}-${Date.now()}` } } });
-  let didTrack = false;
-  try {
-    await new Promise<void>((resolve) => {
-      channel.subscribe(async (status) => {
-        if (status !== 'SUBSCRIBED') return;
-        try {
-          await channel.track({ roomCode, ts: Date.now(), source: 'webrtc' });
-          didTrack = true;
-        } catch {
-          // best-effort
-        } finally {
-          resolve();
-        }
-      });
-      // Safety timeout: don't hang UI if subscribe stalls.
-      window.setTimeout(() => resolve(), 1200);
-    });
-  } finally {
-    try {
-      if (didTrack) await new Promise((r) => window.setTimeout(r, 250));
-    } catch {}
-    try { channel.untrack(); } catch {}
-    try { supabase.removeChannel(channel); } catch {}
-  }
-}
-
-/**
  * Advertises room code:
  * - Supabase: Only during lobby phase (clears on game start for cleaner lobby list)
  * - WebRTC: Continuously broadcasts to Supabase for rejoin scenarios
@@ -1250,10 +1217,30 @@ export function useAdvertiseRoom(roomCode: string, isLobby: boolean, _mode: Conn
  * This runs independently and keeps the room discoverable even after game starts
  */
 export function useWebRTCRoomBroadcast(roomCode: string) {
+  const channelRef = useRef<RealtimeChannel | null>(null);
+  const aliveRef = useRef(false);
+  const roomCodeRef = useRef(roomCode);
+  useEffect(() => {
+    roomCodeRef.current = roomCode;
+  }, [roomCode]);
+
+  const rebroadcastNow = useCallback(async () => {
+    const channel = channelRef.current;
+    if (!channel || !aliveRef.current || !roomCodeRef.current) return false;
+    try {
+      await channel.track({ roomCode: roomCodeRef.current, ts: Date.now(), source: 'webrtc' });
+      return true;
+    } catch {
+      return false;
+    }
+  }, []);
+
   useEffect(() => {
     if (!roomCode) return;
     const channel = supabase.channel(WEBRTC_BROADCAST_CHANNEL, { config: { presence: { key: `webrtc-${roomCode}` } } });
     let alive = true;
+    channelRef.current = channel;
+    aliveRef.current = true;
 
     channel.subscribe(async (status) => {
       if (status === 'SUBSCRIBED' && alive) {
@@ -1271,11 +1258,15 @@ export function useWebRTCRoomBroadcast(roomCode: string) {
 
     return () => {
       alive = false;
+      aliveRef.current = false;
+      channelRef.current = null;
       clearInterval(heartbeat);
       channel.untrack();
       supabase.removeChannel(channel);
     };
   }, [roomCode]);
+
+  return rebroadcastNow;
 }
 
 /**

@@ -451,6 +451,7 @@ export default function Client() {
   const prevDamageDealtRef = useRef<number>(0);
   const disconnectGraceUntilRef = useRef(0);
   const disconnectRedirectTimeoutRef = useRef<number | null>(null);
+  const hasReachedEndgameRef = useRef(false);
   const clientInputLocked = Boolean(gameState?.frozenAll || gameState?.videoPlaying || gameState?.replayCountdown);
 
   useEffect(() => {
@@ -471,7 +472,7 @@ export default function Client() {
         disconnectRedirectTimeoutRef.current = null;
       }
     } else if (wasConnectedRef.current && !kicked) {
-      if (gamePhase === "gameover" || showFTranscript) {
+      if (gamePhase === "gameover" || showFTranscript || hasReachedEndgameRef.current) {
         // Stay on transcript/results even if host disconnects.
         return;
       }
@@ -498,6 +499,7 @@ export default function Client() {
   useEffect(() => {
     if (gamePhase === "lobby" || gamePhase === "reveal" || gamePhase === "countdown") {
       setShowFTranscript(false);
+      hasReachedEndgameRef.current = false;
     }
   }, [gamePhase]);
 
@@ -615,6 +617,9 @@ export default function Client() {
       } else if (msg.type === "game-state") {
         setGameState(msg.state);
         if (msg.state?.phase) setGamePhase(msg.state.phase);
+        if (msg.state?.phase === "gameover") {
+          hasReachedEndgameRef.current = true;
+        }
         const currentConnId = connIdRef.current || clientId;
         const self = currentConnId ? msg.state?.players?.[currentConnId] : null;
         if (self) {
@@ -628,6 +633,11 @@ export default function Client() {
       } else if (msg.type === "game-over") {
         setDirectWinner(msg.winner ?? null);
         setGamePhase("gameover");
+        hasReachedEndgameRef.current = true;
+      } else if (msg.type === "event-skipped") {
+        toast("Host skipped event");
+      } else if (msg.type === "exam-skipped") {
+        toast("Host skipped final exam");
       } else if (msg.type === "you-died") {
         if (msg.connId === connIdRef.current) setIsDead(true);
       } else if (msg.type === "tip-qr") {
@@ -1215,7 +1225,11 @@ export default function Client() {
           setBreakdownOpen={setBreakdownOpen}
           cooperationScore={cooperationScore}
           hideWinnerLine={true}
-          resultNodeOverride={<p className="text-2xl font-pixel text-destructive">F doesn't define you.</p>}
+          resultNodeOverride={
+            <p className="w-full max-w-[90vw] mx-auto text-center text-lg sm:text-xl font-pixel text-destructive leading-tight">
+              F doesn't define you.
+            </p>
+          }
           onLeave={() => { disconnect(); navigate("/"); }}
         />
       );
@@ -1300,7 +1314,11 @@ export default function Client() {
   // ─── ACTIVE EVENT PHASE ──────────────────────────────────────────────────────
   const activeEvent = gameState?.activeEvent;
   if (activeEvent && gamePhase === "playing") {
-    const timeLeft = Math.max(0, Math.ceil((activeEvent.endAt - clockNow) / 1000));
+    const safeEndAt =
+      typeof activeEvent.endAt === "number" && Number.isFinite(activeEvent.endAt) && activeEvent.endAt > 0
+        ? activeEvent.endAt
+        : activeEvent.startedAt + 3000 + 30000;
+    const timeLeft = Math.max(0, Math.ceil((safeEndAt - clockNow) / 1000));
 
     if (activeEvent.phase === "countdown") {
       const cdSec = Math.max(1, 3 - Math.floor((clockNow - activeEvent.startedAt) / 1000));

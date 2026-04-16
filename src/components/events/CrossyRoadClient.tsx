@@ -17,7 +17,11 @@ export default function CrossyRoadClient({ event, isEagle, connId, nowTs, onHop,
   const [speedCd, setSpeedCd] = useState(0);
   const [obstacleCd, setObstacleCd] = useState(0);
   const now = nowTs;
-  const timeLeft = Math.max(0, Math.ceil((event.endAt - nowTs) / 1000));
+  const safeEndAt =
+    typeof event.endAt === "number" && Number.isFinite(event.endAt) && event.endAt > 0
+      ? event.endAt
+      : event.startedAt + 30000;
+  const timeLeft = Math.max(0, Math.ceil((safeEndAt - nowTs) / 1000));
   const myState: CrossyPlayerState | undefined = event.crossyPlayerStates?.[connId];
   const lanes = event.crossyLanes ?? [];
   const speedBoost = event.eagleSpeedBoost ?? 1;

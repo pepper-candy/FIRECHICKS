@@ -1664,7 +1664,22 @@ export function useGameLogic({ players, broadcast, gameMode, connectionMode, map
     const now = Date.now();
     const player = gs.playerStates.get(connId) as PlayerGameState | undefined;
     if (!player || !player.alive) return;
-    if (gs.frozenAll || gs.pendingEagleFreezeAfterVideo || gs.pendingExamEndAfterVideo || !!gs.videoPlaying || !!gs.replayCountdown) {
+    const eventInputTypes = new Set(["event-hitbox-click", "crossy-hop", "crossy-eagle-action", "event-answer"]);
+    const isEventInput =
+      typeof (msg as any)?.type === "string" &&
+      eventInputTypes.has((msg as any).type);
+    const isEventInputAllowed =
+      isEventInput &&
+      !!gs.activeEvent &&
+      gs.activeEvent.phase === "active" &&
+      !gs.pendingEagleFreezeAfterVideo &&
+      !gs.pendingExamEndAfterVideo &&
+      !gs.videoPlaying &&
+      !gs.replayCountdown;
+    if (
+      (gs.frozenAll || gs.pendingEagleFreezeAfterVideo || gs.pendingExamEndAfterVideo || !!gs.videoPlaying || !!gs.replayCountdown) &&
+      !isEventInputAllowed
+    ) {
       return;
     }
 
@@ -2243,6 +2258,7 @@ export function useGameLogic({ players, broadcast, gameMode, connectionMode, map
     const gs = gameStateRef.current as GameStateRef | null;
     if (!gs || gs.phase !== "exam" || !gs.examState || gs.examState.answered) return;
     gs.examState.answered = true;
+    broadcastRef.current({ type: "exam-skipped" });
     resolveExamWinner(gs, gameModeRef.current as "1v3" | "2v6", broadcastRef.current);
   }, []);
 
@@ -2259,6 +2275,9 @@ export function useGameLogic({ players, broadcast, gameMode, connectionMode, map
     ev.startedAt = Math.min(ev.startedAt, now - 3000);
     ev.endAt = now;
     gs.eventCountdown = 0;
+    broadcastRef.current({ type: "event-skipped", eventType: ev.type });
+    // Compute event result immediately so host/client transition is deterministic.
+    updateGameState(0);
   }, []);
 
   // ─── Cleanup ─────────────────────────────────────────────────────────────────
