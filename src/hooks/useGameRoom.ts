@@ -157,6 +157,10 @@ function useHostWebRTC(enabled: boolean, opts?: WebRtcOptions) {
   const slotDataRef = useRef<Map<string, { colorIndex: number; code: string }>>(new Map());
   const clientAliasRef = useRef<Map<string, string>>(new Map()); // newClientId → oldClientId
   const [takeoverCodes, setTakeoverCodes] = useState<Record<string, string>>({});
+  const pingDiagnosticsEnabledRef = useRef(false);
+  const setPingDiagnosticsEnabled = useCallback((enabled: boolean) => {
+    pingDiagnosticsEnabledRef.current = enabled;
+  }, []);
   const resolveClientId = useCallback((clientId: string) => clientAliasRef.current.get(clientId) ?? clientId, []);
 
   const recordSlot = (connId: string, colorIndex: number): string => {
@@ -407,11 +411,12 @@ function useHostWebRTC(enabled: boolean, opts?: WebRtcOptions) {
       });
 
       pingInterval = window.setInterval(() => {
+        if (!pingDiagnosticsEnabledRef.current) return;
         const ts = Date.now();
         connsRef.current.forEach((conn) => {
           try { conn.send(JSON.stringify({ type: 'ping', ts })); } catch {}
         });
-      }, 5000);
+      }, 500);
     })();
 
     return () => {
@@ -488,7 +493,7 @@ function useHostWebRTC(enabled: boolean, opts?: WebRtcOptions) {
     for (const id of botIds) removeBot(id);
   }, [removeBot]);
 
-  return { roomCode, players, kickPlayer, kickAllPlayers, broadcast, onClientMessage, usedColors: usedColorsRef, gameModeRef, takeoverCodes, sendToClient, addBot, removeBot, fillBots, removeBots };
+  return { roomCode, players, kickPlayer, kickAllPlayers, broadcast, onClientMessage, usedColors: usedColorsRef, gameModeRef, takeoverCodes, sendToClient, addBot, removeBot, fillBots, removeBots, setPingDiagnosticsEnabled };
 }
 
 // ─── HOST: Supabase ─────────────────────────────────────────
@@ -504,6 +509,10 @@ function useHostSupabase(enabled: boolean) {
   const clientAliasRef = useRef<Map<string, string>>(new Map()); // newClientId → oldClientId
   const currentClientRef = useRef<Map<string, string>>(new Map()); // oldClientId → currentClientId
   const [takeoverCodes, setTakeoverCodes] = useState<Record<string, string>>({});
+  const pingDiagnosticsEnabledRef = useRef(false);
+  const setPingDiagnosticsEnabled = useCallback((enabled: boolean) => {
+    pingDiagnosticsEnabledRef.current = enabled;
+  }, []);
   const resolveClientId = useCallback((clientId: string) => clientAliasRef.current.get(clientId) ?? clientId, []);
 
   const recordSlot = (connId: string, colorIndex: number): string => {
@@ -716,8 +725,9 @@ function useHostSupabase(enabled: boolean) {
     channelRef.current = channel;
 
     const pingInterval = window.setInterval(() => {
+      if (!pingDiagnosticsEnabledRef.current) return;
       channel.send({ type: 'broadcast', event: 'ping', payload: { ts: Date.now() } });
-    }, 2000);
+    }, 500);
 
     return () => {
       clearInterval(pingInterval);
@@ -788,7 +798,7 @@ function useHostSupabase(enabled: boolean) {
     for (const id of botIds) removeBot(id);
   }, [removeBot]);
 
-  return { roomCode, players, kickPlayer, kickAllPlayers, broadcast, onClientMessage, usedColors: usedColorsRef, gameModeRef, takeoverCodes, sendToClient, addBot, removeBot, fillBots, removeBots };
+  return { roomCode, players, kickPlayer, kickAllPlayers, broadcast, onClientMessage, usedColors: usedColorsRef, gameModeRef, takeoverCodes, sendToClient, addBot, removeBot, fillBots, removeBots, setPingDiagnosticsEnabled };
 }
 
 // ─── CLIENT: WebRTC ─────────────────────────────────────────
@@ -1150,6 +1160,7 @@ const NOOP_HOST = {
   broadcast: () => {}, onClientMessage: () => {}, usedColors: { current: new Set<number>() },
   gameModeRef: { current: '1v3' as const }, takeoverCodes: {}, sendToClient: () => {},
   addBot: () => {}, removeBot: () => {}, fillBots: () => {}, removeBots: () => {},
+  setPingDiagnosticsEnabled: () => {},
 };
 
 const NOOP_CLIENT = {
@@ -1227,8 +1238,26 @@ export function useWebRTCRoomBroadcast(roomCode: string) {
   const rebroadcastNow = useCallback(async () => {
     const channel = channelRef.current;
     if (!channel || !aliveRef.current || !roomCodeRef.current) return false;
+    for (let attempt = 0; attempt < 3; attempt++) {
+      try {
+        await channel.track({ roomCode: roomCodeRef.current, ts: Date.now(), source: 'webrtc' });
+        return true;
+      } catch {
+        await new Promise((r) => window.setTimeout(r, 120));
+      }
+    }
+    return false;
+  }, []);
+
+  const broadcastBeaconNow = useCallback(async () => {
+    const channel = channelRef.current;
+    if (!channel || !aliveRef.current || !roomCodeRef.current) return false;
     try {
-      await channel.track({ roomCode: roomCodeRef.current, ts: Date.now(), source: 'webrtc' });
+      await channel.send({
+        type: 'broadcast',
+        event: 'room-beacon',
+        payload: { roomCode: roomCodeRef.current, ts: Date.now(), source: 'webrtc-click' },
+      });
       return true;
     } catch {
       return false;
@@ -1254,7 +1283,7 @@ export function useWebRTCRoomBroadcast(roomCode: string) {
       if (alive) {
         try { await channel.track({ roomCode, ts: Date.now(), source: 'webrtc' }); } catch {}
       }
-    }, 5_000);
+    }, 1_000);
 
     return () => {
       alive = false;
@@ -1266,7 +1295,10 @@ export function useWebRTCRoomBroadcast(roomCode: string) {
     };
   }, [roomCode]);
 
-  return rebroadcastNow;
+  return {
+    rebroadcastNow,
+    broadcastBeaconNow,
+  };
 }
 
 /**
@@ -1279,6 +1311,7 @@ export function useDiscoverRooms(mode: ConnectionMode) {
   const [rooms, setRooms] = useState<string[]>([]);
   useEffect(() => {
     const discoveredRooms = new Set<string>();
+    const beaconRooms = new Map<string, number>(); // roomCode -> expiresAt
 
     // Channel 1: Discover lobby rooms (clears on game start)
     const lobbyChannel = supabase.channel(LOBBY_CHANNEL, { 
@@ -1287,6 +1320,15 @@ export function useDiscoverRooms(mode: ConnectionMode) {
 
     const updateRooms = () => {
       discoveredRooms.clear();
+      const now = Date.now();
+
+      for (const [code, expiresAt] of beaconRooms.entries()) {
+        if (expiresAt <= now) {
+          beaconRooms.delete(code);
+          continue;
+        }
+        discoveredRooms.add(code);
+      }
 
       // Get rooms from lobby channel (active lobby rooms)
       if (mode === 'supabase') {
@@ -1323,6 +1365,13 @@ export function useDiscoverRooms(mode: ConnectionMode) {
     webrtcChannel.on('presence', { event: 'sync' }, updateRooms);
     webrtcChannel.on('presence', { event: 'join' }, updateRooms);
     webrtcChannel.on('presence', { event: 'leave' }, updateRooms);
+    webrtcChannel.on('broadcast', { event: 'room-beacon' }, (payload) => {
+      const p = payload.payload as { roomCode?: string; ts?: number };
+      if (!p?.roomCode) return;
+      // Keep beacons visible briefly as a fallback in case presence lags/drops.
+      beaconRooms.set(p.roomCode, Date.now() + 15000);
+      updateRooms();
+    });
 
     lobbyChannel.subscribe((status) => {
       if (status === 'SUBSCRIBED') updateRooms();
@@ -1331,7 +1380,10 @@ export function useDiscoverRooms(mode: ConnectionMode) {
       if (status === 'SUBSCRIBED') updateRooms();
     });
 
+    const cleanup = window.setInterval(updateRooms, 2000);
+
     return () => {
+      clearInterval(cleanup);
       supabase.removeChannel(lobbyChannel);
       supabase.removeChannel(webrtcChannel);
     };

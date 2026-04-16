@@ -201,6 +201,7 @@ export default function Host() {
     takeoverCodes,
     fillBots,
     removeBots,
+    setPingDiagnosticsEnabled,
   } = useHostRoom(effectiveMode, { forceRelay: isImmersive });
   const [revealedCodes, setRevealedCodes] = useState<Set<string>>(new Set());
   const [botsAdded, setBotsAdded] = useState(false);
@@ -252,7 +253,7 @@ export default function Host() {
   }, [grabBackUntil]);
 
   useAdvertiseRoom(roomCode, phase === "lobby", effectiveMode);
-  const rebroadcastNow = useWebRTCRoomBroadcast(roomCode);
+  const { rebroadcastNow, broadcastBeaconNow } = useWebRTCRoomBroadcast(roomCode);
 
   // Register client message handler
   useEffect(() => {
@@ -435,8 +436,8 @@ export default function Host() {
               type="button"
               onClick={async () => {
                 if (!isImmersive) return;
-                const ok = await rebroadcastNow();
-                toast(ok ? "Room rebroadcasted" : "Room rebroadcast failed");
+                const [presenceOk, beaconOk] = await Promise.all([rebroadcastNow(), broadcastBeaconNow()]);
+                toast(presenceOk || beaconOk ? "Room rebroadcasted" : "Room rebroadcast failed");
               }}
               className={`px-2 py-1 rounded border border-border bg-card font-mono text-sm ${
                 isImmersive ? "hover:bg-card/80 cursor-pointer active:scale-[0.99] transition-all" : "cursor-default"
@@ -545,7 +546,10 @@ export default function Host() {
           )}
         </div>
 
-        <NetworkPerformancePanel players={players} />
+        <NetworkPerformancePanel
+          players={players}
+          onOpenChange={(open) => setPingDiagnosticsEnabled?.(open)}
+        />
       </div>
     );
   }
@@ -1081,7 +1085,10 @@ export default function Host() {
           <EventOverlay event={snapshot.activeEvent} players={snapshot.players} gameMode={gameMode} />
         )}
 
-        <NetworkPerformancePanel players={players} />
+        <NetworkPerformancePanel
+          players={players}
+          onOpenChange={(open) => setPingDiagnosticsEnabled?.(open)}
+        />
 
         {/* Stage transition toast — slides in from right under game timer */}
         {stageToast && (

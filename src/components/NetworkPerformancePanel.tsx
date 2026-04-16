@@ -8,9 +8,10 @@ const IDLE_THRESHOLD_MS = 10000; // consider idle if no pong for 10s
 
 interface Props {
   players: Map<string, PlayerState>;
+  onOpenChange?: (open: boolean) => void;
 }
 
-export default function NetworkPerformancePanel({ players }: Props) {
+export default function NetworkPerformancePanel({ players, onOpenChange }: Props) {
   const [open, setOpen] = useState(false);
   const [now, setNow] = useState(Date.now());
 
@@ -67,7 +68,13 @@ export default function NetworkPerformancePanel({ players }: Props) {
 
       {/* Toggle button */}
       <button
-        onClick={() => setOpen((o) => !o)}
+        onClick={() =>
+          setOpen((o) => {
+            const next = !o;
+            onOpenChange?.(next);
+            return next;
+          })
+        }
         className="ml-auto flex items-center gap-1.5 px-3 py-1.5 rounded border border-border bg-card text-xs text-muted-foreground hover:text-foreground transition-colors"
       >
         <Activity className="w-3 h-3" />
