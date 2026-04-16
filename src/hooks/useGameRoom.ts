@@ -1266,7 +1266,12 @@ export function useWebRTCRoomBroadcast(roomCode: string) {
 
   useEffect(() => {
     if (!roomCode) return;
-    const channel = supabase.channel(WEBRTC_BROADCAST_CHANNEL, { config: { presence: { key: `webrtc-${roomCode}` } } });
+    const channel = supabase.channel(WEBRTC_BROADCAST_CHANNEL, {
+      config: {
+        presence: { key: `webrtc-${roomCode}` },
+        broadcast: { self: false },
+      },
+    });
     let alive = true;
     channelRef.current = channel;
     aliveRef.current = true;
@@ -1358,8 +1363,11 @@ export function useDiscoverRooms(mode: ConnectionMode) {
     lobbyChannel.on('presence', { event: 'leave' }, updateRooms);
 
     // Channel 2: Discover WebRTC broadcasts (persistent, includes active games)
-    const webrtcChannel = supabase.channel(WEBRTC_BROADCAST_CHANNEL, { 
-      config: { presence: { key: `discover-webrtc-${Math.random().toString(36).slice(2, 6)}` } } 
+    const webrtcChannel = supabase.channel(WEBRTC_BROADCAST_CHANNEL, {
+      config: {
+        presence: { key: `discover-webrtc-${Math.random().toString(36).slice(2, 6)}` },
+        broadcast: { self: false },
+      },
     });
 
     webrtcChannel.on('presence', { event: 'sync' }, updateRooms);
