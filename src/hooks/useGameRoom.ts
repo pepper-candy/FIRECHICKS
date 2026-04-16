@@ -59,7 +59,7 @@ function allocateColor(usedColors: Set<number>, excludeIndices: number[] = []): 
 }
 
 // ─── HOST: WebRTC ───────────────────────────────────────────
-function useHostWebRTC() {
+function useHostWebRTC(enabled: boolean) {
   const [roomCode, setRoomCode] = useState('');
   const [players, setPlayers] = useState<Map<string, PlayerState>>(new Map());
   const peerRef = useRef<Peer | null>(null);
@@ -159,6 +159,12 @@ function useHostWebRTC() {
   }, [broadcast]);
 
   useEffect(() => {
+    if (!enabled) {
+      setRoomCode('');
+      setPlayers(new Map());
+      return;
+    }
+
     const code = generateRoomCode();
     setRoomCode(code);
 
@@ -323,7 +329,7 @@ function useHostWebRTC() {
       connsRef.current.clear();
       peer.destroy();
     };
-  }, [removePlayer, handleColorSwap]);
+  }, [enabled, removePlayer, handleColorSwap]);
 
   const addBot = useCallback((connId: string, colorIndex: number) => {
     usedColorsRef.current.add(colorIndex);
@@ -394,7 +400,7 @@ function useHostWebRTC() {
 }
 
 // ─── HOST: Supabase ─────────────────────────────────────────
-function useHostSupabase() {
+function useHostSupabase(enabled: boolean) {
   const [roomCode, setRoomCode] = useState('');
   const [players, setPlayers] = useState<Map<string, PlayerState>>(new Map());
   const channelRef = useRef<RealtimeChannel | null>(null);
@@ -494,6 +500,12 @@ function useHostSupabase() {
   }, []);
 
   useEffect(() => {
+    if (!enabled) {
+      setRoomCode('');
+      setPlayers(new Map());
+      return;
+    }
+
     const code = generateRoomCode();
     setRoomCode(code);
 
@@ -619,7 +631,7 @@ function useHostSupabase() {
       clearInterval(pingInterval);
       channel.unsubscribe();
     };
-  }, [removePlayer, handleColorSwap, resolveClientId]);
+  }, [enabled, removePlayer, handleColorSwap, resolveClientId]);
 
   const addBot = useCallback((connId: string, colorIndex: number) => {
     usedColorsRef.current.add(colorIndex);
@@ -688,7 +700,7 @@ function useHostSupabase() {
 }
 
 // ─── CLIENT: WebRTC ─────────────────────────────────────────
-function useClientWebRTC(roomCode: string) {
+function useClientWebRTC(roomCode: string, enabled: boolean) {
   const [connected, setConnected] = useState(false);
   const [colorIndex, setColorIndex] = useState<number>(-1);
   const [clientId, setClientId] = useState<string>("");
@@ -705,6 +717,7 @@ function useClientWebRTC(roomCode: string) {
   const hostMsgCallbackRef = useRef<((msg: any) => void) | null>(null);
 
   const connect = useCallback((overrideCode?: string, takeoverCode?: string) => {
+    if (!enabled) return;
     const targetCode = overrideCode || roomCode;
     if (!targetCode) return;
 
@@ -786,7 +799,7 @@ function useClientWebRTC(roomCode: string) {
         if (intervalRef.current) clearInterval(intervalRef.current);
       });
     });
-  }, [roomCode]);
+  }, [enabled, roomCode]);
 
   const doDisconnect = useCallback(() => {
     if (intervalRef.current) clearInterval(intervalRef.current);
@@ -849,7 +862,7 @@ function useClientWebRTC(roomCode: string) {
 }
 
 // ─── CLIENT: Supabase ───────────────────────────────────────
-function useClientSupabase(roomCode: string) {
+function useClientSupabase(roomCode: string, enabled: boolean) {
   const [connected, setConnected] = useState(false);
   const [colorIndex, setColorIndex] = useState<number>(-1);
   const [clientId, setClientId] = useState<string>("");
@@ -863,6 +876,7 @@ function useClientSupabase(roomCode: string) {
   const hostMsgCallbackRef = useRef<((msg: any) => void) | null>(null);
 
   const connect = useCallback((overrideCode?: string, takeoverCode?: string) => {
+    if (!enabled) return;
     const targetCode = overrideCode || roomCode;
     if (!targetCode) return;
 
@@ -955,7 +969,7 @@ function useClientSupabase(roomCode: string) {
       });
 
     channelRef.current = channel;
-  }, [roomCode]);
+  }, [enabled, roomCode]);
 
   const sendJoystick = useCallback((data: JoystickData) => {
     if (idleRef.current || inputLockedRef.current) return;
@@ -1027,15 +1041,14 @@ const NOOP_CLIENT = {
 };
 
 export function useHostRoom(mode: ConnectionMode = 'webrtc') {
-  const webrtc = useHostWebRTC();
-  const supa = useHostSupabase();
-  // Both hooks run (React rules), but only the active one's state is used
+  const webrtc = useHostWebRTC(mode === 'webrtc');
+  const supa = useHostSupabase(mode === 'supabase');
   return mode === 'webrtc' ? webrtc : supa;
 }
 
 export function useClientRoom(roomCode: string, mode: ConnectionMode = 'webrtc') {
-  const webrtc = useClientWebRTC(roomCode);
-  const supa = useClientSupabase(roomCode);
+  const webrtc = useClientWebRTC(roomCode, mode === 'webrtc');
+  const supa = useClientSupabase(roomCode, mode === 'supabase');
   return mode === 'webrtc' ? webrtc : supa;
 }
 
@@ -1122,11 +1135,6 @@ export function useWebRTCRoomBroadcast(roomCode: string) {
 export function useDiscoverRooms(mode: ConnectionMode) {
   const [rooms, setRooms] = useState<string[]>([]);
   useEffect(() => {
-    if (mode !== "supabase") {
-      setRooms([]);
-      return;
-    }
-
     const discoveredRooms = new Set<string>();
 
     // Channel 1: Discover lobby rooms (clears on game start)
@@ -1138,22 +1146,25 @@ export function useDiscoverRooms(mode: ConnectionMode) {
       discoveredRooms.clear();
 
       // Get rooms from lobby channel (active lobby rooms)
-      const lobbyState = lobbyChannel.presenceState();
-      const lobbyCodes = Object.values(lobbyState)
-        .flat()
-        .map((p: any) => p.roomCode as string)
-        .filter(Boolean);
-      lobbyCodes.forEach(code => discoveredRooms.add(code));
+      if (mode === 'supabase') {
+        const lobbyState = lobbyChannel.presenceState();
+        const lobbyCodes = Object.values(lobbyState)
+          .flat()
+          .map((p: any) => p.roomCode as string)
+          .filter(Boolean);
+        lobbyCodes.forEach(code => discoveredRooms.add(code));
+      }
 
-      // Get rooms from WebRTC broadcast channel (all rooms, including active games)
-      const webrtcState = webrtcChannel.presenceState();
-      const webrtcCodes = Object.values(webrtcState)
-        .flat()
-        .map((p: any) => p.roomCode as string)
-        .filter(Boolean);
-      webrtcCodes.forEach(code => discoveredRooms.add(code));
+      // WebRTC mode uses the persistent broadcast channel; supabase mode merges both.
+      if (mode === 'webrtc' || mode === 'supabase') {
+        const webrtcState = webrtcChannel.presenceState();
+        const webrtcCodes = Object.values(webrtcState)
+          .flat()
+          .map((p: any) => p.roomCode as string)
+          .filter(Boolean);
+        webrtcCodes.forEach(code => discoveredRooms.add(code));
+      }
 
-      // Update state with deduplicated combined list
       setRooms(Array.from(discoveredRooms).sort());
     };
 
@@ -1170,8 +1181,12 @@ export function useDiscoverRooms(mode: ConnectionMode) {
     webrtcChannel.on('presence', { event: 'join' }, updateRooms);
     webrtcChannel.on('presence', { event: 'leave' }, updateRooms);
 
-    lobbyChannel.subscribe();
-    webrtcChannel.subscribe();
+    lobbyChannel.subscribe((status) => {
+      if (status === 'SUBSCRIBED') updateRooms();
+    });
+    webrtcChannel.subscribe((status) => {
+      if (status === 'SUBSCRIBED') updateRooms();
+    });
 
     return () => {
       supabase.removeChannel(lobbyChannel);
