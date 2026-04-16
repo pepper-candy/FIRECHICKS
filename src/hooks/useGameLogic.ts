@@ -1553,7 +1553,7 @@ export function useGameLogic({ players, broadcast, gameMode, connectionMode, map
       };
     }
 
-    const snap: GameStateSnapshot = {
+    const hostSnap: GameStateSnapshot = {
       phase: gs.phase,
       stage: gs.stage,
       gameTime: gs.gameTime,
@@ -1577,12 +1577,29 @@ export function useGameLogic({ players, broadcast, gameMode, connectionMode, map
       replayCountdown: (gs as any).replayCountdown ?? null,
     };
 
-    setSnapshot(snap);
+    setSnapshot(hostSnap);
+
+    // Keep client payload lightweight during replay: replay frames are only needed on host.
+    const networkReplay = hostSnap.replayCountdown
+      ? {
+          ...hostSnap.replayCountdown,
+          replayData: {
+            ...hostSnap.replayCountdown.replayData,
+            frames: [],
+          },
+        }
+      : null;
+    const networkSnap: GameStateSnapshot = {
+      ...hostSnap,
+      replayCountdown: networkReplay,
+    };
+
     const nowMs = Date.now();
-    const minIntervalMs = connectionModeRef.current === "supabase" ? 66 : 0;
+    const inReplayWindow = Boolean(hostSnap.videoPlaying || hostSnap.replayCountdown);
+    const minIntervalMs = inReplayWindow ? 66 : connectionModeRef.current === "supabase" ? 66 : 0;
     if (minIntervalMs === 0 || nowMs - lastNetworkStateBroadcastAtRef.current >= minIntervalMs) {
       lastNetworkStateBroadcastAtRef.current = nowMs;
-      bcast({ type: "game-state", state: snap });
+      bcast({ type: "game-state", state: networkSnap });
     }
   }, []);
 

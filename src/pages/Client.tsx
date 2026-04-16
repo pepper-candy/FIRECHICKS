@@ -1568,10 +1568,16 @@ export default function Client() {
   // ─── LOBBY / GAMEPLAY CONTROLLER ─────────────────────────────────────────────
   const stage = gameState?.stage ?? 0;
   const socialMet = myState?.socialCircleMet?.length ?? 0;
+  const showManualPauseOverlay = Boolean(
+    gamePhase === "playing" &&
+      gameState?.frozenAll &&
+      !gameState?.videoPlaying &&
+      !gameState?.replayCountdown,
+  );
 
   return (
     <div className="flex flex-col h-dvh overflow-hidden p-2 gap-2 select-none">
-      {clientInputLocked && gamePhase === "playing" && (
+      {showManualPauseOverlay && (
         <div className="fixed inset-0 z-[70] flex items-center justify-center bg-background/90 backdrop-blur-sm">
           <div className="rounded-xl border border-border bg-card/90 px-6 py-4 text-center shadow-2xl">
             <p className="text-sm font-pixel tracking-widest text-primary">
@@ -1641,7 +1647,7 @@ export default function Client() {
             <div className="w-2 h-2 rounded-full bg-primary" />
             <span className="text-primary">LIVE</span>
           </div>
-          <span className="text-muted-foreground/60">({mode})</span>
+          {!isImmersive && <span className="text-muted-foreground/60">({mode})</span>}
         </div>
 
         {/* Health */}
