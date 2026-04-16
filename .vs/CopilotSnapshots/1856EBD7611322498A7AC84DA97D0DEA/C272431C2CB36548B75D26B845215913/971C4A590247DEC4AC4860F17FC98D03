@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+﻿import { useState, useEffect, useRef, useCallback } from 'react';
 import Peer, { DataConnection } from 'peerjs';
 import { supabase } from '@/integrations/supabase/client';
 import type { RealtimeChannel } from '@supabase/supabase-js';
@@ -928,7 +928,7 @@ function useClientSupabase(roomCode: string) {
       })
       .subscribe((status) => {
         if (status === 'SUBSCRIBED') {
-          // Set a validation timeout: if no host message is received within 8 seconds, disconnect
+          // Set a validation timeout: if no host message is received within 5 seconds, disconnect
           validationTimeoutId = setTimeout(() => {
             if (!hostValidated && channelRef.current === channel) {
               // No host activity detected — invalid room code
@@ -938,7 +938,7 @@ function useClientSupabase(roomCode: string) {
               // Notify via a kicked event to show error
               setKicked(true);
             }
-          }, 8000);
+          }, 5000);
 
           setConnected(true);
           channel.send({ type: 'broadcast', event: 'client-join', payload: { clientId: clientIdRef.current, ...(takeoverCode ? { takeoverCode } : {}) } });

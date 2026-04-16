@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+﻿import { useState, useEffect, useRef, useCallback } from 'react';
 import Peer, { DataConnection } from 'peerjs';
 import { supabase } from '@/integrations/supabase/client';
 import type { RealtimeChannel } from '@supabase/supabase-js';
@@ -928,7 +928,7 @@ function useClientSupabase(roomCode: string) {
       })
       .subscribe((status) => {
         if (status === 'SUBSCRIBED') {
-          // Set a validation timeout: if no host message is received within 8 seconds, disconnect
+          // Set a validation timeout: if no host message is received within 5 seconds, disconnect
           validationTimeoutId = setTimeout(() => {
             if (!hostValidated && channelRef.current === channel) {
               // No host activity detected — invalid room code
@@ -938,7 +938,7 @@ function useClientSupabase(roomCode: string) {
               // Notify via a kicked event to show error
               setKicked(true);
             }
-          }, 8000);
+          }, 5000);
 
           setConnected(true);
           channel.send({ type: 'broadcast', event: 'client-join', payload: { clientId: clientIdRef.current, ...(takeoverCode ? { takeoverCode } : {}) } });
@@ -1061,15 +1061,9 @@ export function useAdvertiseRoom(roomCode: string, _mode: ConnectionMode) {
   }, [roomCode]);
 }
 
-export function useDiscoverRooms(mode: ConnectionMode) {
+export function useDiscoverRooms(_mode: ConnectionMode) {
   const [rooms, setRooms] = useState<string[]>([]);
   useEffect(() => {
-    // Only discover in Supabase mode
-    if (mode !== "supabase") {
-      setRooms([]);
-      return;
-    }
-
     const channel = supabase.channel(LOBBY_CHANNEL, { config: { presence: { key: `discover-${Math.random().toString(36).slice(2, 6)}` } } });
 
     channel.on('presence', { event: 'sync' }, () => {
@@ -1083,6 +1077,6 @@ export function useDiscoverRooms(mode: ConnectionMode) {
 
     channel.subscribe();
     return () => { supabase.removeChannel(channel); };
-  }, [mode]);
+  }, []);
   return rooms;
 }

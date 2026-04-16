@@ -1,7 +1,12 @@
 {
   "ExpandedNodes": [
-    ""
+    "",
+    "\\public",
+    "\\public\\FireChick",
+    "\\src",
+    "\\src\\hooks",
+    "\\supabase"
   ],
-  "SelectedNode": "\\vite.config_for_local_host.ts",
+  "SelectedNode": "\\public\\FireChick\\Babylon.js Sandbox.url",
   "PreviewInSolutionExplorer": false
 }

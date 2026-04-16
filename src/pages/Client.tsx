@@ -826,25 +826,30 @@ export default function Client() {
     [setIdle],
   );
   const handleAttack = useCallback(() => {
+    if (clientInputLocked) return;
     sendToHost({ type: "attack-press" });
-  }, [sendToHost]);
+  }, [clientInputLocked, sendToHost]);
   const handlePropUse = useCallback(
     (t: PropType) => {
+      if (clientInputLocked) return;
       sendToHost({ type: "prop-use", propType: t });
     },
-    [sendToHost],
+    [clientInputLocked, sendToHost],
   );
   const handleHitboxClick = useCallback(() => {
+    if (clientInputLocked) return;
     sendToHost({ type: "hitbox-click" });
-  }, [sendToHost]);
+  }, [clientInputLocked, sendToHost]);
   const handleScan = useCallback(
     (data: string) => {
+      if (clientInputLocked) return;
       sendToHost({ type: "scan-result", data });
     },
-    [sendToHost],
+    [clientInputLocked, sendToHost],
   );
   const handleTipTap = useCallback(
     (tipIndex: 0 | 1) => {
+      if (clientInputLocked) return;
       if (loadingTip[tipIndex]) return;
       // Check local expiry cooldown
       if (Date.now() < tipExpiryCooldown[tipIndex]) return;
@@ -866,7 +871,7 @@ export default function Client() {
       }
       sendToHost({ type: "tip-request", tipIndex });
     },
-    [sendToHost, tipQrCodes, activeScannerQr, tipExpiryCooldown, loadingTip],
+    [clientInputLocked, sendToHost, tipQrCodes, activeScannerQr, tipExpiryCooldown, loadingTip],
   );
   const handleDismissScannerQr = useCallback(() => {
     setActiveScannerQr(null);
