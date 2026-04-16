@@ -700,6 +700,7 @@ function useClientWebRTC(roomCode: string) {
   const joystickRef = useRef<JoystickData>({ x: 0, y: 0 });
   const intervalRef = useRef<number | null>(null);
   const idleRef = useRef(true);
+  const inputLockedRef = useRef(false);
   const colorIndexRef = useRef(-1);
   const hostMsgCallbackRef = useRef<((msg: any) => void) | null>(null);
 
@@ -709,6 +710,8 @@ function useClientWebRTC(roomCode: string) {
     const code = targetCode.toUpperCase();
     setKicked(false);
     setRoomFull(false);
+    inputLockedRef.current = false;
+    joystickRef.current = { x: 0, y: 0 };
 
     const peer = new Peer(undefined as any, {
       config: {
@@ -730,7 +733,7 @@ function useClientWebRTC(roomCode: string) {
       conn.on('open', () => {
         setConnected(true);
         intervalRef.current = window.setInterval(() => {
-          if (colorIndexRef.current >= 0 && !idleRef.current) {
+          if (colorIndexRef.current >= 0 && !idleRef.current && !inputLockedRef.current) {
             try { conn.send({ type: 'joystick', colorIndex: colorIndexRef.current, x: joystickRef.current.x, y: joystickRef.current.y }); } catch {}
           }
         }, JOYSTICK_SEND_INTERVAL);
@@ -785,6 +788,8 @@ function useClientWebRTC(roomCode: string) {
     connRef.current = null;
     peerRef.current?.destroy();
     peerRef.current = null;
+    inputLockedRef.current = false;
+    joystickRef.current = { x: 0, y: 0 };
     setConnected(false);
     setColorIndex(-1);
     colorIndexRef.current = -1;
@@ -794,14 +799,24 @@ function useClientWebRTC(roomCode: string) {
 
   const sendJoystick = useCallback((data: JoystickData) => {
     joystickRef.current = data;
-    if (!idleRef.current && connRef.current && colorIndexRef.current >= 0) {
+    if (!idleRef.current && !inputLockedRef.current && connRef.current && colorIndexRef.current >= 0) {
       try { connRef.current.send({ type: 'joystick', colorIndex: colorIndexRef.current, x: data.x, y: data.y }); } catch {}
     }
   }, []);
 
   const setIdle = useCallback((idle: boolean) => { idleRef.current = idle; }, []);
 
+  const setInputLocked = useCallback((locked: boolean) => {
+    inputLockedRef.current = locked;
+    if (!locked) return;
+    joystickRef.current = { x: 0, y: 0 };
+    if (connRef.current && colorIndexRef.current >= 0) {
+      try { connRef.current.send({ type: 'joystick', colorIndex: colorIndexRef.current, x: 0, y: 0 }); } catch {}
+    }
+  }, []);
+
   const sendToHost = useCallback((msg: any) => {
+    if (inputLockedRef.current) return;
     if (connRef.current) {
       try { connRef.current.send(JSON.stringify(msg)); } catch {}
     }
@@ -823,7 +838,7 @@ function useClientWebRTC(roomCode: string) {
     };
   }, []);
 
-  return { connected, connect, sendJoystick, disconnect, colorIndex, roomFull, kicked, clientId, setIdle, sendToHost, onHostMessage, requestColorSwap, usedColors };
+  return { connected, connect, sendJoystick, disconnect, colorIndex, roomFull, kicked, clientId, setIdle, setInputLocked, sendToHost, onHostMessage, requestColorSwap, usedColors };
 }
 
 // ─── CLIENT: Supabase ───────────────────────────────────────
@@ -837,6 +852,7 @@ function useClientSupabase(roomCode: string) {
   const channelRef = useRef<RealtimeChannel | null>(null);
   const clientIdRef = useRef(Math.random().toString(36).substring(2, 10));
   const idleRef = useRef(true);
+  const inputLockedRef = useRef(false);
   const hostMsgCallbackRef = useRef<((msg: any) => void) | null>(null);
 
   const connect = useCallback((overrideCode?: string, takeoverCode?: string) => {
@@ -845,6 +861,7 @@ function useClientSupabase(roomCode: string) {
     const code = targetCode.toUpperCase();
     setKicked(false);
     setRoomFull(false);
+    inputLockedRef.current = false;
 
     if (channelRef.current) {
       channelRef.current.unsubscribe();
@@ -932,7 +949,7 @@ function useClientSupabase(roomCode: string) {
   }, [roomCode]);
 
   const sendJoystick = useCallback((data: JoystickData) => {
-    if (idleRef.current) return;
+    if (idleRef.current || inputLockedRef.current) return;
     channelRef.current?.send({
       type: 'broadcast', event: 'joystick',
       payload: { clientId: clientIdRef.current, ...data },
@@ -941,7 +958,17 @@ function useClientSupabase(roomCode: string) {
 
   const setIdle = useCallback((idle: boolean) => { idleRef.current = idle; }, []);
 
+  const setInputLocked = useCallback((locked: boolean) => {
+    inputLockedRef.current = locked;
+    if (!locked) return;
+    channelRef.current?.send({
+      type: 'broadcast', event: 'joystick',
+      payload: { clientId: clientIdRef.current, x: 0, y: 0 },
+    });
+  }, []);
+
   const sendToHost = useCallback((msg: any) => {
+    if (inputLockedRef.current) return;
     channelRef.current?.send({
       type: 'broadcast', event: 'client-action',
       payload: { clientId: clientIdRef.current, ...msg },
@@ -960,6 +987,7 @@ function useClientSupabase(roomCode: string) {
   }, []);
 
   const disconnect = useCallback(() => {
+    inputLockedRef.current = false;
     channelRef.current?.send({ type: 'broadcast', event: 'client-leave', payload: { clientId: clientIdRef.current } });
     channelRef.current?.unsubscribe();
     channelRef.current = null;
@@ -971,7 +999,7 @@ function useClientSupabase(roomCode: string) {
     return () => { channelRef.current?.unsubscribe(); };
   }, []);
 
-  return { connected, connect, sendJoystick, disconnect, colorIndex, roomFull, kicked, clientId, setIdle, sendToHost, onHostMessage, requestColorSwap, usedColors };
+  return { connected, connect, sendJoystick, disconnect, colorIndex, roomFull, kicked, clientId, setIdle, setInputLocked, sendToHost, onHostMessage, requestColorSwap, usedColors };
 }
 
 // ─── Public hooks ───────────────────────────────────────────
@@ -984,7 +1012,7 @@ const NOOP_HOST = {
 
 const NOOP_CLIENT = {
   connected: false, connect: () => {}, sendJoystick: () => {}, disconnect: () => {},
-  colorIndex: -1, roomFull: false, kicked: false, clientId: '', setIdle: () => {},
+  colorIndex: -1, roomFull: false, kicked: false, clientId: '', setIdle: () => {}, setInputLocked: () => {},
   sendToHost: () => {}, onHostMessage: () => {}, requestColorSwap: () => {},
   usedColors: new Set<number>(),
 };

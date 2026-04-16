@@ -390,6 +390,7 @@ export default function Client() {
     roomFull,
     kicked,
     setIdle,
+    setInputLocked,
     sendToHost,
     onHostMessage,
     requestColorSwap,
@@ -443,18 +444,44 @@ export default function Client() {
   const prevFlyUntilRef = useRef<number>(0);
   const prevCagedUntilRef = useRef<number>(0);
   const prevDamageDealtRef = useRef<number>(0);
+  const disconnectGraceUntilRef = useRef(0);
+  const disconnectRedirectTimeoutRef = useRef<number | null>(null);
+  const clientInputLocked = Boolean(gameState?.frozenAll || gameState?.videoPlaying || gameState?.replayCountdown);
+
+  useEffect(() => {
+    setInputLocked(clientInputLocked);
+    if (clientInputLocked) {
+      disconnectGraceUntilRef.current = Math.max(disconnectGraceUntilRef.current, Date.now() + 12000);
+    }
+  }, [clientInputLocked, setInputLocked]);
 
   // If host disconnects while client is in lobby/game, navigate to arrival page
   const wasConnectedRef = useRef(false);
   useEffect(() => {
     if (connected) {
       wasConnectedRef.current = true;
+      if (disconnectRedirectTimeoutRef.current !== null) {
+        window.clearTimeout(disconnectRedirectTimeoutRef.current);
+        disconnectRedirectTimeoutRef.current = null;
+      }
     } else if (wasConnectedRef.current && !kicked) {
-      // Was connected, now disconnected (host dropped) — go to arrival
-      wasConnectedRef.current = false;
-      toast("Host Disconnected");
-      navigate("/");
+      const waitMs = Math.max(0, disconnectGraceUntilRef.current - Date.now());
+      if (disconnectRedirectTimeoutRef.current !== null) {
+        window.clearTimeout(disconnectRedirectTimeoutRef.current);
+      }
+      disconnectRedirectTimeoutRef.current = window.setTimeout(() => {
+        wasConnectedRef.current = false;
+        disconnectRedirectTimeoutRef.current = null;
+        toast("Host Disconnected");
+        navigate("/");
+      }, waitMs);
     }
+    return () => {
+      if (disconnectRedirectTimeoutRef.current !== null) {
+        window.clearTimeout(disconnectRedirectTimeoutRef.current);
+        disconnectRedirectTimeoutRef.current = null;
+      }
+    };
   }, [connected, kicked, navigate]);
 
   // Tips state — QR now displays in scanner box, not tip box
@@ -787,9 +814,10 @@ export default function Client() {
 
   const handleMove = useCallback(
     (x: number, y: number) => {
+      if (clientInputLocked) return;
       sendJoystick({ x, y });
     },
-    [sendJoystick],
+    [clientInputLocked, sendJoystick],
   );
   const handleIdleChange = useCallback(
     (idle: boolean) => {
@@ -1508,6 +1536,20 @@ export default function Client() {
 
   return (
     <div className="flex flex-col h-dvh overflow-hidden p-2 gap-2 select-none">
+      {clientInputLocked && gamePhase === "playing" && (
+        <div className="fixed inset-0 z-[70] flex items-center justify-center bg-background/90 backdrop-blur-sm">
+          <div className="rounded-xl border border-border bg-card/90 px-6 py-4 text-center shadow-2xl">
+            <p className="text-sm font-pixel tracking-widest text-primary">
+              {gameState?.replayCountdown ? "ATTACK REPLAY" : "GAME PAUSED"}
+            </p>
+            <p className="mt-2 text-xs font-mono text-muted-foreground">
+              {gameState?.replayCountdown
+                ? "Hold still — the host is replaying the hit."
+                : "Hold still — waiting for the host to resume."}
+            </p>
+          </div>
+        </div>
+      )}
       {/* Damage flash overlay */}
       {damageFlash && (
         <div className="fixed inset-0 z-[60] pointer-events-none damage-flash-overlay" />

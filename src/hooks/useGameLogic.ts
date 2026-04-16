@@ -1644,6 +1644,9 @@ export function useGameLogic({ players, broadcast, gameMode, connectionMode, map
     const now = Date.now();
     const player = gs.playerStates.get(connId) as PlayerGameState | undefined;
     if (!player || !player.alive) return;
+    if (gs.frozenAll || gs.pendingEagleFreezeAfterVideo || gs.pendingExamEndAfterVideo || !!gs.videoPlaying || !!gs.replayCountdown) {
+      return;
+    }
 
     switch (msg.type) {
       // ── Attack ──
