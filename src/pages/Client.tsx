@@ -29,6 +29,7 @@ import GameOverScreen from "@/components/GameOverScreen";
 import { useImmersive } from "@/context/ImmersiveContext";
 import { ColorCodeBalls, ColorCodePicker } from "@/components/ColorCodeBalls";
 import { isColorCode, COLOR_CODE_LETTERS } from "@/lib/colorCode";
+import { AreYouStillTherePrompt } from "@/components/AreYouStillTherePrompt";
 
 // ─── Props Button (inline for compact layout) ──────────────────────────────────
 const PROP_COLORS: Record<PropType, string> = {
@@ -430,6 +431,7 @@ export default function Client() {
   const [mockExamZoom, setMockExamZoom] = useState(1);
   const [mockExamOpacity, setMockExamOpacity] = useState(0.85);
   const connIdRef = useRef<string>("");
+  const [showSusWarning, setShowSusWarning] = useState(false);
 
   // Event state
   const [eventAnswer, setEventAnswer] = useState("");
@@ -733,6 +735,11 @@ export default function Client() {
           setExamAnswer("");
         }
         setGamePhase("exam");
+    } else if (msg.type === "player-sus-warning") {
+        const warningConnId = msg.connId as string;
+        if (warningConnId === connIdRef.current) {
+          setShowSusWarning(true);
+        }
       }
     });
   }, [onHostMessage, colorIndex, clientId]);
@@ -1682,6 +1689,15 @@ export default function Client() {
 
   return (
     <div className="flex flex-col h-dvh overflow-hidden p-2 gap-2 select-none">
+      {/* Sus warning prompt — appears when player hasn't interacted for 3s */}
+      {showSusWarning && (
+        <AreYouStillTherePrompt
+          onRespond={() => {
+            setShowSusWarning(false);
+            sendToHost({ type: "player-still-here" });
+          }}
+        />
+      )}
       {showManualPauseOverlay && (
         <div className="fixed inset-0 z-[70] flex items-center justify-center bg-background/90 backdrop-blur-sm">
           <div className="rounded-xl border border-border bg-card/90 px-6 py-4 text-center shadow-2xl">

@@ -80,6 +80,8 @@ const CAGE_LOCK_DURATION = 10000;
 const CAGE_POST_INVINCIBLE = 3000;
 const REPLAY_COUNTDOWN_DURATION = 3000;
 const POSITION_HISTORY_MAX = 300; // ~5s at 60fps
+const SUS_PLAYER_WARN_DELAY = 3000; // 3s before showing "Are you still there?"
+const SUS_PLAYER_DISCONNECT_DELAY = 15000; // 15s total before auto-disconnect
 
 // Answer keys
 const FINAL_ANSWER_KEY: Record<number, string> = {
@@ -112,6 +114,12 @@ interface BuildingTimer {
 interface EagleZoneState {
   buildingId: number;
   entryHealth: number;
+}
+
+interface SusPlayer {
+  connId: string;
+  detectedAt: number;
+  promptShownAt: number | null;
 }
 
 interface UseGameLogicProps {
@@ -253,6 +261,8 @@ export function useGameLogic({ players, broadcast, gameMode, connectionMode, map
   const gameStateRef = useRef<GameStateRef | null>(null);
   const gamePausedRef = useRef(false);
   const botsPausedRef = useRef(false);
+  // Sus players tracking: connId -> { detectedAt, promptShownAt }
+  const susPlayersRef = useRef<Map<string, SusPlayer>>(new Map());
 
   const [snapshot, setSnapshot] = useState<GameStateSnapshot | null>(null);
   const [videoPlaying, setVideoPlaying] = useState<"hurt" | "dead" | null>(null);
@@ -580,6 +590,66 @@ export function useGameLogic({ players, broadcast, gameMode, connectionMode, map
     }
 
     if (gs.phase !== "playing" && gs.phase !== "exam") return;
+
+    // ── Sus player detection (disconnection/inactivity check) ──
+    const susPlayers = susPlayersRef.current;
+    for (const [connId, sus] of susPlayers) {
+      const elapsed = now - sus.detectedAt;
+
+      // Show "Are you still there?" prompt at 3 second mark
+      if (!sus.promptShownAt && elapsed >= SUS_PLAYER_WARN_DELAY) {
+        sus.promptShownAt = now;
+        currentBroadcast({
+          type: "player-sus-warning",
+          connId,
+        });
+      }
+
+      // Auto-disconnect and replace with bot at 15 second mark
+      if (elapsed >= SUS_PLAYER_DISCONNECT_DELAY) {
+        const player = gs.playerStates.get(connId);
+        if (player && player.alive) {
+          // Replace with bot
+          const botConnId = `bot-${connId}`;
+          const botPlayer: PlayerGameState = {
+            ...player,
+            connId: botConnId,
+          };
+          gs.playerStates.set(botConnId, botPlayer);
+          gs.playerStates.delete(connId);
+
+          // If this player was the exam submitter, assign a new one
+          if (gs.examState && gs.examState.layer1ConnId === connId) {
+            const aliveChicks = Array.from(gs.playerStates.values()).filter(
+              (p) => !p.isEagle && p.alive && !isBotConnId(p.connId)
+            );
+            if (aliveChicks.length > 0) {
+              const newSubmitter = aliveChicks[Math.floor(Math.random() * aliveChicks.length)];
+              gs.examState.layer1ConnId = newSubmitter.connId;
+              currentBroadcast({
+                type: "exam-submitter-changed",
+                newSubmitterId: newSubmitter.connId,
+              });
+            }
+          }
+        }
+        susPlayers.delete(connId);
+      }
+    }
+
+    // Detect newly disconnected players (those in playerStates but not in live players Map)
+    for (const [connId, p] of gs.playerStates) {
+      if (p.alive && !isBotConnId(connId) && !currentPlayers.has(connId)) {
+        // Player just disconnected
+        if (!susPlayers.has(connId)) {
+          susPlayers.set(connId, {
+            connId,
+            detectedAt: now,
+            promptShownAt: null,
+          });
+        }
+      }
+    }
 
     // ── Time ──
     if (!gs.frozenAll) {
@@ -1395,7 +1465,10 @@ export function useGameLogic({ players, broadcast, gameMode, connectionMode, map
 
     if (!gs.winner) {
       if (aliveChicks.length === 0) {
+        // Broadcast updated state BEFORE ending game to ensure clients receive health deductions
+        doBroadcastState(gs, currentBroadcast);
         endGame(gs, "eagle", currentBroadcast);
+        return; // endGame calls doBroadcastState again
       }
       // After exam: check for chicks-win vs draw (handled in endGame after exam completion)
     }
@@ -2160,6 +2233,15 @@ export function useGameLogic({ players, broadcast, gameMode, connectionMode, map
         break;
       }
 
+      // ── Player responded to "Are you still there?" prompt ──
+      case "player-still-here": {
+        const susPlayers = susPlayersRef.current;
+        if (susPlayers.has(connId)) {
+          susPlayers.delete(connId);
+        }
+        break;
+      }
+
       default:
         break;
     }
@@ -2313,5 +2395,6 @@ export function useGameLogic({ players, broadcast, gameMode, connectionMode, map
     hostSkipActiveEvent,
     togglePause,
     toggleBotsPause,
+    susPlayersRef,
   };
 }
