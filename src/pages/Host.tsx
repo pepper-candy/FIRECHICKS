@@ -282,6 +282,28 @@ export default function Host() {
     void import("@/lib/colorCode").then(({ releaseColorCode }) => releaseColorCode(roomCode));
   }, [phase, roomCode, isImmersive]);
 
+    // Release regular room code when host leaves lobby without starting game
+    useEffect(() => {
+        if (!roomCode) return;
+        if (phase !== "lobby") return;
+
+        const releaseRoom = async () => {
+            try {
+                await fetch('/api/release-room', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ code: roomCode })
+                });
+            } catch { }
+        };
+
+        window.addEventListener('beforeunload', releaseRoom);
+        return () => {
+            window.removeEventListener('beforeunload', releaseRoom);
+            releaseRoom();
+        };
+    }, [roomCode, phase]);
+
   // Register client message handler
   useEffect(() => {
     onClientMessage((connId, msg) => {

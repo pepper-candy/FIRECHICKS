@@ -3,12 +3,14 @@
     "",
     "\\.cursor",
     "\\.cursor\\plans",
+    "\\.lovable",
+    "\\api",
     "\\public",
     "\\public\\FireChick",
     "\\src",
     "\\src\\hooks",
     "\\supabase"
   ],
-  "SelectedNode": "\\.cursor\\plans\\reduce_turn_traffic_+_gameplay_fixes_b154a737.plan.md",
+  "SelectedNode": "\\api\\debug",
   "PreviewInSolutionExplorer": false
 }
