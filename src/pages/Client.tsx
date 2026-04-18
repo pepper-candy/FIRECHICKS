@@ -1253,11 +1253,19 @@ export default function Client() {
           cooperationScore={cooperationScore}
           hideWinnerLine={true}
           resultNodeOverride={
-            <p className="w-full max-w-[90vw] mx-auto text-center text-lg sm:text-xl font-pixel text-destructive leading-tight">
-              F doesn't define you.
-            </p>
+              <p
+                  className="text-destructive text-center text-xl sm:text-2xl font-black leading-tight tracking-tight uppercase"
+                  style={{ fontFamily: "'Inter', system-ui, sans-serif" }}
+              >
+                  F DOESN'T DEFINE YOU.
+              </p>
           }
-          onLeave={() => { disconnect(); navigate("/"); }}
+              onLeave={() => {
+                  disconnect();
+                  setTimeout(() => {
+                      window.location.href = "/";
+                  }, 200);
+              }}
         />
       );
     }
