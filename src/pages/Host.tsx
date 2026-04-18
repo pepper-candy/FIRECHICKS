@@ -202,7 +202,7 @@ export default function Host() {
     fillBots,
     removeBots,
     setPingDiagnosticsEnabled,
-  } = useHostRoom(effectiveMode, { forceRelay: isImmersive });
+  } = useHostRoom(effectiveMode, { forceRelay: isImmersive, useColorCode: isImmersive });
   const [revealedCodes, setRevealedCodes] = useState<Set<string>>(new Set());
   const [botsAdded, setBotsAdded] = useState(false);
   const debugLogRef = useRef<string[]>([]);
