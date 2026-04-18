@@ -107,6 +107,11 @@ type WebRtcOptions = {
    * Safety: only applied when Cloudflare TURN credentials were successfully fetched.
    */
   forceRelay?: boolean;
+  /**
+   * When true, host attempts to reserve a 4-color permutation code via Neon
+   * (immersive mode). Falls back to a 6-char text code if exhausted/offline.
+   */
+  useColorCode?: boolean;
 };
 
 async function buildPeerRtcConfig(opts?: WebRtcOptions): Promise<RTCConfiguration> {
