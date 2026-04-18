@@ -269,6 +269,18 @@ export default function Host() {
     return () => clearInterval(broadcastInterval);
   }, [phase, rebroadcastNow]);
 
+  // Release reserved color code as soon as the game leaves the lobby so the
+  // permutation is freed up for new lobbies (no players join after lobby).
+  const releasedRoomRef = useRef<string>("");
+  useEffect(() => {
+    if (!isImmersive) return;
+    if (!roomCode) return;
+    if (phase === "lobby") return;
+    if (releasedRoomRef.current === roomCode) return;
+    releasedRoomRef.current = roomCode;
+    void import("@/lib/colorCode").then(({ releaseColorCode }) => releaseColorCode(roomCode));
+  }, [phase, roomCode, isImmersive]);
+
   // Register client message handler
   useEffect(() => {
     onClientMessage((connId, msg) => {
