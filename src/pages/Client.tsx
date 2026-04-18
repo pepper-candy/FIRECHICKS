@@ -30,6 +30,7 @@ import { useImmersive } from "@/context/ImmersiveContext";
 import { ColorCodeBalls, ColorCodePicker } from "@/components/ColorCodeBalls";
 import { isColorCode, COLOR_CODE_LETTERS } from "@/lib/colorCode";
 import { AreYouStillTherePrompt } from "@/components/AreYouStillTherePrompt";
+import { GameEndTransition } from "@/components/GameEndTransition";
 
 // ─── Props Button (inline for compact layout) ──────────────────────────────────
 const PROP_COLORS: Record<PropType, string> = {
@@ -432,6 +433,7 @@ export default function Client() {
   const [mockExamOpacity, setMockExamOpacity] = useState(0.85);
   const connIdRef = useRef<string>("");
   const [showSusWarning, setShowSusWarning] = useState(false);
+  const [showingEndTransition, setShowingEndTransition] = useState(false);
 
   // Event state
   const [eventAnswer, setEventAnswer] = useState("");
@@ -846,6 +848,13 @@ export default function Client() {
       prevDamageDealtRef.current = 0;
     }
   }, [gamePhase]);
+
+  // ── GameEndTransition trigger ──
+  useEffect(() => {
+    if (gamePhase === "gameover" && gameState?.examState && !showingEndTransition) {
+      setShowingEndTransition(true);
+    }
+  }, [gamePhase, gameState?.examState, showingEndTransition]);
 
   // ── Prop-use screen edge pulse ──
   useEffect(() => {
@@ -1320,6 +1329,13 @@ export default function Client() {
 
   // ─── GAME OVER ───────────────────────────────────────────────────────────────
   if (gamePhase === "gameover") {
+    // Show transition first if exam was played
+    if (showingEndTransition && gameState?.examState) {
+      return (
+        <GameEndTransition onComplete={() => setShowingEndTransition(false)} />
+      );
+    }
+
     const winner = directWinner ?? gameState?.winner;
     const amWinner = (winner === "eagle" && isEagle) || (winner === "chicks" && !isEagle);
     const isDraw = winner === "draw";
