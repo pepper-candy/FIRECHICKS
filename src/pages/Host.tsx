@@ -30,6 +30,7 @@ import ScoreBreakdownModal from "@/components/ScoreBreakdownModal";
 import { Bounds } from "@react-three/drei";
 import { useImmersive } from "@/context/ImmersiveContext";
 import { ColorCodeBalls } from "@/components/ColorCodeBalls";
+import { GameEndTransition } from "@/components/GameEndTransition";
 
 // ─── Event Overlay (shows during mystery box events) ─────────────────────────
 function EventOverlay({
@@ -1186,6 +1187,9 @@ export default function Host() {
 function GameOverCeremony({ snapshot, gameMode }: { snapshot: GameStateSnapshot; gameMode: string }) {
   const { isImmersive } = useImmersive();
   const [ceremonyPhase, setCeremonyPhase] = useState<"mvp" | "team" | "transcript">("mvp");
+  const [showingEndTransition, setShowingEndTransition] = useState(
+    snapshot.examState ? true : false
+  );
 
   const winner = snapshot.winner;
   const getMatchResult = (p: PlayerGameStateSerializable): "draw" | "win" | "lose" => {
@@ -1215,6 +1219,13 @@ function GameOverCeremony({ snapshot, gameMode }: { snapshot: GameStateSnapshot;
 
   const skipTeamPhase =
     winner === "draw" || (winner === "eagle" && gameMode === "1v3") || winningTeamPlayers.length === 0;
+
+  // Show transition first if exam was played
+  if (showingEndTransition) {
+    return (
+      <GameEndTransition onComplete={() => setShowingEndTransition(false)} />
+    );
+  }
 
   useEffect(() => {
     const t1 = setTimeout(() => {

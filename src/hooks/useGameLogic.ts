@@ -80,8 +80,15 @@ const CAGE_LOCK_DURATION = 10000;
 const CAGE_POST_INVINCIBLE = 3000;
 const REPLAY_COUNTDOWN_DURATION = 3000;
 const POSITION_HISTORY_MAX = 300; // ~5s at 60fps
+// Sus detection system (4 levels)
 const SUS_PLAYER_WARN_DELAY = 3000; // 3s before showing "Are you still there?"
 const SUS_PLAYER_DISCONNECT_DELAY = 15000; // 15s total before auto-disconnect
+const PING_PONG_CHECK_INTERVAL = 5000; // Check ping every 5s
+const PING_PONG_FAIL_THRESHOLD = 2; // 2 consecutive fails triggers warning
+const PING_PONG_WARNING_DURATION = 10000; // 10s to respond to ping
+const ACTIVITY_CHECK_INTERVAL = 20000; // Check activity every 20s
+const ACTIVITY_INACTIVITY_TIMEOUT = 20000; // 20s without movement/props triggers warning
+const ACTIVITY_WARNING_DURATION = 20000; // 20s to show activity
 
 // Answer keys
 const FINAL_ANSWER_KEY: Record<number, string> = {

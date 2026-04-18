@@ -32,6 +32,7 @@ import { isColorCode, COLOR_CODE_LETTERS } from "@/lib/colorCode";
 import { AreYouStillTherePrompt } from "@/components/AreYouStillTherePrompt";
 import { GameEndTransition } from "@/components/GameEndTransition";
 import { ExamVotingUI } from "@/components/ExamVotingUI";
+import { ExamSubmissionBox } from "@/components/ExamSubmissionBox";
 
 // ─── Props Button (inline for compact layout) ──────────────────────────────────
 const PROP_COLORS: Record<PropType, string> = {
@@ -436,6 +437,9 @@ export default function Client() {
   const [showSusWarning, setShowSusWarning] = useState(false);
   const [showingEndTransition, setShowingEndTransition] = useState(false);
   const [showExamVoting, setShowExamVoting] = useState(false);
+  const [isExamSubmitter, setIsExamSubmitter] = useState(false);
+  const [hasVotedExam, setHasVotedExam] = useState(false);
+  const [currentExamVote, setCurrentExamVote] = useState<'pass' | 'fail' | null>(null);
   const [examVotingState, setExamVotingState] = useState<{
     submitterConnId: string;
     submitterName: string;
@@ -751,24 +755,30 @@ export default function Client() {
           setShowSusWarning(true);
         }
     } else if (msg.type === "exam-voting-start") {
-        const submitterConnId = msg.submitterConnId as string;
-        const maskedAnswer = msg.maskedAnswer as string;
-        const startedAt = msg.startedAt as number;
+       const submitterConnId = msg.submitterConnId as string;
+       const maskedAnswer = msg.maskedAnswer as string;
+       const startedAt = msg.startedAt as number;
 
-        // Get submitter name from game state
-        const submitterState = gameState?.players?.[submitterConnId];
-        const submitterName = submitterState 
-          ? `${PLAYER_COLORS[submitterState.colorIndex]?.name ?? 'Player'}`
-          : 'Anonymous';
+       // Get submitter name from game state
+       const submitterState = gameState?.players?.[submitterConnId];
+       const submitterName = submitterState 
+         ? `${PLAYER_COLORS[submitterState.colorIndex]?.name ?? 'Player'}`
+         : 'Anonymous';
 
-        setExamVotingState({
-          submitterConnId,
-          submitterName,
-          maskedAnswer,
-          startedAt,
-        });
-        setShowExamVoting(true);
-      }
+       // Check if this client is the submitter
+       const isSubmitter = submitterConnId === connIdRef.current;
+
+       setExamVotingState({
+         submitterConnId,
+         submitterName,
+         maskedAnswer,
+         startedAt,
+       });
+       setIsExamSubmitter(isSubmitter);
+       setShowExamVoting(true);
+       setHasVotedExam(false);
+       setCurrentExamVote(null);
+     }
     });
   }, [onHostMessage, colorIndex, clientId, gameState]);
 
@@ -981,10 +991,11 @@ export default function Client() {
     });
     setTipQrCodes([null, null]);
   }, [activeScannerTipIdx]);
-  const handleExamSubmit = useCallback(() => {
-    if (examAnswer.trim()) {
+  const handleExamSubmit = useCallback((answer?: string) => {
+    const answerToSubmit = answer ?? examAnswer;
+    if (answerToSubmit.trim()) {
       // Send as voting answer message for voting system
-      sendToHost({ type: "exam-answer-submit", answer: examAnswer.trim() });
+      sendToHost({ type: "exam-answer-submit", answer: answerToSubmit.trim() });
       setExamAnswer("");
     }
   }, [sendToHost, examAnswer]);
@@ -1604,22 +1615,6 @@ export default function Client() {
 
   // ─── EXAM PHASE ──────────────────────────────────────────────────────────────
   if (gamePhase === "exam") {
-    // Show voting UI if exam voting is active
-    if (showExamVoting && examVotingState) {
-      return (
-        <ExamVotingUI
-          submitterName={examVotingState.submitterName}
-          maskedAnswer={examVotingState.maskedAnswer}
-          startedAt={examVotingState.startedAt}
-          votingDurationMs={10000}
-          onVote={(vote) => {
-            sendToHost({ type: "exam-vote", vote });
-            setShowExamVoting(false);
-          }}
-        />
-      );
-    }
-
     // Eagle sees distract message
     if (isEagle) {
       return (
@@ -1718,20 +1713,72 @@ export default function Client() {
           </div>
         </div>
 
-        {/* Answer submit */}
-        <div className="flex gap-2 px-3 pb-4">
-          <Input
-            placeholder="Type your answer..."
-            value={examAnswer}
-            onChange={(e) => setExamAnswer(e.target.value.toUpperCase())}
-            className="flex-1 uppercase font-mono"
-            onKeyDown={(e) => e.key === "Enter" && handleExamSubmit()}
-          />
+        {/* Bottom section: Voting UI or Answer input */}
+        {showExamVoting && examVotingState ? (
+          <div className="flex flex-col gap-3 px-3 pb-4 border-t border-border">
+            {/* Submitter answer input */}
+            {isExamSubmitter ? (
+              <ExamSubmissionBox
+                questionNum={examQuestionNum}
+                onSubmit={(answer) => {
+                  handleExamSubmit(answer);
+                }}
+                disabled={false}
+                isSubmitting={false}
+                placeholder="Type your answer..."
+              />
+            ) : null}
 
-          <Button onClick={handleExamSubmit} className="font-pixel text-xs bg-primary">
-            SUBMIT
-          </Button>
-        </div>
+            {/* Vote buttons (for non-submitters or after submission) */}
+            <div className="flex flex-col gap-2">
+              <p className="text-xs font-mono text-muted-foreground text-center">{examVotingState.submitterName}'s answer: {examVotingState.maskedAnswer}</p>
+              <div className="flex gap-2">
+                <Button
+                  onClick={() => {
+                    sendToHost({ type: "exam-vote", vote: "pass" });
+                    setHasVotedExam(true);
+                    setCurrentExamVote("pass");
+                  }}
+                  disabled={hasVotedExam}
+                  variant={currentExamVote === 'pass' ? 'default' : 'outline'}
+                  className="flex-1 font-pixel text-xs"
+                >
+                  ✓ PASS
+                </Button>
+                <Button
+                  onClick={() => {
+                    sendToHost({ type: "exam-vote", vote: "fail" });
+                    setHasVotedExam(true);
+                    setCurrentExamVote("fail");
+                  }}
+                  disabled={hasVotedExam}
+                  variant={currentExamVote === 'fail' ? 'destructive' : 'outline'}
+                  className="flex-1 font-pixel text-xs"
+                >
+                  ✗ FAIL
+                </Button>
+              </div>
+              {hasVotedExam && (
+                <p className="text-xs font-mono text-muted-foreground text-center">Voted: {currentExamVote === 'pass' ? 'PASS' : 'FAIL'}</p>
+              )}
+            </div>
+          </div>
+        ) : (
+          /* Regular answer input (before voting starts) */
+          <div className="flex gap-2 px-3 pb-4 border-t border-border">
+            <Input
+              placeholder="Type your answer..."
+              value={examAnswer}
+              onChange={(e) => setExamAnswer(e.target.value.toUpperCase())}
+              className="flex-1 uppercase font-mono"
+              onKeyDown={(e) => e.key === "Enter" && handleExamSubmit()}
+            />
+
+            <Button onClick={handleExamSubmit} className="font-pixel text-xs bg-primary">
+              SUBMIT
+            </Button>
+          </div>
+        )}
       </div>
     );
   }
@@ -1847,10 +1894,14 @@ export default function Client() {
           <Button
             variant="ghost"
             size="sm"
-            onClick={() => { disconnect(); navigate("/"); }}
-            className="text-[10px] font-mono text-muted-foreground/60 h-6 px-2"
+            onClick={() => { 
+              sendToHost({ type: "player-leave" });
+              setTimeout(() => { disconnect(); navigate("/"); }, 100);
+            }}
+            className="text-[10px] font-mono text-destructive/60 h-6 px-2"
+            title="Leave game"
           >
-            ✕
+            ✕ LEAVE
           </Button>
         </div>
       </div>

@@ -264,7 +264,8 @@ export type ClientMessage =
   | { type: 'teleport-set'; x: number; z: number }
   | { type: 'teleport-confirm' }
   | { type: 'exam-answer-submit'; answer: string }
-  | { type: 'exam-vote'; vote: 'pass' | 'fail' };
+  | { type: 'exam-vote'; vote: 'pass' | 'fail' }
+  | { type: 'player-leave' };
 
 // ─── Replay types ─────────────────────────────────────────────────────────────
 export interface ReplayFramePlayer {
