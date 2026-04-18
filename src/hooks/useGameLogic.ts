@@ -127,6 +127,18 @@ interface SusPlayer {
   connId: string;
   detectedAt: number;
   promptShownAt: number | null;
+  // Level 1: Proper quit
+  properQuit: boolean;
+  // Level 2: Page reload/close (detected via disconnect)
+  disconnectReason: 'proper-quit' | 'page-close' | 'ping-fail' | 'inactive' | null;
+  // Level 3: Ping pong tracking
+  pingFailCount: number;
+  lastPingAt: number;
+  pingWarningShownAt: number | null;
+  // Level 4: Activity tracking
+  lastActivityAt: number;
+  lastPosition: { x: number; z: number };
+  activityWarningShownAt: number | null;
 }
 
 interface UseGameLogicProps {
@@ -268,8 +280,9 @@ export function useGameLogic({ players, broadcast, gameMode, connectionMode, map
   const gameStateRef = useRef<GameStateRef | null>(null);
   const gamePausedRef = useRef(false);
   const botsPausedRef = useRef(false);
-  // Sus players tracking: connId -> { detectedAt, promptShownAt }
+  // Sus players tracking: connId -> { detectedAt, promptShownAt, ...}
   const susPlayersRef = useRef<Map<string, SusPlayer>>(new Map());
+  const lastPingBroadcastRef = useRef(0);
 
   const [snapshot, setSnapshot] = useState<GameStateSnapshot | null>(null);
   const [videoPlaying, setVideoPlaying] = useState<"hurt" | "dead" | null>(null);
@@ -598,49 +611,66 @@ export function useGameLogic({ players, broadcast, gameMode, connectionMode, map
 
     if (gs.phase !== "playing" && gs.phase !== "exam") return;
 
-    // ── Sus player detection (disconnection/inactivity check) ──
+    // ── Sus player detection (4-level system) ──
     const susPlayers = susPlayersRef.current;
     for (const [connId, sus] of susPlayers) {
+      const player = gs.playerStates.get(connId);
+      if (!player || !player.alive) continue;
+
       const elapsed = now - sus.detectedAt;
 
-      // Show "Are you still there?" prompt at 3 second mark
-      if (!sus.promptShownAt && elapsed >= SUS_PLAYER_WARN_DELAY) {
-        sus.promptShownAt = now;
-        currentBroadcast({
-          type: "player-sus-warning",
-          connId,
-        });
+      // LEVEL 1: Proper quit → Immediate bot replacement (skip warning)
+      if (sus.properQuit && elapsed >= 100) {
+        replaceSusPlayerWithBot(gs, connId, currentBroadcast);
+        susPlayers.delete(connId);
+        continue;
       }
 
-      // Auto-disconnect and replace with bot at 15 second mark
-      if (elapsed >= SUS_PLAYER_DISCONNECT_DELAY) {
-        const player = gs.playerStates.get(connId);
-        if (player && player.alive) {
-          // Replace with bot
-          const botConnId = `bot-${connId}`;
-          const botPlayer: PlayerGameState = {
-            ...player,
-            connId: botConnId,
-          };
-          gs.playerStates.set(botConnId, botPlayer);
-          gs.playerStates.delete(connId);
+      // LEVEL 2: Page reload/close (detected via disconnect) → Immediate bot replacement
+      if (sus.disconnectReason === 'page-close' && elapsed >= 500) {
+        replaceSusPlayerWithBot(gs, connId, currentBroadcast);
+        susPlayers.delete(connId);
+        continue;
+      }
 
-          // If this player was the exam submitter, assign a new one
-          if (gs.examState && gs.examState.layer1ConnId === connId) {
-            const aliveChicks = Array.from(gs.playerStates.values()).filter(
-              (p) => !p.isEagle && p.alive && !isBotConnId(p.connId)
-            );
-            if (aliveChicks.length > 0) {
-              const newSubmitter = aliveChicks[Math.floor(Math.random() * aliveChicks.length)];
-              gs.examState.layer1ConnId = newSubmitter.connId;
-              currentBroadcast({
-                type: "exam-submitter-changed",
-                newSubmitterId: newSubmitter.connId,
-              });
-            }
+      // LEVEL 3: Ping pong failures → Show 10s warning, then bot
+      if (sus.pingFailCount >= PING_PONG_FAIL_THRESHOLD) {
+        if (!sus.pingWarningShownAt) {
+          sus.pingWarningShownAt = now;
+          currentBroadcast({
+            type: "player-sus-warning",
+            connId,
+          });
+        }
+        const pingElapsed = now - sus.pingWarningShownAt;
+        if (pingElapsed >= PING_PONG_WARNING_DURATION) {
+          sus.disconnectReason = 'ping-fail';
+          replaceSusPlayerWithBot(gs, connId, currentBroadcast);
+          susPlayers.delete(connId);
+          continue;
+        }
+      }
+
+      // LEVEL 4: Inactivity (no movement/props for 20s) → Show 20s warning, then bot
+      // Skip during minigames and exam
+      if (gs.phase === "playing" && !gs.activeEvent && !gs.examState) {
+        const timeSinceActivity = now - sus.lastActivityAt;
+        if (timeSinceActivity >= ACTIVITY_INACTIVITY_TIMEOUT) {
+          if (!sus.activityWarningShownAt) {
+            sus.activityWarningShownAt = now;
+            currentBroadcast({
+              type: "player-sus-warning",
+              connId,
+            });
+          }
+          const activityElapsed = now - sus.activityWarningShownAt;
+          if (activityElapsed >= ACTIVITY_WARNING_DURATION) {
+            sus.disconnectReason = 'inactive';
+            replaceSusPlayerWithBot(gs, connId, currentBroadcast);
+            susPlayers.delete(connId);
+            continue;
           }
         }
-        susPlayers.delete(connId);
       }
     }
 
@@ -653,7 +683,83 @@ export function useGameLogic({ players, broadcast, gameMode, connectionMode, map
             connId,
             detectedAt: now,
             promptShownAt: null,
+            properQuit: false,
+            disconnectReason: 'page-close', // Assume page close unless we know better
+            pingFailCount: 0,
+            lastPingAt: 0,
+            pingWarningShownAt: null,
+            lastActivityAt: now,
+            lastPosition: p.position,
+            activityWarningShownAt: null,
           });
+        }
+      }
+    }
+
+    // Track activity (movement + prop usage) for non-bot players
+    for (const [connId, player] of gs.playerStates) {
+      if (!player.alive || isBotConnId(connId)) continue;
+      const sus = susPlayers.get(connId);
+      if (!sus) continue;
+
+      // Check for movement or recent prop usage
+      const movedDistance = Math.hypot(
+        player.position.x - sus.lastPosition.x,
+        player.position.z - sus.lastPosition.z
+      );
+
+      if (movedDistance > 0.1 || now - player.attackCooldownUntil < 500) {
+        sus.lastActivityAt = now;
+        sus.lastPosition = player.position;
+      }
+    }
+  }
+
+  // Helper function to replace sus player with bot
+  const replaceSusPlayerWithBot = (
+    gs: GameStateRef,
+    connId: string,
+    broadcast: (msg: HostMessage) => void
+  ) => {
+    const player = gs.playerStates.get(connId);
+    if (!player) return;
+
+    const botConnId = `bot-${connId}`;
+    const botPlayer: PlayerGameState = {
+      ...player,
+      connId: botConnId,
+    };
+    gs.playerStates.set(botConnId, botPlayer);
+    gs.playerStates.delete(connId);
+
+    // If this player was the exam submitter, assign a new one
+    if (gs.examState && gs.examState.layer1ConnId === connId) {
+      const aliveChicks = Array.from(gs.playerStates.values()).filter(
+        (p) => !p.isEagle && p.alive && !isBotConnId(p.connId)
+      );
+      if (aliveChicks.length > 0) {
+        const newSubmitter = aliveChicks[Math.floor(Math.random() * aliveChicks.length)];
+        gs.examState.layer1ConnId = newSubmitter.connId;
+        broadcast({
+          type: "exam-submitter-changed",
+          newSubmitterId: newSubmitter.connId,
+        });
+      }
+    }
+  };
+
+    // ── Periodic ping checks for sus detection ──
+    if ((lastPingBroadcastRef.current ?? 0) + PING_PONG_CHECK_INTERVAL < now) {
+      lastPingBroadcastRef.current = now;
+      for (const [connId, sus] of susPlayers) {
+        if (sus.properQuit || sus.disconnectReason === 'proper-quit') continue; // Skip already marked
+
+        const timeSincePing = now - sus.lastPingAt;
+        if (timeSincePing > PING_PONG_CHECK_INTERVAL) {
+          sus.pingFailCount += 1;
+          sus.lastPingAt = now;
+          // Broadcast ping to all players
+          currentBroadcast({ type: "ping" });
         }
       }
     }
@@ -2337,6 +2443,45 @@ export function useGameLogic({ players, broadcast, gameMode, connectionMode, map
             }
             updateHostExamDisplay(gs);
           }
+        }
+        break;
+      }
+
+      // ── Player Leave (proper quit via X button) ──
+      case "player-leave": {
+        // Mark as properly quit - trigger immediate bot replacement
+        const susPlayers = susPlayersRef.current;
+        if (!susPlayers.has(connId)) {
+          susPlayers.set(connId, {
+            connId,
+            detectedAt: now,
+            promptShownAt: now, // Already "warned" by proper quit
+            properQuit: true,
+            disconnectReason: 'proper-quit',
+            pingFailCount: 0,
+            lastPingAt: 0,
+            pingWarningShownAt: null,
+            lastActivityAt: 0,
+            lastPosition: player.position,
+            activityWarningShownAt: null,
+          });
+        } else {
+          const sus = susPlayers.get(connId)!;
+          sus.properQuit = true;
+          sus.disconnectReason = 'proper-quit';
+          sus.promptShownAt = now;
+        }
+        break;
+      }
+
+      // ── Pong Response (ping-pong keepalive) ──
+      case "pong": {
+        const susPlayers = susPlayersRef.current;
+        if (susPlayers.has(connId)) {
+          const sus = susPlayers.get(connId)!;
+          sus.lastPingAt = now;
+          sus.pingFailCount = 0; // Reset fail counter on successful pong
+          sus.lastActivityAt = now; // Also counts as activity
         }
         break;
       }

@@ -246,7 +246,8 @@ export type HostMessage =
   | { type: 'exam-wrong'; attemptsLeft: number }
   | { type: 'exam-submitter-selected'; connId: string }
   | { type: 'exam-voting-start'; submitterConnId: string; maskedAnswer: string; startedAt: number }
-  | { type: 'exam-vote-submitted'; connId: string; vote: 'pass' | 'fail' };
+  | { type: 'exam-vote-submitted'; connId: string; vote: 'pass' | 'fail' }
+  | { type: 'ping' };
 
 // Messages client → host
 export type ClientMessage =
@@ -265,7 +266,8 @@ export type ClientMessage =
   | { type: 'teleport-confirm' }
   | { type: 'exam-answer-submit'; answer: string }
   | { type: 'exam-vote'; vote: 'pass' | 'fail' }
-  | { type: 'player-leave' };
+  | { type: 'player-leave' }
+  | { type: 'pong' };
 
 // ─── Replay types ─────────────────────────────────────────────────────────────
 export interface ReplayFramePlayer {

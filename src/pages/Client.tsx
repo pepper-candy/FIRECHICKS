@@ -777,10 +777,14 @@ export default function Client() {
        setIsExamSubmitter(isSubmitter);
        setShowExamVoting(true);
        setHasVotedExam(false);
-       setCurrentExamVote(null);
-     }
+        setCurrentExamVote(null);
+      }
+     } else if (msg.type === "ping") {
+        // Respond to ping with pong to maintain connection status
+        sendToHost({ type: "pong" });
+      }
     });
-  }, [onHostMessage, colorIndex, clientId, gameState]);
+  }, [onHostMessage, colorIndex, clientId, gameState, sendToHost]);
 
   // Watch for tips received (tips changed in game state)
   const prevTipsRef = useRef<[boolean, boolean]>([false, false]);
