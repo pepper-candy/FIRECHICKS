@@ -945,7 +945,8 @@ export default function Client() {
       const fallbackRoom = rememberedRoomCode.trim().toUpperCase();
       const hasTakeover = !isImmersive && rejoinCode.trim().length >= 5;
       const targetRoom = providedRoom || (hasTakeover ? fallbackRoom : "");
-      if (targetRoom.length >= 6) {
+      const targetIsValid = targetRoom.length >= 6 || (isImmersive && isColorCode(targetRoom));
+      if (targetIsValid) {
         setConnecting(true);
         await enterFullscreen();
         if (roomCode || !code) setCode(targetRoom);
@@ -958,7 +959,7 @@ export default function Client() {
     [code, connect, enterFullscreen, rejoinCode, rememberedRoomCode, connecting, isImmersive],
   );
   const hasRejoinCode = rejoinCode.trim().length >= 5;
-  const hasRoomCode = code.trim().length >= 6;
+  const hasRoomCode = code.trim().length >= 6 || (isImmersive && isColorCode(code.trim()));
   const hasFallbackRoom = rememberedRoomCode.trim().length >= 6;
   const canConnect = hasRoomCode || (!isImmersive && hasRejoinCode && hasFallbackRoom);
 
