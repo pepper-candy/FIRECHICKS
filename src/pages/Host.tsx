@@ -29,6 +29,7 @@ import { assetUrl } from "@/lib/assets";
 import ScoreBreakdownModal from "@/components/ScoreBreakdownModal";
 import { Bounds } from "@react-three/drei";
 import { useImmersive } from "@/context/ImmersiveContext";
+import { ColorCodeBalls } from "@/components/ColorCodeBalls";
 
 // ─── Event Overlay (shows during mystery box events) ─────────────────────────
 function EventOverlay({
