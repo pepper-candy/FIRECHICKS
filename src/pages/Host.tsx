@@ -567,7 +567,11 @@ export default function Host() {
           {playerCount === 0 ? (
             <p className="text-xs text-muted-foreground font-mono animate-pulse">
               Open <span className="text-secondary">/client</span> on phones · Room:{" "}
-              <span className="text-accent font-bold">{roomCode}</span>
+              {isImmersive && roomCode.length === 4 ? (
+                <ColorCodeBalls code={roomCode} size={14} gap={4} className="ml-1" />
+              ) : (
+                <span className="text-accent font-bold">{roomCode}</span>
+              )}
             </p>
           ) : !isFull ? (
             <p className="text-xs text-muted-foreground font-mono">
