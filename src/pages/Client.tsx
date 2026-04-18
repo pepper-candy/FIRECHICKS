@@ -1051,7 +1051,7 @@ export default function Client() {
           {isImmersive ? (
             <div className="flex flex-col gap-2">
               <p className="text-[11px] font-mono text-muted-foreground text-center tracking-widest">
-                TAP EACH BALL TO MATCH THE HOST'S COLOR CODE
+                TAP TO MATCH THE HOST'S COLOR CODE
               </p>
               <ColorCodePicker
                 value={code || COLOR_CODE_LETTERS.join("")}
