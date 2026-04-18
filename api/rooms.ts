@@ -39,7 +39,7 @@ export default async function handler(req: any, res: any) {
     const sql = neon(databaseUrl);
     const rooms = await sql`
       SELECT code FROM rooms 
-      WHERE created_at > NOW() - INTERVAL '1 hour'
+      WHERE expires_at > NOW()
       ORDER BY created_at DESC
       LIMIT 100
     `;
