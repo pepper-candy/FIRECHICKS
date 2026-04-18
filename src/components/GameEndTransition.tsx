@@ -50,14 +50,7 @@ export const GameEndTransition = ({ onComplete }: GameEndTransitionProps) => {
             opacity: 0,
           }}
         >
-          <span
-            style={{
-              animation: "cyclePeriods 1.5s steps(3, end) 3s forwards",
-              display: "inline-block",
-            }}
-          >
-            SOMEWHERE, SOMEONE IS GRADING<span className="dots">.</span>
-          </span>
+          SOMEWHERE, SOMEONE IS GRADING...
         </div>
 
         {/* Line 4: "Your transcript is ready." - fades in at 7s */}
@@ -85,13 +78,6 @@ export const GameEndTransition = ({ onComplete }: GameEndTransitionProps) => {
           }
         }
 
-        @keyframes cyclePeriods {
-          0% { content: "SOMEWHERE, SOMEONE IS GRADING."; }
-          33% { content: "SOMEWHERE, SOMEONE IS GRADING.."; }
-          66% { content: "SOMEWHERE, SOMEONE IS GRADING..."; }
-          100% { content: "SOMEWHERE, SOMEONE IS GRADING..."; }
-        }
-
         @keyframes pulse {
           0%, 100% {
             opacity: 1;
@@ -99,10 +85,6 @@ export const GameEndTransition = ({ onComplete }: GameEndTransitionProps) => {
           50% {
             opacity: 0.6;
           }
-        }
-
-        .dots {
-          animation: cyclePeriods 1.5s steps(3, end) infinite;
         }
       `}</style>
     </div>

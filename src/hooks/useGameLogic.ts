@@ -642,6 +642,9 @@ export function useGameLogic({ players, broadcast, gameMode, connectionMode, map
           });
         }
       }
+
+      // Broadcast the state update so clients see the bot replacement
+      doBroadcastState(gs, broadcast);
     };
 
     // ── Sus player detection (4-level system) ──
@@ -744,23 +747,6 @@ export function useGameLogic({ players, broadcast, gameMode, connectionMode, map
       if (movedDistance > 0.1 || now - player.attackCooldownUntil < 500) {
         sus.lastActivityAt = now;
         sus.lastPosition = player.position;
-      }
-    }
-  }
-
-    // ── Periodic ping checks for sus detection ──
-    if ((lastPingBroadcastRef.current ?? 0) + PING_PONG_CHECK_INTERVAL < now) {
-      lastPingBroadcastRef.current = now;
-      for (const [connId, sus] of susPlayers) {
-        if (sus.properQuit || sus.disconnectReason === 'proper-quit') continue; // Skip already marked
-
-        const timeSincePing = now - sus.lastPingAt;
-        if (timeSincePing > PING_PONG_CHECK_INTERVAL) {
-          sus.pingFailCount += 1;
-          sus.lastPingAt = now;
-          // Broadcast ping to all players
-          currentBroadcast({ type: "ping" });
-        }
       }
     }
 
@@ -2474,15 +2460,16 @@ export function useGameLogic({ players, broadcast, gameMode, connectionMode, map
         break;
       }
 
-      // ── Pong Response (ping-pong keepalive) ──
+      // ── Pong Response (client ping keepalive) ──
       case "pong": {
         const susPlayers = susPlayersRef.current;
         if (susPlayers.has(connId)) {
           const sus = susPlayers.get(connId)!;
-          sus.lastPingAt = now;
+          sus.lastPingAt = now; // Update last ping received
           sus.pingFailCount = 0; // Reset fail counter on successful pong
-          sus.lastActivityAt = now; // Also counts as activity
+          sus.lastActivityAt = now; // Ping also counts as activity
         }
+        // If player is not sus yet, remove any inactivity flag
         break;
       }
 

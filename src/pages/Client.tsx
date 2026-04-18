@@ -774,16 +774,22 @@ export default function Client() {
          maskedAnswer,
          startedAt,
        });
-          setIsExamSubmitter(isSubmitter);
-          setShowExamVoting(true);
-          setHasVotedExam(false);
-           setCurrentExamVote(null);
-       } else if (msg.type === "ping") {
-           // Respond to ping with pong to maintain connection status
-           sendToHost({ type: "pong" });
-       }
+       setIsExamSubmitter(isSubmitter);
+       setShowExamVoting(true);
+       setHasVotedExam(false);
+       setCurrentExamVote(null);
+    }
     });
   }, [onHostMessage, colorIndex, clientId, gameState, sendToHost]);
+
+  // Periodic ping to host (every 5s normally, 2s when sus warning shown)
+  useEffect(() => {
+    const pingInterval = showSusWarning ? 2000 : 5000;
+    const interval = setInterval(() => {
+      sendToHost({ type: "pong" }); // Send ping to host
+    }, pingInterval);
+    return () => clearInterval(interval);
+  }, [showSusWarning, sendToHost]);
 
   // Watch for tips received (tips changed in game state)
   const prevTipsRef = useRef<[boolean, boolean]>([false, false]);
@@ -1899,7 +1905,7 @@ export default function Client() {
             size="sm"
             onClick={() => { 
               sendToHost({ type: "player-leave" });
-              setTimeout(() => { disconnect(); navigate("/"); }, 100);
+              setTimeout(() => { disconnect(); navigate("/"); }, 300);
             }}
             className="text-[10px] font-mono text-destructive/60 h-6 px-2"
             title="Leave game"
