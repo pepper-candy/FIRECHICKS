@@ -3,11 +3,25 @@ import Peer, { DataConnection } from 'peerjs';
 import { supabase } from '@/integrations/supabase/client';
 import type { RealtimeChannel } from '@supabase/supabase-js';
 import { MAX_PLAYERS, MAX_PLAYERS_1V3, MAX_PLAYERS_2V6, EAGLE_COLOR_INDICES } from '@/lib/playerColors';
+import { reserveColorCode, releaseColorCode, isColorCode } from '@/lib/colorCode';
 
 export type ConnectionMode = 'webrtc' | 'supabase';
 
 function generateRoomCode(): string {
   return Math.random().toString(36).substring(2, 8).toUpperCase();
+}
+
+/**
+ * Resolve the room code for a host. When `useColorCode` is true (immersive
+ * mode), try to reserve a unique 4-color permutation via the Neon-backed API;
+ * if reservation fails (network, exhaustion), fall back to a 6-char text code.
+ */
+async function resolveHostRoomCode(useColorCode: boolean): Promise<string> {
+  if (useColorCode) {
+    const reserved = await reserveColorCode('host_' + Date.now());
+    if (reserved) return reserved;
+  }
+  return generateRoomCode();
 }
 
 const PEER_PREFIX = 'evsc-';
@@ -93,6 +107,11 @@ type WebRtcOptions = {
    * Safety: only applied when Cloudflare TURN credentials were successfully fetched.
    */
   forceRelay?: boolean;
+  /**
+   * When true, host attempts to reserve a 4-color permutation code via Neon
+   * (immersive mode). Falls back to a 6-char text code if exhausted/offline.
+   */
+  useColorCode?: boolean;
 };
 
 async function buildPeerRtcConfig(opts?: WebRtcOptions): Promise<RTCConfiguration> {
@@ -254,18 +273,21 @@ function useHostWebRTC(enabled: boolean, opts?: WebRtcOptions) {
       return;
     }
 
-    const code = generateRoomCode();
-    setRoomCode(code);
-
     let cancelled = false;
     let peer: Peer | null = null;
     let pingInterval: number | null = null;
+    let resolvedCode = '';
 
     void (async () => {
+      // Resolve code first (may await Neon reservation in immersive mode).
+      resolvedCode = await resolveHostRoomCode(!!opts?.useColorCode);
+      if (cancelled) return;
+      setRoomCode(resolvedCode);
+
       const rtcConfig = await buildPeerRtcConfig({ forceRelay: opts?.forceRelay });
       if (cancelled) return;
 
-      peer = new Peer(`${PEER_PREFIX}${code}`, {
+      peer = new Peer(`${PEER_PREFIX}${resolvedCode}`, {
         config: rtcConfig,
       });
       peerRef.current = peer;
@@ -425,8 +447,12 @@ function useHostWebRTC(enabled: boolean, opts?: WebRtcOptions) {
       connsRef.current.forEach((c) => c.close());
       connsRef.current.clear();
       peer?.destroy();
+      // Release any reserved color code so the permutation can be reused.
+      if (resolvedCode && isColorCode(resolvedCode)) {
+        void releaseColorCode(resolvedCode);
+      }
     };
-  }, [enabled, removePlayer, handleColorSwap, opts?.forceRelay]);
+  }, [enabled, removePlayer, handleColorSwap, opts?.forceRelay, opts?.useColorCode]);
 
   const addBot = useCallback((connId: string, colorIndex: number) => {
     usedColorsRef.current.add(colorIndex);
@@ -497,7 +523,7 @@ function useHostWebRTC(enabled: boolean, opts?: WebRtcOptions) {
 }
 
 // ─── HOST: Supabase ─────────────────────────────────────────
-function useHostSupabase(enabled: boolean) {
+function useHostSupabase(enabled: boolean, opts?: WebRtcOptions) {
   const [roomCode, setRoomCode] = useState('');
   const [players, setPlayers] = useState<Map<string, PlayerState>>(new Map());
   const channelRef = useRef<RealtimeChannel | null>(null);
@@ -608,23 +634,31 @@ function useHostSupabase(enabled: boolean) {
     }
 
     let alive = true;
+    let resolvedCode = '';
 
-    // Create room via API instead of generating locally
+    // Create room via API (or reserve color code in immersive mode).
     (async () => {
       try {
-        const res = await fetch('/api/create-room', { 
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ hostId: 'host_' + Date.now() })
-        });
-        const data = await res.json();
-        const code = data.code;
+        let code: string | undefined;
+        if (opts?.useColorCode) {
+          code = (await reserveColorCode('host_' + Date.now())) ?? undefined;
+        }
+        if (!code) {
+          const res = await fetch('/api/create-room', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ hostId: 'host_' + Date.now() })
+          });
+          const data = await res.json();
+          code = data.code;
+        }
         if (!code) {
           console.error('Failed to create room: no code in response');
           return;
         }
 
         if (!alive) return;
+        resolvedCode = code;
         setRoomCode(code);
 
         const channel = supabase.channel(`game-room-${code}`, {
@@ -766,8 +800,11 @@ function useHostSupabase(enabled: boolean) {
         delete (window as any).__supabaseHostPingInterval;
       }
       channelRef.current?.unsubscribe();
+      if (resolvedCode && isColorCode(resolvedCode)) {
+        void releaseColorCode(resolvedCode);
+      }
     };
-  }, [enabled, removePlayer, handleColorSwap, resolveClientId]);
+  }, [enabled, removePlayer, handleColorSwap, resolveClientId, opts?.useColorCode]);
 
   const addBot = useCallback((connId: string, colorIndex: number) => {
     usedColorsRef.current.add(colorIndex);
@@ -1206,7 +1243,7 @@ const NOOP_CLIENT = {
 
 export function useHostRoom(mode: ConnectionMode = 'webrtc', opts?: WebRtcOptions) {
   const webrtc = useHostWebRTC(mode === 'webrtc', opts);
-  const supa = useHostSupabase(mode === 'supabase');
+  const supa = useHostSupabase(mode === 'supabase', opts);
   return mode === 'webrtc' ? webrtc : supa;
 }
 

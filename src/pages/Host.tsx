@@ -29,6 +29,7 @@ import { assetUrl } from "@/lib/assets";
 import ScoreBreakdownModal from "@/components/ScoreBreakdownModal";
 import { Bounds } from "@react-three/drei";
 import { useImmersive } from "@/context/ImmersiveContext";
+import { ColorCodeBalls } from "@/components/ColorCodeBalls";
 
 // ─── Event Overlay (shows during mystery box events) ─────────────────────────
 function EventOverlay({
@@ -202,7 +203,7 @@ export default function Host() {
     fillBots,
     removeBots,
     setPingDiagnosticsEnabled,
-  } = useHostRoom(effectiveMode, { forceRelay: isImmersive });
+  } = useHostRoom(effectiveMode, { forceRelay: isImmersive, useColorCode: isImmersive });
   const [revealedCodes, setRevealedCodes] = useState<Set<string>>(new Set());
   const [botsAdded, setBotsAdded] = useState(false);
   const debugLogRef = useRef<string[]>([]);
@@ -268,6 +269,18 @@ export default function Host() {
 
     return () => clearInterval(broadcastInterval);
   }, [phase, rebroadcastNow]);
+
+  // Release reserved color code as soon as the game leaves the lobby so the
+  // permutation is freed up for new lobbies (no players join after lobby).
+  const releasedRoomRef = useRef<string>("");
+  useEffect(() => {
+    if (!isImmersive) return;
+    if (!roomCode) return;
+    if (phase === "lobby") return;
+    if (releasedRoomRef.current === roomCode) return;
+    releasedRoomRef.current = roomCode;
+    void import("@/lib/colorCode").then(({ releaseColorCode }) => releaseColorCode(roomCode));
+  }, [phase, roomCode, isImmersive]);
 
   // Register client message handler
   useEffect(() => {
@@ -458,7 +471,12 @@ export default function Host() {
               }`}
               title={isImmersive ? "Click to rebroadcast room (immersive)" : undefined}
             >
-              ROOM: <span className="text-accent font-bold tracking-widest">{roomCode}</span>
+              ROOM:{" "}
+              {isImmersive && roomCode.length === 4 ? (
+                <ColorCodeBalls code={roomCode} size={16} gap={4} className="ml-1" />
+              ) : (
+                <span className="text-accent font-bold tracking-widest">{roomCode}</span>
+              )}
             </button>
           </div>
 
@@ -549,7 +567,11 @@ export default function Host() {
           {playerCount === 0 ? (
             <p className="text-xs text-muted-foreground font-mono animate-pulse">
               Open <span className="text-secondary">/client</span> on phones · Room:{" "}
-              <span className="text-accent font-bold">{roomCode}</span>
+              {isImmersive && roomCode.length === 4 ? (
+                <ColorCodeBalls code={roomCode} size={14} gap={4} className="ml-1" />
+              ) : (
+                <span className="text-accent font-bold">{roomCode}</span>
+              )}
             </p>
           ) : !isFull ? (
             <p className="text-xs text-muted-foreground font-mono">
