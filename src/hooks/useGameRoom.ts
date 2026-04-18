@@ -447,8 +447,12 @@ function useHostWebRTC(enabled: boolean, opts?: WebRtcOptions) {
       connsRef.current.forEach((c) => c.close());
       connsRef.current.clear();
       peer?.destroy();
+      // Release any reserved color code so the permutation can be reused.
+      if (resolvedCode && isColorCode(resolvedCode)) {
+        void releaseColorCode(resolvedCode);
+      }
     };
-  }, [enabled, removePlayer, handleColorSwap, opts?.forceRelay]);
+  }, [enabled, removePlayer, handleColorSwap, opts?.forceRelay, opts?.useColorCode]);
 
   const addBot = useCallback((connId: string, colorIndex: number) => {
     usedColorsRef.current.add(colorIndex);
