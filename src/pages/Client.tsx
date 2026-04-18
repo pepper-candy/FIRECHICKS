@@ -436,6 +436,7 @@ export default function Client() {
   const connIdRef = useRef<string>("");
   const [showSusWarning, setShowSusWarning] = useState(false);
   const [showingEndTransition, setShowingEndTransition] = useState(false);
+  const handleTransitionComplete = useCallback(() => setShowingEndTransition(false), []);
   const [showExamVoting, setShowExamVoting] = useState(false);
   const [isExamSubmitter, setIsExamSubmitter] = useState(false);
   const [hasVotedExam, setHasVotedExam] = useState(false);
@@ -748,6 +749,7 @@ export default function Client() {
           setExamQuestionNum(myExam.questionNum);
           setExamAnswer("");
         }
+        setIsExamSubmitter(msg.examSubmitterId === connIdRef.current);
         setGamePhase("exam");
     } else if (msg.type === "player-sus-warning") {
         const warningConnId = msg.connId as string;
@@ -778,6 +780,20 @@ export default function Client() {
        setShowExamVoting(true);
        setHasVotedExam(false);
        setCurrentExamVote(null);
+    } else if (msg.type === "exam-voting-end") {
+       const allowResubmit = msg.allowResubmit as boolean;
+       const submitterConnId = msg.submitterConnId as string;
+       
+       // Reset voting UI state
+       setShowExamVoting(false);
+       setExamVotingState(null);
+       setHasVotedExam(false);
+       setCurrentExamVote(null);
+       
+       // If this client is the submitter and resubmission is allowed, clear their answer
+       if (allowResubmit && submitterConnId === connIdRef.current) {
+         setExamAnswer("");
+       }
     }
     });
   }, [onHostMessage, colorIndex, clientId, gameState, sendToHost]);
@@ -1379,7 +1395,7 @@ export default function Client() {
     // Show transition first if exam was played
     if (showingEndTransition && gameState?.examState) {
       return (
-        <GameEndTransition onComplete={() => setShowingEndTransition(false)} />
+        <GameEndTransition onComplete={handleTransitionComplete} />
       );
     }
 
@@ -1722,15 +1738,27 @@ export default function Client() {
           </div>
         </div>
 
-        {/* Bottom section: Voting UI or Answer input */}
-        {showExamVoting && examVotingState ? (
-          <div className="flex flex-col gap-3 px-3 pb-4 border-t border-border">
-
-
-            {/* Vote buttons (for non-submitters or after submission) */}
+        {/* Bottom section: Answer input and voting UI */}
+        <div className="flex flex-col gap-3 px-3 pb-4 border-t border-border">
+          {/* Answer display in boxes (shown after submission) */}
+          {showExamVoting && examVotingState && (
             <div className="flex flex-col gap-2">
-              <p className="text-xs font-mono text-muted-foreground text-center">{examVotingState.submitterName}'s answer: {examVotingState.maskedAnswer}</p>
-              <p className="text-xs font-mono text-muted-foreground text-center">Voting ends in {Math.max(0, Math.ceil((examVotingState.startedAt + 10000 - clockNow) / 1000))}s</p>
+              <p className="text-xs font-mono text-muted-foreground text-center">Final Exam Submission</p>
+              <p className="text-xs font-mono text-muted-foreground text-center">Do you agree?</p>
+              
+              {/* Answer displayed in character boxes */}
+              <div className="flex justify-center gap-1 mb-2">
+                {examVotingState.maskedAnswer.split('').map((char, index) => (
+                  <div
+                    key={index}
+                    className="w-8 h-8 flex items-center justify-center border border-border rounded bg-background font-mono text-sm"
+                  >
+                    {char}
+                  </div>
+                ))}
+              </div>
+              
+              {/* Voting buttons (👍/👎) */}
               <div className="flex gap-2">
                 <Button
                   onClick={() => {
@@ -1738,11 +1766,11 @@ export default function Client() {
                     setHasVotedExam(true);
                     setCurrentExamVote("pass");
                   }}
-                  disabled={hasVotedExam}
+                  disabled={hasVotedExam || isExamSubmitter}
                   variant={currentExamVote === 'pass' ? 'default' : 'outline'}
-                  className="flex-1 font-pixel text-xs"
+                  className="flex-1 font-pixel text-xs bg-green-600 hover:bg-green-700 border-green-600"
                 >
-                  ✓ PASS
+                  👍 AGREE
                 </Button>
                 <Button
                   onClick={() => {
@@ -1750,34 +1778,71 @@ export default function Client() {
                     setHasVotedExam(true);
                     setCurrentExamVote("fail");
                   }}
-                  disabled={hasVotedExam}
+                  disabled={hasVotedExam || isExamSubmitter}
                   variant={currentExamVote === 'fail' ? 'destructive' : 'outline'}
-                  className="flex-1 font-pixel text-xs"
+                  className="flex-1 font-pixel text-xs bg-red-600 hover:bg-red-700 border-red-600"
                 >
-                  ✗ FAIL
+                  👎 DISAGREE
                 </Button>
               </div>
-              {hasVotedExam && (
-                <p className="text-xs font-mono text-muted-foreground text-center">Voted: {currentExamVote === 'pass' ? 'PASS' : 'FAIL'}</p>
-              )}
+              
+              {/* Voting status */}
+              <div className="flex flex-col items-center gap-1">
+                <p className="text-xs font-mono text-muted-foreground text-center">
+                  {examVotingState.submitterName}'s answer
+                </p>
+                <p className="text-xs font-mono text-muted-foreground text-center">
+                  Voting ends in {Math.max(0, Math.ceil((examVotingState.startedAt + 10000 - clockNow) / 1000))}s
+                </p>
+                {hasVotedExam && (
+                  <p className="text-xs font-mono text-muted-foreground text-center">
+                    Voted: {currentExamVote === 'pass' ? 'AGREE' : 'DISAGREE'}
+                  </p>
+                )}
+                {isExamSubmitter && (
+                  <p className="text-xs font-mono text-muted-foreground text-center">
+                    (You submitted this answer)
+                  </p>
+                )}
+              </div>
             </div>
-          </div>
-        ) : (
-          /* Regular answer input (before voting starts) */
-          <div className="flex gap-2 px-3 pb-4 border-t border-border">
+          )}
+          
+          {/* Answer input (only for submitter before submission) */}
+          <div className="flex gap-2">
             <Input
-              placeholder="Type your answer..."
+              placeholder={isExamSubmitter ? "Type your answer (max 5 chars)..." : "Waiting for submitter..."}
               value={examAnswer}
-              onChange={(e) => setExamAnswer(e.target.value.toUpperCase())}
+              onChange={(e) => {
+                const value = e.target.value.toUpperCase();
+                if (value.length <= 5) {
+                  setExamAnswer(value);
+                }
+              }}
               className="flex-1 uppercase font-mono"
               onKeyDown={(e) => e.key === "Enter" && handleExamSubmit()}
+              disabled={!isExamSubmitter || (showExamVoting && examVotingState)}
+              style={{
+                opacity: !isExamSubmitter || (showExamVoting && examVotingState) ? 0.5 : 1
+              }}
             />
-
-            <Button onClick={handleExamSubmit} className="font-pixel text-xs bg-primary">
+            
+            <Button 
+              onClick={() => handleExamSubmit()} 
+              className="font-pixel text-xs bg-primary"
+              disabled={!isExamSubmitter || examAnswer.trim().length === 0 || (showExamVoting && examVotingState)}
+            >
               SUBMIT
             </Button>
           </div>
-        )}
+          
+          {/* Status message for non-submitters before submission */}
+          {!showExamVoting && !isExamSubmitter && (
+            <p className="text-xs font-mono text-muted-foreground text-center">
+              Waiting for {gameState?.examState?.examSubmitterId ? "submitter" : "someone"} to submit answer...
+            </p>
+          )}
+        </div>
       </div>
     );
   }

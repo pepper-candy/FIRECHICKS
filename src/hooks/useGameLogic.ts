@@ -283,7 +283,7 @@ export function useGameLogic({ players, broadcast, gameMode, connectionMode, map
   const botsPausedRef = useRef(false);
   // Sus players tracking: connId -> { detectedAt, promptShownAt, ...}
   const susPlayersRef = useRef<Map<string, SusPlayer>>(new Map());
-  const lastPingBroadcastRef = useRef(0);
+  const lastPingCheckRef = useRef(0);
 
   const [snapshot, setSnapshot] = useState<GameStateSnapshot | null>(null);
   const [videoPlaying, setVideoPlaying] = useState<"hurt" | "dead" | null>(null);
@@ -751,18 +751,31 @@ export function useGameLogic({ players, broadcast, gameMode, connectionMode, map
       }
     }
 
-    // ── Ping broadcast ──
-    if (now - lastPingBroadcastRef.current > 3000) {
-      // Broadcast ping to all players
-      currentBroadcast({ type: "ping", timestamp: now });
-      lastPingBroadcastRef.current = now;
-
-      // Update ping fail counts for sus players who haven't responded
+    // ── Ping-pong monitoring (check every 5 seconds) ──
+    if (now - lastPingCheckRef.current > 5000) {
+      lastPingCheckRef.current = now;
+      
       const susPlayers = susPlayersRef.current;
       for (const [connId, sus] of susPlayers) {
-        // If player hasn't responded to previous ping (older than ping interval + grace)
-        if (now - sus.lastPingAt > 4000) {
+        const player = gs.playerStates.get(connId);
+        if (!player || !player.alive || isBotConnId(connId)) continue;
+        
+        // Check if player hasn't sent pong in last 7 seconds (5s interval + 2s grace)
+        if (now - sus.lastPingAt > 7000) {
           sus.pingFailCount += 1;
+          
+          // After 2 consecutive missed checks, mark as sus (if not already)
+          if (sus.pingFailCount >= 2 && sus.detectedAt === 0) {
+            sus.detectedAt = now;
+            sus.disconnectReason = 'ping-fail';
+            // Trigger warning prompt
+            if (!sus.promptShownAt) {
+              sus.promptShownAt = now;
+            }
+          }
+        } else {
+          // Received pong recently, reset fail count
+          sus.pingFailCount = 0;
         }
       }
     }
@@ -1664,6 +1677,11 @@ export function useGameLogic({ players, broadcast, gameMode, connectionMode, map
       nonBotChicks.length > 0
         ? nonBotChicks[Math.floor(Math.random() * nonBotChicks.length)].connId
         : null;
+    
+    // Select random non-bot chick as exam submitter (if none, fallback to any chick)
+    const examSubmitterId = nonBotChicks.length > 0
+      ? nonBotChicks[Math.floor(Math.random() * nonBotChicks.length)].connId
+      : (aliveChicks.length > 0 ? aliveChicks[Math.floor(Math.random() * aliveChicks.length)].connId : null);
 
     gs.examState = {
       questionNum,
@@ -1676,6 +1694,7 @@ export function useGameLogic({ players, broadcast, gameMode, connectionMode, map
       anyAnswerSubmitted: false,
       hostDisplayLayer: soloExam ? "1" : "none",
       examWhiteBgConnId,
+      examSubmitterId,
     };
     gs.stageLabel = "FINAL EXAM — Solve together!";
     updateHostExamDisplay(gs);
@@ -1697,7 +1716,7 @@ export function useGameLogic({ players, broadcast, gameMode, connectionMode, map
     }
 
     bcast({ type: "phase-change", phase: "exam" });
-    bcast({ type: "exam-start", assignments: examAssigns, examWhiteBgConnId });
+    bcast({ type: "exam-start", assignments: examAssigns, examWhiteBgConnId, examSubmitterId });
   }
 
   function endGame(gs: GameStateRef, winner: "eagle" | "chicks" | "draw", bcast: (msg: any) => void) {
@@ -1891,6 +1910,16 @@ export function useGameLogic({ players, broadcast, gameMode, connectionMode, map
         gs.examState.answered = true;
         gs.examState.timeRemaining = 0;
         resolveExamWinner(gs, gameModeRef.current as "1v3" | "2v6", currentBroadcast);
+      } else {
+        // No votes but still have attempts left - allow resubmission by same player
+        // Clear voting state so same submitter can submit again
+        gs.examState.votingState = undefined;
+        // Broadcast that voting has ended and resubmission is allowed
+        currentBroadcast({ 
+          type: "exam-voting-end",
+          allowResubmit: true,
+          submitterConnId: gs.examState.examSubmitterId
+        });
       }
       return;
     }
@@ -1908,6 +1937,8 @@ export function useGameLogic({ players, broadcast, gameMode, connectionMode, map
       if (submitter) {
         addBreakdown(submitter, 'final-exam', 'Final Exam correct', 10);
       }
+      // Clear voting state
+      gs.examState.votingState = undefined;
       resolveExamWinner(gs, gameModeRef.current as "1v3" | "2v6", currentBroadcast);
     } else {
       // Incorrect — apply -2 penalty to all chicks
@@ -1927,6 +1958,7 @@ export function useGameLogic({ players, broadcast, gameMode, connectionMode, map
         }
       }
       updateHostExamDisplay(gs);
+      
       // Check if all chicks dead or max 3 attempts reached
       const aliveAfter = Array.from<PlayerGameState>(gs.playerStates.values()).filter((p) => !p.isEagle && p.alive);
       if (aliveAfter.length === 0) {
@@ -1935,6 +1967,16 @@ export function useGameLogic({ players, broadcast, gameMode, connectionMode, map
         gs.examState.answered = true;
         gs.examState.timeRemaining = 0;
         resolveExamWinner(gs, gameModeRef.current as "1v3" | "2v6", currentBroadcast);
+      } else {
+        // Failed vote but still have attempts left - allow resubmission by same player
+        // Clear voting state so same submitter can submit again
+        gs.examState.votingState = undefined;
+        // Broadcast that voting has ended and resubmission is allowed
+        currentBroadcast({ 
+          type: "exam-voting-end",
+          allowResubmit: true,
+          submitterConnId: gs.examState.examSubmitterId
+        });
       }
     }
   }, []);
@@ -2464,9 +2506,9 @@ export function useGameLogic({ players, broadcast, gameMode, connectionMode, map
         gs.examState.examSubmitterId = connId;
         gs.examState.anyAnswerSubmitted = true;
 
-        // Create masked answer display: show first 3 chars as boxes with actual chars
+        // Create answer display: show actual chars in boxes
         const answer = gs.examState.finalAnswer;
-        const maskedAnswer = answer.split('').slice(0, 3).join('');
+        const maskedAnswer = answer; // Full answer shown to voters
 
         // Initialize voting state
         gs.examState.votingState = {
@@ -2545,13 +2587,30 @@ export function useGameLogic({ players, broadcast, gameMode, connectionMode, map
       // ── Pong Response (client ping keepalive) ──
       case "pong": {
         const susPlayers = susPlayersRef.current;
-        if (susPlayers.has(connId)) {
+        const player = gs.playerStates.get(connId);
+        if (!player) break;
+        
+        if (!susPlayers.has(connId)) {
+          // Create initial SusPlayer entry for tracking (not yet detected as sus)
+          susPlayers.set(connId, {
+            connId,
+            detectedAt: 0, // 0 means not yet detected as sus
+            promptShownAt: null,
+            properQuit: false,
+            disconnectReason: null,
+            pingFailCount: 0,
+            lastPingAt: now,
+            pingWarningShownAt: null,
+            lastActivityAt: now,
+            lastPosition: player.position,
+            activityWarningShownAt: null,
+          });
+        } else {
           const sus = susPlayers.get(connId)!;
           sus.lastPingAt = now; // Update last ping received
           sus.pingFailCount = 0; // Reset fail counter on successful pong
           sus.lastActivityAt = now; // Ping also counts as activity
         }
-        // If player is not sus yet, remove any inactivity flag
         break;
       }
 
