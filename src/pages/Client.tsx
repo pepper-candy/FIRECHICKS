@@ -774,15 +774,14 @@ export default function Client() {
          maskedAnswer,
          startedAt,
        });
-       setIsExamSubmitter(isSubmitter);
-       setShowExamVoting(true);
-       setHasVotedExam(false);
-        setCurrentExamVote(null);
-      }
-     } else if (msg.type === "ping") {
-        // Respond to ping with pong to maintain connection status
-        sendToHost({ type: "pong" });
-      }
+          setIsExamSubmitter(isSubmitter);
+          setShowExamVoting(true);
+          setHasVotedExam(false);
+           setCurrentExamVote(null);
+       } else if (msg.type === "ping") {
+           // Respond to ping with pong to maintain connection status
+           sendToHost({ type: "pong" });
+       }
     });
   }, [onHostMessage, colorIndex, clientId, gameState, sendToHost]);
 
