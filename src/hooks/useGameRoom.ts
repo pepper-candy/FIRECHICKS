@@ -3,11 +3,25 @@ import Peer, { DataConnection } from 'peerjs';
 import { supabase } from '@/integrations/supabase/client';
 import type { RealtimeChannel } from '@supabase/supabase-js';
 import { MAX_PLAYERS, MAX_PLAYERS_1V3, MAX_PLAYERS_2V6, EAGLE_COLOR_INDICES } from '@/lib/playerColors';
+import { reserveColorCode, releaseColorCode, isColorCode } from '@/lib/colorCode';
 
 export type ConnectionMode = 'webrtc' | 'supabase';
 
 function generateRoomCode(): string {
   return Math.random().toString(36).substring(2, 8).toUpperCase();
+}
+
+/**
+ * Resolve the room code for a host. When `useColorCode` is true (immersive
+ * mode), try to reserve a unique 4-color permutation via the Neon-backed API;
+ * if reservation fails (network, exhaustion), fall back to a 6-char text code.
+ */
+async function resolveHostRoomCode(useColorCode: boolean): Promise<string> {
+  if (useColorCode) {
+    const reserved = await reserveColorCode('host_' + Date.now());
+    if (reserved) return reserved;
+  }
+  return generateRoomCode();
 }
 
 const PEER_PREFIX = 'evsc-';
