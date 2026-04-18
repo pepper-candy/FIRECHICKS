@@ -177,11 +177,14 @@ export default function CrossyRoadClient({ event, isEagle, connId, nowTs, onHop,
       {/* Hop controls */}
       <div className="flex gap-6 items-center">
         <button
-          onPointerDown={(e) => {
+          onClick={(e) => {
             e.stopPropagation();
             onHop("down");
           }}
-          className="w-16 h-16 rounded-full border-2 border-accent bg-accent/20 active:scale-90 transition-all flex items-center justify-center"
+          onTouchStart={(e) => {
+            e.stopPropagation();
+          }}
+          className="w-16 h-16 rounded-full border-2 border-accent bg-accent/20 active:scale-90 transition-all flex items-center justify-center select-none"
           style={{ touchAction: "manipulation" }}
         >
           <ChevronDown className="w-8 h-8 text-accent" />
@@ -192,11 +195,14 @@ export default function CrossyRoadClient({ event, isEagle, connId, nowTs, onHop,
         </div>
 
         <button
-          onPointerDown={(e) => {
+          onClick={(e) => {
             e.stopPropagation();
             onHop("up");
           }}
-          className="w-20 h-20 rounded-full border-2 border-primary bg-primary/20 active:scale-90 transition-all flex items-center justify-center"
+          onTouchStart={(e) => {
+            e.stopPropagation();
+          }}
+          className="w-20 h-20 rounded-full border-2 border-primary bg-primary/20 active:scale-90 transition-all flex items-center justify-center select-none"
           style={{ touchAction: "manipulation" }}
         >
           <ChevronUp className="w-10 h-10 text-primary" />

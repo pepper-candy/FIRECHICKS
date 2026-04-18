@@ -1337,10 +1337,9 @@ export default function Client() {
 
     if (activeEvent.phase === "active" && activeEvent.type === "hitbox") {
       return (
-        <div className="flex flex-col items-center justify-between h-dvh overflow-hidden p-4">
+        <div className="flex flex-col items-center justify-between h-dvh overflow-hidden p-4 pt-12">
           <div className="text-center">
             <h2 className="text-lg font-pixel text-accent">👊 HITBOX BATTLE</h2>
-            <p className="text-2xl font-pixel text-primary">{timeLeft}s</p>
           </div>
           <button
             onClick={() => sendToHost({ type: "event-hitbox-click" })}
@@ -1358,10 +1357,9 @@ export default function Client() {
 
     if (activeEvent.phase === "active" && activeEvent.type === "mock-exam") {
       return (
-        <div className="flex flex-col h-dvh overflow-hidden p-4 gap-4">
+        <div className="flex flex-col h-dvh overflow-hidden p-4 pt-12 gap-4">
           <div className="flex justify-between items-center">
             <h2 className="text-sm font-pixel text-accent">MOCK EXAM</h2>
-            <span className="font-mono text-sm text-accent">{timeLeft}s</span>
           </div>
           {isEagle ? (
             <div className="flex-1 flex items-center justify-center">
