@@ -273,18 +273,21 @@ function useHostWebRTC(enabled: boolean, opts?: WebRtcOptions) {
       return;
     }
 
-    const code = generateRoomCode();
-    setRoomCode(code);
-
     let cancelled = false;
     let peer: Peer | null = null;
     let pingInterval: number | null = null;
+    let resolvedCode = '';
 
     void (async () => {
+      // Resolve code first (may await Neon reservation in immersive mode).
+      resolvedCode = await resolveHostRoomCode(!!opts?.useColorCode);
+      if (cancelled) return;
+      setRoomCode(resolvedCode);
+
       const rtcConfig = await buildPeerRtcConfig({ forceRelay: opts?.forceRelay });
       if (cancelled) return;
 
-      peer = new Peer(`${PEER_PREFIX}${code}`, {
+      peer = new Peer(`${PEER_PREFIX}${resolvedCode}`, {
         config: rtcConfig,
       });
       peerRef.current = peer;
