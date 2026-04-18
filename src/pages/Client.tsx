@@ -1048,13 +1048,25 @@ export default function Client() {
         )}
 
         <div className="flex flex-col gap-4 w-full max-w-[320px] sm:max-w-xs">
-          <Input
-            value={code}
-            onChange={(e) => setCode(e.target.value.toUpperCase())}
-            placeholder="ROOM CODE"
-            maxLength={6}
-            className="text-center text-2xl sm:text-3xl tracking-[0.3em] sm:tracking-[0.5em] font-pixel bg-card border-border h-14 uppercase"
-          />
+          {isImmersive ? (
+            <div className="flex flex-col gap-2">
+              <p className="text-[11px] font-mono text-muted-foreground text-center tracking-widest">
+                TAP EACH BALL TO MATCH THE HOST'S COLOR CODE
+              </p>
+              <ColorCodePicker
+                value={code || COLOR_CODE_LETTERS.join("")}
+                onChange={(next) => setCode(next)}
+              />
+            </div>
+          ) : (
+            <Input
+              value={code}
+              onChange={(e) => setCode(e.target.value.toUpperCase())}
+              placeholder="ROOM CODE"
+              maxLength={6}
+              className="text-center text-2xl sm:text-3xl tracking-[0.3em] sm:tracking-[0.5em] font-pixel bg-card border-border h-14 uppercase"
+            />
+          )}
 
           <Button
             onClick={() => handleJoin()}
@@ -1114,24 +1126,33 @@ export default function Client() {
             <div className="flex flex-col gap-2 mt-2">
               <p className="text-xs text-muted-foreground font-mono text-center">ACTIVE ROOMS</p>
               <div className="flex flex-wrap gap-2 justify-center">
-                {roomList.map((rc) => (
-                  <Button
-                    key={rc}
-                    variant="outline"
-                    size="sm"
-                    onClick={() => {
-                      setCode(rc);
-                      handleJoin(rc);
-                    }}
-                    className={`font-mono text-xs tracking-widest ${
-                      mode === "supabase"
-                        ? "text-secondary border-secondary/30 hover:bg-secondary/10"
-                        : "text-accent border-accent/30 hover:bg-accent/10"
-                    }`}
-                  >
-                    {rc}
-                  </Button>
-                ))}
+                {roomList.map((rc) => {
+                  const isColor = isColorCode(rc);
+                  // In immersive mode, only show color-code rooms; in classic
+                  // mode, only show text-code rooms (avoids confusion).
+                  if (isImmersive && !isColor) return null;
+                  if (!isImmersive && isColor) return null;
+                  return (
+                    <Button
+                      key={rc}
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        setCode(rc);
+                        handleJoin(rc);
+                      }}
+                      className={`font-mono text-xs tracking-widest ${
+                        isColor
+                          ? "border-border hover:bg-card/80 px-3 py-2"
+                          : mode === "supabase"
+                            ? "text-secondary border-secondary/30 hover:bg-secondary/10"
+                            : "text-accent border-accent/30 hover:bg-accent/10"
+                      }`}
+                    >
+                      {isColor ? <ColorCodeBalls code={rc} size={14} gap={4} /> : rc}
+                    </Button>
+                  );
+                })}
               </div>
             </div>
           )}
