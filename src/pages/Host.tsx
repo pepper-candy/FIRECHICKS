@@ -623,10 +623,10 @@ export default function Host() {
           <div className="immersive-vignette" />
           <div className="immersive-scanline-overlay" style={{ opacity: 0.4 }} />
           {/* Edge pulse strips */}
-              <div className="absolute inset-y-0 left-0 w-1 bg-orange-500/40 animate-pulse"
-                  style={{ animationDuration: '0.5s' }} />
-              <div className="absolute inset-y-0 right-0 w-1 bg-orange-500/40 animate-pulse"
-                  style={{ animationDuration: '0.5s' }} />
+              <div className="absolute inset-y-0 left-0 w-1 bg-orange-500/70 animate-pulse"
+                  style={{ animationDuration: '1s' }} />
+              <div className="absolute inset-y-0 right-0 w-1 bg-orange-500/70 animate-pulse"
+                  style={{ animationDuration: '1s' }} />
 
           <div className="z-10 flex flex-col items-center gap-8">
             <h1
