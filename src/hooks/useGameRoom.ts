@@ -524,7 +524,6 @@ function useHostWebRTC(enabled: boolean, opts?: WebRtcOptions) {
 
 // ─── HOST: Supabase ─────────────────────────────────────────
 function useHostSupabase(enabled: boolean, opts?: WebRtcOptions) {
-function useHostSupabase(enabled: boolean) {
   const [roomCode, setRoomCode] = useState('');
   const [players, setPlayers] = useState<Map<string, PlayerState>>(new Map());
   const channelRef = useRef<RealtimeChannel | null>(null);
