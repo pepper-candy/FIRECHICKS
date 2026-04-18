@@ -760,6 +760,14 @@ export function useGameLogic({ players, broadcast, gameMode, connectionMode, map
         const player = gs.playerStates.get(connId);
         if (!player || !player.alive || isBotConnId(connId)) continue;
         
+        // Skip ping-pong monitoring during exam and minigames
+        const isInExamOrMinigame = gs.phase === "exam" || gs.activeEvent;
+        if (isInExamOrMinigame) {
+          // Reset ping fail count when entering exam/minigame
+          sus.pingFailCount = 0;
+          continue;
+        }
+        
         // Check if player hasn't sent pong in last 7 seconds (5s interval + 2s grace)
         if (now - sus.lastPingAt > 7000) {
           sus.pingFailCount += 1;
@@ -1420,6 +1428,16 @@ export function useGameLogic({ players, broadcast, gameMode, connectionMode, map
               };
               gs.eventCountdown = 3;
               gs.stageLabel = eventType === "mock-exam" ? "🎲 Event: Mock Exam!" : eventType === "hitbox" ? "🎲 Event: Hitbox Challenge!" : "🎲 Event: Crossy Road!";
+              
+              // Update last activity for all players when entering minigame
+              const susPlayers = susPlayersRef.current;
+              for (const [connId, sus] of susPlayers) {
+                const player = gs.playerStates.get(connId);
+                if (player && player.alive && !isBotConnId(connId)) {
+                  sus.lastActivityAt = now;
+                }
+              }
+              
               currentBroadcast({ type: "phase-change", phase: gs.phase });
             }
             break;
@@ -1660,6 +1678,16 @@ export function useGameLogic({ players, broadcast, gameMode, connectionMode, map
     gs.examStarted = true;
     gs.phase = "exam";
     setPhase("exam");
+    
+    // Update last activity for all players when entering exam phase
+    const now = Date.now();
+    const susPlayers = susPlayersRef.current;
+    for (const [connId, sus] of susPlayers) {
+      const player = gs.playerStates.get(connId);
+      if (player && player.alive && !isBotConnId(connId)) {
+        sus.lastActivityAt = now;
+      }
+    }
 
     const aliveChicks = Array.from<PlayerGameState>(gs.playerStates.values()).filter((p) => !p.isEagle && p.alive);
     const questionNum = Math.floor(Math.random() * 4) + 1;
