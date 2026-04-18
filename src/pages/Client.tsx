@@ -1254,7 +1254,7 @@ export default function Client() {
           hideWinnerLine={true}
           resultNodeOverride={
               <p className="font-pixel text-destructive text-center text-lg sm:text-xl tracking-tighter">
-                  F Grade\ndoesn't define you.
+                  F DOESN'T<br />DEFINE YOU!
               </p>
           }
               onLeave={() => {
