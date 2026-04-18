@@ -1,11 +1,14 @@
 {
   "ExpandedNodes": [
     "",
+    "\\.cursor",
+    "\\.cursor\\plans",
     "\\public",
     "\\public\\FireChick",
     "\\src",
     "\\src\\hooks",
     "\\supabase"
   ],
+  "SelectedNode": "\\.cursor\\plans\\reduce_turn_traffic_+_gameplay_fixes_b154a737.plan.md",
   "PreviewInSolutionExplorer": false
 }

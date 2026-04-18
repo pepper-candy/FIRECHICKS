@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, Suspense, useRef, useMemo } from "react";
+﻿import { useState, useEffect, useCallback, Suspense, useRef, useMemo } from "react";
 import { toast } from "sonner";
 import { createPortal } from "react-dom";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
@@ -255,17 +255,12 @@ export default function Host() {
   useAdvertiseRoom(roomCode, phase === "lobby", effectiveMode);
   const { rebroadcastNow, broadcastBeaconNow } = useWebRTCRoomBroadcast(roomCode);
 
-  // Auto-broadcast room code every 1 second while in active lobby (not gameover/reveal/etc)
+  // Auto-broadcast room code every 0.5 seconds while in lobby
   useEffect(() => {
-    // Only broadcast during active lobby phase
     if (phase !== "lobby") return;
-
     const broadcastInterval = setInterval(() => {
-      rebroadcastNow().catch(() => {
-        // Silently catch broadcast errors - network might be temporarily unavailable
-      });
-    }, 1000); // Broadcast every 1 second
-
+      rebroadcastNow();
+    }, 500);
     return () => clearInterval(broadcastInterval);
   }, [phase, rebroadcastNow]);
 

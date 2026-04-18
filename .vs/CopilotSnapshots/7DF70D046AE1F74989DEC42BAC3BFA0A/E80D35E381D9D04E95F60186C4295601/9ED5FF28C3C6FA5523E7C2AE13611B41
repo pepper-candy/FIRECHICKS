@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+﻿import { useState, useEffect, useRef, useCallback } from 'react';
 import Peer, { DataConnection } from 'peerjs';
 import { supabase } from '@/integrations/supabase/client';
 import type { RealtimeChannel } from '@supabase/supabase-js';
@@ -1265,16 +1265,13 @@ export function useWebRTCRoomBroadcast(roomCode: string) {
   const channelRef = useRef<RealtimeChannel | null>(null);
   const aliveRef = useRef(false);
   const roomCodeRef = useRef(roomCode);
-  const subscribedRef = useRef(false);
-
   useEffect(() => {
     roomCodeRef.current = roomCode;
   }, [roomCode]);
 
   const rebroadcastNow = useCallback(async () => {
     const channel = channelRef.current;
-    if (!channel || !aliveRef.current || !roomCodeRef.current || !subscribedRef.current) return false;
-
+    if (!channel || !aliveRef.current || !roomCodeRef.current) return false;
     for (let attempt = 0; attempt < 3; attempt++) {
       try {
         await channel.track({ roomCode: roomCodeRef.current, ts: Date.now(), source: 'webrtc' });
@@ -1315,27 +1312,21 @@ export function useWebRTCRoomBroadcast(roomCode: string) {
 
     channel.subscribe(async (status) => {
       if (status === 'SUBSCRIBED' && alive) {
-        subscribedRef.current = true;
         // Broadcast room code via WebRTC channel (persistent, including during gameplay)
         await channel.track({ roomCode, ts: Date.now(), source: 'webrtc' });
-      } else if (status === 'CLOSED' || status === 'CHANNEL_ERROR') {
-        subscribedRef.current = false;
       }
     });
 
-    // Re-track periodically to keep WebRTC broadcast alive - every 1 second
+    // Re-track periodically to keep WebRTC broadcast alive - use 5s to reduce network overhead
     const heartbeat = window.setInterval(async () => {
-      if (alive && subscribedRef.current) {
-        try { 
-          await channel.track({ roomCode, ts: Date.now(), source: 'webrtc' }); 
-        } catch {}
+      if (alive) {
+        try { await channel.track({ roomCode, ts: Date.now(), source: 'webrtc' }); } catch {}
       }
     }, 1_000);
 
     return () => {
       alive = false;
       aliveRef.current = false;
-      subscribedRef.current = false;
       channelRef.current = null;
       clearInterval(heartbeat);
       channel.untrack();
