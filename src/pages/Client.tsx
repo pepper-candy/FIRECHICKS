@@ -508,6 +508,15 @@ export default function Client() {
     }
   }, [gamePhase]);
 
+  // When game reaches gameover, extend disconnect grace to prevent redirect while viewing transcript
+  useEffect(() => {
+    if (gamePhase === "gameover") {
+      hasReachedEndgameRef.current = true;
+      // Extend grace period to keep transcript stable (no reconnection needed)
+      disconnectGraceUntilRef.current = Math.max(disconnectGraceUntilRef.current, Date.now() + 600000); // 5 minutes
+    }
+  }, [gamePhase]);
+
   // Tips state — QR now displays in scanner box, not tip box
   const [tipQrCodes, setTipQrCodes] = useState<[string | null, string | null]>([null, null]);
   const [loadingTip, setLoadingTip] = useState<[boolean, boolean]>([false, false]);
@@ -792,9 +801,9 @@ export default function Client() {
     connIdRef.current && gameState?.tipObtainTimers?.[connIdRef.current]
       ? Math.ceil(gameState.tipObtainTimers[connIdRef.current].remainingMs / 1000)
       : 0;
-  const speedRemainingSec = myState?.speedMultiplierUntil ? Math.ceil(Math.max(0, myState.speedMultiplierUntil - nowTs) / 1000) : 0;
-  const invincibleRemainingSec = myState?.invincibleUntil ? Math.ceil(Math.max(0, myState.invincibleUntil - nowTs) / 1000) : 0;
-  const cagedRemainingSec = myState?.cagedUntil ? Math.ceil(Math.max(0, myState.cagedUntil - nowTs) / 1000) : 0;
+  const speedRemainingSec = myState?.speedRemainingMs ? Math.ceil(myState.speedRemainingMs / 1000) : 0;
+  const invincibleRemainingSec = myState?.invincibleRemainingMs ? Math.ceil(myState.invincibleRemainingMs / 1000) : 0;
+  const cagedRemainingSec = myState?.cageRemainingMs ? Math.ceil(myState.cageRemainingMs / 1000) : 0;
 
   // ── Damage flash: track damageTaken increases (attack only) ──
   const damageInitRef = useRef(false);
