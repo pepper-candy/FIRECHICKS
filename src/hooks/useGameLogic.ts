@@ -611,6 +611,39 @@ export function useGameLogic({ players, broadcast, gameMode, connectionMode, map
 
     if (gs.phase !== "playing" && gs.phase !== "exam") return;
 
+    // Helper function to replace sus player with bot
+    const replaceSusPlayerWithBot = (
+      gs: GameStateRef,
+      connId: string,
+      broadcast: (msg: HostMessage) => void
+    ) => {
+      const player = gs.playerStates.get(connId);
+      if (!player) return;
+
+      const botConnId = `bot-${connId}`;
+      const botPlayer: PlayerGameState = {
+        ...player,
+        connId: botConnId,
+      };
+      gs.playerStates.set(botConnId, botPlayer);
+      gs.playerStates.delete(connId);
+
+      // If this player was the exam submitter, assign a new one
+      if (gs.examState && gs.examState.layer1ConnId === connId) {
+        const aliveChicks = Array.from(gs.playerStates.values()).filter(
+          (p) => !p.isEagle && p.alive && !isBotConnId(p.connId)
+        );
+        if (aliveChicks.length > 0) {
+          const newSubmitter = aliveChicks[Math.floor(Math.random() * aliveChicks.length)];
+          gs.examState.layer1ConnId = newSubmitter.connId;
+          broadcast({
+            type: "exam-submitter-changed",
+            newSubmitterId: newSubmitter.connId,
+          });
+        }
+      }
+    };
+
     // ── Sus player detection (4-level system) ──
     const susPlayers = susPlayersRef.current;
     for (const [connId, sus] of susPlayers) {
@@ -714,39 +747,6 @@ export function useGameLogic({ players, broadcast, gameMode, connectionMode, map
       }
     }
   }
-
-  // Helper function to replace sus player with bot
-  const replaceSusPlayerWithBot = (
-    gs: GameStateRef,
-    connId: string,
-    broadcast: (msg: HostMessage) => void
-  ) => {
-    const player = gs.playerStates.get(connId);
-    if (!player) return;
-
-    const botConnId = `bot-${connId}`;
-    const botPlayer: PlayerGameState = {
-      ...player,
-      connId: botConnId,
-    };
-    gs.playerStates.set(botConnId, botPlayer);
-    gs.playerStates.delete(connId);
-
-    // If this player was the exam submitter, assign a new one
-    if (gs.examState && gs.examState.layer1ConnId === connId) {
-      const aliveChicks = Array.from(gs.playerStates.values()).filter(
-        (p) => !p.isEagle && p.alive && !isBotConnId(p.connId)
-      );
-      if (aliveChicks.length > 0) {
-        const newSubmitter = aliveChicks[Math.floor(Math.random() * aliveChicks.length)];
-        gs.examState.layer1ConnId = newSubmitter.connId;
-        broadcast({
-          type: "exam-submitter-changed",
-          newSubmitterId: newSubmitter.connId,
-        });
-      }
-    }
-  };
 
     // ── Periodic ping checks for sus detection ──
     if ((lastPingBroadcastRef.current ?? 0) + PING_PONG_CHECK_INTERVAL < now) {
