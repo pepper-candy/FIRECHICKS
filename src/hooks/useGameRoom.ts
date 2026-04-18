@@ -1243,7 +1243,7 @@ const NOOP_CLIENT = {
 
 export function useHostRoom(mode: ConnectionMode = 'webrtc', opts?: WebRtcOptions) {
   const webrtc = useHostWebRTC(mode === 'webrtc', opts);
-  const supa = useHostSupabase(mode === 'supabase');
+  const supa = useHostSupabase(mode === 'supabase', opts);
   return mode === 'webrtc' ? webrtc : supa;
 }
 
