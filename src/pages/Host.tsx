@@ -1220,14 +1220,23 @@ function GameOverCeremony({ snapshot, gameMode }: { snapshot: GameStateSnapshot;
   const skipTeamPhase =
     winner === "draw" || (winner === "eagle" && gameMode === "1v3") || winningTeamPlayers.length === 0;
 
+  const handleTransitionComplete = useCallback(() => {
+    setShowingEndTransition(false);
+  }, []);
+
   // Show transition first if exam was played
   if (showingEndTransition) {
     return (
-      <GameEndTransition onComplete={() => setShowingEndTransition(false)} />
+      <GameEndTransition onComplete={handleTransitionComplete} />
     );
   }
 
   useEffect(() => {
+    // Don't start ceremony timers while the transition is showing
+    if (showingEndTransition) {
+      return;
+    }
+
     const t1 = setTimeout(() => {
       if (skipTeamPhase) {
         setCeremonyPhase("transcript");
@@ -1246,7 +1255,13 @@ function GameOverCeremony({ snapshot, gameMode }: { snapshot: GameStateSnapshot;
       clearTimeout(t1);
       if (t2) clearTimeout(t2);
     };
-  }, [skipTeamPhase]);
+  }, [skipTeamPhase, showingEndTransition]);
+
+  useEffect(() => {
+    if (!showingEndTransition) {
+      setCeremonyPhase("mvp");
+    }
+  }, [showingEndTransition]);
 
   const mvpColor = mvp ? PLAYER_COLORS[mvp.colorIndex] : null;
   const teamName =
