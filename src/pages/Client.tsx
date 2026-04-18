@@ -1253,11 +1253,8 @@ export default function Client() {
           cooperationScore={cooperationScore}
           hideWinnerLine={true}
           resultNodeOverride={
-              <p
-                  className="text-destructive text-center text-xl sm:text-2xl font-black leading-tight tracking-tight uppercase"
-                  style={{ fontFamily: "'Inter', system-ui, sans-serif" }}
-              >
-                  F DOESN'T DEFINE YOU.
+              <p className="font-pixel text-destructive text-center text-lg sm:text-xl tracking-tighter">
+                  F doesn't define you.
               </p>
           }
               onLeave={() => {

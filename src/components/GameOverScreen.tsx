@@ -323,7 +323,7 @@ export default function GameOverScreen({
           <Button
             variant="outline"
             size="sm"
-            onClick={() => window.location.reload()}
+            onClick={onLeave}
             className="text-xs font-mono mt-4 border-border/40 backdrop-blur-sm"
           >
             LEAVE
