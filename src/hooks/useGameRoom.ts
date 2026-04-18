@@ -1448,7 +1448,7 @@ export function useFetchRoomsFromAPI() {
         const res = await fetch('/api/rooms');
 
         if (!res.ok) {
-          console.warn(`API returned status ${res.statusCode} for /api/rooms`);
+          console.warn(`API returned status ${res.status} for /api/rooms`);
           return;
         }
 

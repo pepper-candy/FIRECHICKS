@@ -6,10 +6,9 @@ interface Props {
 
 export default function HitboxClient({ timeLeft, isEagle, onHit }: Props) {
   return (
-    <div className="flex flex-col items-center justify-between h-full p-4">
+    <div className="flex flex-col items-center justify-between h-full p-4 pt-12">
       <div className="text-center">
         <h2 className="text-lg font-pixel text-accent">👊 HITBOX BATTLE</h2>
-        <p className="text-2xl font-pixel text-primary">{timeLeft}s</p>
       </div>
       <button
         onClick={onHit}

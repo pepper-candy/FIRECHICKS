@@ -32,10 +32,9 @@ export default function CrossyRoadClient({ event, isEagle, connId, nowTs, onHop,
     const obstacleReady = now >= obstacleCd;
 
     return (
-      <div className="flex flex-col items-center justify-between h-full p-4">
+      <div className="flex flex-col items-center justify-between h-full p-4 pt-12">
         <div className="text-center">
           <h2 className="text-lg font-pixel text-accent">🐔 CROSSY ROAD</h2>
-          <p className="text-2xl font-pixel text-primary">{timeLeft}s</p>
           <p className="text-xs font-mono text-muted-foreground mt-1">
             Speed: <span className="text-accent font-bold">{speedBoost.toFixed(1)}×</span>
           </p>
@@ -88,10 +87,9 @@ export default function CrossyRoadClient({ event, isEagle, connId, nowTs, onHop,
   const visibleLaneIndices = [currentLane - 1, currentLane, currentLane + 1].filter((i) => i >= 1 && i <= 5);
 
   return (
-    <div className="flex flex-col items-center justify-between h-full p-4">
+    <div className="flex flex-col items-center justify-between h-full p-4 pt-12">
       <div className="text-center">
         <h2 className="text-lg font-pixel text-accent">🐔 CROSSY ROAD</h2>
-        <p className="text-2xl font-pixel text-primary">{timeLeft}s</p>
         <p className="text-sm font-mono text-muted-foreground">
           Crossings: <span className="text-accent font-bold">{crossings}</span>
         </p>

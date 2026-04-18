@@ -26,7 +26,7 @@ const ExamTips = () => {
     setShareCode(code);
 
     // Insert into mission_logs as pending
-    const { error } = await supabase.from("mission_logs").insert({ share_code: code, status: "pending" });
+    const { error } = await (supabase as any).from("mission_logs").insert({ share_code: code, status: "pending" });
 
     if (error) {
       toast.error("Failed to create share code");
@@ -86,16 +86,16 @@ const ExamTips = () => {
         setScanning(false);
 
         // Check if code is still pending (not already used)
-        const { data: existing } = await supabase.from("mission_logs").select("status").eq("share_code", code).single();
+        const { data: existing } = await (supabase as any).from("mission_logs").select("status").eq("share_code", code).single();
 
-        if (!existing || existing.status !== "pending") {
+        if (!existing || (existing as any).status !== "pending") {
           toast.error("⚠️ This QR code has already been used!");
           setScanned(false);
           return;
         }
 
         // Update mission_logs status to received
-        const { error } = await supabase.
+        const { error } = await (supabase as any).
         from("mission_logs").
         update({ status: "received" }).
         eq("share_code", code).

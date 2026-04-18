@@ -2038,7 +2038,7 @@ export function useGameLogic({ players, broadcast, gameMode, connectionMode, map
         } else {
           gs.activeEvent.chickClicks[connId] = (gs.activeEvent.chickClicks[connId] ?? 0) + 1;
         }
-        addBreakdown(player, 'hitbox', 'Hitbox tap', 0.1);
+        addBreakdown(player, 'hitbox', 'Hitbox tap', 0.01);
         break;
       }
 

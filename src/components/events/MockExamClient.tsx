@@ -74,10 +74,9 @@ export default function MockExamClient({
   }
 
   return (
-    <div className="flex flex-col h-full p-4 gap-3">
+    <div className="flex flex-col h-full p-4 pt-12 gap-3">
       <div className="flex justify-between items-center">
         <h2 className="text-sm font-pixel text-accent">MOCK EXAM</h2>
-        <span className="font-mono text-sm text-accent">{timeLeft}s</span>
       </div>
 
       <div className="relative w-full overflow-hidden rounded border border-border bg-black" style={{ aspectRatio: '873/457' }}>
