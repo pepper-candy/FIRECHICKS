@@ -2242,6 +2242,98 @@ export function useGameLogic({ players, broadcast, gameMode, connectionMode, map
         break;
       }
 
+      // ── Exam answer submission (voting system) ──
+      case "exam-answer-submit": {
+        if (player.isEagle) return;
+        if (!gs.examState || gs.phase !== "exam") return;
+
+        // Store the answer from the designated submitter
+        gs.examState.finalAnswer = msg.answer.toUpperCase().trim();
+
+        // Create masked answer display: show first 3 chars as boxes with actual chars
+        const answer = gs.examState.finalAnswer;
+        const maskedAnswer = answer.split('').slice(0, 3).join('');
+
+        // Broadcast voting start to all clients
+        broadcastRef.current({
+          type: "exam-voting-start",
+          submitterConnId: connId,
+          maskedAnswer,
+          startedAt: Date.now(),
+        });
+        break;
+      }
+
+      // ── Exam vote submission ──
+      case "exam-vote": {
+        if (!gs.examState || !gs.examState.votingState) return;
+
+        if (!gs.examState.votingState.submittedVotes) {
+          gs.examState.votingState.submittedVotes = {};
+        }
+        gs.examState.votingState.submittedVotes[connId] = msg.vote;
+
+        // Broadcast that this player voted
+        broadcastRef.current({
+          type: "exam-vote-submitted",
+          connId,
+          vote: msg.vote,
+        });
+
+        // Check if all alive chicks have voted
+        const aliveChicks = Array.from<PlayerGameState>(gs.playerStates.values())
+          .filter((p) => !p.isEagle && p.alive && !isBotConnId(p.connId));
+
+        const votes = gs.examState.votingState.submittedVotes;
+        const allVoted = aliveChicks.every((c) => votes[c.connId] !== undefined);
+
+        if (allVoted) {
+          // Tally votes
+          const passVotes = Object.values(votes).filter((v) => v === 'pass').length;
+          const totalVotes = Object.keys(votes).length;
+          const majorityPass = passVotes > totalVotes / 2;
+
+          if (majorityPass) {
+            // Correct — end exam successfully
+            gs.examState.answered = true;
+            addBreakdown(player, 'final-exam', 'Final Exam correct', 10);
+            resolveExamWinner(gs, gameModeRef.current as "1v3" | "2v6", broadcastRef.current);
+          } else {
+            // Incorrect — apply -2 penalty to all chicks
+            if (!gs.examState.wrongCount) gs.examState.wrongCount = 0;
+            gs.examState.wrongCount += 1;
+
+            for (const [, p] of gs.playerStates) {
+              if (p.alive && !p.isEagle) {
+                p.health = addSubGrades(p.health, -2);
+                if (isDead(p.health)) {
+                  p.alive = false;
+                  p.health = 0;
+                  broadcastRef.current({ type: "you-died", connId: p.connId });
+
+                  if (gs.examState && gs.examState.layer1ConnId === p.connId && !gs.examState.layer1Dead) {
+                    gs.examState.layer1Dead = true;
+                  }
+                  updateHostExamDisplay(gs);
+                }
+              }
+            }
+
+            // Check if all chicks dead or max 3 attempts reached
+            const aliveAfter = Array.from<PlayerGameState>(gs.playerStates.values()).filter((p) => !p.isEagle && p.alive);
+            if (aliveAfter.length === 0) {
+              endGame(gs, "eagle", broadcastRef.current);
+            } else if (gs.examState.wrongCount >= 3) {
+              gs.examState.answered = true;
+              gs.examState.timeRemaining = 0;
+              resolveExamWinner(gs, gameModeRef.current as "1v3" | "2v6", broadcastRef.current);
+            }
+            updateHostExamDisplay(gs);
+          }
+        }
+        break;
+      }
+
       default:
         break;
     }

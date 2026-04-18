@@ -31,6 +31,7 @@ import { ColorCodeBalls, ColorCodePicker } from "@/components/ColorCodeBalls";
 import { isColorCode, COLOR_CODE_LETTERS } from "@/lib/colorCode";
 import { AreYouStillTherePrompt } from "@/components/AreYouStillTherePrompt";
 import { GameEndTransition } from "@/components/GameEndTransition";
+import { ExamVotingUI } from "@/components/ExamVotingUI";
 
 // ─── Props Button (inline for compact layout) ──────────────────────────────────
 const PROP_COLORS: Record<PropType, string> = {
@@ -434,6 +435,13 @@ export default function Client() {
   const connIdRef = useRef<string>("");
   const [showSusWarning, setShowSusWarning] = useState(false);
   const [showingEndTransition, setShowingEndTransition] = useState(false);
+  const [showExamVoting, setShowExamVoting] = useState(false);
+  const [examVotingState, setExamVotingState] = useState<{
+    submitterConnId: string;
+    submitterName: string;
+    maskedAnswer: string;
+    startedAt: number;
+  } | null>(null);
 
   // Event state
   const [eventAnswer, setEventAnswer] = useState("");
@@ -742,9 +750,27 @@ export default function Client() {
         if (warningConnId === connIdRef.current) {
           setShowSusWarning(true);
         }
+    } else if (msg.type === "exam-voting-start") {
+        const submitterConnId = msg.submitterConnId as string;
+        const maskedAnswer = msg.maskedAnswer as string;
+        const startedAt = msg.startedAt as number;
+
+        // Get submitter name from game state
+        const submitterState = gameState?.players?.[submitterConnId];
+        const submitterName = submitterState 
+          ? `${PLAYER_COLORS[submitterState.colorIndex]?.name ?? 'Player'}`
+          : 'Anonymous';
+
+        setExamVotingState({
+          submitterConnId,
+          submitterName,
+          maskedAnswer,
+          startedAt,
+        });
+        setShowExamVoting(true);
       }
     });
-  }, [onHostMessage, colorIndex, clientId]);
+  }, [onHostMessage, colorIndex, clientId, gameState]);
 
   // Watch for tips received (tips changed in game state)
   const prevTipsRef = useRef<[boolean, boolean]>([false, false]);
@@ -957,7 +983,8 @@ export default function Client() {
   }, [activeScannerTipIdx]);
   const handleExamSubmit = useCallback(() => {
     if (examAnswer.trim()) {
-      sendToHost({ type: "answer-submit", answer: examAnswer.trim() });
+      // Send as voting answer message for voting system
+      sendToHost({ type: "exam-answer-submit", answer: examAnswer.trim() });
       setExamAnswer("");
     }
   }, [sendToHost, examAnswer]);
@@ -1577,6 +1604,22 @@ export default function Client() {
 
   // ─── EXAM PHASE ──────────────────────────────────────────────────────────────
   if (gamePhase === "exam") {
+    // Show voting UI if exam voting is active
+    if (showExamVoting && examVotingState) {
+      return (
+        <ExamVotingUI
+          submitterName={examVotingState.submitterName}
+          maskedAnswer={examVotingState.maskedAnswer}
+          startedAt={examVotingState.startedAt}
+          votingDurationMs={10000}
+          onVote={(vote) => {
+            sendToHost({ type: "exam-vote", vote });
+            setShowExamVoting(false);
+          }}
+        />
+      );
+    }
+
     // Eagle sees distract message
     if (isEagle) {
       return (

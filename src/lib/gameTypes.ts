@@ -68,6 +68,16 @@ export interface ExamState {
   submittedConnIds?: string[];
   /** Total wrong attempts across all submitters (max 3) */
   wrongCount?: number;
+  /** Single random non-bot chick designated as submitter for voting system */
+  examSubmitterId?: string;
+  /** Final submitted answer by the designated submitter */
+  finalAnswer?: string;
+  /** Voting state: { startedAt, submittedConnIds } */
+  votingState?: {
+    startedAt: number;
+    isVoting: boolean;
+    submittedVotes: Record<string, 'pass' | 'fail'>;
+  };
 }
 
 export type EventType = 'mock-exam' | 'hitbox' | 'crossy-road';
@@ -233,7 +243,10 @@ export type HostMessage =
       examWhiteBgConnId?: string | null;
     }
   | { type: 'lobby-prop-granted'; colorIndex: number; propType: 'speed' | 'heal' }
-  | { type: 'exam-wrong'; attemptsLeft: number };
+  | { type: 'exam-wrong'; attemptsLeft: number }
+  | { type: 'exam-submitter-selected'; connId: string }
+  | { type: 'exam-voting-start'; submitterConnId: string; maskedAnswer: string; startedAt: number }
+  | { type: 'exam-vote-submitted'; connId: string; vote: 'pass' | 'fail' };
 
 // Messages client → host
 export type ClientMessage =
@@ -249,7 +262,9 @@ export type ClientMessage =
   | { type: 'crossy-hop'; direction: 'up' | 'down' }
   | { type: 'crossy-eagle-action'; action: 'speed-up' | 'add-obstacle' }
   | { type: 'teleport-set'; x: number; z: number }
-  | { type: 'teleport-confirm' };
+  | { type: 'teleport-confirm' }
+  | { type: 'exam-answer-submit'; answer: string }
+  | { type: 'exam-vote'; vote: 'pass' | 'fail' };
 
 // ─── Replay types ─────────────────────────────────────────────────────────────
 export interface ReplayFramePlayer {
