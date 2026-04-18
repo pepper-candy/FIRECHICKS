@@ -5,7 +5,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AssetLoadingProvider } from "@/context/AssetLoadingContext";
 import { ImmersiveProvider } from "@/context/ImmersiveContext";
-import PWExam from "./pages/PWExam";
+import PWExamVoting from "./pages/PWExamVoting";
 import GameIndex from "./pages/GameIndex";
 import Host from "./pages/Host";
 import Client from "./pages/Client";
@@ -49,8 +49,8 @@ const App = () => (
         <BrowserRouter>
           <Routes>
           <Route path="/" element={<GameIndex />} />
-          <Route path="/pw-exam" element={<PWExam />} />
-          <Route path="/pw" element={<PWExam />} />
+          <Route path="/pw-exam" element={<PWExamVoting />} />
+          <Route path="/pw" element={<PWExamVoting />} />
           <Route path="/host" element={<Host />} />
           <Route path="/client" element={<Client />} />
           <Route path="/character" element={<Character />} />
