@@ -188,6 +188,8 @@ export interface PlayerGameStateSerializable {
   attackRemainingMs: number;
   flyRemainingMs: number;
   cageRemainingMs: number;
+  speedRemainingMs: number;
+  invincibleRemainingMs: number;
 }
 
 export interface GameStateSnapshot {
@@ -289,5 +291,7 @@ export function serializePlayerState(p: PlayerGameState, now?: number): PlayerGa
     attackRemainingMs: Math.max(0, p.attackCooldownUntil - t),
     flyRemainingMs: Math.max(0, p.flyCooldownUntil - t),
     cageRemainingMs: Math.max(0, p.cageCooldownUntil - t),
+    speedRemainingMs: Math.max(0, p.speedMultiplierUntil - t),
+    invincibleRemainingMs: Math.max(0, p.invincibleUntil - t),
   };
 }
