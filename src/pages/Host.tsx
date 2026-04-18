@@ -470,7 +470,12 @@ export default function Host() {
               }`}
               title={isImmersive ? "Click to rebroadcast room (immersive)" : undefined}
             >
-              ROOM: <span className="text-accent font-bold tracking-widest">{roomCode}</span>
+              ROOM:{" "}
+              {isImmersive && roomCode.length === 4 ? (
+                <ColorCodeBalls code={roomCode} size={16} gap={4} className="ml-1" />
+              ) : (
+                <span className="text-accent font-bold tracking-widest">{roomCode}</span>
+              )}
             </button>
           </div>
 
