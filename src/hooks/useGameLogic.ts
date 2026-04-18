@@ -65,6 +65,7 @@ const TIP_OBTAIN_DURATION = 7000; // 7 sec in protected zone to become star stud
 const TIP_QR_COOLDOWN = 5000; // 5 sec before tip QR can regenerate
 const EXAM_TIMER_1V3 = 45;
 const EXAM_TIMER_2V6 = 60;
+const EXAM_VOTING_DURATION = 10000; // 10 seconds
 const MYSTERY_BOX_INTERVAL = 30000; // every 60 sec
 const MYSTERY_BOX_ACTIVE_MIN = 5000;
 const MYSTERY_BOX_ACTIVE_MAX = 8000;
@@ -750,6 +751,22 @@ export function useGameLogic({ players, broadcast, gameMode, connectionMode, map
       }
     }
 
+    // ── Ping broadcast ──
+    if (now - lastPingBroadcastRef.current > 3000) {
+      // Broadcast ping to all players
+      currentBroadcast({ type: "ping", timestamp: now });
+      lastPingBroadcastRef.current = now;
+
+      // Update ping fail counts for sus players who haven't responded
+      const susPlayers = susPlayersRef.current;
+      for (const [connId, sus] of susPlayers) {
+        // If player hasn't responded to previous ping (older than ping interval + grace)
+        if (now - sus.lastPingAt > 4000) {
+          sus.pingFailCount += 1;
+        }
+      }
+    }
+
     // ── Time ──
     if (!gs.frozenAll) {
       gs.gameTime += delta;
@@ -1202,6 +1219,15 @@ export function useGameLogic({ players, broadcast, gameMode, connectionMode, map
             resolveExamWinner(gs, currentMode, currentBroadcast);
           }
         }
+      }
+    }
+
+    // ── Voting timeout ──
+    if (gs.phase === "exam" && gs.examState?.votingState?.isVoting) {
+      const votingState = gs.examState.votingState;
+      if (now - votingState.startedAt > EXAM_VOTING_DURATION) {
+        // Voting timeout, resolve with current votes
+        resolveVoting(gs, currentBroadcast);
       }
     }
 
@@ -1829,6 +1855,90 @@ export function useGameLogic({ players, broadcast, gameMode, connectionMode, map
     hostDragBackupRef.current.delete(connId);
   }, []);
 
+  // ─── Voting resolution helper ────────────────────────────────────────────────
+  const resolveVoting = useCallback((gs: GameStateRef, currentBroadcast: (msg: BroadcastMessage) => void) => {
+    if (!gs.examState?.votingState?.isVoting) return;
+    const votingState = gs.examState.votingState;
+    votingState.isVoting = false;
+    const aliveChicks = Array.from<PlayerGameState>(gs.playerStates.values())
+      .filter((p) => !p.isEagle && p.alive && !isBotConnId(p.connId));
+    const votes = votingState.submittedVotes;
+    
+    // If no votes, treat as wrong answer
+    if (Object.keys(votes).length === 0) {
+      if (!gs.examState.wrongCount) gs.examState.wrongCount = 0;
+      gs.examState.wrongCount += 1;
+      // Apply -2 penalty to all chicks
+      for (const [, p] of gs.playerStates) {
+        if (p.alive && !p.isEagle) {
+          p.health = addSubGrades(p.health, -2);
+          if (isDead(p.health)) {
+            p.alive = false;
+            p.health = 0;
+            currentBroadcast({ type: "you-died", connId: p.connId });
+            if (gs.examState.layer1ConnId === p.connId && !gs.examState.layer1Dead) {
+              gs.examState.layer1Dead = true;
+            }
+          }
+        }
+      }
+      updateHostExamDisplay(gs);
+      // Check if all chicks dead or max 3 attempts reached
+      const aliveAfter = Array.from<PlayerGameState>(gs.playerStates.values()).filter((p) => !p.isEagle && p.alive);
+      if (aliveAfter.length === 0) {
+        endGame(gs, "eagle", currentBroadcast);
+      } else if (gs.examState.wrongCount >= 3) {
+        gs.examState.answered = true;
+        gs.examState.timeRemaining = 0;
+        resolveExamWinner(gs, gameModeRef.current as "1v3" | "2v6", currentBroadcast);
+      }
+      return;
+    }
+    
+    // Tally votes
+    const passVotes = Object.values(votes).filter((v) => v === 'pass').length;
+    const totalVotes = Object.keys(votes).length;
+    const majorityPass = passVotes > totalVotes / 2;
+    
+    if (majorityPass) {
+      // Correct — end exam successfully
+      gs.examState.answered = true;
+      // Find submitter player for breakdown
+      const submitter = gs.examState.examSubmitterId ? gs.playerStates.get(gs.examState.examSubmitterId) : null;
+      if (submitter) {
+        addBreakdown(submitter, 'final-exam', 'Final Exam correct', 10);
+      }
+      resolveExamWinner(gs, gameModeRef.current as "1v3" | "2v6", currentBroadcast);
+    } else {
+      // Incorrect — apply -2 penalty to all chicks
+      if (!gs.examState.wrongCount) gs.examState.wrongCount = 0;
+      gs.examState.wrongCount += 1;
+      for (const [, p] of gs.playerStates) {
+        if (p.alive && !p.isEagle) {
+          p.health = addSubGrades(p.health, -2);
+          if (isDead(p.health)) {
+            p.alive = false;
+            p.health = 0;
+            currentBroadcast({ type: "you-died", connId: p.connId });
+            if (gs.examState.layer1ConnId === p.connId && !gs.examState.layer1Dead) {
+              gs.examState.layer1Dead = true;
+            }
+          }
+        }
+      }
+      updateHostExamDisplay(gs);
+      // Check if all chicks dead or max 3 attempts reached
+      const aliveAfter = Array.from<PlayerGameState>(gs.playerStates.values()).filter((p) => !p.isEagle && p.alive);
+      if (aliveAfter.length === 0) {
+        endGame(gs, "eagle", currentBroadcast);
+      } else if (gs.examState.wrongCount >= 3) {
+        gs.examState.answered = true;
+        gs.examState.timeRemaining = 0;
+        resolveExamWinner(gs, gameModeRef.current as "1v3" | "2v6", currentBroadcast);
+      }
+    }
+  }, []);
+
   // ─── Handle Client Messages ───────────────────────────────────────────────────
   const handleClientMessage = useCallback((connId: string, msg: ClientMessage) => {
     const gs = gameStateRef.current as GameStateRef | null;
@@ -2346,12 +2456,24 @@ export function useGameLogic({ players, broadcast, gameMode, connectionMode, map
         if (player.isEagle) return;
         if (!gs.examState || gs.phase !== "exam") return;
 
+        // If voting already started, ignore subsequent submissions
+        if (gs.examState.votingState) return;
+
         // Store the answer from the designated submitter
         gs.examState.finalAnswer = msg.answer.toUpperCase().trim();
+        gs.examState.examSubmitterId = connId;
+        gs.examState.anyAnswerSubmitted = true;
 
         // Create masked answer display: show first 3 chars as boxes with actual chars
         const answer = gs.examState.finalAnswer;
         const maskedAnswer = answer.split('').slice(0, 3).join('');
+
+        // Initialize voting state
+        gs.examState.votingState = {
+          startedAt: Date.now(),
+          isVoting: true,
+          submittedVotes: {},
+        };
 
         // Broadcast voting start to all clients
         broadcastRef.current({
@@ -2387,48 +2509,8 @@ export function useGameLogic({ players, broadcast, gameMode, connectionMode, map
         const allVoted = aliveChicks.every((c) => votes[c.connId] !== undefined);
 
         if (allVoted) {
-          // Tally votes
-          const passVotes = Object.values(votes).filter((v) => v === 'pass').length;
-          const totalVotes = Object.keys(votes).length;
-          const majorityPass = passVotes > totalVotes / 2;
-
-          if (majorityPass) {
-            // Correct — end exam successfully
-            gs.examState.answered = true;
-            addBreakdown(player, 'final-exam', 'Final Exam correct', 10);
-            resolveExamWinner(gs, gameModeRef.current as "1v3" | "2v6", broadcastRef.current);
-          } else {
-            // Incorrect — apply -2 penalty to all chicks
-            if (!gs.examState.wrongCount) gs.examState.wrongCount = 0;
-            gs.examState.wrongCount += 1;
-
-            for (const [, p] of gs.playerStates) {
-              if (p.alive && !p.isEagle) {
-                p.health = addSubGrades(p.health, -2);
-                if (isDead(p.health)) {
-                  p.alive = false;
-                  p.health = 0;
-                  broadcastRef.current({ type: "you-died", connId: p.connId });
-
-                  if (gs.examState && gs.examState.layer1ConnId === p.connId && !gs.examState.layer1Dead) {
-                    gs.examState.layer1Dead = true;
-                  }
-                  updateHostExamDisplay(gs);
-                }
-              }
-            }
-
-            // Check if all chicks dead or max 3 attempts reached
-            const aliveAfter = Array.from<PlayerGameState>(gs.playerStates.values()).filter((p) => !p.isEagle && p.alive);
-            if (aliveAfter.length === 0) {
-              endGame(gs, "eagle", broadcastRef.current);
-            } else if (gs.examState.wrongCount >= 3) {
-              gs.examState.answered = true;
-              gs.examState.timeRemaining = 0;
-              resolveExamWinner(gs, gameModeRef.current as "1v3" | "2v6", broadcastRef.current);
-            }
-            updateHostExamDisplay(gs);
-          }
+          // All chicks voted, resolve voting
+          resolveVoting(gs, broadcastRef.current);
         }
         break;
       }

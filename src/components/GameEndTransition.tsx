@@ -7,7 +7,6 @@ interface GameEndTransitionProps {
 
 export const GameEndTransition = ({ onComplete }: GameEndTransitionProps) => {
     const [phase, setPhase] = useState(0);
-    const [dotCount, setDotCount] = useState(1);
 
     // Phase timing
     useEffect(() => {
@@ -25,25 +24,10 @@ export const GameEndTransition = ({ onComplete }: GameEndTransitionProps) => {
         return () => timers.forEach(clearTimeout);
     }, [onComplete]);
 
-    // Dot animation for "grading..."
-    useEffect(() => {
-        if (phase !== 2) return;
-        const interval = setInterval(() => {
-            setDotCount((prev) => (prev % 3) + 1);
-        }, 1000);
-        return () => clearInterval(interval);
-    }, [phase]);
-
-    const getGradingText = () => {
-        const base = "Somewhere, someone is grading";
-        const dots = ".".repeat(dotCount);
-        return base + dots;
-    };
-
     return (
         <div className="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-background overflow-hidden">
             <div className="flex flex-col items-center justify-center gap-6 px-6 text-center">
-                {/* Line 1: "Pens down." */}
+                {/* Line 1: "Phones down." */}
                 <div
                     className="text-4xl font-pixel text-primary tracking-[0.3em] transition-all duration-500"
                     style={{
@@ -52,7 +36,7 @@ export const GameEndTransition = ({ onComplete }: GameEndTransitionProps) => {
                         transform: phase >= 0 ? "translateY(0)" : "translateY(20px)",
                     }}
                 >
-                    PENS DOWN.
+                    PHONES DOWN.
                 </div>
 
                 {/* Line 2: "The exam has ended." */}
@@ -74,17 +58,18 @@ export const GameEndTransition = ({ onComplete }: GameEndTransitionProps) => {
                         transform: phase >= 2 ? "translateY(0)" : "translateY(20px)",
                     }}
                 >
-                    <span>{getGradingText()}</span>
+                    <span>Somewhere, someone is grading...</span>
                     <Loader2 className="w-4 h-4 animate-spin" />
                 </div>
 
-                {/* Line 4: "Your transcript is ready." */}
+                {/* Line 4: "Your transcript is ready." with subtle pulse */}
                 <div
-                    className="text-lg font-pixel text-primary tracking-[0.3em] mt-8 transition-all duration-500"
+                    className="text-lg font-pixel text-primary tracking-[0.3em] mt-8 animate-pulse"
                     style={{
                         textShadow: "0 0 40px hsl(var(--primary) / 0.6)",
                         opacity: phase >= 3 ? 1 : 0,
                         transform: phase >= 3 ? "scale(1)" : "scale(0.95)",
+                        animation: phase >= 3 ? 'pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite' : 'none',
                     }}
                 >
                     YOUR TRANSCRIPT IS READY.

@@ -31,7 +31,7 @@ import { ColorCodeBalls, ColorCodePicker } from "@/components/ColorCodeBalls";
 import { isColorCode, COLOR_CODE_LETTERS } from "@/lib/colorCode";
 import { AreYouStillTherePrompt } from "@/components/AreYouStillTherePrompt";
 import { GameEndTransition } from "@/components/GameEndTransition";
-import { ExamVotingUI } from "@/components/ExamVotingUI";
+
 import { ExamSubmissionBox } from "@/components/ExamSubmissionBox";
 
 // ─── Props Button (inline for compact layout) ──────────────────────────────────
@@ -1725,22 +1725,12 @@ export default function Client() {
         {/* Bottom section: Voting UI or Answer input */}
         {showExamVoting && examVotingState ? (
           <div className="flex flex-col gap-3 px-3 pb-4 border-t border-border">
-            {/* Submitter answer input */}
-            {isExamSubmitter ? (
-              <ExamSubmissionBox
-                questionNum={examQuestionNum}
-                onSubmit={(answer) => {
-                  handleExamSubmit(answer);
-                }}
-                disabled={false}
-                isSubmitting={false}
-                placeholder="Type your answer..."
-              />
-            ) : null}
+
 
             {/* Vote buttons (for non-submitters or after submission) */}
             <div className="flex flex-col gap-2">
               <p className="text-xs font-mono text-muted-foreground text-center">{examVotingState.submitterName}'s answer: {examVotingState.maskedAnswer}</p>
+              <p className="text-xs font-mono text-muted-foreground text-center">Voting ends in {Math.max(0, Math.ceil((examVotingState.startedAt + 10000 - clockNow) / 1000))}s</p>
               <div className="flex gap-2">
                 <Button
                   onClick={() => {
