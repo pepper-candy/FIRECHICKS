@@ -634,23 +634,31 @@ function useHostSupabase(enabled: boolean, opts?: WebRtcOptions) {
     }
 
     let alive = true;
+    let resolvedCode = '';
 
-    // Create room via API instead of generating locally
+    // Create room via API (or reserve color code in immersive mode).
     (async () => {
       try {
-        const res = await fetch('/api/create-room', { 
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ hostId: 'host_' + Date.now() })
-        });
-        const data = await res.json();
-        const code = data.code;
+        let code: string | undefined;
+        if (opts?.useColorCode) {
+          code = (await reserveColorCode('host_' + Date.now())) ?? undefined;
+        }
+        if (!code) {
+          const res = await fetch('/api/create-room', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ hostId: 'host_' + Date.now() })
+          });
+          const data = await res.json();
+          code = data.code;
+        }
         if (!code) {
           console.error('Failed to create room: no code in response');
           return;
         }
 
         if (!alive) return;
+        resolvedCode = code;
         setRoomCode(code);
 
         const channel = supabase.channel(`game-room-${code}`, {
