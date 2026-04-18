@@ -800,8 +800,11 @@ function useHostSupabase(enabled: boolean, opts?: WebRtcOptions) {
         delete (window as any).__supabaseHostPingInterval;
       }
       channelRef.current?.unsubscribe();
+      if (resolvedCode && isColorCode(resolvedCode)) {
+        void releaseColorCode(resolvedCode);
+      }
     };
-  }, [enabled, removePlayer, handleColorSwap, resolveClientId]);
+  }, [enabled, removePlayer, handleColorSwap, resolveClientId, opts?.useColorCode]);
 
   const addBot = useCallback((connId: string, colorIndex: number) => {
     usedColorsRef.current.add(colorIndex);
