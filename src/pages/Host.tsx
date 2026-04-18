@@ -872,7 +872,7 @@ export default function Host() {
 
         {/* Pause controls + Health display top-right */}
         {
-          <div className="absolute top-2 right-2 z-30 flex flex-col gap-1">
+          <div className="absolute top-2 right-2 z-50 flex flex-col gap-1 pointer-events-auto">
             <div className="flex gap-1 justify-end">
               {(snapshot.activeEvent || phase === "exam") && (
                 <button
@@ -880,7 +880,7 @@ export default function Host() {
                     if (phase === "exam") hostSkipExam();
                     else hostSkipActiveEvent();
                   }}
-                  className="flex items-center gap-1 px-2 py-1 rounded border text-[10px] font-mono transition-all border-destructive/60 bg-destructive/15 text-destructive hover:bg-destructive/25"
+                  className="flex items-center gap-1 px-2 py-1 rounded border text-[10px] font-mono transition-all border-destructive/60 bg-destructive/15 text-destructive hover:bg-destructive/25 opacity-100"
                   title="Skip current event/exam"
                 >
                   SKIP
@@ -900,7 +900,7 @@ export default function Host() {
                     setIsPaused(true);
                   }
                 }}
-                className={`flex items-center gap-1 px-2 py-1 rounded border text-[10px] font-mono transition-all ${
+                className={`flex items-center gap-1 px-2 py-1 rounded border text-[10px] font-mono transition-all opacity-100 ${
                   isPaused
                     ? "border-accent bg-accent/20 text-accent"
                     : "border-border bg-card/80 text-muted-foreground hover:text-foreground"
@@ -915,7 +915,7 @@ export default function Host() {
                   const v = toggleBotsPause();
                   setIsBotsPaused(v);
                 }}
-                className={`flex items-center gap-1 px-2 py-1 rounded border text-[10px] font-mono transition-all ${
+                className={`flex items-center gap-1 px-2 py-1 rounded border text-[10px] font-mono transition-all opacity-100 ${
                   isBotsPaused
                     ? "border-accent bg-accent/20 text-accent"
                     : "border-border bg-card/80 text-muted-foreground hover:text-foreground"
