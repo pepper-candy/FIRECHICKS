@@ -27,6 +27,8 @@ import { ZONE_RADIUS } from "@/lib/gameplayMapData";
 import { buzz } from "@/lib/haptics";
 import GameOverScreen from "@/components/GameOverScreen";
 import { useImmersive } from "@/context/ImmersiveContext";
+import { ColorCodeBalls, ColorCodePicker } from "@/components/ColorCodeBalls";
+import { isColorCode, COLOR_CODE_LETTERS } from "@/lib/colorCode";
 
 // ─── Props Button (inline for compact layout) ──────────────────────────────────
 const PROP_COLORS: Record<PropType, string> = {
