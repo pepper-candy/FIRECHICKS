@@ -1191,12 +1191,12 @@ function GameOverCeremony({ snapshot, gameMode }: { snapshot: GameStateSnapshot;
     snapshot.examState ? true : false
   );
 
-  // Sync showingEndTransition with snapshot.examState
+  // Debug log for transition state
   useEffect(() => {
-    if (!snapshot.examState) {
-      setShowingEndTransition(false);
-    }
-  }, [snapshot.examState]);
+    console.log('[GameOverCeremony] snapshot.examState:', snapshot.examState, 'showingEndTransition:', showingEndTransition, 'ceremonyPhase:', ceremonyPhase);
+  }, [snapshot.examState, showingEndTransition, ceremonyPhase]);
+
+  // No longer sync showingEndTransition with examState; rely on initial state and onComplete only.
 
   const winner = snapshot.winner;
   const getMatchResult = (p: PlayerGameStateSerializable): "draw" | "win" | "lose" => {
@@ -1228,6 +1228,7 @@ function GameOverCeremony({ snapshot, gameMode }: { snapshot: GameStateSnapshot;
     winner === "draw" || (winner === "eagle" && gameMode === "1v3") || winningTeamPlayers.length === 0;
 
   const handleTransitionComplete = useCallback(() => {
+    console.log('[GameOverCeremony] handleTransitionComplete called');
     setShowingEndTransition(false);
   }, []);
 
@@ -1239,12 +1240,16 @@ function GameOverCeremony({ snapshot, gameMode }: { snapshot: GameStateSnapshot;
   }
 
   useEffect(() => {
+    console.log('[GameOverCeremony] timers useEffect, showingEndTransition:', showingEndTransition, 'skipTeamPhase:', skipTeamPhase);
     // Don't start ceremony timers while the transition is showing
     if (showingEndTransition) {
+      console.log('[GameOverCeremony] Transition still showing, skipping timers');
       return;
     }
 
+    console.log('[GameOverCeremony] Starting ceremony timers');
     const t1 = setTimeout(() => {
+      console.log('[GameOverCeremony] Timer t1 firing, skipTeamPhase:', skipTeamPhase);
       if (skipTeamPhase) {
         setCeremonyPhase("transcript");
       } else {
@@ -1255,10 +1260,12 @@ function GameOverCeremony({ snapshot, gameMode }: { snapshot: GameStateSnapshot;
     const t2 = skipTeamPhase
       ? null
       : setTimeout(() => {
+          console.log('[GameOverCeremony] Timer t2 firing, moving to transcript');
           setCeremonyPhase("transcript");
         }, 10000);
 
     return () => {
+      console.log('[GameOverCeremony] Cleaning up timers');
       clearTimeout(t1);
       if (t2) clearTimeout(t2);
     };
@@ -1266,9 +1273,15 @@ function GameOverCeremony({ snapshot, gameMode }: { snapshot: GameStateSnapshot;
 
   useEffect(() => {
     if (!showingEndTransition) {
-      setCeremonyPhase("mvp");
+      console.log('[GameOverCeremony] showingEndTransition false, setting ceremonyPhase');
+      if (!mvp) {
+        console.log('[GameOverCeremony] MVP undefined, skipping to transcript');
+        setCeremonyPhase("transcript");
+      } else {
+        setCeremonyPhase("mvp");
+      }
     }
-  }, [showingEndTransition]);
+  }, [showingEndTransition, mvp]);
 
   const mvpColor = mvp ? PLAYER_COLORS[mvp.colorIndex] : null;
   const teamName =
@@ -1323,20 +1336,9 @@ function GameOverCeremony({ snapshot, gameMode }: { snapshot: GameStateSnapshot;
   if (ceremonyPhase === "mvp") {
     // Safety check for mvp undefined
     if (!mvp) {
-      // Fallback: skip to transcript
-      return (
-        <div className="flex flex-col items-center justify-center h-screen gap-6 bg-background">
-          <h1 className="text-2xl font-pixel text-accent tracking-widest">GAME OVER</h1>
-          <p className="text-sm font-mono text-muted-foreground">Preparing transcript...</p>
-          <button
-            type="button"
-            onClick={() => setCeremonyPhase("transcript")}
-            className="px-6 py-2 rounded border border-primary text-primary font-pixel text-sm mt-4"
-          >
-            View Transcript
-          </button>
-        </div>
-      );
+      console.log('[GameOverCeremony] MVP is undefined, skipping to transcript');
+      setCeremonyPhase("transcript");
+      return null;
     }
     return (
       <div

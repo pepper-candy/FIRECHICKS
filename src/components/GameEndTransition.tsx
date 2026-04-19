@@ -12,15 +12,17 @@ export const GameEndTransition = ({ onComplete }: GameEndTransitionProps) => {
     const [showLine4, setShowLine4] = useState(false);
     const [completed, setCompleted] = useState(false);
 
-    // Phase timing - more reliable approach
+        // Phase timing - more reliable approach
     useEffect(() => {
+        console.log('[GameEndTransition] useEffect, completed:', completed);
         if (completed) return;
 
-        const timer1 = setTimeout(() => setShowLine1(true), 0); // 0s
-        const timer2 = setTimeout(() => setShowLine2(true), 1500); // 1.5s
-        const timer3 = setTimeout(() => setShowLine3(true), 3000); // 3s
-        const timer4 = setTimeout(() => setShowLine4(true), 7000); // 7s
+        const timer1 = setTimeout(() => { setShowLine1(true); console.log('[GameEndTransition] line1'); }, 0); // 0s
+        const timer2 = setTimeout(() => { setShowLine2(true); console.log('[GameEndTransition] line2'); }, 1500); // 1.5s
+        const timer3 = setTimeout(() => { setShowLine3(true); console.log('[GameEndTransition] line3'); }, 3000); // 3s
+        const timer4 = setTimeout(() => { setShowLine4(true); console.log('[GameEndTransition] line4'); }, 7000); // 7s
         const timerComplete = setTimeout(() => {
+            console.log('[GameEndTransition] timerComplete, calling onComplete');
             setCompleted(true);
             onComplete();
         }, 10000); // 10s

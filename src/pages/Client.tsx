@@ -436,7 +436,10 @@ export default function Client() {
   const connIdRef = useRef<string>("");
   const [showSusWarning, setShowSusWarning] = useState(false);
   const [showingEndTransition, setShowingEndTransition] = useState(false);
-  const handleTransitionComplete = useCallback(() => setShowingEndTransition(false), []);
+  const handleTransitionComplete = useCallback(() => {
+    console.log('[Client] handleTransitionComplete called');
+    setShowingEndTransition(false);
+  }, []);
   const [showExamVoting, setShowExamVoting] = useState(false);
   const [isExamSubmitter, setIsExamSubmitter] = useState(false);
   const [hasVotedExam, setHasVotedExam] = useState(false);
@@ -910,18 +913,18 @@ export default function Client() {
     }
   }, [gamePhase]);
 
-  // ── GameEndTransition trigger ──
+    // ── GameEndTransition trigger ──
   useEffect(() => {
+    console.log('[Client] GameEndTransition trigger:', { gamePhase, examState: gameState?.examState, showingEndTransition });
     if (gamePhase === "gameover" && gameState?.examState && !showingEndTransition) {
+      console.log('[Client] Setting showingEndTransition true');
       setShowingEndTransition(true);
     }
   }, [gamePhase, gameState?.examState, showingEndTransition]);
 
-  // Sync showingEndTransition with examState
+    // Debug log for transition state
   useEffect(() => {
-    if (gamePhase === "gameover" && !gameState?.examState && showingEndTransition) {
-      setShowingEndTransition(false);
-    }
+    console.log('[Client] gamePhase:', gamePhase, 'examState:', gameState?.examState, 'showingEndTransition:', showingEndTransition);
   }, [gamePhase, gameState?.examState, showingEndTransition]);
 
   // ── Prop-use screen edge pulse ──
