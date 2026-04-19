@@ -275,8 +275,10 @@ export type ClientMessage =
   | { type: 'answer-submit'; answer: string }
   | { type: 'tip-request'; tipIndex: 0 | 1 }
   | { type: 'event-hitbox-click' }
+  | { type: 'event-hitbox-batch'; taps: number }  // ← ADD THIS
   | { type: 'event-answer'; answer: string }
   | { type: 'crossy-hop'; direction: 'up' | 'down' }
+  | { type: 'crossy-crossing'; crossings: number }  // ← ADD THIS
   | { type: 'crossy-eagle-action'; action: 'speed-up' | 'add-obstacle' }
   | { type: 'teleport-set'; x: number; z: number }
   | { type: 'teleport-confirm' }

@@ -21,7 +21,7 @@ import type { GamePhase, GameStateSnapshot, PropType, GameMode, PropItem } from 
 import type { ChickColor } from "@/components/CharacterViewer";
 import QRCode from "react-qr-code";
 import { Zap, Heart, Wind, Shield, ChevronUp, Crosshair, Lock } from "lucide-react";
-import CrossyRoadClient from "@/components/events/CrossyRoadClient";
+import CrossyRoadClientLocal from "@/components/events/CrossyRoadClientLocal";
 import { useNavigate } from "react-router-dom";
 import { ZONE_RADIUS } from "@/lib/gameplayMapData";
 import { buzz } from "@/lib/haptics";
@@ -472,6 +472,8 @@ export default function Client() {
   const disconnectGraceUntilRef = useRef(0);
   const disconnectRedirectTimeoutRef = useRef<number | null>(null);
   const hasReachedEndgameRef = useRef(false);
+  const hitboxTapCountRef = useRef(0);
+  const hitboxBatchIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const clientInputLocked = Boolean(gameState?.frozenAll || gameState?.videoPlaying || gameState?.replayCountdown);
 
   useEffect(() => {
@@ -1467,7 +1469,9 @@ export default function Client() {
             <h2 className="text-lg font-pixel text-accent">👊 HITBOX BATTLE</h2>
           </div>
           <button
-            onClick={() => sendToHost({ type: "event-hitbox-click" })}
+            onClick={() => {
+              hitboxTapCountRef.current++;
+            }}
             className="w-48 h-48 rounded-full border-4 border-accent bg-accent/20 active:scale-90 transition-all flex items-center justify-center"
             style={{ boxShadow: "0 0 30px hsl(var(--accent) / 0.5)" }}
           >
@@ -1554,12 +1558,11 @@ export default function Client() {
     if (activeEvent.phase === "active" && activeEvent.type === "crossy-road") {
       return (
         <div className="h-dvh overflow-hidden">
-          <CrossyRoadClient
+          <CrossyRoadClientLocal
             event={activeEvent}
             isEagle={!!isEagle}
             connId={myState?.connId ?? ""}
-            nowTs={clockNow}
-            onHop={(dir) => sendToHost({ type: "crossy-hop", direction: dir })}
+            onCrossingComplete={(crossings) => sendToHost({ type: "crossy-crossing", crossings })}
             onEagleAction={(action) => sendToHost({ type: "crossy-eagle-action", action })}
           />
         </div>
@@ -1633,6 +1636,26 @@ export default function Client() {
       );
     }
   }
+
+  useEffect(() => {
+    if (gamePhase === "playing" && activeEvent?.type === "hitbox" && activeEvent?.phase === "active") {
+      hitboxBatchIntervalRef.current = setInterval(() => {
+        if (hitboxTapCountRef.current > 0) {
+          sendToHost({ type: "event-hitbox-batch", taps: hitboxTapCountRef.current });
+          hitboxTapCountRef.current = 0;
+        }
+      }, 300);
+    } else {
+      if (hitboxBatchIntervalRef.current) {
+        clearInterval(hitboxBatchIntervalRef.current);
+        hitboxBatchIntervalRef.current = null;
+      }
+      hitboxTapCountRef.current = 0;
+    }
+    return () => {
+      if (hitboxBatchIntervalRef.current) clearInterval(hitboxBatchIntervalRef.current);
+    };
+  }, [gamePhase, activeEvent]);
 
   // ─── EXAM PHASE ──────────────────────────────────────────────────────────────
   if (gamePhase === "exam") {

@@ -2500,6 +2500,20 @@ export function useGameLogic({
         break;
       }
 
+      case "event-hitbox-batch": {
+        if (!gs.activeEvent || gs.activeEvent.type !== "hitbox" || gs.activeEvent.phase !== "active") return;
+        const taps = (msg as any).taps as number;
+        if (!taps) return;
+        
+        if (player.isEagle) {
+          gs.activeEvent.eagleClicks[connId] = (gs.activeEvent.eagleClicks[connId] ?? 0) + taps;
+        } else {
+          gs.activeEvent.chickClicks[connId] = (gs.activeEvent.chickClicks[connId] ?? 0) + taps;
+        }
+        addBreakdown(player, 'hitbox', 'Hitbox tap', 0.1 * taps, taps);
+        break;
+      }
+
       // ── Event mock exam answer ──
       case "event-answer": {
         if (!gs.activeEvent || gs.activeEvent.type !== "mock-exam" || gs.activeEvent.phase !== "active") return;
@@ -2516,6 +2530,19 @@ export function useGameLogic({
             addBreakdown(player, 'mock-exam', 'Mock Exam correct', 3);
           }
         }
+        break;
+      }
+
+      case "crossy-crossing": {
+        if (!gs.activeEvent || gs.activeEvent.type !== "crossy-road" || gs.activeEvent.phase !== "active") return;
+        if (player.isEagle) return;
+        
+        const crossings = (msg as any).crossings as number;
+        if (!gs.activeEvent.crossyPlayerStates) gs.activeEvent.crossyPlayerStates = {};
+        if (!gs.activeEvent.crossyPlayerStates[connId]) {
+          gs.activeEvent.crossyPlayerStates[connId] = { laneIndex: 0, xPosition: 200, crossings: 0, hitCount: 0 };
+        }
+        gs.activeEvent.crossyPlayerStates[connId].crossings = crossings;
         break;
       }
 
