@@ -1443,6 +1443,27 @@ export default function Client() {
 
   // ─── ACTIVE EVENT PHASE ──────────────────────────────────────────────────────
   const activeEvent = gameState?.activeEvent;
+  
+  useEffect(() => {
+    if (gamePhase === "playing" && activeEvent?.type === "hitbox" && activeEvent?.phase === "active") {
+      hitboxBatchIntervalRef.current = setInterval(() => {
+        if (hitboxTapCountRef.current > 0) {
+          sendToHost({ type: "event-hitbox-batch", taps: hitboxTapCountRef.current });
+          hitboxTapCountRef.current = 0;
+        }
+      }, 300);
+    } else {
+      if (hitboxBatchIntervalRef.current) {
+        clearInterval(hitboxBatchIntervalRef.current);
+        hitboxBatchIntervalRef.current = null;
+      }
+      hitboxTapCountRef.current = 0;
+    }
+    return () => {
+      if (hitboxBatchIntervalRef.current) clearInterval(hitboxBatchIntervalRef.current);
+    };
+  }, [gamePhase, activeEvent]);
+
   if (activeEvent && gamePhase === "playing") {
     const safeEndAt =
       typeof activeEvent.endAt === "number" && Number.isFinite(activeEvent.endAt) && activeEvent.endAt > 0
@@ -1636,26 +1657,6 @@ export default function Client() {
       );
     }
   }
-
-  useEffect(() => {
-    if (gamePhase === "playing" && activeEvent?.type === "hitbox" && activeEvent?.phase === "active") {
-      hitboxBatchIntervalRef.current = setInterval(() => {
-        if (hitboxTapCountRef.current > 0) {
-          sendToHost({ type: "event-hitbox-batch", taps: hitboxTapCountRef.current });
-          hitboxTapCountRef.current = 0;
-        }
-      }, 300);
-    } else {
-      if (hitboxBatchIntervalRef.current) {
-        clearInterval(hitboxBatchIntervalRef.current);
-        hitboxBatchIntervalRef.current = null;
-      }
-      hitboxTapCountRef.current = 0;
-    }
-    return () => {
-      if (hitboxBatchIntervalRef.current) clearInterval(hitboxBatchIntervalRef.current);
-    };
-  }, [gamePhase, activeEvent]);
 
   // ─── EXAM PHASE ──────────────────────────────────────────────────────────────
   if (gamePhase === "exam") {
