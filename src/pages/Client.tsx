@@ -1057,6 +1057,37 @@ export default function Client() {
   const hasRoomCode = code.trim().length >= 6 || (isImmersive && isColorCode(code.trim()));
   const hasFallbackRoom = rememberedRoomCode.trim().length >= 6;
   const canConnect = hasRoomCode || (!isImmersive && hasRejoinCode && hasFallbackRoom);
+  const activeEvent = gameState?.activeEvent;
+
+  useEffect(() => {
+    if (gamePhase === "playing" && activeEvent?.type === "hitbox" && activeEvent.phase === "active") {
+      hitboxBatchIntervalRef.current = setInterval(() => {
+        if (hitboxTapCountRef.current > 0) {
+          sendToHost({ type: "event-hitbox-batch", taps: hitboxTapCountRef.current });
+          hitboxTapCountRef.current = 0;
+        }
+      }, 300);
+    } else {
+      if (hitboxBatchIntervalRef.current) {
+        clearInterval(hitboxBatchIntervalRef.current);
+        hitboxBatchIntervalRef.current = null;
+      }
+      hitboxTapCountRef.current = 0;
+    }
+
+    return () => {
+      if (hitboxBatchIntervalRef.current) {
+        clearInterval(hitboxBatchIntervalRef.current);
+        hitboxBatchIntervalRef.current = null;
+      }
+    };
+  }, [gamePhase, activeEvent, sendToHost]);
+
+  useEffect(() => {
+    if (activeEvent?.type !== "mock-exam" || activeEvent.phase === "result") {
+      setHasSubmittedMockExam(false);
+    }
+  }, [activeEvent]);
 
   // ── Eagle-in-zone detection (for hitbox visual cue)
   const isInZone =
@@ -1442,28 +1473,6 @@ export default function Client() {
   }
 
   // ─── ACTIVE EVENT PHASE ──────────────────────────────────────────────────────
-  const activeEvent = gameState?.activeEvent;
-  
-  useEffect(() => {
-    if (gamePhase === "playing" && activeEvent?.type === "hitbox" && activeEvent?.phase === "active") {
-      hitboxBatchIntervalRef.current = setInterval(() => {
-        if (hitboxTapCountRef.current > 0) {
-          sendToHost({ type: "event-hitbox-batch", taps: hitboxTapCountRef.current });
-          hitboxTapCountRef.current = 0;
-        }
-      }, 300);
-    } else {
-      if (hitboxBatchIntervalRef.current) {
-        clearInterval(hitboxBatchIntervalRef.current);
-        hitboxBatchIntervalRef.current = null;
-      }
-      hitboxTapCountRef.current = 0;
-    }
-    return () => {
-      if (hitboxBatchIntervalRef.current) clearInterval(hitboxBatchIntervalRef.current);
-    };
-  }, [gamePhase, activeEvent]);
-
   if (activeEvent && gamePhase === "playing") {
     const safeEndAt =
       typeof activeEvent.endAt === "number" && Number.isFinite(activeEvent.endAt) && activeEvent.endAt > 0
@@ -1589,9 +1598,6 @@ export default function Client() {
         </div>
       );
     }
-
-    // Reset mock exam submission for next event
-    if (hasSubmittedMockExam) setHasSubmittedMockExam(false);
 
     if (activeEvent.phase === "result") {
       const isHitbox = activeEvent.type === "hitbox";
