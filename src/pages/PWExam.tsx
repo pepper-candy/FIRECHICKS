@@ -71,7 +71,7 @@ const PWExam = () => {
   const selectQuestion = (num: number) => {
     setQuestionNum(num);
     setLayer("layer-1");
-    setZoom(1);
+    setZoom(0.6);
     setOpacity(0.9);
     setAnswer("");
     setShowSuccess(false);

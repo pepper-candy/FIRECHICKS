@@ -432,8 +432,7 @@ export default function Client() {
   const [colorChosen, setColorChosen] = useState(false);
   const [gameOverState, setGameOverState] = useState<GameStateSnapshot | null>(null);
   const [hasSubmittedMockExam, setHasSubmittedMockExam] = useState(false);
-  const [mockExamZoom, setMockExamZoom] = useState(1);
-  const [mockExamOpacity, setMockExamOpacity] = useState(0.85);
+  const [mockExamZoom, setMockExamZoom] = useState(0.6);
   const connIdRef = useRef<string>("");
   const [showSusWarning, setShowSusWarning] = useState(false);
   const [showExamVoting, setShowExamVoting] = useState(false);
@@ -559,8 +558,7 @@ export default function Client() {
   const [examLayer, setExamLayer] = useState<"1" | "2" | null>(null);
   const [examQuestionNum, setExamQuestionNum] = useState(0);
   const [examAnswer, setExamAnswer] = useState("");
-  const [examZoom, setExamZoom] = useState(1);
-  const [examOpacity, setExamOpacity] = useState(0.85);
+  const [examZoom, setExamZoom] = useState(0.6);
   const examVideoRef = useRef<HTMLVideoElement>(null);
   const [examWhiteBg, setExamWhiteBg] = useState(false);
   const examStreamRef = useRef<MediaStream | null>(null);
@@ -1507,7 +1505,7 @@ export default function Client() {
                   src={assetUrl(`/PW/PW_Mock_${activeEvent.questionNum}_layer-2.png`)}
                   alt="Mock exam layer 2"
                   className="absolute inset-0 w-full h-full object-contain pointer-events-none"
-                  style={{ opacity: mockExamOpacity, mixBlendMode: 'multiply', transform: `scale(${mockExamZoom})`, transformOrigin: 'center center' }}
+                  style={{ opacity: 0.85, mixBlendMode: 'multiply', transform: `scale(${mockExamZoom})`, transformOrigin: 'center center' }}
                 />
               </div>
 
@@ -1515,13 +1513,8 @@ export default function Client() {
               <div className="flex flex-col gap-2">
                 <div className="flex items-center gap-2">
                   <span className="text-[10px] font-mono text-muted-foreground w-12 shrink-0">🔍 Zoom</span>
-                  <Slider value={[mockExamZoom]} min={0.5} max={1.25} step={0.05} onValueChange={([v]) => setMockExamZoom(v)} className="flex-1" />
+                  <Slider value={[mockExamZoom]} min={0.3} max={0.9} step={0.05} onValueChange={([v]) => setMockExamZoom(v)} className="flex-1" />
                   <span className="text-[10px] text-muted-foreground w-10 text-right">{mockExamZoom.toFixed(2)}×</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className="text-[10px] font-mono text-muted-foreground w-12 shrink-0">👁 Layer</span>
-                  <Slider value={[mockExamOpacity]} min={0} max={1} step={0.05} onValueChange={([v]) => setMockExamOpacity(v)} className="flex-1" />
-                  <span className="text-[10px] text-muted-foreground w-10 text-right">{Math.round(mockExamOpacity * 100)}%</span>
                 </div>
               </div>
 
@@ -1711,7 +1704,7 @@ export default function Client() {
             src={assetUrl(`/PW/PW_Final_${examQuestionNum}_layer-${examLayer}.png`)}
             alt="Final exam"
             className="absolute inset-0 z-[2] w-full h-full object-contain pointer-events-none"
-            style={{ opacity: examOpacity, transform: `scale(${examZoom})`, transformOrigin: "center center" }}
+            style={{ opacity: 0.85, transform: `scale(${examZoom})`, transformOrigin: "center center" }}
           />
         </div>
 
@@ -1722,26 +1715,13 @@ export default function Client() {
             <Slider
               value={[examZoom]}
               onValueChange={([v]) => setExamZoom(v)}
-              min={0.5}
-              max={1.5}
+              min={0.3}
+              max={0.9}
               step={0.05}
               className="flex-1"
             />
 
             <span className="text-xs text-muted-foreground w-10 text-right">{examZoom.toFixed(2)}×</span>
-          </div>
-          <div className="flex items-center gap-3">
-            <span className="text-xs font-mono text-muted-foreground w-14 shrink-0">Opacity</span>
-            <Slider
-              value={[examOpacity]}
-              onValueChange={([v]) => setExamOpacity(v)}
-              min={0}
-              max={1}
-              step={0.05}
-              className="flex-1"
-            />
-
-            <span className="text-xs text-muted-foreground w-10 text-right">{Math.round(examOpacity * 100)}%</span>
           </div>
         </div>
 
