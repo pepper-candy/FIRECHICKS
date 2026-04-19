@@ -541,6 +541,8 @@ export default function Client() {
     }
   }, [gamePhase, gameState]);
 
+  const stableGameState = gamePhase === "gameover" ? (gameOverState ?? gameState) : gameState;
+
   // Tips state — QR now displays in scanner box, not tip box
   const [tipQrCodes, setTipQrCodes] = useState<[string | null, string | null]>([null, null]);
   const [loadingTip, setLoadingTip] = useState<[boolean, boolean]>([false, false]);
@@ -1110,7 +1112,6 @@ export default function Client() {
     );
   }
 
-  const stableGameState = gamePhase === "gameover" ? (gameOverState ?? gameState) : gameState;
   const canRenderEndgameWhileDisconnected =
     gamePhase === "gameover" && Boolean(stableGameState || showFTranscript || hasReachedEndgameRef.current);
 
