@@ -208,6 +208,7 @@ export default function Host() {
   } = useHostRoom(effectiveMode, { forceRelay: isImmersive, useColorCode: isImmersive });
   const [revealedCodes, setRevealedCodes] = useState<Set<string>>(new Set());
   const [botsAdded, setBotsAdded] = useState(false);
+  const [gameOverSnapshot, setGameOverSnapshot] = useState<GameStateSnapshot | null>(null);
   const debugLogRef = useRef<string[]>([]);
   const lastSnapshotLogAtRef = useRef(0);
 
@@ -344,6 +345,16 @@ export default function Host() {
       `state phase=${snapshot.phase} stage=${snapshot.stage} label="${snapshot.stageLabel}" event=${eventType} players=[${playerSummary}]`,
     );
   }, [snapshot, pushDebugLog]);
+
+  useEffect(() => {
+    if (phase === "gameover" && snapshot) {
+      setGameOverSnapshot(snapshot);
+      return;
+    }
+    if (phase !== "gameover") {
+      setGameOverSnapshot(null);
+    }
+  }, [phase, snapshot]);
 
   const exportDebugLog = useCallback(() => {
     const content = debugLogRef.current.join("\n");
@@ -1190,8 +1201,8 @@ export default function Host() {
   }
 
   // ─── GAME OVER / TRANSCRIPT ──────────────────────────────────────────────────
-  if (phase === "gameover" && snapshot) {
-    return <GameOverCeremony snapshot={snapshot} gameMode={gameMode} />;
+  if (phase === "gameover" && gameOverSnapshot) {
+    return <GameOverCeremony snapshot={gameOverSnapshot} gameMode={gameMode} />;
   }
 
   return <div className="flex items-center justify-center h-screen text-muted-foreground font-mono">Loading...</div>;

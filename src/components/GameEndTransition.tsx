@@ -5,6 +5,10 @@ interface GameEndTransitionProps {
   onComplete: () => void;
 }
 
+const GRADING_START_MS = 3000;
+const READY_START_MS = 7000;
+const COMPLETE_MS = 11000;
+
 export const GameEndTransition = ({ onComplete }: GameEndTransitionProps) => {
   const [elapsedMs, setElapsedMs] = useState(0);
 
@@ -13,7 +17,7 @@ export const GameEndTransition = ({ onComplete }: GameEndTransitionProps) => {
     const tick = window.setInterval(() => {
       const nextElapsed = Date.now() - startedAt;
       setElapsedMs(nextElapsed);
-      if (nextElapsed >= 10000) {
+      if (nextElapsed >= COMPLETE_MS) {
         window.clearInterval(tick);
         onComplete();
       }
@@ -22,15 +26,15 @@ export const GameEndTransition = ({ onComplete }: GameEndTransitionProps) => {
     return () => window.clearInterval(tick);
   }, [onComplete]);
 
-  const phase = useMemo(() => (elapsedMs >= 7000 ? "ready" : "grading"), [elapsedMs]);
+  const phase = useMemo(() => (elapsedMs >= READY_START_MS ? "ready" : "grading"), [elapsedMs]);
   const gradingDots = useMemo(() => {
-    if (elapsedMs < 3000 || elapsedMs >= 7000) return "";
-    return ".".repeat(((Math.floor((elapsedMs - 3000) / 500) % 3) + 1));
+    if (elapsedMs < GRADING_START_MS || elapsedMs >= READY_START_MS) return "";
+    return ".".repeat(((Math.floor((elapsedMs - GRADING_START_MS) / 500) % 3) + 1));
   }, [elapsedMs]);
 
-  const showLine1 = elapsedMs >= 0 && elapsedMs < 7000;
-  const showLine2 = elapsedMs >= 1500 && elapsedMs < 7000;
-  const showLine3 = elapsedMs >= 3000 && elapsedMs < 7000;
+  const showLine1 = elapsedMs >= 0 && elapsedMs < READY_START_MS;
+  const showLine2 = elapsedMs >= 1500 && elapsedMs < READY_START_MS;
+  const showLine3 = elapsedMs >= GRADING_START_MS && elapsedMs < READY_START_MS;
   const showReady = phase === "ready";
 
   return (

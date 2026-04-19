@@ -430,6 +430,7 @@ export default function Client() {
   const [directWinner, setDirectWinner] = useState<"eagle" | "chicks" | "draw" | null>(null);
   const [breakdownOpen, setBreakdownOpen] = useState(false);
   const [colorChosen, setColorChosen] = useState(false);
+  const [gameOverState, setGameOverState] = useState<GameStateSnapshot | null>(null);
   const [hasSubmittedMockExam, setHasSubmittedMockExam] = useState(false);
   const [mockExamZoom, setMockExamZoom] = useState(1);
   const [mockExamOpacity, setMockExamOpacity] = useState(0.85);
@@ -525,6 +526,7 @@ export default function Client() {
     if (gamePhase === "lobby" || gamePhase === "reveal" || gamePhase === "countdown") {
       setShowFTranscript(false);
       setEndTransitionCompleted(false);
+      setGameOverState(null);
       hasReachedEndgameRef.current = false;
     }
   }, [gamePhase]);
@@ -537,6 +539,12 @@ export default function Client() {
       disconnectGraceUntilRef.current = Math.max(disconnectGraceUntilRef.current, Date.now() + 600000); // 5 minutes
     }
   }, [gamePhase]);
+
+  useEffect(() => {
+    if (gamePhase === "gameover" && gameState) {
+      setGameOverState(gameState);
+    }
+  }, [gamePhase, gameState]);
 
   // Tips state — QR now displays in scanner box, not tip box
   const [tipQrCodes, setTipQrCodes] = useState<[string | null, string | null]>([null, null]);
@@ -870,8 +878,8 @@ export default function Client() {
   }, [gamePhase, examLayer]);
 
   const playerColor = colorIndex >= 0 ? PLAYER_COLORS[colorIndex] : null;
-  const myState = gameState
-    ? Object.values(gameState.players).find((p) => p.colorIndex === (myAssignment?.colorIndex ?? colorIndex))
+  const myState = stableGameState
+    ? Object.values(stableGameState.players).find((p) => p.colorIndex === (myAssignment?.colorIndex ?? colorIndex))
     : null;
   const isEagle = myAssignment?.isEagle ?? myState?.isEagle ?? (gameMode === '2v6' && EAGLE_COLOR_INDICES.includes(colorIndex));
   const currentColorIndex = myAssignment?.colorIndex ?? colorIndex;
@@ -1107,8 +1115,12 @@ export default function Client() {
     );
   }
 
+  const stableGameState = gamePhase === "gameover" ? (gameOverState ?? gameState) : gameState;
+  const canRenderEndgameWhileDisconnected =
+    gamePhase === "gameover" && Boolean(stableGameState || showFTranscript || hasReachedEndgameRef.current);
+
   // ─── JOIN SCREEN ─────────────────────────────────────────────────────────────
-  if (!connected) {
+  if (!connected && !canRenderEndgameWhileDisconnected) {
     return (
       <div className="flex flex-col items-center justify-center h-dvh overflow-hidden p-5 gap-6">
         <div className="w-full max-w-[320px] sm:max-w-xs">
@@ -1396,13 +1408,13 @@ export default function Client() {
 
   // ─── GAME OVER ───────────────────────────────────────────────────────────────
   if (gamePhase === "gameover") {
-    if (gameState?.examState && !endTransitionCompleted) {
+    if (stableGameState?.examState && !endTransitionCompleted) {
       return (
         <GameEndTransition onComplete={handleTransitionComplete} />
       );
     }
 
-    const winner = directWinner ?? gameState?.winner;
+    const winner = directWinner ?? stableGameState?.winner;
     const amWinner = (winner === "eagle" && isEagle) || (winner === "chicks" && !isEagle);
     const isDraw = winner === "draw";
 
