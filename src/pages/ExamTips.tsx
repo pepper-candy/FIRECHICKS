@@ -46,7 +46,7 @@ const ExamTips = () => {
 
     pollingRef.current = setInterval(async () => {
       try {
-        const res = await fetch(`/api/exam-tip?action=status&code${code}`);
+        const res = await fetch(`/api/exam-tip?action=status&code=${code}`);
         const data = await res.json();
 
         if (!res.ok) return;
