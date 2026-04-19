@@ -432,7 +432,7 @@ export default function Client() {
   const [colorChosen, setColorChosen] = useState(false);
   const [gameOverState, setGameOverState] = useState<GameStateSnapshot | null>(null);
   const [hasSubmittedMockExam, setHasSubmittedMockExam] = useState(false);
-  const [mockExamZoom, setMockExamZoom] = useState(0.6);
+  const [mockExamZoom, setMockExamZoom] = useState(0.8);
   const connIdRef = useRef<string>("");
   const [showSusWarning, setShowSusWarning] = useState(false);
   const [showExamVoting, setShowExamVoting] = useState(false);
@@ -558,7 +558,7 @@ export default function Client() {
   const [examLayer, setExamLayer] = useState<"1" | "2" | null>(null);
   const [examQuestionNum, setExamQuestionNum] = useState(0);
   const [examAnswer, setExamAnswer] = useState("");
-  const [examZoom, setExamZoom] = useState(0.6);
+  const [examZoom, setExamZoom] = useState(0.8);
   const examVideoRef = useRef<HTMLVideoElement>(null);
   const [examWhiteBg, setExamWhiteBg] = useState(false);
   const examStreamRef = useRef<MediaStream | null>(null);

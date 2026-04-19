@@ -23,9 +23,9 @@ export default function FinalExamClient({
 }: Props) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
-  const [zoom, setZoom] = useState(0.6);
+  const [zoom, setZoom] = useState(0.8);
   const [opacity, setOpacity] = useState(0.85);
-  const [cameraZoom] = useState(0.6);
+  const [cameraZoom] = useState(0.8);
 
   useEffect(() => {
     navigator.mediaDevices
@@ -61,7 +61,7 @@ export default function FinalExamClient({
           src={assetUrl(`/PW/PW_Final_${questionNum}_layer-${examLayer}.png`)}
           alt={`Layer ${examLayer}`}
           className="absolute inset-0 w-full h-full object-contain pointer-events-none"
-          style={{ opacity, transform: `scale(${zoom})`, transformOrigin: 'center center' }}
+          style={{ opacity: 0.85, transform: `scale(${zoom})`, transformOrigin: 'center center' }}
         />
       </div>
 

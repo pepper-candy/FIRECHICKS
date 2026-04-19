@@ -48,7 +48,7 @@ export default function MockExamClient({
   answer,
   onAnswerChange,
   onSubmit,
-  zoom = 0.6,
+  zoom = 0.8,
   opacity = 0.85,
   onZoomChange,
   onOpacityChange,
@@ -85,7 +85,7 @@ export default function MockExamClient({
           src={assetUrl(`/PW/PW_Mock_${questionNum}_layer-2.png`)}
           alt="Mock exam layer 2"
           className="absolute inset-0 w-full h-full object-contain pointer-events-none"
-          style={{ opacity, mixBlendMode: 'multiply', transform: `scale(${zoom})`, transformOrigin: 'center center' }}
+          style={{ opacity: 0.85, mixBlendMode: 'multiply', transform: `scale(${zoom})`, transformOrigin: 'center center' }}
         />
       </div>
 
