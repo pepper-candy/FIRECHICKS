@@ -11,6 +11,7 @@ import Client from "./pages/Client";
 import NotFound from "./pages/NotFound";
 import Character from "./pages/Character";
 import ExamTips from "./pages/ExamTips";
+import PWExam from "./pages/PWExam";
 // Preview pages
 import PreviewClientReveal from "./pages/preview/ClientReveal";
 import PreviewHostReveal from "./pages/preview/HostReveal";
@@ -52,6 +53,7 @@ const App = () => (
           <Route path="/client" element={<Client />} />
           <Route path="/character" element={<Character />} />
           <Route path="/exam-tips" element={<ExamTips />} />
+          <Route path="/pw" element={<PWExam />} />
           {/* Preview routes for individual phases */}
           <Route path="/client-reveal" element={<PreviewClientReveal />} />
           <Route path="/host-reveal" element={<PreviewHostReveal />} />

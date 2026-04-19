@@ -56,6 +56,7 @@ export interface ExamState {
   questionNum: number;
   category: 'Final';
   timeRemaining: number;
+  timeLimit: number;
   layer1ConnId: string;
   layer2ConnIds: string[];
   answered: boolean;
@@ -70,6 +71,8 @@ export interface ExamState {
   wrongCount?: number;
   /** Single random non-bot chick designated as submitter for voting system */
   examSubmitterId?: string;
+  /** Expected answer length for placeholder boxes on clients */
+  answerLength?: number;
   /** Final submitted answer by the designated submitter */
   finalAnswer?: string;
   /** Voting state: { startedAt, submittedConnIds } */
@@ -233,21 +236,30 @@ export type HostMessage =
   | { type: 'phase-change'; phase: GamePhase }
   | { type: 'game-over'; winner: 'eagle' | 'chicks' | 'draw' }
   | { type: 'color-update'; colorIndex: number; isEagle?: boolean }
+  | { type: 'takeover-accepted'; colorIndex: number; connId: string }
   | { type: 'you-died'; connId: string }
   | { type: 'game-mode'; gameMode: GameMode }
   | { type: 'tip-qr'; forConnId: string; code: string; tipIndex: 0 | 1 }
+  | { type: 'tip-copy-notify'; connIds: string[]; tipIndex: 0 | 1 }
   | { type: 'tip-reject'; forConnId: string; reason: 'too-far' }
   | {
       type: 'exam-start';
       assignments: Record<string, { layer: '1' | '2'; questionNum: number; category: 'Final' }>;
       examWhiteBgConnId?: string | null;
+      examSubmitterId?: string | null;
+      answerLength?: number;
     }
   | { type: 'lobby-prop-granted'; colorIndex: number; propType: 'speed' | 'heal' }
   | { type: 'exam-wrong'; attemptsLeft: number }
   | { type: 'exam-submitter-selected'; connId: string }
-  | { type: 'exam-voting-start'; submitterConnId: string; maskedAnswer: string; startedAt: number }
+  | { type: 'exam-submitter-changed'; newSubmitterId: string }
+  | { type: 'exam-voting-start'; submitterConnId: string; displayAnswer: string; startedAt: number }
   | { type: 'exam-vote-submitted'; connId: string; vote: 'pass' | 'fail' }
-  | { type: 'ping' };
+  | { type: 'exam-voting-end'; allowResubmit: boolean; submitterConnId?: string }
+  | { type: 'exam-skipped' }
+  | { type: 'event-skipped'; eventType: EventType }
+  | { type: 'player-sus-warning'; connId: string }
+  | { type: 'ping'; ts?: number };
 
 // Messages client → host
 export type ClientMessage =
@@ -267,6 +279,7 @@ export type ClientMessage =
   | { type: 'exam-answer-submit'; answer: string }
   | { type: 'exam-vote'; vote: 'pass' | 'fail' }
   | { type: 'player-leave' }
+  | { type: 'player-still-here' }
   | { type: 'pong' };
 
 // ─── Replay types ─────────────────────────────────────────────────────────────

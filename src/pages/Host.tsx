@@ -201,6 +201,7 @@ export default function Host() {
     onClientMessage,
     gameModeRef,
     takeoverCodes,
+    addBot,
     fillBots,
     removeBots,
     setPingDiagnosticsEnabled,
@@ -218,6 +219,11 @@ export default function Host() {
     }
   }, []);
 
+  const replaceHumanWithBot = useCallback((connId: string, botConnId: string, colorIndex: number) => {
+    kickPlayer(connId);
+    addBot(botConnId, colorIndex);
+  }, [addBot, kickPlayer]);
+
   const {
     phase,
     snapshot,
@@ -233,7 +239,15 @@ export default function Host() {
     hostSkipActiveEvent,
     togglePause,
     toggleBotsPause,
-  } = useGameLogic({ players, broadcast, gameMode, connectionMode: effectiveMode, mapId, devMode });
+  } = useGameLogic({
+    players,
+    broadcast,
+    gameMode,
+    connectionMode: effectiveMode,
+    replacePlayerWithBot: replaceHumanWithBot,
+    mapId,
+    devMode,
+  });
 
   const [isPaused, setIsPaused] = useState(false);
   const [isBotsPaused, setIsBotsPaused] = useState(false);
@@ -1187,16 +1201,7 @@ export default function Host() {
 function GameOverCeremony({ snapshot, gameMode }: { snapshot: GameStateSnapshot; gameMode: string }) {
   const { isImmersive } = useImmersive();
   const [ceremonyPhase, setCeremonyPhase] = useState<"mvp" | "team" | "transcript">("mvp");
-  const [showingEndTransition, setShowingEndTransition] = useState(
-    snapshot.examState ? true : false
-  );
-
-  // Debug log for transition state
-  useEffect(() => {
-    console.log('[GameOverCeremony] snapshot.examState:', snapshot.examState, 'showingEndTransition:', showingEndTransition, 'ceremonyPhase:', ceremonyPhase);
-  }, [snapshot.examState, showingEndTransition, ceremonyPhase]);
-
-  // No longer sync showingEndTransition with examState; rely on initial state and onComplete only.
+  const [showingEndTransition, setShowingEndTransition] = useState(Boolean(snapshot.examState));
 
   const winner = snapshot.winner;
   const getMatchResult = (p: PlayerGameStateSerializable): "draw" | "win" | "lose" => {
@@ -1228,28 +1233,15 @@ function GameOverCeremony({ snapshot, gameMode }: { snapshot: GameStateSnapshot;
     winner === "draw" || (winner === "eagle" && gameMode === "1v3") || winningTeamPlayers.length === 0;
 
   const handleTransitionComplete = useCallback(() => {
-    console.log('[GameOverCeremony] handleTransitionComplete called');
     setShowingEndTransition(false);
   }, []);
 
-  // Show transition first if exam was played
-  if (showingEndTransition) {
-    return (
-      <GameEndTransition onComplete={handleTransitionComplete} />
-    );
-  }
-
   useEffect(() => {
-    console.log('[GameOverCeremony] timers useEffect, showingEndTransition:', showingEndTransition, 'skipTeamPhase:', skipTeamPhase);
-    // Don't start ceremony timers while the transition is showing
     if (showingEndTransition) {
-      console.log('[GameOverCeremony] Transition still showing, skipping timers');
       return;
     }
 
-    console.log('[GameOverCeremony] Starting ceremony timers');
     const t1 = setTimeout(() => {
-      console.log('[GameOverCeremony] Timer t1 firing, skipTeamPhase:', skipTeamPhase);
       if (skipTeamPhase) {
         setCeremonyPhase("transcript");
       } else {
@@ -1260,12 +1252,10 @@ function GameOverCeremony({ snapshot, gameMode }: { snapshot: GameStateSnapshot;
     const t2 = skipTeamPhase
       ? null
       : setTimeout(() => {
-          console.log('[GameOverCeremony] Timer t2 firing, moving to transcript');
           setCeremonyPhase("transcript");
         }, 10000);
 
     return () => {
-      console.log('[GameOverCeremony] Cleaning up timers');
       clearTimeout(t1);
       if (t2) clearTimeout(t2);
     };
@@ -1273,15 +1263,17 @@ function GameOverCeremony({ snapshot, gameMode }: { snapshot: GameStateSnapshot;
 
   useEffect(() => {
     if (!showingEndTransition) {
-      console.log('[GameOverCeremony] showingEndTransition false, setting ceremonyPhase');
       if (!mvp) {
-        console.log('[GameOverCeremony] MVP undefined, skipping to transcript');
         setCeremonyPhase("transcript");
       } else {
         setCeremonyPhase("mvp");
       }
     }
   }, [showingEndTransition, mvp]);
+
+  if (showingEndTransition) {
+    return <GameEndTransition onComplete={handleTransitionComplete} />;
+  }
 
   const mvpColor = mvp ? PLAYER_COLORS[mvp.colorIndex] : null;
   const teamName =

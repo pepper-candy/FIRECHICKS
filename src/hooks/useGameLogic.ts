@@ -11,6 +11,7 @@ import type {
   PropSpawn,
   BuildingState,
   ClientMessage,
+  HostMessage,
   PropType,
   ReplayFrame,
   ReplayData,
@@ -126,6 +127,7 @@ interface EagleZoneState {
 
 interface SusPlayer {
   connId: string;
+  status: 'active' | 'sus' | 'checked';
   detectedAt: number;
   promptShownAt: number | null;
   // Level 1: Proper quit
@@ -147,6 +149,7 @@ interface UseGameLogicProps {
   broadcast: (msg: any) => void;
   gameMode: "1v3" | "2v6";
   connectionMode: ConnectionMode;
+  replacePlayerWithBot?: (connId: string, botConnId: string, colorIndex: number) => void;
   mapId?: import('@/lib/mapVariants').MapId;
   devMode?: boolean;
 }
@@ -200,6 +203,47 @@ function isBotConnId(connId: string): boolean {
   return connId.startsWith("bot-");
 }
 
+function createSusPlayer(connId: string, now: number, position: { x: number; z: number }): SusPlayer {
+  return {
+    connId,
+    status: 'active',
+    detectedAt: 0,
+    promptShownAt: null,
+    properQuit: false,
+    disconnectReason: null,
+    pingFailCount: 0,
+    lastPingAt: now,
+    pingWarningShownAt: null,
+    lastActivityAt: now,
+    lastPosition: { ...position },
+    activityWarningShownAt: null,
+  };
+}
+
+function clearSusWarning(
+  sus: SusPlayer,
+  now: number,
+  options?: {
+    position?: { x: number; z: number };
+    resetActivity?: boolean;
+  },
+) {
+  sus.status = 'active';
+  sus.detectedAt = 0;
+  sus.promptShownAt = null;
+  sus.properQuit = false;
+  sus.disconnectReason = null;
+  sus.pingFailCount = 0;
+  sus.pingWarningShownAt = null;
+  sus.activityWarningShownAt = null;
+  if (options?.resetActivity) {
+    sus.lastActivityAt = now;
+  }
+  if (options?.position) {
+    sus.lastPosition = { ...options.position };
+  }
+}
+
 function addBreakdown(p: PlayerGameState, key: string, label: string, points: number, countDelta: number = 1) {
   if (!p.scoreBreakdown) p.scoreBreakdown = {};
   const entry = p.scoreBreakdown[key];
@@ -246,7 +290,15 @@ function updateHostExamDisplay(gs: GameStateRef) {
 }
 
 // ─── Hook ─────────────────────────────────────────────────────────────────────
-export function useGameLogic({ players, broadcast, gameMode, connectionMode, mapId = 1, devMode = false }: UseGameLogicProps) {
+export function useGameLogic({
+  players,
+  broadcast,
+  gameMode,
+  connectionMode,
+  replacePlayerWithBot,
+  mapId = 1,
+  devMode = false,
+}: UseGameLogicProps) {
   const devModeRef = useRef(devMode);
   useEffect(() => { devModeRef.current = devMode; }, [devMode]);
   const [phase, setPhase] = useState<GamePhase>("lobby");
@@ -273,6 +325,10 @@ export function useGameLogic({ players, broadcast, gameMode, connectionMode, map
   useEffect(() => {
     connectionModeRef.current = connectionMode;
   }, [connectionMode]);
+  const replacePlayerWithBotRef = useRef(replacePlayerWithBot);
+  useEffect(() => {
+    replacePlayerWithBotRef.current = replacePlayerWithBot;
+  }, [replacePlayerWithBot]);
   const mapIdRef = useRef(mapId);
   useEffect(() => { mapIdRef.current = mapId; }, [mapId]);
 
@@ -299,6 +355,88 @@ export function useGameLogic({ players, broadcast, gameMode, connectionMode, map
   const hostDragBackupRef = useRef<
     Map<string, { position: { x: number; z: number }; frozen: boolean; frozenUntil: number }>
   >(new Map());
+
+  function replaceSusPlayerWithBot(
+    gs: GameStateRef,
+    connId: string,
+    currentPlayers: Map<string, PlayerState>,
+    currentBroadcast: (msg: HostMessage) => void,
+  ) {
+    const player = gs.playerStates.get(connId);
+    if (!player || isBotConnId(connId)) return null;
+
+    const botConnId = `bot-${connId}`;
+    if (gs.playerStates.has(botConnId)) return botConnId;
+
+    const botPlayer: PlayerGameState = {
+      ...player,
+      connId: botConnId,
+    };
+
+    gs.playerStates.delete(connId);
+    gs.playerStates.set(botConnId, botPlayer);
+
+    if (gs.examState) {
+      if (gs.examState.layer1ConnId === connId) {
+        gs.examState.layer1ConnId = botConnId;
+      }
+      gs.examState.layer2ConnIds = gs.examState.layer2ConnIds.map((id) => (id === connId ? botConnId : id));
+      if (gs.examState.examWhiteBgConnId === connId) {
+        gs.examState.examWhiteBgConnId = null;
+      }
+      if (gs.examState.examSubmitterId === connId) {
+        gs.examState.votingState = undefined;
+        gs.examState.finalAnswer = undefined;
+        gs.examState.anyAnswerSubmitted = false;
+        const nextSubmitterId = reassignExamSubmitter(gs, currentPlayers, currentBroadcast);
+        currentBroadcast({
+          type: "exam-voting-end",
+          allowResubmit: Boolean(nextSubmitterId),
+          submitterConnId: nextSubmitterId ?? undefined,
+        });
+      }
+    }
+
+    const oldBuildingTimerKey = `${connId}-building`;
+    const botBuildingTimerKey = `${botConnId}-building`;
+    if (gs.buildingTimers.has(oldBuildingTimerKey)) {
+      const timer = gs.buildingTimers.get(oldBuildingTimerKey)!;
+      gs.buildingTimers.delete(oldBuildingTimerKey);
+      gs.buildingTimers.set(botBuildingTimerKey, timer);
+    }
+
+    const eagleZoneState = gs.eagleZoneStates.get(connId);
+    if (eagleZoneState) {
+      gs.eagleZoneStates.delete(connId);
+      gs.eagleZoneStates.set(botConnId, eagleZoneState);
+    }
+
+    for (const [key, tipShare] of gs.activeTipShares.entries()) {
+      if (tipShare.connId !== connId) continue;
+      gs.activeTipShares.delete(key);
+      gs.activeTipShares.set(`${botConnId}-${tipShare.tipIndex}`, {
+        ...tipShare,
+        connId: botConnId,
+      });
+    }
+
+    const priorTransportPlayer = currentPlayers.get(connId);
+    currentPlayers.delete(connId);
+    currentPlayers.set(botConnId, {
+      joystick: { x: 0, y: 0 },
+      colorIndex: player.colorIndex,
+      ping: priorTransportPlayer?.ping ?? 0,
+      lastPongAt: Date.now(),
+      isBot: true,
+    });
+
+    replacePlayerWithBotRef.current?.(connId, botConnId, player.colorIndex);
+    susPlayersRef.current.delete(connId);
+    updateHostExamDisplay(gs);
+    doBroadcastState(gs, currentBroadcast);
+
+    return botConnId;
+  }
 
   // ─── Start Game ──────────────────────────────────────────────────────────────
   const startGame = useCallback(() => {
@@ -612,123 +750,47 @@ export function useGameLogic({ players, broadcast, gameMode, connectionMode, map
 
     if (gs.phase !== "playing" && gs.phase !== "exam") return;
 
-    // Helper function to replace sus player with bot
-    const replaceSusPlayerWithBot = (
-      gs: GameStateRef,
-      connId: string,
-      broadcast: (msg: HostMessage) => void
-    ) => {
-      const player = gs.playerStates.get(connId);
-      if (!player) return;
-
-      const botConnId = `bot-${connId}`;
-      const botPlayer: PlayerGameState = {
-        ...player,
-        connId: botConnId,
-      };
-      gs.playerStates.set(botConnId, botPlayer);
-      gs.playerStates.delete(connId);
-
-      // If this player was the exam submitter, assign a new one
-      if (gs.examState && gs.examState.layer1ConnId === connId) {
-        const aliveChicks = Array.from(gs.playerStates.values()).filter(
-          (p) => !p.isEagle && p.alive && !isBotConnId(p.connId)
-        );
-        if (aliveChicks.length > 0) {
-          const newSubmitter = aliveChicks[Math.floor(Math.random() * aliveChicks.length)];
-          gs.examState.layer1ConnId = newSubmitter.connId;
-          broadcast({
-            type: "exam-submitter-changed",
-            newSubmitterId: newSubmitter.connId,
-          });
-        }
-      }
-
-      // Broadcast the state update so clients see the bot replacement
-      doBroadcastState(gs, broadcast);
-    };
-
     // ── Sus player detection (4-level system) ──
     const susPlayers = susPlayersRef.current;
-    for (const [connId, sus] of susPlayers) {
-      const player = gs.playerStates.get(connId);
-      if (!player || !player.alive) continue;
 
-      const elapsed = now - sus.detectedAt;
-
-      // LEVEL 1: Proper quit → Immediate bot replacement (skip warning)
-      if (sus.properQuit && elapsed >= 100) {
-        replaceSusPlayerWithBot(gs, connId, currentBroadcast);
-        susPlayers.delete(connId);
-        continue;
-      }
-
-      // LEVEL 2: Page reload/close (detected via disconnect) → Immediate bot replacement
-      if (sus.disconnectReason === 'page-close' && elapsed >= 500) {
-        replaceSusPlayerWithBot(gs, connId, currentBroadcast);
-        susPlayers.delete(connId);
-        continue;
-      }
-
-      // LEVEL 3: Ping pong failures → Show 10s warning, then bot
-      if (sus.pingFailCount >= PING_PONG_FAIL_THRESHOLD) {
-        if (!sus.pingWarningShownAt) {
-          sus.pingWarningShownAt = now;
-          currentBroadcast({
-            type: "player-sus-warning",
-            connId,
-          });
-        }
-        const pingElapsed = now - sus.pingWarningShownAt;
-        if (pingElapsed >= PING_PONG_WARNING_DURATION) {
-          sus.disconnectReason = 'ping-fail';
-          replaceSusPlayerWithBot(gs, connId, currentBroadcast);
-          susPlayers.delete(connId);
-          continue;
-        }
-      }
-
-      // LEVEL 4: Inactivity (no movement/props for 20s) → Show 20s warning, then bot
-      // Skip during minigames and exam
-      if (gs.phase === "playing" && !gs.activeEvent && !gs.examState) {
-        const timeSinceActivity = now - sus.lastActivityAt;
-        if (timeSinceActivity >= ACTIVITY_INACTIVITY_TIMEOUT) {
-          if (!sus.activityWarningShownAt) {
-            sus.activityWarningShownAt = now;
-            currentBroadcast({
-              type: "player-sus-warning",
-              connId,
-            });
-          }
-          const activityElapsed = now - sus.activityWarningShownAt;
-          if (activityElapsed >= ACTIVITY_WARNING_DURATION) {
-            sus.disconnectReason = 'inactive';
-            replaceSusPlayerWithBot(gs, connId, currentBroadcast);
-            susPlayers.delete(connId);
-            continue;
-          }
-        }
+    for (const [connId, player] of gs.playerStates) {
+      if (!player.alive || isBotConnId(connId)) continue;
+      if (!susPlayers.has(connId)) {
+        susPlayers.set(connId, createSusPlayer(connId, now, player.position));
       }
     }
 
-    // Detect newly disconnected players (those in playerStates but not in live players Map)
-    for (const [connId, p] of gs.playerStates) {
-      if (p.alive && !isBotConnId(connId) && !currentPlayers.has(connId)) {
-        // Player just disconnected
-        if (!susPlayers.has(connId)) {
-          susPlayers.set(connId, {
-            connId,
-            detectedAt: now,
-            promptShownAt: null,
-            properQuit: false,
-            disconnectReason: 'page-close', // Assume page close unless we know better
-            pingFailCount: 0,
-            lastPingAt: 0,
-            pingWarningShownAt: null,
-            lastActivityAt: now,
-            lastPosition: p.position,
-            activityWarningShownAt: null,
-          });
+    for (const [connId, sus] of susPlayers) {
+      const player = gs.playerStates.get(connId);
+      if (!player || !player.alive || isBotConnId(connId)) continue;
+
+      if (sus.properQuit || sus.disconnectReason === "page-close") {
+        replaceSusPlayerWithBot(gs, connId, currentPlayers, currentBroadcast);
+        continue;
+      }
+
+      if (!currentPlayers.has(connId)) {
+        sus.disconnectReason = "page-close";
+        replaceSusPlayerWithBot(gs, connId, currentPlayers, currentBroadcast);
+        continue;
+      }
+
+      const movedDistance = Math.hypot(
+        player.position.x - sus.lastPosition.x,
+        player.position.z - sus.lastPosition.z
+      );
+      if (movedDistance > 0.1) {
+        clearSusWarning(sus, now, {
+          position: player.position,
+          resetActivity: true,
+        });
+        sus.lastPingAt = currentPlayers.get(connId)?.lastPongAt ?? sus.lastPingAt;
+      }
+
+      if (sus.status === "sus" && sus.promptShownAt) {
+        if (now - sus.promptShownAt >= SUS_PLAYER_DISCONNECT_DELAY) {
+          replaceSusPlayerWithBot(gs, connId, currentPlayers, currentBroadcast);
+          continue;
         }
       }
     }
@@ -739,51 +801,63 @@ export function useGameLogic({ players, broadcast, gameMode, connectionMode, map
       const sus = susPlayers.get(connId);
       if (!sus) continue;
 
-      // Check for movement or recent prop usage
       const movedDistance = Math.hypot(
         player.position.x - sus.lastPosition.x,
         player.position.z - sus.lastPosition.z
       );
 
-      if (movedDistance > 0.1 || now - player.attackCooldownUntil < 500) {
+      if (movedDistance > 0.1) {
         sus.lastActivityAt = now;
-        sus.lastPosition = player.position;
+        sus.lastPosition = { ...player.position };
+      }
+    }
+
+    if (gs.phase === "playing" && !gs.activeEvent) {
+      for (const [connId, sus] of susPlayers) {
+        const player = gs.playerStates.get(connId);
+        if (!player || !player.alive || isBotConnId(connId)) continue;
+        if (sus.status === "sus") continue;
+        if (now - sus.lastActivityAt >= ACTIVITY_INACTIVITY_TIMEOUT) {
+          sus.status = "sus";
+          sus.detectedAt = now;
+          sus.promptShownAt = now;
+          sus.activityWarningShownAt = now;
+          sus.disconnectReason = "inactive";
+          currentBroadcast({ type: "player-sus-warning", connId });
+        }
       }
     }
 
     // ── Ping-pong monitoring (check every 5 seconds) ──
-    if (now - lastPingCheckRef.current > 5000) {
+    if (now - lastPingCheckRef.current >= PING_PONG_CHECK_INTERVAL) {
       lastPingCheckRef.current = now;
-      
-      const susPlayers = susPlayersRef.current;
+      currentBroadcast({ type: "ping", ts: now });
+
       for (const [connId, sus] of susPlayers) {
         const player = gs.playerStates.get(connId);
         if (!player || !player.alive || isBotConnId(connId)) continue;
-        
-        // Skip ping-pong monitoring during exam and minigames
-        const isInExamOrMinigame = gs.phase === "exam" || gs.activeEvent;
-        if (isInExamOrMinigame) {
-          // Reset ping fail count when entering exam/minigame
+        const transportPlayer = currentPlayers.get(connId);
+        const latestPongAt = transportPlayer?.lastPongAt ?? 0;
+        if (latestPongAt > sus.lastPingAt) {
+          sus.lastPingAt = latestPongAt;
           sus.pingFailCount = 0;
+          if (sus.disconnectReason === "ping-fail") {
+            clearSusWarning(sus, now, {
+              position: player.position,
+              resetActivity: false,
+            });
+          }
           continue;
         }
-        
-        // Check if player hasn't sent pong in last 7 seconds (5s interval + 2s grace)
-        if (now - sus.lastPingAt > 7000) {
-          sus.pingFailCount += 1;
-          
-          // After 2 consecutive missed checks, mark as sus (if not already)
-          if (sus.pingFailCount >= 2 && sus.detectedAt === 0) {
-            sus.detectedAt = now;
-            sus.disconnectReason = 'ping-fail';
-            // Trigger warning prompt
-            if (!sus.promptShownAt) {
-              sus.promptShownAt = now;
-            }
-          }
-        } else {
-          // Received pong recently, reset fail count
-          sus.pingFailCount = 0;
+
+        sus.pingFailCount += 1;
+        if (sus.pingFailCount >= PING_PONG_FAIL_THRESHOLD && sus.status !== "sus") {
+          sus.status = "sus";
+          sus.detectedAt = now;
+          sus.promptShownAt = now;
+          sus.pingWarningShownAt = now;
+          sus.disconnectReason = "ping-fail";
+          currentBroadcast({ type: "player-sus-warning", connId });
         }
       }
     }
@@ -1182,7 +1256,7 @@ export function useGameLogic({ players, broadcast, gameMode, connectionMode, map
     if (gs.stage === 3 && !gs.examStarted && gs.phase === "playing") {
       const aliveChicks = Array.from<PlayerGameState>(gs.playerStates.values()).filter((p) => !p.isEagle && p.alive);
       if (aliveChicks.length > 0 && aliveChicks.every((c) => getAdjacentBuilding(c.position.x, c.position.z) >= 0)) {
-        startExam(gs, currentBroadcast, currentMode);
+        startExam(gs, currentBroadcast, currentMode, currentPlayers);
       }
     }
 
@@ -1190,54 +1264,16 @@ export function useGameLogic({ players, broadcast, gameMode, connectionMode, map
     if (gs.phase === "exam" && gs.examState && !gs.examState.answered) {
       if (!gs.frozenAll) {
         updateHostExamDisplay(gs);
-        gs.examState.timeRemaining -= delta;
-
-        // Check if all alive chicks have submitted — advance early.
-        // Skip solo exams so the last surviving chick can keep using the remaining attempts.
-        const aliveChickIds = Array.from<PlayerGameState>(gs.playerStates.values())
-          .filter((p) => !p.isEagle && p.alive)
-          .map((p) => p.connId);
-        const submitted = gs.examState.submittedConnIds ?? [];
-        if (aliveChickIds.length > 1 && aliveChickIds.every((id) => submitted.includes(id))) {
-          // All chicks answered — don't wait for timer
-          gs.examState.timeRemaining = 0;
+        if (!gs.examState.votingState?.isVoting) {
+          gs.examState.timeRemaining -= delta;
         }
 
         if (gs.examState.timeRemaining <= 0) {
           gs.examState.timeRemaining = 0;
-          gs.examState.answered = true; // prevent re-entry
-
-          // Apply remaining wrong-answer penalties to reach total of 3
-          const alreadyWrong = gs.examState.wrongCount ?? 0;
-          const remainingPenalties = Math.max(0, 3 - alreadyWrong);
-          let mostSerious: "hurt" | "dead" = "hurt";
-          for (let i = 0; i < remainingPenalties; i++) {
-            for (const [, p] of gs.playerStates) {
-              if (p.isEagle || !p.alive) continue;
-              p.health = addSubGrades(p.health, -2);
-              if (isDead(p.health)) {
-                p.alive = false;
-                p.health = 0;
-                mostSerious = "dead";
-                if (gs.examState.layer1ConnId === p.connId && !gs.examState.layer1Dead) {
-                  gs.examState.layer1Dead = true;
-                }
-                currentBroadcast({ type: "you-died", connId: p.connId });
-              }
-            }
-          }
-          updateHostExamDisplay(gs);
-
-          if (!gs.examState.anyAnswerSubmitted) {
-            // Nobody tried — play the video, defer winner resolution to onVideoComplete
-            gs.frozenAll = true;
-            gs.frozenAllUntil = now + 60000;
-            gs.videoPlaying = mostSerious;
-            gs.pendingExamEndAfterVideo = true;
-            setVideoPlaying(mostSerious);
+          if (gs.examState.votingState?.isVoting) {
+            resolveVoting(gs, currentBroadcast);
           } else {
-            // Someone submitted (wrong) — no video, resolve immediately
-            resolveExamWinner(gs, currentMode, currentBroadcast);
+            finalizeFinalExam(gs, currentBroadcast);
           }
         }
       }
@@ -1674,7 +1710,86 @@ export function useGameLogic({ players, broadcast, gameMode, connectionMode, map
     return null;
   }
 
-  function startExam(gs: GameStateRef, bcast: (msg: any) => void, mode: "1v3" | "2v6") {
+  function selectExamSubmitter(
+    gs: GameStateRef,
+    currentPlayers: Map<string, PlayerState>,
+  ): string | null {
+    const connectedChicks = Array.from<PlayerGameState>(gs.playerStates.values()).filter(
+      (p) => !p.isEagle && p.alive && !isBotConnId(p.connId) && currentPlayers.has(p.connId),
+    );
+    if (connectedChicks.length > 0) {
+      return connectedChicks[Math.floor(Math.random() * connectedChicks.length)].connId;
+    }
+
+    const anyHumanChick = Array.from<PlayerGameState>(gs.playerStates.values()).filter(
+      (p) => !p.isEagle && p.alive && !isBotConnId(p.connId),
+    );
+    if (anyHumanChick.length > 0) {
+      return anyHumanChick[Math.floor(Math.random() * anyHumanChick.length)].connId;
+    }
+
+    return null;
+  }
+
+  function reassignExamSubmitter(
+    gs: GameStateRef,
+    currentPlayers: Map<string, PlayerState>,
+    bcast: (msg: HostMessage) => void,
+  ): string | null {
+    if (!gs.examState) return null;
+    const nextSubmitterId = selectExamSubmitter(gs, currentPlayers);
+    gs.examState.examSubmitterId = nextSubmitterId ?? undefined;
+    if (nextSubmitterId) {
+      bcast({ type: "exam-submitter-changed", newSubmitterId: nextSubmitterId });
+    }
+    return nextSubmitterId;
+  }
+
+  function applyFinalExamPenalty(gs: GameStateRef, bcast: (msg: HostMessage) => void) {
+    for (const [, p] of gs.playerStates) {
+      if (!p.alive || p.isEagle) continue;
+      p.health = addSubGrades(p.health, -2);
+      if (isDead(p.health)) {
+        p.alive = false;
+        p.health = 0;
+        bcast({ type: "you-died", connId: p.connId });
+        if (gs.examState?.layer1ConnId === p.connId && !gs.examState.layer1Dead) {
+          gs.examState.layer1Dead = true;
+        }
+      }
+    }
+    updateHostExamDisplay(gs);
+  }
+
+  function finalizeFinalExam(gs: GameStateRef, bcast: (msg: HostMessage) => void) {
+    if (!gs.examState || gs.examState.answered) return;
+
+    gs.examState.answered = true;
+    gs.examState.timeRemaining = 0;
+    gs.examState.votingState = undefined;
+
+    const finalAnswer = (gs.examState.finalAnswer ?? "").trim().toUpperCase();
+    const correctAnswer = FINAL_ANSWER_KEY[gs.examState.questionNum] ?? "";
+    const isCorrect = finalAnswer.length > 0 && finalAnswer === correctAnswer;
+
+    if (isCorrect && gs.examState.examSubmitterId) {
+      const submitter = gs.playerStates.get(gs.examState.examSubmitterId);
+      if (submitter) {
+        addBreakdown(submitter, "final-exam", "Final Exam correct", 10);
+      }
+    } else {
+      applyFinalExamPenalty(gs, bcast);
+    }
+
+    resolveExamWinner(gs, gameModeRef.current as "1v3" | "2v6", bcast);
+  }
+
+  function startExam(
+    gs: GameStateRef,
+    bcast: (msg: HostMessage) => void,
+    mode: "1v3" | "2v6",
+    currentPlayers: Map<string, PlayerState>,
+  ) {
     gs.examStarted = true;
     gs.phase = "exam";
     setPhase("exam");
@@ -1706,15 +1821,14 @@ export function useGameLogic({ players, broadcast, gameMode, connectionMode, map
         ? nonBotChicks[Math.floor(Math.random() * nonBotChicks.length)].connId
         : null;
     
-    // Select random non-bot chick as exam submitter (if none, fallback to any chick)
-    const examSubmitterId = nonBotChicks.length > 0
-      ? nonBotChicks[Math.floor(Math.random() * nonBotChicks.length)].connId
-      : (aliveChicks.length > 0 ? aliveChicks[Math.floor(Math.random() * aliveChicks.length)].connId : null);
+    const examSubmitterId = selectExamSubmitter(gs, currentPlayers);
+    const answerLength = (FINAL_ANSWER_KEY[questionNum] ?? "").length || 3;
 
     gs.examState = {
       questionNum,
       category: "Final",
       timeRemaining: timer,
+      timeLimit: timer,
       layer1ConnId: layer1Player.connId,
       layer2ConnIds: layer2Players.map((p) => p.connId),
       answered: false,
@@ -1722,7 +1836,8 @@ export function useGameLogic({ players, broadcast, gameMode, connectionMode, map
       anyAnswerSubmitted: false,
       hostDisplayLayer: soloExam ? "1" : "none",
       examWhiteBgConnId,
-      examSubmitterId,
+      examSubmitterId: examSubmitterId ?? undefined,
+      answerLength,
     };
     gs.stageLabel = "FINAL EXAM — Solve together!";
     updateHostExamDisplay(gs);
@@ -1744,7 +1859,7 @@ export function useGameLogic({ players, broadcast, gameMode, connectionMode, map
     }
 
     bcast({ type: "phase-change", phase: "exam" });
-    bcast({ type: "exam-start", assignments: examAssigns, examWhiteBgConnId, examSubmitterId });
+    bcast({ type: "exam-start", assignments: examAssigns, examWhiteBgConnId, examSubmitterId, answerLength });
   }
 
   function endGame(gs: GameStateRef, winner: "eagle" | "chicks" | "draw", bcast: (msg: any) => void) {
@@ -1903,110 +2018,40 @@ export function useGameLogic({ players, broadcast, gameMode, connectionMode, map
   }, []);
 
   // ─── Voting resolution helper ────────────────────────────────────────────────
-  const resolveVoting = useCallback((gs: GameStateRef, currentBroadcast: (msg: BroadcastMessage) => void) => {
+  const resolveVoting = useCallback((gs: GameStateRef, currentBroadcast: (msg: HostMessage) => void) => {
     if (!gs.examState?.votingState?.isVoting) return;
+
     const votingState = gs.examState.votingState;
     votingState.isVoting = false;
-    const aliveChicks = Array.from<PlayerGameState>(gs.playerStates.values())
-      .filter((p) => !p.isEagle && p.alive && !isBotConnId(p.connId));
-    const votes = votingState.submittedVotes;
-    
-    // If no votes, treat as wrong answer
-    if (Object.keys(votes).length === 0) {
-      if (!gs.examState.wrongCount) gs.examState.wrongCount = 0;
-      gs.examState.wrongCount += 1;
-      // Apply -2 penalty to all chicks
-      for (const [, p] of gs.playerStates) {
-        if (p.alive && !p.isEagle) {
-          p.health = addSubGrades(p.health, -2);
-          if (isDead(p.health)) {
-            p.alive = false;
-            p.health = 0;
-            currentBroadcast({ type: "you-died", connId: p.connId });
-            if (gs.examState.layer1ConnId === p.connId && !gs.examState.layer1Dead) {
-              gs.examState.layer1Dead = true;
-            }
-          }
-        }
-      }
-      updateHostExamDisplay(gs);
-      // Check if all chicks dead or max 3 attempts reached
-      const aliveAfter = Array.from<PlayerGameState>(gs.playerStates.values()).filter((p) => !p.isEagle && p.alive);
-      if (aliveAfter.length === 0) {
-        endGame(gs, "eagle", currentBroadcast);
-      } else if (gs.examState.wrongCount >= 3) {
-        gs.examState.answered = true;
-        gs.examState.timeRemaining = 0;
-        resolveExamWinner(gs, gameModeRef.current as "1v3" | "2v6", currentBroadcast);
-      } else {
-        // No votes but still have attempts left - allow resubmission by same player
-        // Clear voting state so same submitter can submit again
-        gs.examState.votingState = undefined;
-        // Broadcast that voting has ended and resubmission is allowed
-        currentBroadcast({ 
-          type: "exam-voting-end",
-          allowResubmit: true,
-          submitterConnId: gs.examState.examSubmitterId
-        });
-      }
+    const submitterConnId = gs.examState.examSubmitterId;
+    const livePlayers = playersRef.current;
+    const eligibleVoterIds = Array.from<PlayerGameState>(gs.playerStates.values())
+      .filter(
+        (p) =>
+          !p.isEagle &&
+          p.alive &&
+          !isBotConnId(p.connId) &&
+          p.connId !== submitterConnId &&
+          livePlayers.has(p.connId),
+      )
+      .map((p) => p.connId);
+
+    const votes = votingState.submittedVotes ?? {};
+    const passVotes = eligibleVoterIds.filter((connId) => votes[connId] === "pass").length;
+    const failVotes = eligibleVoterIds.filter((connId) => votes[connId] === "fail").length;
+    const majorityPass = eligibleVoterIds.length === 0 || passVotes >= failVotes;
+
+    if (majorityPass) {
+      finalizeFinalExam(gs, currentBroadcast);
       return;
     }
-    
-    // Tally votes
-    const passVotes = Object.values(votes).filter((v) => v === 'pass').length;
-    const totalVotes = Object.keys(votes).length;
-    const majorityPass = passVotes > totalVotes / 2;
-    
-    if (majorityPass) {
-      // Correct — end exam successfully
-      gs.examState.answered = true;
-      // Find submitter player for breakdown
-      const submitter = gs.examState.examSubmitterId ? gs.playerStates.get(gs.examState.examSubmitterId) : null;
-      if (submitter) {
-        addBreakdown(submitter, 'final-exam', 'Final Exam correct', 10);
-      }
-      // Clear voting state
-      gs.examState.votingState = undefined;
-      resolveExamWinner(gs, gameModeRef.current as "1v3" | "2v6", currentBroadcast);
-    } else {
-      // Incorrect — apply -2 penalty to all chicks
-      if (!gs.examState.wrongCount) gs.examState.wrongCount = 0;
-      gs.examState.wrongCount += 1;
-      for (const [, p] of gs.playerStates) {
-        if (p.alive && !p.isEagle) {
-          p.health = addSubGrades(p.health, -2);
-          if (isDead(p.health)) {
-            p.alive = false;
-            p.health = 0;
-            currentBroadcast({ type: "you-died", connId: p.connId });
-            if (gs.examState.layer1ConnId === p.connId && !gs.examState.layer1Dead) {
-              gs.examState.layer1Dead = true;
-            }
-          }
-        }
-      }
-      updateHostExamDisplay(gs);
-      
-      // Check if all chicks dead or max 3 attempts reached
-      const aliveAfter = Array.from<PlayerGameState>(gs.playerStates.values()).filter((p) => !p.isEagle && p.alive);
-      if (aliveAfter.length === 0) {
-        endGame(gs, "eagle", currentBroadcast);
-      } else if (gs.examState.wrongCount >= 3) {
-        gs.examState.answered = true;
-        gs.examState.timeRemaining = 0;
-        resolveExamWinner(gs, gameModeRef.current as "1v3" | "2v6", currentBroadcast);
-      } else {
-        // Failed vote but still have attempts left - allow resubmission by same player
-        // Clear voting state so same submitter can submit again
-        gs.examState.votingState = undefined;
-        // Broadcast that voting has ended and resubmission is allowed
-        currentBroadcast({ 
-          type: "exam-voting-end",
-          allowResubmit: true,
-          submitterConnId: gs.examState.examSubmitterId
-        });
-      }
-    }
+
+    gs.examState.votingState = undefined;
+    currentBroadcast({
+      type: "exam-voting-end",
+      allowResubmit: true,
+      submitterConnId: gs.examState.examSubmitterId,
+    });
   }, []);
 
   // ─── Handle Client Messages ───────────────────────────────────────────────────
@@ -2165,6 +2210,15 @@ export function useGameLogic({ players, broadcast, gameMode, connectionMode, map
         if (gs.phase === "exam" && player.isEagle && msg.propType === "cage") return;
         const propItem = player.props.find((p) => p.type === msg.propType && p.count > 0);
         if (!propItem) return;
+        const sus = susPlayersRef.current.get(connId);
+        if (sus) {
+          sus.lastActivityAt = now;
+          sus.status = "active";
+          sus.disconnectReason = null;
+          sus.promptShownAt = null;
+          sus.activityWarningShownAt = null;
+          sus.detectedAt = 0;
+        }
         propItem.count--;
         // scoring handled per-prop below
 
@@ -2452,63 +2506,8 @@ export function useGameLogic({ players, broadcast, gameMode, connectionMode, map
         break;
       }
 
-      // ── Answer submit (exam) ──
+      // ── Legacy final-exam submit path (disabled in favor of voting flow) ──
       case "answer-submit": {
-        if (player.isEagle) return;
-        if (!gs.examState || gs.examState.answered) return;
-        if (gs.phase !== "exam") return;
-
-        // Mark that at least one submission happened (suppress timeout video)
-        gs.examState.anyAnswerSubmitted = true;
-        // Track this player's submission
-        if (!gs.examState.submittedConnIds) gs.examState.submittedConnIds = [];
-        if (!gs.examState.submittedConnIds.includes(connId)) {
-          gs.examState.submittedConnIds.push(connId);
-        }
-
-        const correct = FINAL_ANSWER_KEY[gs.examState.questionNum];
-        if (msg.answer.toUpperCase().trim() === correct) {
-          gs.examState.answered = true;
-          addBreakdown(player, 'final-exam', 'Final Exam correct', 10);
-          resolveExamWinner(gs, gameModeRef.current as "1v3" | "2v6", broadcastRef.current);
-        } else {
-          // Wrong: -2 sub-grades to all alive chicks, track attempt count
-          if (!gs.examState.wrongCount) gs.examState.wrongCount = 0;
-          gs.examState.wrongCount += 1;
-
-          for (const [, p] of gs.playerStates) {
-            if (p.alive && !p.isEagle) {
-              p.health = addSubGrades(p.health, -2);
-              if (isDead(p.health)) {
-                p.alive = false;
-                p.health = 0;
-                broadcastRef.current({ type: "you-died", connId: p.connId });
-
-                // If the layer-1 holder dies, show layer 1 on host
-                if (gs.examState && gs.examState.layer1ConnId === p.connId && !gs.examState.layer1Dead) {
-                  gs.examState.layer1Dead = true;
-                }
-                updateHostExamDisplay(gs);
-              }
-            }
-          }
-
-          // Broadcast wrong answer notification to all players
-          const attemptsLeft = 3 - (gs.examState.wrongCount ?? 0);
-          broadcastRef.current({ type: "exam-wrong", attemptsLeft });
-
-          // Check if all chicks dead or max 3 attempts reached
-          const aliveAfter = Array.from<PlayerGameState>(gs.playerStates.values()).filter((p) => !p.isEagle && p.alive);
-          if (aliveAfter.length === 0) {
-            endGame(gs, "eagle", broadcastRef.current);
-          } else if (gs.examState.wrongCount >= 3) {
-            // Max attempts used — end exam immediately, no extra damage
-            gs.examState.answered = true;
-            gs.examState.timeRemaining = 0;
-            resolveExamWinner(gs, gameModeRef.current as "1v3" | "2v6", broadcastRef.current);
-          }
-          updateHostExamDisplay(gs);
-        }
         break;
       }
 
@@ -2516,7 +2515,13 @@ export function useGameLogic({ players, broadcast, gameMode, connectionMode, map
       case "player-still-here": {
         const susPlayers = susPlayersRef.current;
         if (susPlayers.has(connId)) {
-          susPlayers.delete(connId);
+          const sus = susPlayers.get(connId)!;
+          clearSusWarning(sus, now, {
+            position: player.position,
+            resetActivity: true,
+          });
+          sus.status = "checked";
+          sus.lastPingAt = now;
         }
         break;
       }
@@ -2525,32 +2530,27 @@ export function useGameLogic({ players, broadcast, gameMode, connectionMode, map
       case "exam-answer-submit": {
         if (player.isEagle) return;
         if (!gs.examState || gs.phase !== "exam") return;
-
-        // If voting already started, ignore subsequent submissions
         if (gs.examState.votingState) return;
+        if (gs.examState.examSubmitterId !== connId) return;
 
-        // Store the answer from the designated submitter
-        gs.examState.finalAnswer = msg.answer.toUpperCase().trim();
-        gs.examState.examSubmitterId = connId;
+        const maxAnswerLength = gs.examState.answerLength ?? 4;
+        const submittedAnswer = msg.answer.toUpperCase().trim().slice(0, maxAnswerLength);
+        if (!submittedAnswer) return;
+
+        gs.examState.finalAnswer = submittedAnswer;
         gs.examState.anyAnswerSubmitted = true;
 
-        // Create answer display: show actual chars in boxes
-        const answer = gs.examState.finalAnswer;
-        const maskedAnswer = answer; // Full answer shown to voters
-
-        // Initialize voting state
         gs.examState.votingState = {
-          startedAt: Date.now(),
+          startedAt: now,
           isVoting: true,
           submittedVotes: {},
         };
 
-        // Broadcast voting start to all clients
         broadcastRef.current({
           type: "exam-voting-start",
           submitterConnId: connId,
-          maskedAnswer,
-          startedAt: Date.now(),
+          displayAnswer: submittedAnswer,
+          startedAt: now,
         });
         break;
       }
@@ -2558,6 +2558,9 @@ export function useGameLogic({ players, broadcast, gameMode, connectionMode, map
       // ── Exam vote submission ──
       case "exam-vote": {
         if (!gs.examState || !gs.examState.votingState) return;
+        if (player.isEagle || isBotConnId(connId)) return;
+        if (connId === gs.examState.examSubmitterId) return;
+        if (!playersRef.current.has(connId)) return;
 
         if (!gs.examState.votingState.submittedVotes) {
           gs.examState.votingState.submittedVotes = {};
@@ -2571,15 +2574,20 @@ export function useGameLogic({ players, broadcast, gameMode, connectionMode, map
           vote: msg.vote,
         });
 
-        // Check if all alive chicks have voted
-        const aliveChicks = Array.from<PlayerGameState>(gs.playerStates.values())
-          .filter((p) => !p.isEagle && p.alive && !isBotConnId(p.connId));
-
+        const eligibleVoterIds = Array.from<PlayerGameState>(gs.playerStates.values())
+          .filter(
+            (p) =>
+              !p.isEagle &&
+              p.alive &&
+              !isBotConnId(p.connId) &&
+              p.connId !== gs.examState?.examSubmitterId &&
+              playersRef.current.has(p.connId),
+          )
+          .map((p) => p.connId);
         const votes = gs.examState.votingState.submittedVotes;
-        const allVoted = aliveChicks.every((c) => votes[c.connId] !== undefined);
+        const allVoted = eligibleVoterIds.every((id) => votes[id] !== undefined);
 
         if (allVoted) {
-          // All chicks voted, resolve voting
           resolveVoting(gs, broadcastRef.current);
         }
         break;
@@ -2587,28 +2595,15 @@ export function useGameLogic({ players, broadcast, gameMode, connectionMode, map
 
       // ── Player Leave (proper quit via X button) ──
       case "player-leave": {
-        // Mark as properly quit - trigger immediate bot replacement
         const susPlayers = susPlayersRef.current;
-        if (!susPlayers.has(connId)) {
-          susPlayers.set(connId, {
-            connId,
-            detectedAt: now,
-            promptShownAt: now, // Already "warned" by proper quit
-            properQuit: true,
-            disconnectReason: 'proper-quit',
-            pingFailCount: 0,
-            lastPingAt: 0,
-            pingWarningShownAt: null,
-            lastActivityAt: 0,
-            lastPosition: player.position,
-            activityWarningShownAt: null,
-          });
-        } else {
-          const sus = susPlayers.get(connId)!;
-          sus.properQuit = true;
-          sus.disconnectReason = 'proper-quit';
-          sus.promptShownAt = now;
-        }
+        const sus = susPlayers.get(connId) ?? createSusPlayer(connId, now, player.position);
+        sus.status = "sus";
+        sus.detectedAt = now;
+        sus.promptShownAt = now;
+        sus.properQuit = true;
+        sus.disconnectReason = "proper-quit";
+        susPlayers.set(connId, sus);
+        replaceSusPlayerWithBot(gs, connId, playersRef.current, broadcastRef.current);
         break;
       }
 
@@ -2617,27 +2612,20 @@ export function useGameLogic({ players, broadcast, gameMode, connectionMode, map
         const susPlayers = susPlayersRef.current;
         const player = gs.playerStates.get(connId);
         if (!player) break;
-        
+
         if (!susPlayers.has(connId)) {
-          // Create initial SusPlayer entry for tracking (not yet detected as sus)
-          susPlayers.set(connId, {
-            connId,
-            detectedAt: 0, // 0 means not yet detected as sus
-            promptShownAt: null,
-            properQuit: false,
-            disconnectReason: null,
-            pingFailCount: 0,
-            lastPingAt: now,
-            pingWarningShownAt: null,
-            lastActivityAt: now,
-            lastPosition: player.position,
-            activityWarningShownAt: null,
-          });
+          susPlayers.set(connId, createSusPlayer(connId, now, player.position));
         } else {
           const sus = susPlayers.get(connId)!;
-          sus.lastPingAt = now; // Update last ping received
-          sus.pingFailCount = 0; // Reset fail counter on successful pong
-          sus.lastActivityAt = now; // Ping also counts as activity
+          sus.lastPingAt = now;
+          sus.pingFailCount = 0;
+          if (sus.disconnectReason === "ping-fail" || sus.status === "checked") {
+            sus.status = "active";
+            sus.detectedAt = 0;
+            sus.promptShownAt = null;
+            sus.disconnectReason = null;
+            sus.pingWarningShownAt = null;
+          }
         }
         break;
       }
