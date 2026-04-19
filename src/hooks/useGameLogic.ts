@@ -108,14 +108,6 @@ const MOCK_ANSWER_KEY: Record<number, string> = {
 };
 
 // ─── Interfaces ───────────────────────────────────────────────────────────────
-interface TipShare {
-  connId: string;
-  tipIndex: 0 | 1;
-  code: string;
-  cooldownUntil: number;
-  expiresAt: number;
-}
-
 interface BuildingTimer {
   buildingId: number;
   startTime: number;
@@ -155,6 +147,14 @@ interface UseGameLogicProps {
   devMode?: boolean;
 }
 
+interface TipShare {
+  connId: string;
+  tipIndex: 0 | 1;
+  code: string;
+  cooldownUntil: number;
+  expiresAt: number;
+}
+
 // Named type for the full game state reference — avoids TypeScript `unknown` inference issues
 interface GameStateRef {
   phase: GamePhase;
@@ -192,6 +192,7 @@ interface GameStateRef {
   totalPauseMs: number;
   stageTransitionPauseApplied: boolean;
   replayCountdown: ReplayCountdownState | null;
+  activeTipShares: Map<string, TipShare>;
 }
 
 // Circular buffer for position recording
@@ -619,6 +620,7 @@ export function useGameLogic({
       lastMysteryBoxSpawn: 0,
       mysteryBoxIdCounter: 0,
       tipShareIdCounter: 0,
+      activeTipShares: new Map(),
       buildingTimers: new Map(),
       eagleZoneStates: new Map(),
       activeEvent: null,
