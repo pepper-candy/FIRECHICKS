@@ -108,6 +108,14 @@ const MOCK_ANSWER_KEY: Record<number, string> = {
 };
 
 // ─── Interfaces ───────────────────────────────────────────────────────────────
+interface TipShare {
+  connId: string;
+  tipIndex: 0 | 1;
+  code: string;
+  cooldownUntil: number;
+  expiresAt: number;
+}
+
 interface BuildingTimer {
   buildingId: number;
   startTime: number;
@@ -2066,7 +2074,7 @@ export function useGameLogic({
   }, []);
 
   // ─── Handle Client Messages ───────────────────────────────────────────────────
-  const handleClientMessage = useCallback((connId: string, msg: ClientMessage) => {
+  const handleClientMessage = useCallback(async (connId: string, msg: ClientMessage) => {
     const gs = gameStateRef.current as GameStateRef | null;
     if (!gs) return;
     const now = Date.now();
@@ -2351,57 +2359,55 @@ export function useGameLogic({
         if (player.isEagle) return;
         const data = msg.data;
 
-        // Check if it's a tip share code
-if (data.startsWith('FIRETIP-')) {
-  // Call Neon API to claim tip
-  try {
-    const res = await fetch('/api/tip-claim', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ code: data, scannerConnId: connId }),
-    });
-    const claimData = await res.json();
+        // Check if it's a tip share code (starts with FIRETIP-)
+        if (data.startsWith('FIRETIP-')) {
+          try {
+            const res = await fetch('/api/tip-claim', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ code: data, scannerConnId: connId }),
+            });
+            const claimData = await res.json();
 
-    if (!res.ok) {
-      // Code already used or expired
-      return;
-    }
+            if (!res.ok) {
+              // Code already used or expired
+              return;
+            }
 
-    const { sharerConnId, tipIndex } = claimData;
+            const { sharerConnId, tipIndex } = claimData;
 
-    // Validate proximity
-    const sharer = gs.playerStates.get(sharerConnId);
-    if (sharer && !checkOverlap(player.position.x, player.position.z, sharer.position.x, sharer.position.z, TIP_SHARE_RADIUS)) {
-      return; // too far
-    }
+            // Proximity check
+            const sharer = gs.playerStates.get(sharerConnId);
+            if (sharer && !checkOverlap(player.position.x, player.position.z, sharer.position.x, sharer.position.z, TIP_SHARE_RADIUS)) {
+              return; // too far
+            }
 
-    // Transfer tip
-    player.tips[tipIndex] = true;
-    addBreakdown(player, 'receive-tip', 'Receive shared tip', 5);
-    player.scansPerformed++;
+            // Transfer tip
+            player.tips[tipIndex] = true;
+            addBreakdown(player, 'receive-tip', 'Receive shared tip', 5);
+            player.scansPerformed++;
+            const sharerPlayer = gs.playerStates.get(sharerConnId);
+            if (sharerPlayer) sharerPlayer.tipsShared++;
 
-    const sharerPlayer = gs.playerStates.get(sharerConnId);
-    if (sharerPlayer) sharerPlayer.tipsShared++;
+            // Notify both players
+            broadcastRef.current({
+              type: "tip-copy-notify",
+              connIds: [connId, sharerConnId],
+              tipIndex,
+            });
 
-    // Notify both players
-    broadcastRef.current({
-      type: "tip-copy-notify",
-      connIds: [connId, sharerConnId],
-      tipIndex,
-    });
-
-    // Check stage progression
-    if (gs.stage === 2) {
-      const aliveChicks = Array.from<PlayerGameState>(gs.playerStates.values()).filter((p) => !p.isEagle && p.alive);
-      if (aliveChicks.length > 0 && aliveChicks.every((c) => c.tips[0] && c.tips[1])) {
-        gs.stage = 3;
-        gs.stageLabel = "Run to any building to start the Final Exam!";
-      }
-    }
-  } catch (error) {
-    console.error('Tip claim error:', error);
-  }
-  break;
+            // Check stage progression
+            if (gs.stage === 2) {
+              const aliveChicks = Array.from<PlayerGameState>(gs.playerStates.values()).filter((p) => !p.isEagle && p.alive);
+              if (aliveChicks.length > 0 && aliveChicks.every((c) => c.tips[0] && c.tips[1])) {
+                gs.stage = 3;
+                gs.stageLabel = "Run to any building to start the Final Exam!";
+              }
+            }
+          } catch (error) {
+            console.error('Tip claim error:', error);
+          }
+          break;
         }
 
         // Check if it's a prop ID
