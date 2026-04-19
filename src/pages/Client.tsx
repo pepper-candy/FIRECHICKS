@@ -917,6 +917,13 @@ export default function Client() {
     }
   }, [gamePhase, gameState?.examState, showingEndTransition]);
 
+  // Sync showingEndTransition with examState
+  useEffect(() => {
+    if (gamePhase === "gameover" && !gameState?.examState && showingEndTransition) {
+      setShowingEndTransition(false);
+    }
+  }, [gamePhase, gameState?.examState, showingEndTransition]);
+
   // ── Prop-use screen edge pulse ──
   useEffect(() => {
     if (!myState) return;

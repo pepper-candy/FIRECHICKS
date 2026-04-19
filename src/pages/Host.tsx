@@ -1191,6 +1191,13 @@ function GameOverCeremony({ snapshot, gameMode }: { snapshot: GameStateSnapshot;
     snapshot.examState ? true : false
   );
 
+  // Sync showingEndTransition with snapshot.examState
+  useEffect(() => {
+    if (!snapshot.examState) {
+      setShowingEndTransition(false);
+    }
+  }, [snapshot.examState]);
+
   const winner = snapshot.winner;
   const getMatchResult = (p: PlayerGameStateSerializable): "draw" | "win" | "lose" => {
     if (winner === "draw" || winner === null) return "draw";
