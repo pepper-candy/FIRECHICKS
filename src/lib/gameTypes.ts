@@ -227,6 +227,7 @@ export interface GameStateSnapshot {
   activeTipShareConnIds: string[];
   totalPauseMs: number;
   replayCountdown: ReplayCountdownState | null;
+  examTransitionEndsAt?: number;
 }
 
 // Messages host → client

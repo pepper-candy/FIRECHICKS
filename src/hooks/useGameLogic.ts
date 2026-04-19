@@ -81,6 +81,7 @@ const CAGE_COOLDOWN = 30000;
 const CAGE_LOCK_DURATION = 10000;
 const CAGE_POST_INVINCIBLE = 3000;
 const REPLAY_COUNTDOWN_DURATION = 3000;
+const GAME_END_TRANSITION_DURATION = 11000;
 const POSITION_HISTORY_MAX = 300; // ~5s at 60fps
 // Sus detection system (4 levels)
 const SUS_PLAYER_WARN_DELAY = 3000; // 3s before showing "Are you still there?"
@@ -166,6 +167,8 @@ interface GameStateRef {
   frozenAllUntil: number;
   pendingEagleFreezeAfterVideo: boolean;
   pendingExamEndAfterVideo: boolean;
+  pendingExamWinner: "eagle" | "chicks" | "draw" | null;
+  examTransitionEndsAt: number;
   videoPlaying: "hurt" | "dead" | null;
   propSpawns: PropSpawn[];
   buildings: BuildingState[];
@@ -592,6 +595,8 @@ export function useGameLogic({
       frozenAllUntil: 0,
       pendingEagleFreezeAfterVideo: false,
       pendingExamEndAfterVideo: false,
+      pendingExamWinner: null,
+      examTransitionEndsAt: 0,
       videoPlaying: null,
       propSpawns: [],
       buildings,
@@ -676,6 +681,15 @@ export function useGameLogic({
     const currentPlayers = playersRef.current as Map<string, PlayerState>;
     const currentBroadcast = broadcastRef.current as (msg: any) => void;
     const currentMode = gameModeRef.current as "1v3" | "2v6";
+
+    if (gs.examTransitionEndsAt > 0) {
+      if (now >= gs.examTransitionEndsAt && gs.pendingExamWinner) {
+        endGame(gs, gs.pendingExamWinner, currentBroadcast);
+        return;
+      }
+      doBroadcastState(gs, currentBroadcast);
+      return;
+    }
 
     // ── Stage transition auto-pause ──
     // During stage transitions, freeze all game logic (like pause) but keep gameTime ticking.
@@ -1781,7 +1795,7 @@ export function useGameLogic({
       applyFinalExamPenalty(gs, bcast);
     }
 
-    resolveExamWinner(gs, gameModeRef.current as "1v3" | "2v6", bcast);
+    startExamGameOverTransition(gs, gameModeRef.current as "1v3" | "2v6");
   }
 
   function startExam(
@@ -1874,6 +1888,8 @@ export function useGameLogic({
       }
     }
     gs.winner = winner;
+    gs.pendingExamWinner = null;
+    gs.examTransitionEndsAt = 0;
     gs.phase = "gameover";
     setPhase("gameover");
     cancelAnimationFrame(frameRef.current);
@@ -1881,20 +1897,26 @@ export function useGameLogic({
     doBroadcastState(gs, bcast);
   }
 
-  // Decide winner after exam timeout based on alive counts
-  function resolveExamWinner(gs: GameStateRef, mode: "1v3" | "2v6", bcast: (msg: any) => void) {
+  function getExamWinner(gs: GameStateRef, mode: "1v3" | "2v6"): "eagle" | "chicks" | "draw" {
     const aliveChicks = Array.from<PlayerGameState>(gs.playerStates.values()).filter((p) => !p.isEagle && p.alive);
     const C = aliveChicks.length;
 
     if (C === 0) {
-      endGame(gs, "eagle", bcast);
+      return "eagle";
     } else if (mode === "1v3") {
       // 1v3: 2+ chicks = win, 1 = draw
-      endGame(gs, C >= 2 ? "chicks" : "draw", bcast);
+      return C >= 2 ? "chicks" : "draw";
     } else {
       // 2v6: 3+ chicks = win, 2 = draw, <2 = eagle
-      endGame(gs, C >= 3 ? "chicks" : C === 2 ? "draw" : "eagle", bcast);
+      return C >= 3 ? "chicks" : C === 2 ? "draw" : "eagle";
     }
+  }
+
+  function startExamGameOverTransition(gs: GameStateRef, mode: "1v3" | "2v6") {
+    gs.pendingExamWinner = getExamWinner(gs, mode);
+    gs.examTransitionEndsAt = Date.now() + GAME_END_TRANSITION_DURATION;
+    gs.frozenAll = true;
+    gs.frozenAllUntil = gs.examTransitionEndsAt;
   }
 
   // ─── Broadcast state ────────────────────────────────────────────────────────
@@ -1935,6 +1957,7 @@ export function useGameLogic({
       activeTipShareConnIds: Array.from(gs.activeTipShares.values()).map((ts: TipShare) => ts.connId),
       totalPauseMs: gs.totalPauseMs ?? 0,
       replayCountdown: (gs as any).replayCountdown ?? null,
+      examTransitionEndsAt: gs.examTransitionEndsAt,
     };
 
     setSnapshot(hostSnap);
@@ -2651,7 +2674,7 @@ export function useGameLogic({
       gs.pendingExamEndAfterVideo = false;
       gs.frozenAll = false;
       gs.frozenAllUntil = 0;
-      resolveExamWinner(gs, gameModeRef.current as "1v3" | "2v6", broadcastRef.current);
+      startExamGameOverTransition(gs, gameModeRef.current as "1v3" | "2v6");
       return;
     }
 
@@ -2729,7 +2752,7 @@ export function useGameLogic({
     if (!gs || gs.phase !== "exam" || !gs.examState || gs.examState.answered) return;
     gs.examState.answered = true;
     broadcastRef.current({ type: "exam-skipped" });
-    resolveExamWinner(gs, gameModeRef.current as "1v3" | "2v6", broadcastRef.current);
+    startExamGameOverTransition(gs, gameModeRef.current as "1v3" | "2v6");
   }, []);
 
   /** Host-only: end an active mystery-box event immediately (minigames). */

@@ -747,6 +747,9 @@ export default function Host() {
 
   // ─── PLAYING / EXAM ──────────────────────────────────────────────────────────
   if ((phase === "playing" || phase === "exam") && snapshot) {
+    if (phase === "exam" && (snapshot.examTransitionEndsAt ?? 0) > Date.now()) {
+      return <GameEndTransition />;
+    }
     const alivePlayers = Object.values(snapshot.players).filter((p) => p.alive);
     const isEventOverlay =
       !!snapshot.activeEvent &&
@@ -1212,7 +1215,6 @@ export default function Host() {
 function GameOverCeremony({ snapshot, gameMode }: { snapshot: GameStateSnapshot; gameMode: string }) {
   const { isImmersive } = useImmersive();
   const [ceremonyPhase, setCeremonyPhase] = useState<"mvp" | "team" | "transcript">("mvp");
-  const [showingEndTransition, setShowingEndTransition] = useState(Boolean(snapshot.examState));
 
   const winner = snapshot.winner;
   const getMatchResult = (p: PlayerGameStateSerializable): "draw" | "win" | "lose" => {
@@ -1243,15 +1245,7 @@ function GameOverCeremony({ snapshot, gameMode }: { snapshot: GameStateSnapshot;
   const skipTeamPhase =
     winner === "draw" || (winner === "eagle" && gameMode === "1v3") || winningTeamPlayers.length === 0;
 
-  const handleTransitionComplete = useCallback(() => {
-    setShowingEndTransition(false);
-  }, []);
-
   useEffect(() => {
-    if (showingEndTransition) {
-      return;
-    }
-
     const t1 = setTimeout(() => {
       if (skipTeamPhase) {
         setCeremonyPhase("transcript");
@@ -1270,21 +1264,15 @@ function GameOverCeremony({ snapshot, gameMode }: { snapshot: GameStateSnapshot;
       clearTimeout(t1);
       if (t2) clearTimeout(t2);
     };
-  }, [skipTeamPhase, showingEndTransition]);
+  }, [skipTeamPhase]);
 
   useEffect(() => {
-    if (!showingEndTransition) {
-      if (!mvp) {
-        setCeremonyPhase("transcript");
-      } else {
-        setCeremonyPhase("mvp");
-      }
+    if (!mvp) {
+      setCeremonyPhase("transcript");
+    } else {
+      setCeremonyPhase("mvp");
     }
-  }, [showingEndTransition, mvp]);
-
-  if (showingEndTransition) {
-    return <GameEndTransition onComplete={handleTransitionComplete} />;
-  }
+  }, [mvp]);
 
   const mvpColor = mvp ? PLAYER_COLORS[mvp.colorIndex] : null;
   const teamName =

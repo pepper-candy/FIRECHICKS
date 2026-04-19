@@ -436,10 +436,6 @@ export default function Client() {
   const [mockExamOpacity, setMockExamOpacity] = useState(0.85);
   const connIdRef = useRef<string>("");
   const [showSusWarning, setShowSusWarning] = useState(false);
-  const [endTransitionCompleted, setEndTransitionCompleted] = useState(false);
-  const handleTransitionComplete = useCallback(() => {
-    setEndTransitionCompleted(true);
-  }, []);
   const [showExamVoting, setShowExamVoting] = useState(false);
   const [isExamSubmitter, setIsExamSubmitter] = useState(false);
   const [hasVotedExam, setHasVotedExam] = useState(false);
@@ -525,7 +521,6 @@ export default function Client() {
   useEffect(() => {
     if (gamePhase === "lobby" || gamePhase === "reveal" || gamePhase === "countdown") {
       setShowFTranscript(false);
-      setEndTransitionCompleted(false);
       setGameOverState(null);
       hasReachedEndgameRef.current = false;
     }
@@ -1408,12 +1403,6 @@ export default function Client() {
 
   // ─── GAME OVER ───────────────────────────────────────────────────────────────
   if (gamePhase === "gameover") {
-    if (stableGameState?.examState && !endTransitionCompleted) {
-      return (
-        <GameEndTransition onComplete={handleTransitionComplete} />
-      );
-    }
-
     const winner = directWinner ?? stableGameState?.winner;
     const amWinner = (winner === "eagle" && isEagle) || (winner === "chicks" && !isEagle);
     const isDraw = winner === "draw";
@@ -1655,6 +1644,10 @@ export default function Client() {
 
   // ─── EXAM PHASE ──────────────────────────────────────────────────────────────
   if (gamePhase === "exam") {
+    if ((stableGameState?.examTransitionEndsAt ?? 0) > clockNow) {
+      return <GameEndTransition />;
+    }
+
     // Eagle sees distract message
     if (isEagle) {
       return (

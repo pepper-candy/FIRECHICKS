@@ -1,28 +1,34 @@
+There are 4 to-do from our last conversation.
+
+1. Refactor sus player detection, active status, prompt flow, and bot replacement
+
+2. Rewrite final exam submission and voting flow to match single-submitters rules
+
+3. Rewrite GameEndTransition and integrate stable host/client handoff
+
+4. Run diagnostics and fix remaining implementation errors
+
+Please take a look on how our last conversation goes and continue the thining and doing process. I have also attatched background.txt for your reference on what am I doing.
+
+Attatched: chat.txt background.txt
+
+You may immediately create to do(re-adjusted) after getting familar with the project and start working all in one go, you may use sequence task 3 then 2 then 1 for a smoother flow as that matches time sequence in game. Also you should be noted that I want all 3 task to be fully implemented in one go, with debug you may do it at the very last before the end of your reply.
+
 Builder
 
 Thought process
 
-Adjusting game types and diagnostics
-
-I’m considering adjusting the gameTypes to include extra messages like exam-voting-update and exam-submitter-changed structure. I need to implement a transition component for Task 1 and fix the host/client integration. Running diagnostics is essential to understand the existing types and hook exports, which might be in a large file. I'll likely need to patch chunks and inspect the relevant types in gameTypes for messages, possibly looking at HostMessage or ClientMessage union.
-
-I’m implementing the three tasks in the order we agreed: sus-player handling first, then final-exam voting, then the transition handoff. I’ll refactor the host logic into one consistent path and fix the client UI afterward so the whole flow works together.
+I’m picking up from the previous refactor and will first verify the current file state in useGameLogic , Client , Host , GameEndTransition , and shared types, then I’ll re-adjust the todo list and finish the three gameplay tasks before running diagnostics at the end.
 
 0/4 done
 
-Refactor sus player detection, active status, prompt flow, and bot replacement
+Stabilize GameEndTransition and host/client game-over handoff flow
 
-Rewrite final exam submission and voting flow to match single-submitters rules
+Finish final exam single-submitter submission and inline voting flow across host/client/types
 
-Rewrite GameEndTransition and integrate stable host/client handoff
+Finish sus-player detection, activity tracking, prompt flow, ping/pong, and bot replacement
 
-Run diagnostics and fix remaining implementation errors
-
-Thought
-
-Exploring game types and messages
-
-I’m thinking I need to do more reading around game types, especially message unions and Host message types. It might also be important to look into the app for GameEndTransition conditions. I'll inspect relevant types and check out the larger regions in``useGameLogic`` , possibly focusing on function definitions related to bot replacement. Additionally, I should read about the Client and its game-over flow, particularly the logic for disconnections.
+Run diagnostics/build checks and fix remaining implementation errors
 
 src\lib\gameTypes.ts
 
@@ -32,314 +38,290 @@ src\pages\Client.tsx
 
 src\pages\Host.tsx
 
-I’m now replacing the brittle host-side exam and sus-player logic in useGameLogic itself, because both the voting rules and the black-screen handoff depend on that state machine being clean first. After that I’ll align the client UI and the transition component in one pass.
-
-Search codebase for 'useGameLogic\('
+src\components\GameEndTransition.tsx
 
 Thought
 
-Evaluating return destructuring
+I’ve confirmed the previous refactor partially landed, but the host/client types and bot replacement path are still inconsistent, so I’m checking the room/bot plumbing and current diagnostics before patching the three gameplay flows together.
 
-I think I need to check the return destructuring to see if I should include addBot or not. It’s important to clarify whether addBot is necessary for my current setup. I want to make sure everything works smoothly, so I’ll inspect it carefully. Maybe there are details I’m overlooking, and it’s crucial not to miss anything. Let's go through it step by step to ensure I’m making the right choice!
-
-src\pages\Host.tsx
+Search codebase for 'export interface PlayerState|fillBots|removeBots|isBot|takeover-accepted|tip-copy-notify|exam-skipped|event-skipped'
 
 Thought
 
-Assessing game logic updates
+src\hooks\useGameRoom.ts
 
-I need to inspect the``useGameLogic`` return and current types, which might be sufficient. I’ll rewrite the 'sus' algorithm, starting by extending the``SusPlayer`` interface to include a``status`` of 'sus' or 'checked', and maybe add``promptReason`` and``lastPromptAt`` .
-
-I have to ensure tracking exists for every non-bot player, but I think I can simplify this using the current structure. I'll replace``properQuit`` and page-close with immediate actions, and for ping, the client should send a pong signal every 5 seconds or 2 seconds during warnings. The host will keep track of these intervals without needing sequence IDs, using``lastPingAt`` . Lastly, inactivity shouldn't be reset by pong signals.
-
-Considering game state updates
-
-I'm working through the game logic to ensure that the gameover condition is set before the gameState updates. It's important to handle directWinner from the state phase properly. I need to fix early return hooks in the host function to make things more robust. Perhaps I can simplify the GameOverCeremony by avoiding early returns before hooks and using an effect to conditionally render after all hooks are defined. Additionally, I might need to check the gameState for player serialization, but that might not be essential.
-
-Evaluating UI changes
-
-I’m considering how the UI should respond after a failed vote and before resubmission. It seems like during the waiting period, the interface should show the message “Waiting...” instead of the last submitted answer. The answer display should mask the boxes, using placeholders since there’s no current submission. I'd want to make sure the last submitted answer is logged, but maybe not shown visually on the interface while waiting. That feels like the best approach!
-
-Considering resubmission layout
-
-I’m thinking about how to handle the UI for resubmission. For non-submitters, the top text should display “Final Exam Submission,” with a second line showing either “Waiting...” or “Do you agree?” The boxes and buttons should always be visible but maybe greyed out if not voting. After submission, the submitter's input should be greyed out, but it could reopen if the vote fails. Other clients' input boxes should also be greyed out. I’ll keep the eagle layout unchanged and only adjust the chick exam UI.
-
-Search codebase for 'type BroadcastMessage|BroadcastMessage'
+Search codebase for 'broadcast\(|type: 'ping'|lastPongAt|pong'
 
 Thought
 
-Evaluating diagnostics issue
+The room hook already has addBot / removeBot , so the clean fix is to wire those into useGameLogic instead of only mutating gameState ; I’m also checking the client transport-level ping handling so the gameplay-level sus prompt doesn’t fight the networking layer.
 
-I think there might be a problem with the BroadcastMessage type being undefined, possibly due to it not being compiled. That's kind of strange, right? It seems like we might be using an implicit format, which we should change to either "any" or "HostMessage." I need to check the top imports since "HostMessage" isn't there. It might be easier to use GetDiagnostics once we make those edits. Let’s inspect the first 40 lines of useGameLogic for formatting!
+src\hooks\useGameRoom.ts
 
-src\hooks\useGameLogic.ts
+Search codebase for 'tip-copy-notify|exam-skipped|event-skipped|takeover-accepted|assign-color|used-colors|ping'
 
 Thought
 
-Exploring game logic patching
-
-I think I need to import HostMessage and it might be easier to patch``useGameLogic`` by applying multiple patches. First, I should tackle patching``gameTypes`` , making sure to include``answerLength`` , exam voting messages, and anything else relevant. I want to inspect the full union area thoroughly to ensure I’m not missing anything. I'll get started with patching``ExamState`` and the associated messages!
-
-I’ve confirmed the type layer is also out of sync with the runtime logic, so I’m aligning the shared message and exam-state types first to keep the larger host/client refactor from fighting TypeScript.
+I’ve narrowed the remaining risk to three places: the shared message/types layer, host-side replacement of humans with bots, and the client exam/transition UI state. I’m patching those next so the whole sequence works coherently instead of fixing isolated symptoms.
 
 gameTypes.ts
 src\lib\gameTypes.ts
 
-+ 10 - 1
-
-Review
-
-Thought
-
-Patching game logic
-
-I need to patch the useGameLogic function, and this feels significant. I might need to introduce a new field for the interface state. So, I'll take a look at the SusPlayer interface, specifically between lines 120 and 150, to gather more information. It’s important to get this right, as it could impact the functionality. Let's see what elements I can incorporate from that section to make the necessary adjustments.
-
-src\hooks\useGameLogic.ts
-
-useGameLogic.ts
-src\hooks\useGameLogic.ts
-
-+ 19 - 0
-
-Review
-
-Thought
-
-Inspecting patch for startExam
-
-I'm thinking I should focus on patching the startExam function and possibly the helper functions before it. I want to check lines around 1669-1748 to see what needs adjusting. It seems I need to include currentBroadcast types like any/HostMessage. I’ll need to patch a large block from startExam and make sure to add helpers for choosing a submitter and finalizing the exam. Careful planning is essential here!
-
-Reviewing pseudo helper functions
-
-I'm looking at some helper functions. For instance, there's one that retrieves the final answer based on the question number. Another function filters current player candidates based on specific conditions. I also have a function that assigns a new exam submitter, but I need to consider what happens if there are no valid candidates. Should I use connected non-bot players or return null?
-
-I want to focus on applying penalties and finalizing the exam, ensuring the scoring aligns with existing formulas. I feel like I need to narrow down some specifics, like when to add breakdowns or apply penalties!
-
-Considering exam flow improvements
-
-I'm thinking about what happens if the final answer is wrong, which could lead to ending the game for the eagle. After applying penalties, I’ll have to resolve the exam winner. It might make sense to pause the exam timer during voting, so the state doesn’t decrement if voting is in progress. When time runs out, I should call finalizeFinalExam.
-
-Also, I need to consider removing all alive chicks that answered early to prevent old direct submissions. I'll need to clear submittedConnIds and any early answers in the video too!
-
-useGameLogic.ts
-src\hooks\useGameLogic.ts
-
-+ 96 - 7
++ 5 - 1
 
 Review
 
 useGameLogic.ts
 src\hooks\useGameLogic.ts
 
-+ 1 - 1
++ 167 - 95
 
 Review
 
-src\hooks\useGameLogic.ts
+Thought
 
-src\hooks\useGameLogic.ts
-
-src\hooks\useGameLogic.ts
-
-src\hooks\useGameLogic.ts
-
-src\hooks\useGameLogic.ts
-
-src\hooks\useGameLogic.ts
-
-src\hooks\useGameLogic.ts
+The bot-replacement logic is now wired into the room layer, but I caught one risky part in the hook ordering and I’m correcting that before I touch the client UI so we don’t introduce a render-time regression.
 
 useGameLogic.ts
 src\hooks\useGameLogic.ts
 
-+ 30 - 100
++ 3 - 3
 
 Review
 
 Thought
-
-Evaluating exam timer and patching blocks
-
-I need to patch the exam timer, along with the suspicious block, and handle the client message afterward. There’s a warning about reading the latest after multiple edits, which suggests I should verify the updated relevant block before making more edits. It seems okay, but the system advises to check the latest changes first. We did read it before the last edit, so I need to ensure I read the latest relevant sections now for patching.
-
-src\hooks\useGameLogic.ts
-
-src\hooks\useGameLogic.ts
-
-src\hooks\useGameLogic.ts
-
-src\hooks\useGameLogic.ts
-
-useGameLogic.ts
-src\hooks\useGameLogic.ts
-
-+ 66 - 104
-
-Review
-
-useGameLogic.ts
-src\hooks\useGameLogic.ts
-
-+ 5 - 43
-
-Review
-
-Search codebase for 'case "prop-use"'
-
-src\hooks\useGameLogic.ts
-
-useGameLogic.ts
-src\hooks\useGameLogic.ts
-
-+ 64 - 110
-
-Review
-
-The host logic refactor is in place now: I’ve removed the old direct-answer path, changed vote resolution to pass-on-draw, paused exam time during voting, and moved final grading to the end of the exam only. I’m checking for type/runtime breakage before I wire the client UI and the transition scene to the new flow.
-
-Search codebase for 'maskedAnswer|BroadcastMessage|wrongCount|submittedConnIds|pendingExamEndAfterVideo'
-
-Thought
-
-Patching game logic
-
-I’m checking to see if there are any remaining references in the game logic related to wrong counts — but it seems there aren’t any. I think I need to patch the Client with references like maskedAnswer. It’s time to look at the latest relevant sections, especially on state declarations, the host message handler, game over conditions, and the exam UI. I might also want to use transitions and apply multiple patches; I’ll inspect lines 437-452 for details.
-
-src\pages\Client.tsx
-
-Thought
-
-Considering UI elements and states
-
-I'm pondering a function for exam answer boxes, deciding whether to show asterisks if no answer is provided. There are considerations for button opacities and visibility depending on the user type, whether submitters or voters. Maybe the text changes based on voting status, and the countdown should only show when voting. I need to address state changes if the submitter alters their answers. There's a lot to think about for the user interface!
-
-Planning interface adjustments
-
-I'm considering opening the prompt in the bottom right corner right away. I also need to think about removing transition logs later on. It seems important to patch the state block effectively to keep everything running smoothly. There’s a lot to manage, but I want to ensure the user has a seamless experience. Each adjustment matters, and I’m curious about how these changes will positively impact the overall functionality!
-
-Client.tsx
-src\pages\Client.tsx
-
-+ 3 - 2
-
-Review
-
-src\pages\Client.tsx
-
-Thought
-
-Patching exam functionality
-
-I'm looking at how to patch the exam handling. I might consider removing the exam-wrong handling or leaving it without effect. Adding a function like setExamAnswerLength is needed. I need to ensure that when the player-sus-warning opens, the exam resets at the start. Also, adjusting for changes when the exam submitter changes seems crucial. Alright, let's move forward with these adjustments!
-
-Client.tsx
-src\pages\Client.tsx
-
-+ 21 - 15
-
-Review
-
-Thought
-
-Updating UI settings
-
-I need to set``showSusWarning`` to false for the current response. Alright, that sounds good. Now, I should also address the exam UI block. It seems I need to read the latest block, which might be the same as before. It’s key to ensure everything aligns properly. I want to make sure both parts are working seamlessly. Let's get this done efficiently!
-
-src\pages\Client.tsx
-
-Client.tsx
-src\pages\Client.tsx
-
-+ 61 - 83
-
-Review
-
-Thought
-
-Evaluating game patch needs
-
-I need to consider the maximum length for handling exam submissions and whether game-over logs are necessary later. I’ll need to rewrite the GameEndTransition component and fix the order in the Host's GameOverCeremony hook. I'm wondering about the client logs, maybe they aren't necessary. I should inspect the current GameEndTransition and the Host/Client around game over to decide on the best approach. There's a possibility I could rewrite the whole GameEndTransition file.
-
-src\components\GameEndTransition.tsx
-
-GameEndTransition.tsx
-src\components\GameEndTransition.tsx
-
-+ 72 - 86
-
-Review
-
-Thought
-
-Addressing game issues
-
-I need to patch Host GameOverCeremony and maybe check the client logs. It seems essential to read the latest updates around the Host ceremony to get a full understanding. I want to ensure everything is running smoothly and correctly. There might be some nuances or issues that have been reported, and getting the latest info will help me tackle this effectively. I'll dig into it and see what I can find!
-
-src\pages\Host.tsx
-
-Thought
-
-Patching code logic
-
-I need to remove an early return that’s placed before the hooks. I'm thinking of moving the conditional later instead. It’s also important to check the logs; I can remove the debug logs in the ceremony. The simplest patch involves lines 1194-1240 and 1242, so I might keep the effects but eliminate the logs. I should also consider when to render later—maybe showing the transition after the effects and before mvpColor around line 1284 could work.
 
 Host.tsx
 src\pages\Host.tsx
 
-+ 5 - 27
++ 15 - 1
 
 Review
 
 Thought
 
-Assessing game patch needs
-
-I need to simplify Client logs and possibly the showingEndTransition effect. It seems fine to remove some logs for cleanliness. I’m considering whether gamePhase transitions before showingEndTransition affect result visibility, which might be important. Updating the examAnswer max length in PWExam could be unnecessary. There's a question about using game logic and whether pendingExamEndAfterVideo can remain. Additionally, I want to address client gameover transitions related to gameState when showingEndTransition is false.
-
-Identifying a potential loop issue
-
-I'm noticing that if onComplete is set to false, it keeps the gamePhase in "gameover" while the gameState has an examState, which would trigger the effect and cause it to set true again. This might create an infinite loop that leads to a black screen. I need to patch this! It's crucial to read the latest lines around 916 to better understand how this is happening and confirm my suspicions.
-
-src\pages\Client.tsx
-
 Client.tsx
 src\pages\Client.tsx
 
-+ 2 - 1
++ 32 - 37
 
 Review
 
 Thought
 
-Considering game mechanics
+GameEndTransition.tsx
+src\components\GameEndTransition.tsx
 
-I'm thinking about the patch reset effect and transition trigger. I should read the latest updates around the game phase reset in the useEffect, particularly around line 523. It might be a good idea to include the endTransitionCompleted reset in various game phases like lobby, reveal, and countdown, unless it's after a game over. I’m figuring out how to effectively patch in the same effect.
-
-Client.tsx
-src\pages\Client.tsx
-
-+ 5 - 10
++ 6 - 5
 
 Review
 
 Thought
 
-Adjusting game transitions
+The core flow edits are in place now: host-side replacement is no longer isolated in gameState , the transition component has the grading animation, and the client exam UI is aligned to the inline voting flow. I’m running diagnostics next so I can fix the integration errors before I do the final build check.
 
-I'm considering if the hosting ceremony transition could retrigger, realizing useState initializes only on the first render. I might need to reset endTransitionCompleted for new exams, especially since it currently only involves lobby/reveal/countdown. Updating the exam UI for the unchanged eagles seems necessary, while host side focus panels or indicators might need more attention but could work as is. I need to create conditions so transitions are smoother and avoid any flickering issues on the GameOverScreen.
+firechick_1
+Auto Run
+View in terminal
 
-Patching game over mechanism
+$ npm run build
 
-I’m considering how to patch the game over block. Currently, the condition is complex, but I could simplify it like this:``if (gameState?.examState && !endTransitionCompleted) return <GameEndTransition onComplete={handleTransitionComplete}/>.`` This might let me eliminate the showingEndTransition state altogether, which seems unnecessary since it only triggers once. By focusing on returning the transition directly based on the endTransitionCompleted status, I can minimize flicker and streamline the rendering, though I'll keep the useEffect in place for safety's sake.
+npm : The term 'npm' is not recognized as the name of a cmdlet, function, 
+script file, or operable program. Check the spelling of the name, or if a path  
+was included, verify that the path is correct and try again.
+At line:1 char:1
++ npm run build
++ ~~~
+    + CategoryInfo          : ObjectNotFound: (npm:String) [], CommandNotFound  
+   Exception
+    + FullyQualifiedErrorId : CommandNotFoundException
 
-Evaluating game over transition
+Thought
 
-I noticed that during the initial render after the game over, even with endTransitionCompleted set to false, it still returns the transition before the effect runs. That’s interesting! This makes the showing state seem redundant, and I might be able to simplify the patch block. I’ll need to consider if keeping the showing state adds any value or if I should fully streamline this section. It feels great that I'm finding ways to improve the code!
+The code diagnostics are clean, but the environment doesn’t have npm on PATH , so I’m checking which package manager is actually available before I do the final verification step.
+
+firechick_1
+Auto Run
+View in terminal
+
+$ $tools = 'npm','pnpm','yarn','bun','node'; foreach ($tool in $tools) { $cmd = Get-Command $tool -ErrorAction SilentlyContinue; if ($cmd) { Write-Output "$tool`t$($cmd.Source)" } }
+
+Thought
+
+src\hooks\useGameLogic.ts
+
+src\hooks\useGameLogic.ts
+
+src\hooks\useGameLogic.ts
+
+src\hooks\useGameLogic.ts
+
+src\hooks\useGameLogic.ts
+
+src\pages\Client.tsx
+
+src\pages\Client.tsx
+
+src\pages\Client.tsx
+
+src\pages\Host.tsx
+
+src\components\GameEndTransition.tsx
+
+src\lib\gameTypes.ts
+
+4/4 done
+
+Stabilize GameEndTransition and host/client game-over handoff flow
+
+Finish final exam single-submitter submission and inline voting flow across host/client/types
+
+Finish sus-player detection, activity tracking, prompt flow, ping/pong, and bot replacement
+
+Run diagnostics/build checks and fix remaining implementation errors
+
+Thought
+
+Done
+
+- Finished the sus-player refactor in useGameLogic.ts and useGameLogic.ts : the host now has a real replace-human-with-bot path, transfers exam/building/tip state to the bot, and keeps the room layer in sync through the host callback wired in Host.tsx .
+- Finished the sus warning / activity / ping flow in useGameLogic.ts : inactivity warnings, ping broadcasts every 5s, ping-fail tracking, prompt timeout replacement, and immediate proper-quit replacement are now all on one consistent path.
+- Finished the single-submitter final exam flow in useGameLogic.ts and useGameLogic.ts : only the designated submitter can submit, answer length is respected, voting pauses exam resolution, and submitter replacement during disconnects is handled.
+- Finished the inline client exam UI in Client.tsx and Client.tsx : same camera/layer screen stays visible, PASS/FAIL only appears during voting, masked answer boxes persist inline, and the submitter input cleanly reopens on failed vote.
+- Reworked the transition scene in GameEndTransition.tsx : PHONES DOWN , persistent stacked lines during grading, spinner, 0.5s cycling dots, and the 10s onComplete handoff are now implemented.
+- Aligned the shared message types in gameTypes.ts so the newer host/client flow is represented in the type layer too.
+Checks
+
+- VS Code diagnostics are clean for the edited files: useGameLogic , Client , Host , GameEndTransition , and gameTypes .
+- Full build verification could not run here because this machine does not currently have node / npm available on PATH , so npm run build cannot execute in this environment.
+Next
+
+- Once node is available locally, run npm run build in c:\Users\mongk\Desktop\firechick_1 .
+- For manual testing, I’d verify this exact sequence: final exam start -> submitter submits -> inline voting pass/fail -> failed vote resubmit -> exam end transition -> transcript -> force client leave / idle / disconnect during exam and normal gameplay.
+
+Builder
+
+I’m going to change the flow so final-exam endings use the same real end-game trigger path as normal endings, instead of locally bridging from the transition into the ceremony/screens. That means inspecting game-over / phase-change handling and adding a dedicated post-exam transition trigger that only promotes to gameover after the transition finishes.
+
+Search codebase for 'type: 'game-over'|phase === "gameover"|setGamePhase\("gameover"\)|GameEndTransition|phase-change|game-over'
+
+src\pages\Client.tsx
+
+src\pages\Host.tsx
+
+src\hooks\useGameLogic.ts
+
+Thought
+
+Inspecting game logic transitions
+
+I need to check how the updateGameState function determines if there's a pending winner and whether the time has been reached to end the game. It's important to disable other logic during this pending exam transition. I see we have the pendingExamEndAfterVideo that's unrelated. It might be worth repurposing that functionality or creating something new for this. I'll take a closer look at GameStateRef to see if pendingExamEndAfterVideo is unused and can be searched.
+
+I’m switching from “local transition then local handoff” to a host-driven exam-finished transition window, then a normal endGame() call. That should make final-exam endings enter the exact same host/client end pages as non-exam endings.
+
+Search codebase for 'pendingExamEndAfterVideo|pendingExamTransition|resolveExamWinner\(|endGame\('
+
+src\hooks\useGameLogic.ts
+
+src\hooks\useGameLogic.ts
+
+Thought
+
+Considering game transition logic
+
+I'm thinking it might be better to use a timer-based system for GameEndTransition with a callback if it's provided, and maybe an optional``holdReadyMs`` . If``onComplete`` is a no-op, that seems okay. But I realize that once the state changes to the game-over component, it unmounts, and that's fine. I guess it can call a no-op internally at 11 seconds, which shouldn’t cause any issues.
+
+Updating game state logic
+
+I need to ensure the main game state updates properly after the exam timer, especially if the phase is still the exam and there's no winner. I should add an early return when the exam transition end time is greater than zero, and maybe set``gs.frozenAll=true`` and call``doBroadcastState`` before the stage transition logic.
+
+Also, I should render the GameEndTransition based on specific timing, removing the GameOverCeremony local transition entirely for a smoother experience. Lastly, I'm considering making the onComplete in GameEndTransition optional to simplify the effect reset handling.
+
+Stabilizing component callbacks
+
+I'm noticing that if I use an inline function for my component, it restarts on every parent re-render, which isn't ideal. I definitely need a stable callback to avoid that. One option might be to adjust the component props to make the callback optional or accept a disabled callback. This adjustment should help prevent unnecessary re-renders and keep the component functioning smoothly. I'm eager to work on this for better performance!
+
+I’ve got the new shape: host will keep everyone in exam state during the post-exam transition, then call the normal endGame() path after the timer. I’m patching the shared snapshot field and removing the old local gameover-bridge transition from host/client.
+
+gameTypes.ts
+src\lib\gameTypes.ts
+
++ 1 - 0
+
+Review
+
+GameEndTransition.tsx
+src\components\GameEndTransition.tsx
+
++ 2 - 2
+
+Review
+
+useGameLogic.ts
+src\hooks\useGameLogic.ts
+
++ 31 - 8
+
+Review
+
+I’ve moved the trigger into useGameLogic ; now I’m simplifying Host and Client so they only show the transition while the host says the exam transition is active, and go straight to the ordinary end pages once phase becomes gameover .
+
+Host.tsx
+src\pages\Host.tsx
+
++ 10 - 22
+
+Review
 
 Client.tsx
 src\pages\Client.tsx
 
-+ 1 - 2
++ 4 - 6
 
 Review
+
+Thought
+
+Client.tsx
+src\pages\Client.tsx
+
++ 0 - 5
+
+Review
+
+Thought
+
+I’ve removed the old local transition bridge from both screens. I’m running diagnostics now, and I’m specifically checking for leftover references to the old exam-to-gameover helpers.
+
+Search codebase for 'resolveExamWinner\(|handleTransitionComplete|endTransitionCompleted|showingEndTransition|pendingExamWinner|examTransitionEndsAt'
+
+Thought
+
+Fixed
+
+- Changed the final-exam ending flow so it no longer locally bridges from transition -> end page.
+- The host now starts a host-driven post-exam transition window inside useGameLogic.ts , keeps everyone in the exam state during that window, and only calls the normal endGame() path after the transition timer finishes.
+- That means final-exam endings now use the same real gameover trigger path as non-exam endings for both host and client.
+What Changed
+
+- Added a shared examTransitionEndsAt snapshot field in gameTypes.ts .
+- In useGameLogic.ts , final exam resolution now:
+  - computes the winner,
+  - starts a transition timer,
+  - freezes gameplay,
+  - then calls normal endGame() after the timer ends.
+- In Host.tsx , the host shows GameEndTransition during the host-driven exam transition, and GameOverCeremony no longer has its own local transition bridge.
+- In Client.tsx , the client also shows GameEndTransition during the host-driven exam transition, and the gameover page now opens directly from the regular end-game trigger path.
+- GameEndTransition.tsx still keeps the 4s hold for "Your transcript is ready."
+Checked
+
+- Diagnostics are clean for:
+  - useGameLogic.ts
+  - Client.tsx
+  - Host.tsx
+  - GameEndTransition.tsx
+  - gameTypes.ts
+Please Test
+
+- Final exam ends -> transition plays -> "Your transcript is ready" holds -> host goes to MVP ceremony using the normal gameover flow.
+- Same case on client -> transition plays -> client goes to the 3-scroll transcript screen, not back to join page.

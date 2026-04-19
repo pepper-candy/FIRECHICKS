@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Loader2 } from "lucide-react";
 
 interface GameEndTransitionProps {
-  onComplete: () => void;
+  onComplete?: () => void;
 }
 
 const GRADING_START_MS = 3000;
@@ -19,7 +19,7 @@ export const GameEndTransition = ({ onComplete }: GameEndTransitionProps) => {
       setElapsedMs(nextElapsed);
       if (nextElapsed >= COMPLETE_MS) {
         window.clearInterval(tick);
-        onComplete();
+        onComplete?.();
       }
     }, 100);
 
