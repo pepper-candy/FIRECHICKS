@@ -1580,25 +1580,39 @@ export function useGameLogic({
             }
           }
         } else if (ev.type === "mock-exam") {
-          // Individual scoring: each chick who didn't answer correctly gets -2
+          // Individual scoring: exclude bots from counting
           let correctCount = 0;
-          let totalChicks = 0;
+          let totalRealChicks = 0;
+          
+          // First pass: apply penalties to bots (they always fail) and count real chicks
           for (const [, p] of gs.playerStates) {
             if (p.isEagle || !p.alive) continue;
-            totalChicks++;
-            if (ev.chickClicks[p.connId] && ev.chickClicks[p.connId] > 0) {
-              correctCount++;
-              // +1 already applied in event-answer handler
+            
+            // Check if this is a real player (not a bot)
+            const isRealPlayer = !isBotConnId(p.connId);
+            
+            if (isRealPlayer) {
+              totalRealChicks++;
+              if (ev.chickClicks[p.connId] && ev.chickClicks[p.connId] > 0) {
+                correctCount++;
+                // +1 already applied in event-answer handler
+              } else {
+                // Wrong or didn't answer: -2 sub-grades
+                p.health = addSubGrades(p.health, -2);
+              }
             } else {
-              // Wrong or didn't answer: -2 sub-grades
+              // Bot: automatically apply penalty (they never answer correctly)
               p.health = addSubGrades(p.health, -2);
             }
           }
-          // Cosmetic result: majority correct = "chick", else "eagle"
-          ev.result = correctCount > totalChicks / 2 ? "chick" : "eagle";
-          // F-grade elimination after mock exam
+          
+          // Cosmetic result: majority correct among REAL chicks = "chick", else "eagle"
+          // If no real chicks, default to "eagle"
+          ev.result = totalRealChicks > 0 && correctCount > totalRealChicks / 2 ? "chick" : "eagle";
+          
+          // F-grade elimination after mock exam (only for real players, bots handled by bot AI)
           for (const [, p] of gs.playerStates) {
-            if (!p.isEagle && p.alive && isDead(p.health)) {
+            if (!p.isEagle && p.alive && isDead(p.health) && !isBotConnId(p.connId)) {
               p.alive = false;
               p.health = 0;
               currentBroadcast({ type: "you-died", connId: p.connId });
