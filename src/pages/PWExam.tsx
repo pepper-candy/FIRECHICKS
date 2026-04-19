@@ -248,7 +248,7 @@ const PWExam = () => {
         </div>
         <div className="p-4 bg-muted/30 text-center">
         <p className="text-[10px] font-mono text-muted-foreground">
-          -- SOLO DEMO MODE -- <br /> Switch layers to see how visual cryptography works.
+          -- SOLO DEMO MODE -- <br /> Switch layers to see how it works.
         </p>
       </div>
 
