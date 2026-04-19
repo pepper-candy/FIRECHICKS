@@ -63,7 +63,7 @@ const ExamTips = () => {
       } catch (error) {
         console.error("Poll error:", error);
       }
-    }, 1000); // Poll every 1 second
+    }, 300); // Poll every 0.3 second
   }, []);
 
   // Start polling when a code is generated
