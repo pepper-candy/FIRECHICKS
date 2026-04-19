@@ -29,6 +29,7 @@ const PWExam = () => {
   const [opacity, setOpacity] = useState(0.9);
   const [answer, setAnswer] = useState("");
   const [showSuccess, setShowSuccess] = useState(false);
+  const [examWhiteBg, setExamWhiteBg] = useState(false);
 
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
@@ -186,16 +187,27 @@ const PWExam = () => {
         <span className="text-xs font-pixel text-muted-foreground">
           {category} Q{questionNum}
         </span>
-        <div className="ml-auto w-32">
-          <Select value={layer} onValueChange={setLayer}>
-            <SelectTrigger className="h-8 text-xs">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="layer-1">Layer 1</SelectItem>
-              <SelectItem value="layer-2">Layer 2</SelectItem>
-            </SelectContent>
-          </Select>
+        <div className="ml-auto flex items-center gap-2">
+          <button
+            onClick={() => setExamWhiteBg(!examWhiteBg)}
+            className={`px-2 py-1 rounded text-[10px] font-mono border transition-colors ${
+              examWhiteBg ? "bg-white text-black border-white" : "bg-transparent text-muted-foreground border-border"
+            }`}
+            title="Toggle white background"
+          >
+            🏳️
+          </button>
+          <div className="w-32">
+            <Select value={layer} onValueChange={setLayer}>
+              <SelectTrigger className="h-8 text-xs">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="layer-1">Layer 1</SelectItem>
+                <SelectItem value="layer-2">Layer 2</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
         </div>
       </div>
 
@@ -205,6 +217,10 @@ const PWExam = () => {
         style={{ aspectRatio: `${ASPECT_W} / ${ASPECT_H}`, maxWidth: "100vw" }}
       >
         <video ref={videoRef} autoPlay playsInline muted className="absolute inset-0 w-full h-full object-cover" />
+        
+        {/* White background toggle */}
+        {examWhiteBg && <div className="absolute inset-0 bg-white" />}
+        
         {/* Overlay image */}
         <img
           src={overlayUrl}
