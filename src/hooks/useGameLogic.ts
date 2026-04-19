@@ -259,6 +259,12 @@ function addBreakdown(p: PlayerGameState, key: string, label: string, points: nu
   p.actionScore += points;
 }
 
+function setVotingDeadline(gs: GameStateRef, voteUntil: number) {
+  for (const [, p] of gs.playerStates) {
+    p.voteUntil = voteUntil;
+  }
+}
+
 function updateHostExamDisplay(gs: GameStateRef) {
   const exam = gs.examState;
   if (!exam) return;
@@ -391,6 +397,7 @@ export function useGameLogic({
         gs.examState.votingState = undefined;
         gs.examState.finalAnswer = undefined;
         gs.examState.anyAnswerSubmitted = false;
+        setVotingDeadline(gs, 0);
         const nextSubmitterId = reassignExamSubmitter(gs, currentPlayers, currentBroadcast);
         currentBroadcast({
           type: "exam-voting-end",
@@ -563,6 +570,7 @@ export function useGameLogic({
         teleportTarget: { x: spawn.x, z: spawn.z },
         cagedUntil: 0,
         cageCooldownUntil: assign.isEagle ? Date.now() + totalRevealAndCountdown + EAGLE_AWAKE_DELAY + CAGE_COOLDOWN : 0,
+        voteUntil: 0,
         scoreBreakdown: {},
         scansPerformed: 0,
         timeInZones: 0,
@@ -1781,6 +1789,7 @@ export function useGameLogic({
     gs.examState.answered = true;
     gs.examState.timeRemaining = 0;
     gs.examState.votingState = undefined;
+    setVotingDeadline(gs, 0);
 
     const finalAnswer = (gs.examState.finalAnswer ?? "").trim().toUpperCase();
     const correctAnswer = FINAL_ANSWER_KEY[gs.examState.questionNum] ?? "";
@@ -1853,6 +1862,7 @@ export function useGameLogic({
       examSubmitterId: examSubmitterId ?? undefined,
       answerLength,
     };
+    setVotingDeadline(gs, 0);
     gs.stageLabel = "FINAL EXAM — Solve together!";
     updateHostExamDisplay(gs);
 
@@ -1917,6 +1927,7 @@ export function useGameLogic({
     gs.examTransitionEndsAt = Date.now() + GAME_END_TRANSITION_DURATION;
     gs.frozenAll = true;
     gs.frozenAllUntil = gs.examTransitionEndsAt;
+    setVotingDeadline(gs, 0);
   }
 
   // ─── Broadcast state ────────────────────────────────────────────────────────
@@ -2070,6 +2081,7 @@ export function useGameLogic({
     }
 
     gs.examState.votingState = undefined;
+    setVotingDeadline(gs, 0);
     currentBroadcast({
       type: "exam-voting-end",
       allowResubmit: true,
@@ -2562,6 +2574,7 @@ export function useGameLogic({
 
         gs.examState.finalAnswer = submittedAnswer;
         gs.examState.anyAnswerSubmitted = true;
+        setVotingDeadline(gs, now + EXAM_VOTING_DURATION);
 
         gs.examState.votingState = {
           startedAt: now,

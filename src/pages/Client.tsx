@@ -445,7 +445,6 @@ export default function Client() {
   const [examVotingState, setExamVotingState] = useState<{
     submitterConnId: string;
     displayAnswer: string;
-    startedAt: number;
   } | null>(null);
 
   // Event state
@@ -784,13 +783,11 @@ export default function Client() {
     } else if (msg.type === "exam-voting-start") {
        const submitterConnId = msg.submitterConnId as string;
        const displayAnswer = msg.displayAnswer as string;
-       const startedAt = msg.startedAt as number;
        const isSubmitter = submitterConnId === connIdRef.current;
 
        setExamVotingState({
          submitterConnId,
          displayAnswer,
-         startedAt,
        });
        setExamDisplayAnswer(displayAnswer);
        setIsExamSubmitter(isSubmitter);
@@ -888,6 +885,7 @@ export default function Client() {
       ? Math.ceil(gameState.tipObtainTimers[connIdRef.current].remainingMs / 1000)
       : 0;
   const speedRemainingSec = myState?.speedRemainingMs ? Math.ceil(myState.speedRemainingMs / 1000) : 0;
+  const voteRemainingSec = myState?.voteRemainMs ? Math.ceil(myState.voteRemainMs / 1000) : 0;
   const invincibleRemainingSec = myState?.invincibleRemainingMs ? Math.ceil(myState.invincibleRemainingMs / 1000) : 0;
   const cagedRemainingSec = myState?.cageRemainingMs ? Math.ceil(myState.cageRemainingMs / 1000) : 0;
 
@@ -1800,7 +1798,7 @@ export default function Client() {
             <div className="min-h-4">
               {showExamVoting && examVotingState && (
                 <p className="text-xs font-mono text-muted-foreground text-center">
-                  Voting ends in {Math.max(0, Math.ceil((examVotingState.startedAt + 10000 - clockNow) / 1000))}s
+                  Voting ends in {voteRemainingSec}s
                 </p>
               )}
             </div>

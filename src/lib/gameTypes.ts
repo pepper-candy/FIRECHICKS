@@ -153,6 +153,7 @@ export interface PlayerGameState {
   // Cage
   cagedUntil: number;
   cageCooldownUntil: number;
+  voteUntil: number;
   scoreBreakdown: Record<string, ScoreBreakdownEntry>;
   scansPerformed: number;
   timeInZones: number;
@@ -192,6 +193,7 @@ export interface PlayerGameStateSerializable {
   teleportTarget: { x: number; z: number };
   cagedUntil: number;
   cageCooldownUntil: number;
+  voteUntil: number;
   scoreBreakdown: Record<string, ScoreBreakdownEntry>;
   scansPerformed: number;
   timeInZones: number;
@@ -203,6 +205,7 @@ export interface PlayerGameStateSerializable {
   cageRemainingMs: number;
   speedRemainingMs: number;
   invincibleRemainingMs: number;
+  voteRemainMs: number;
 }
 
 export interface GameStateSnapshot {
@@ -325,5 +328,6 @@ export function serializePlayerState(p: PlayerGameState, now?: number): PlayerGa
     cageRemainingMs: Math.max(0, p.cageCooldownUntil - t),
     speedRemainingMs: Math.max(0, p.speedMultiplierUntil - t),
     invincibleRemainingMs: Math.max(0, p.invincibleUntil - t),
+    voteRemainMs: Math.max(0, p.voteUntil - t),
   };
 }
