@@ -108,14 +108,6 @@ const MOCK_ANSWER_KEY: Record<number, string> = {
 };
 
 // ─── Interfaces ───────────────────────────────────────────────────────────────
-interface TipShare {
-  connId: string;
-  tipIndex: 0 | 1;
-  code: string;
-  cooldownUntil: number;
-  expiresAt: number;
-}
-
 interface BuildingTimer {
   buildingId: number;
   startTime: number;
@@ -183,7 +175,6 @@ interface GameStateRef {
   mysteryBoxes: MysteryBox[];
   lastMysteryBoxSpawn: number;
   mysteryBoxIdCounter: number;
-  activeTipShares: Map<string, TipShare>;
   tipShareIdCounter: number;
   buildingTimers: Map<string, BuildingTimer>;
   eagleZoneStates: Map<string, EagleZoneState>;
@@ -619,7 +610,6 @@ export function useGameLogic({
       mysteryBoxes: [],
       lastMysteryBoxSpawn: 0,
       mysteryBoxIdCounter: 0,
-      activeTipShares: new Map(),
       tipShareIdCounter: 0,
       buildingTimers: new Map(),
       eagleZoneStates: new Map(),
@@ -1068,20 +1058,6 @@ export function useGameLogic({
       // Process bot messages through handleClientMessage ref
       for (const msg of decision.messages) {
         handleClientMessageRef.current?.(connId, msg);
-      }
-    }
-
-
-    if (gs.activeTipShares.size > 0) {
-      for (const [key, ts] of gs.activeTipShares.entries()) {
-        if (now >= ts.expiresAt) {
-          gs.activeTipShares.delete(key);
-          continue;
-        }
-        const sharer = gs.playerStates.get(ts.connId);
-        if (!sharer || !sharer.alive || sharer.isEagle) {
-          gs.activeTipShares.delete(key);
-        }
       }
     }
 
@@ -1965,7 +1941,7 @@ export function useGameLogic({
       activeEvent: gs.activeEvent,
       tipObtainTimers,
       stageTransitionUntil: gs.stageTransitionUntil ?? 0,
-      activeTipShareConnIds: Array.from(gs.activeTipShares.values()).map((ts: TipShare) => ts.connId),
+      activeTipShareConnIds: [],
       totalPauseMs: gs.totalPauseMs ?? 0,
       replayCountdown: (gs as any).replayCountdown ?? null,
       examTransitionEndsAt: gs.examTransitionEndsAt,
@@ -2376,45 +2352,56 @@ export function useGameLogic({
         const data = msg.data;
 
         // Check if it's a tip share code
-        const tipShare = Array.from<TipShare>(gs.activeTipShares.values()).find((ts: TipShare) => ts.code === data);
-        if (tipShare) {
-          if (tipShare.connId === connId) return; // can't scan own tip
-          if (now < tipShare.cooldownUntil) return; // on cooldown
+if (data.startsWith('FIRETIP-')) {
+  // Call Neon API to claim tip
+  try {
+    const res = await fetch('/api/tip-claim', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ code: data, scannerConnId: connId }),
+    });
+    const claimData = await res.json();
 
-          // Reject if scanner already has this tip (prevent occupying quota)
-          if (player.tips[tipShare.tipIndex]) return;
+    if (!res.ok) {
+      // Code already used or expired
+      return;
+    }
 
-          // Proximity check: scanner must be near sharer
-          const sharer = gs.playerStates.get(tipShare.connId);
-          if (sharer && !checkOverlap(player.position.x, player.position.z, sharer.position.x, sharer.position.z, TIP_SHARE_RADIUS)) {
-            return; // too far
-          }
+    const { sharerConnId, tipIndex } = claimData;
 
-          player.tips[tipShare.tipIndex] = true;
-          addBreakdown(player, 'receive-tip', 'Receive shared tip', 5);
-          player.scansPerformed++;
-          const sharerPlayer = gs.playerStates.get(tipShare.connId);
-          if (sharerPlayer) sharerPlayer.tipsShared++;
-          tipShare.cooldownUntil = now + TIP_QR_COOLDOWN;
+    // Validate proximity
+    const sharer = gs.playerStates.get(sharerConnId);
+    if (sharer && !checkOverlap(player.position.x, player.position.z, sharer.position.x, sharer.position.z, TIP_SHARE_RADIUS)) {
+      return; // too far
+    }
 
-          // Notify both scanner and sharer to show 3s copying countdown
-          broadcastRef.current({
-            type: "tip-copy-notify",
-            connIds: [connId, tipShare.connId],
-            tipIndex: tipShare.tipIndex,
-          });
+    // Transfer tip
+    player.tips[tipIndex] = true;
+    addBreakdown(player, 'receive-tip', 'Receive shared tip', 5);
+    player.scansPerformed++;
 
-          // Check if all alive chicks now have both tips
-          if (gs.stage === 2) {
-            const aliveChicks = Array.from<PlayerGameState>(gs.playerStates.values()).filter(
-              (p) => !p.isEagle && p.alive,
-            );
-            if (aliveChicks.length > 0 && aliveChicks.every((c) => c.tips[0] && c.tips[1])) {
-              gs.stage = 3;
-              gs.stageLabel = "Run to any building to start the Final Exam!";
-            }
-          }
-          break;
+    const sharerPlayer = gs.playerStates.get(sharerConnId);
+    if (sharerPlayer) sharerPlayer.tipsShared++;
+
+    // Notify both players
+    broadcastRef.current({
+      type: "tip-copy-notify",
+      connIds: [connId, sharerConnId],
+      tipIndex,
+    });
+
+    // Check stage progression
+    if (gs.stage === 2) {
+      const aliveChicks = Array.from<PlayerGameState>(gs.playerStates.values()).filter((p) => !p.isEagle && p.alive);
+      if (aliveChicks.length > 0 && aliveChicks.every((c) => c.tips[0] && c.tips[1])) {
+        gs.stage = 3;
+        gs.stageLabel = "Run to any building to start the Final Exam!";
+      }
+    }
+  } catch (error) {
+    console.error('Tip claim error:', error);
+  }
+  break;
         }
 
         // Check if it's a prop ID
@@ -2441,7 +2428,7 @@ export function useGameLogic({
         const tipIndex = msg.tipIndex as 0 | 1;
         if (!player.tips[tipIndex]) return;
         if (now < player.tipShareCooldownUntil) return;
-
+      
         // Proximity check: must be near at least one other alive chick
         const otherChicks = Array.from<PlayerGameState>(gs.playerStates.values()).filter(
           (p) => !p.isEagle && p.alive && p.connId !== connId,
@@ -2450,24 +2437,32 @@ export function useGameLogic({
           checkOverlap(player.position.x, player.position.z, c.position.x, c.position.z, TIP_SHARE_RADIUS),
         );
         if (!nearbyChick) {
-          // Reject — notify client
           broadcastRef.current({ type: "tip-reject", forConnId: connId, reason: "too-far" });
           return;
         }
-
-        // Generate a unique tip share code
-        const code = `FIRETIP-${tipIndex}-${Math.random().toString(36).slice(2, 8).toUpperCase()}`;
-        const tipKey = `${connId}-${tipIndex}`;
-        gs.activeTipShares.set(tipKey, {
-          connId,
-          tipIndex,
-          code,
-          cooldownUntil: 0,
-          expiresAt: now + TIP_QR_COOLDOWN,
-        });
-
+      
         player.tipShareCooldownUntil = now + TIP_QR_COOLDOWN;
-        broadcastRef.current({ type: "tip-qr", forConnId: connId, code, tipIndex });
+      
+        // Call Neon API to create tip record
+        try {
+          const res = await fetch('/api/tip-request', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ sharerConnId: connId, tipIndex }),
+          });
+          const data = await res.json();
+      
+          if (!res.ok) {
+            console.error('Tip request failed:', data.error);
+            return;
+          }
+      
+          // Store the tip info for polling (client will poll)
+          // We still need to tell the client about the QR code
+          broadcastRef.current({ type: "tip-qr", forConnId: connId, code: data.code, tipIndex });
+        } catch (error) {
+          console.error('Tip request error:', error);
+        }
         break;
       }
 
