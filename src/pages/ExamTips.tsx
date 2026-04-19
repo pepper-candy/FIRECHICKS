@@ -23,7 +23,7 @@ const ExamTips = () => {
   // Generate a unique share code via Neon API
   const generateCode = useCallback(async () => {
     try {
-      const res = await fetch("/api/exam-tip-create", { method: "POST" });
+      const res = await fetch("/api/exam-tip?action=create", { method: "POST" });
       const data = await res.json();
 
       if (!res.ok) {
@@ -46,7 +46,7 @@ const ExamTips = () => {
 
     pollingRef.current = setInterval(async () => {
       try {
-        const res = await fetch(`/api/exam-tip-status?code=${code}`);
+        const res = await fetch(`/api/exam-tip?action=status&code${code}`);
         const data = await res.json();
 
         if (!res.ok) return;
@@ -98,7 +98,7 @@ const ExamTips = () => {
 
         // Claim the code via Neon API
         try {
-          const res = await fetch("/api/exam-tip-claim", {
+          const res = await fetch("/api/exam-tip?action=claim", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ code }),
