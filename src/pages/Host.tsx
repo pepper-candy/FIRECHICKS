@@ -1313,7 +1313,24 @@ function GameOverCeremony({ snapshot, gameMode }: { snapshot: GameStateSnapshot;
     ) : null;
 
   // Phase 1: MVP showcase
-  if (ceremonyPhase === "mvp" && mvp) {
+  if (ceremonyPhase === "mvp") {
+    // Safety check for mvp undefined
+    if (!mvp) {
+      // Fallback: skip to transcript
+      return (
+        <div className="flex flex-col items-center justify-center h-screen gap-6 bg-background">
+          <h1 className="text-2xl font-pixel text-accent tracking-widest">GAME OVER</h1>
+          <p className="text-sm font-mono text-muted-foreground">Preparing transcript...</p>
+          <button
+            type="button"
+            onClick={() => setCeremonyPhase("transcript")}
+            className="px-6 py-2 rounded border border-primary text-primary font-pixel text-sm mt-4"
+          >
+            View Transcript
+          </button>
+        </div>
+      );
+    }
     return (
       <div
         className={`flex flex-col items-center justify-center h-screen gap-6 overflow-hidden relative ${isImmersive ? "bg-black" : "bg-background"}`}

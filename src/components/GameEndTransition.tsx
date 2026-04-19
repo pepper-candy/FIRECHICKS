@@ -6,23 +6,33 @@ interface GameEndTransitionProps {
 }
 
 export const GameEndTransition = ({ onComplete }: GameEndTransitionProps) => {
-    const [phase, setPhase] = useState(0);
+    const [showLine1, setShowLine1] = useState(false);
+    const [showLine2, setShowLine2] = useState(false);
+    const [showLine3, setShowLine3] = useState(false);
+    const [showLine4, setShowLine4] = useState(false);
+    const [completed, setCompleted] = useState(false);
 
-    // Phase timing
+    // Phase timing - more reliable approach
     useEffect(() => {
-        const timers: NodeJS.Timeout[] = [];
+        if (completed) return;
 
-        // Phase 0 -> 1: after 1.5s
-        timers.push(setTimeout(() => setPhase(1), 1500));
-        // Phase 1 -> 2: after 1.5s (total 3s)
-        timers.push(setTimeout(() => setPhase(2), 3000));
-        // Phase 2 -> 3: after 4s (total 7s)
-        timers.push(setTimeout(() => setPhase(3), 7000));
-        // Phase 3 -> complete: after 3s (total 10s)
-        timers.push(setTimeout(() => onComplete(), 10000));
+        const timer1 = setTimeout(() => setShowLine1(true), 0); // 0s
+        const timer2 = setTimeout(() => setShowLine2(true), 1500); // 1.5s
+        const timer3 = setTimeout(() => setShowLine3(true), 3000); // 3s
+        const timer4 = setTimeout(() => setShowLine4(true), 7000); // 7s
+        const timerComplete = setTimeout(() => {
+            setCompleted(true);
+            onComplete();
+        }, 10000); // 10s
 
-        return () => timers.forEach(clearTimeout);
-    }, [onComplete]);
+        return () => {
+            clearTimeout(timer1);
+            clearTimeout(timer2);
+            clearTimeout(timer3);
+            clearTimeout(timer4);
+            clearTimeout(timerComplete);
+        };
+    }, [onComplete, completed]);
 
     return (
         <div className="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-background overflow-hidden">
@@ -32,8 +42,8 @@ export const GameEndTransition = ({ onComplete }: GameEndTransitionProps) => {
                     className="text-4xl font-pixel text-primary tracking-[0.3em] transition-all duration-500"
                     style={{
                         textShadow: "0 0 40px hsl(var(--primary) / 0.8)",
-                        opacity: phase >= 0 ? 1 : 0,
-                        transform: phase >= 0 ? "translateY(0)" : "translateY(20px)",
+                        opacity: showLine1 ? 1 : 0,
+                        transform: showLine1 ? "translateY(0)" : "translateY(20px)",
                     }}
                 >
                     PHONES DOWN.
@@ -43,36 +53,41 @@ export const GameEndTransition = ({ onComplete }: GameEndTransitionProps) => {
                 <div
                     className="text-lg font-mono text-muted-foreground/80 tracking-widest transition-all duration-500"
                     style={{
-                        opacity: phase >= 1 ? 1 : 0,
-                        transform: phase >= 1 ? "translateY(0)" : "translateY(20px)",
+                        opacity: showLine2 ? 1 : 0,
+                        transform: showLine2 ? "translateY(0)" : "translateY(20px)",
                     }}
                 >
                     THE EXAM HAS ENDED.
                 </div>
 
                 {/* Line 3: "Somewhere, someone is grading..." with spinner */}
-                <div
-                    className="flex items-center gap-2 text-sm font-mono text-muted-foreground/60 tracking-widest transition-all duration-500"
-                    style={{
-                        opacity: phase >= 2 ? 1 : 0,
-                        transform: phase >= 2 ? "translateY(0)" : "translateY(20px)",
-                    }}
-                >
-                    <span>Somewhere, someone is grading...</span>
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                </div>
+                {showLine3 && (
+                    <div
+                        className="flex items-center gap-2 text-sm font-mono text-muted-foreground/60 tracking-widest transition-all duration-500"
+                        style={{
+                            opacity: showLine3 ? 1 : 0,
+                            transform: showLine3 ? "translateY(0)" : "translateY(20px)",
+                        }}
+                    >
+                        <span>Somewhere, someone is grading...</span>
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                    </div>
+                )}
 
                 {/* Line 4: "Your transcript is ready." with subtle pulse */}
                 <div
-                    className="text-lg font-pixel text-primary tracking-[0.3em] mt-8 animate-pulse"
+                    className="text-lg font-pixel text-primary tracking-[0.3em] transition-all duration-500"
                     style={{
                         textShadow: "0 0 40px hsl(var(--primary) / 0.6)",
-                        opacity: phase >= 3 ? 1 : 0,
-                        transform: phase >= 3 ? "scale(1)" : "scale(0.95)",
-                        animation: phase >= 3 ? 'pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite' : 'none',
+                        opacity: showLine4 ? 1 : 0,
+                        transform: showLine4 ? "scale(1)" : "scale(0.95)",
                     }}
                 >
-                    YOUR TRANSCRIPT IS READY.
+                    {showLine4 && (
+                        <span className="animate-pulse">
+                            YOUR TRANSCRIPT IS READY.
+                        </span>
+                    )}
                 </div>
             </div>
         </div>
