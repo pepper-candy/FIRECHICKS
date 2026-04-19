@@ -43,7 +43,7 @@ export default function FinalExamClient({
   }, []);
 
   return (
-    <div className="flex flex-col h-full bg-background">
+    <div className="flex flex-col h-full bg-background p-4 pt-12">
       <div className="flex items-center justify-between p-3 border-b border-border">
         <span className="text-xs font-pixel text-muted-foreground">
           Layer {examLayer} {examLayer === '1' ? '(You have layer 1!)' : '(layer 2)'}

@@ -167,7 +167,7 @@ const PWExam = () => {
 
   // ─── Camera + Overlay ─────────────────────────────
   return (
-    <div className="flex flex-col items-center min-h-screen bg-background">
+    <div className="flex flex-col items-center min-h-screen bg-background p-4 pt-12">
       {/* Success overlay */}
       {showSuccess && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80">
