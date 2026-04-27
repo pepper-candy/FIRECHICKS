@@ -2517,6 +2517,7 @@ export function useGameLogic({
         if (!gs.activeEvent || gs.activeEvent.type !== "hitbox" || gs.activeEvent.phase !== "active") return;
         const taps = (msg as any).taps as number;
         if (!taps) return;
+        console.log("[Host] received hitbox batch", taps, "from", connId);
         
         if (player.isEagle) {
           gs.activeEvent.eagleClicks[connId] = (gs.activeEvent.eagleClicks[connId] ?? 0) + taps;

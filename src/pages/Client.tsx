@@ -21,7 +21,7 @@ import type { GamePhase, GameStateSnapshot, PropType, GameMode, PropItem } from 
 import type { ChickColor } from "@/components/CharacterViewer";
 import QRCode from "react-qr-code";
 import { Zap, Heart, Wind, Shield, ChevronUp, Crosshair, Lock } from "lucide-react";
-import CrossyRoadClientLocal from "@/components/events/CrossyRoadClientLocal";
+import CrossyRoadClient from "@/components/events/CrossyRoadClient";
 import { useNavigate } from "react-router-dom";
 import { ZONE_RADIUS } from "@/lib/gameplayMapData";
 import { buzz } from "@/lib/haptics";
@@ -1062,11 +1062,12 @@ export default function Client() {
   useEffect(() => {
     if (gamePhase === "playing" && activeEvent?.type === "hitbox" && activeEvent.phase === "active") {
       hitboxBatchIntervalRef.current = setInterval(() => {
+        console.log("[Hitbox] batch interval active, taps:", hitboxTapCountRef.current);
         if (hitboxTapCountRef.current > 0) {
           sendToHost({ type: "event-hitbox-batch", taps: hitboxTapCountRef.current });
           hitboxTapCountRef.current = 0;
         }
-      }, 300);
+      }, 500);
     } else {
       if (hitboxBatchIntervalRef.current) {
         clearInterval(hitboxBatchIntervalRef.current);
@@ -1480,10 +1481,7 @@ export default function Client() {
         : Math.max(0, Math.ceil((activeEvent.endAt - clockNow) / 1000));
 
     if (activeEvent.phase === "countdown") {
-      const cdSec =
-        activeEvent.remainingMs !== undefined
-          ? Math.max(1, Math.ceil(activeEvent.remainingMs / 1000))
-          : Math.max(1, 3 - Math.floor((clockNow - activeEvent.startedAt) / 1000));
+      const cdSec = Math.max(1, 3 - Math.floor((clockNow - activeEvent.startedAt) / 1000));
       return (
         <div className="flex flex-col items-center justify-center h-dvh overflow-hidden gap-4">
           <h2 className="text-lg font-pixel text-accent">
@@ -1591,12 +1589,13 @@ export default function Client() {
     if (activeEvent.phase === "active" && activeEvent.type === "crossy-road") {
       return (
         <div className="h-dvh overflow-hidden">
-          <CrossyRoadClientLocal
+          <CrossyRoadClient
             event={activeEvent}
             isEagle={!!isEagle}
             connId={myState?.connId ?? ""}
-            onCrossingComplete={(crossings) => sendToHost({ type: "crossy-crossing", crossings })}
+            nowTs={clockNow}
             onEagleAction={(action) => sendToHost({ type: "crossy-eagle-action", action })}
+            onHop={(direction) => sendToHost({ type: "crossy-hop", direction })}
           />
         </div>
       );
