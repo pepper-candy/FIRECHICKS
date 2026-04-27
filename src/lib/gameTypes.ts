@@ -104,6 +104,7 @@ export interface GameEvent {
   phase: 'countdown' | 'active' | 'result';
   startedAt: number;
   endAt: number;
+  remainingMs?: number;
   // Mock exam
   questionNum?: number;
   mockExamSubmitted?: Record<string, true>;
@@ -227,6 +228,7 @@ export interface GameStateSnapshot {
   activeEvent: GameEvent | null;
   tipObtainTimers?: Record<string, { buildingId: number; remainingMs: number }>;
   stageTransitionUntil: number;
+  stageTransitionRemainingMs?: number;
   activeTipShareConnIds: string[];
   totalPauseMs: number;
   replayCountdown: ReplayCountdownState | null;

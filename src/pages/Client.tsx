@@ -1474,14 +1474,16 @@ export default function Client() {
 
   // ─── ACTIVE EVENT PHASE ──────────────────────────────────────────────────────
   if (activeEvent && gamePhase === "playing") {
-    const safeEndAt =
-      typeof activeEvent.endAt === "number" && Number.isFinite(activeEvent.endAt) && activeEvent.endAt > 0
-        ? activeEvent.endAt
-        : activeEvent.startedAt + 3000 + 30000;
-    const timeLeft = Math.max(0, Math.ceil((safeEndAt - clockNow) / 1000));
+    const timeLeft =
+      activeEvent.remainingMs !== undefined
+        ? Math.max(0, Math.ceil(activeEvent.remainingMs / 1000))
+        : Math.max(0, Math.ceil((activeEvent.endAt - clockNow) / 1000));
 
     if (activeEvent.phase === "countdown") {
-      const cdSec = Math.max(1, 3 - Math.floor((clockNow - activeEvent.startedAt) / 1000));
+      const cdSec =
+        activeEvent.remainingMs !== undefined
+          ? Math.max(1, Math.ceil(activeEvent.remainingMs / 1000))
+          : Math.max(1, 3 - Math.floor((clockNow - activeEvent.startedAt) / 1000));
       return (
         <div className="flex flex-col items-center justify-center h-dvh overflow-hidden gap-4">
           <h2 className="text-lg font-pixel text-accent">
@@ -1519,6 +1521,7 @@ export default function Client() {
         <div className="flex flex-col h-dvh overflow-hidden p-4 pt-12 gap-4">
           <div className="flex justify-between items-center">
             <h2 className="text-sm font-pixel text-accent">MOCK EXAM</h2>
+                <span className="text-sm font-mono text-primary">{timeLeft}s</span>
           </div>
           {isEagle ? (
             <div className="flex-1 flex items-center justify-center">
@@ -1893,8 +1896,8 @@ export default function Client() {
         />
       )}
       {/* Stage transition overlay — 8s total: 5s instruction + 3s ready-up */}
-      {(gameState?.stageTransitionUntil ?? 0) > 0 && clockNow < (gameState?.stageTransitionUntil ?? 0) && (() => {
-        const remainMs = gameState.stageTransitionUntil - clockNow;
+      {(gameState?.stageTransitionRemainingMs ?? 0) > 0 && (() => {
+        const remainMs = gameState.stageTransitionRemainingMs ?? 0;
         // Client only sees the first 5s (instruction phase), not the last 3s (host-only grab-back)
         if (remainMs <= 3000) return null;
         const sec = Math.ceil((remainMs - 3000) / 1000); // countdown from 5

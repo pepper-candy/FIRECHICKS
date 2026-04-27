@@ -265,6 +265,15 @@ function setVotingDeadline(gs: GameStateRef, voteUntil: number) {
   }
 }
 
+function resetSusActivityTimers(gs: GameStateRef, now: number, susPlayers: Map<string, SusPlayer>) {
+  for (const [connId, sus] of susPlayers) {
+    const player = gs.playerStates.get(connId);
+    if (!player || !player.alive || isBotConnId(connId)) continue;
+    sus.lastActivityAt = now;
+    sus.lastPosition = { ...player.position };
+  }
+}
+
 function updateHostExamDisplay(gs: GameStateRef) {
   const exam = gs.examState;
   if (!exam) return;
@@ -1272,9 +1281,7 @@ export function useGameLogic({
     if (gs.phase === "exam" && gs.examState && !gs.examState.answered) {
       if (!gs.frozenAll) {
         updateHostExamDisplay(gs);
-        if (!gs.examState.votingState?.isVoting) {
-          gs.examState.timeRemaining -= delta;
-        }
+        gs.examState.timeRemaining -= delta;
 
         if (gs.examState.timeRemaining <= 0) {
           gs.examState.timeRemaining = 0;
@@ -1473,14 +1480,7 @@ export function useGameLogic({
               gs.eventCountdown = 3;
               gs.stageLabel = eventType === "mock-exam" ? "🎲 Event: Mock Exam!" : eventType === "hitbox" ? "🎲 Event: Hitbox Challenge!" : "🎲 Event: Crossy Road!";
               
-              // Update last activity for all players when entering minigame
-              const susPlayers = susPlayersRef.current;
-              for (const [connId, sus] of susPlayers) {
-                const player = gs.playerStates.get(connId);
-                if (player && player.alive && !isBotConnId(connId)) {
-                  sus.lastActivityAt = now;
-                }
-              }
+              resetSusActivityTimers(gs, now, susPlayersRef.current);
               
               currentBroadcast({ type: "phase-change", phase: gs.phase });
             }
@@ -1660,6 +1660,7 @@ export function useGameLogic({
 
         // Unfreeze all after short result display (3s)
         gs.frozenAllUntil = now + 3000;
+        resetSusActivityTimers(gs, now, susPlayersRef.current);
 
         // Clear event after 3 more seconds
         setTimeout(() => {
@@ -1669,6 +1670,7 @@ export function useGameLogic({
             gsCleanup.frozenAllUntil = 0;
             gsCleanup.activeEvent = null;
             gsCleanup.stageLabel = getStageLabel(gsCleanup.stage as number);
+            resetSusActivityTimers(gsCleanup, Date.now(), susPlayersRef.current);
           }
         }, 3000);
       }
@@ -1946,6 +1948,16 @@ export function useGameLogic({
       };
     }
 
+    let activeEvent: GameEvent | null = null;
+    if (gs.activeEvent) {
+      activeEvent = {
+        ...gs.activeEvent,
+        remainingMs: Math.max(0, gs.activeEvent.endAt - now),
+      };
+    }
+    const stageTransitionRemainingMs =
+      gs.stageTransitionUntil > 0 ? Math.max(0, gs.stageTransitionUntil - now) : 0;
+
     const hostSnap: GameStateSnapshot = {
       phase: gs.phase,
       stage: gs.stage,
@@ -1962,9 +1974,10 @@ export function useGameLogic({
       stageLabel: gs.stageLabel,
       examState: gs.examState,
       mysteryBoxes: gs.mysteryBoxes,
-      activeEvent: gs.activeEvent,
+      activeEvent,
       tipObtainTimers,
       stageTransitionUntil: gs.stageTransitionUntil ?? 0,
+      stageTransitionRemainingMs,
       activeTipShareConnIds: [],
       totalPauseMs: gs.totalPauseMs ?? 0,
       replayCountdown: (gs as any).replayCountdown ?? null,
