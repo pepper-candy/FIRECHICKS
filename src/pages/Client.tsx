@@ -1060,7 +1060,17 @@ export default function Client() {
   const activeEvent = gameState?.activeEvent;
 
   useEffect(() => {
-    if (gamePhase === "playing" && activeEvent?.type === "hitbox" && activeEvent.phase === "active") {
+    // Never keep hitbox batching alive outside active gameplay.
+    if (gamePhase !== "playing") {
+      if (hitboxBatchIntervalRef.current) {
+        clearInterval(hitboxBatchIntervalRef.current);
+        hitboxBatchIntervalRef.current = null;
+      }
+      hitboxTapCountRef.current = 0;
+      return;
+    }
+
+    if (activeEvent?.type === "hitbox" && activeEvent.phase === "active") {
       hitboxBatchIntervalRef.current = setInterval(() => {
         console.log("[Hitbox] batch interval active, taps:", hitboxTapCountRef.current);
         if (hitboxTapCountRef.current > 0) {
