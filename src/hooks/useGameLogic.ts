@@ -42,6 +42,7 @@ import { getMapVariant } from "@/lib/mapVariants";
 import type { PlayerState, ConnectionMode } from "@/hooks/useGameRoom";
 import type { ChickColor } from "@/components/CharacterViewer";
 import { updateBot, isBot } from "@/lib/botAI";
+import { gameLogger } from "@/lib/gameLogger";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 const SPEED = 10;
@@ -2518,6 +2519,7 @@ export function useGameLogic({
         const taps = (msg as any).taps as number;
         if (!taps) return;
         console.log("[Host] received hitbox batch, taps:", taps, "from:", connId);
+        gameLogger.event("host", "hitbox-batch-received", { taps, from: connId }, gs.phase);
         
         if (player.isEagle) {
           gs.activeEvent.eagleClicks[connId] = (gs.activeEvent.eagleClicks[connId] ?? 0) + taps;

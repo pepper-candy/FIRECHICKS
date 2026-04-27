@@ -33,6 +33,7 @@ import { AreYouStillTherePrompt } from "@/components/AreYouStillTherePrompt";
 import { GameEndTransition } from "@/components/GameEndTransition";
 
 import { ExamSubmissionBox } from "@/components/ExamSubmissionBox";
+import { gameLogger } from "@/lib/gameLogger";
 
 // ─── Props Button (inline for compact layout) ──────────────────────────────────
 const PROP_COLORS: Record<PropType, string> = {
@@ -1060,8 +1061,15 @@ export default function Client() {
   const activeEvent = gameState?.activeEvent;
 
   useEffect(() => {
+    console.log("[Hitbox] useEffect triggered", {
+      gamePhase,
+      activeEventType: activeEvent?.type,
+      activeEventPhase: activeEvent?.phase,
+    });
+
     // Never keep hitbox batching alive outside active gameplay.
     if (gamePhase !== "playing") {
+      console.log("[Hitbox] not playing, skipping");
       if (hitboxBatchIntervalRef.current) {
         clearInterval(hitboxBatchIntervalRef.current);
         hitboxBatchIntervalRef.current = null;
@@ -1071,15 +1079,21 @@ export default function Client() {
     }
 
     if (activeEvent?.type === "hitbox" && activeEvent.phase === "active") {
+      console.log("[Hitbox] starting batch interval");
+      if (hitboxBatchIntervalRef.current) {
+        clearInterval(hitboxBatchIntervalRef.current);
+      }
       hitboxBatchIntervalRef.current = setInterval(() => {
         console.log("[Hitbox] batch interval active, taps:", hitboxTapCountRef.current);
         if (hitboxTapCountRef.current > 0) {
           console.log("[Hitbox] sending batch, taps:", hitboxTapCountRef.current);
+          gameLogger.event("client", "hitbox-batch-send", { taps: hitboxTapCountRef.current }, gamePhase);
           sendToHost({ type: "event-hitbox-batch", taps: hitboxTapCountRef.current });
           hitboxTapCountRef.current = 0;
         }
       }, 500);
     } else {
+      console.log("[Hitbox] hitbox not active, clearing");
       if (hitboxBatchIntervalRef.current) {
         clearInterval(hitboxBatchIntervalRef.current);
         hitboxBatchIntervalRef.current = null;
@@ -1093,7 +1107,7 @@ export default function Client() {
         hitboxBatchIntervalRef.current = null;
       }
     };
-  }, [gamePhase, activeEvent, sendToHost]);
+  }, [gamePhase, activeEvent?.type, activeEvent?.phase, sendToHost]);
 
   useEffect(() => {
     if (activeEvent?.type !== "mock-exam" || activeEvent.phase === "result") {
