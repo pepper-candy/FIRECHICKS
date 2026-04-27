@@ -105,6 +105,7 @@ export interface GameEvent {
   startedAt: number;
   endAt: number;
   remainingMs?: number;
+  countdownRemainingMs?: number;
   // Mock exam
   questionNum?: number;
   mockExamSubmitted?: Record<string, true>;

@@ -90,7 +90,12 @@ function EventOverlay({
                   : "🐔 CROSSY ROAD"}
             </h2>
             <div className="text-6xl font-pixel text-primary animate-pulse">
-              {Math.max(1, 3 - Math.floor((now - event.startedAt) / 1000))}
+              {Math.max(
+                1,
+                Math.ceil(
+                  ((event.countdownRemainingMs ?? Math.max(0, 3000 - (now - event.startedAt))) || 1) / 1000,
+                ),
+              )}
             </div>
             <p className="text-sm font-mono text-muted-foreground">Get ready!</p>
           </>

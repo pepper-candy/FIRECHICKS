@@ -792,6 +792,7 @@ export function useGameLogic({
       }
     }
 
+    const isMiniGameActive = gs.phase === "playing" && !!gs.activeEvent;
     for (const [connId, sus] of susPlayers) {
       const player = gs.playerStates.get(connId);
       if (!player || !player.alive || isBotConnId(connId)) continue;
@@ -820,6 +821,9 @@ export function useGameLogic({
       }
 
       if (sus.status === "sus" && sus.promptShownAt) {
+        if (isMiniGameActive && sus.disconnectReason === "inactive") {
+          continue;
+        }
         if (now - sus.promptShownAt >= SUS_PLAYER_DISCONNECT_DELAY) {
           replaceSusPlayerWithBot(gs, connId, currentPlayers, currentBroadcast);
           continue;
@@ -1504,11 +1508,9 @@ export function useGameLogic({
 
       if (ev.phase === "active" && ev.type === "mock-exam") {
         const aliveChickIds = Array.from<PlayerGameState>(gs.playerStates.values())
-          .filter((p) => !p.isEagle && p.alive)
+          .filter((p) => !p.isEagle && p.alive && !isBotConnId(p.connId))
           .map((p) => p.connId);
-        const allSubmitted =
-          aliveChickIds.length > 0 &&
-          aliveChickIds.every((id) => !!ev.mockExamSubmitted?.[id]);
+        const allSubmitted = aliveChickIds.every((id) => !!ev.mockExamSubmitted?.[id]);
         if (allSubmitted) ev.endAt = now;
       }
 
@@ -1581,37 +1583,25 @@ export function useGameLogic({
             }
           }
         } else if (ev.type === "mock-exam") {
-          // Individual scoring: exclude bots from counting
+          // Individual scoring: only non-bot chicks participate
           let correctCount = 0;
-          let totalRealChicks = 0;
-          
-          // First pass: apply penalties to bots (they always fail) and count real chicks
+          let totalEligibleChicks = 0;
+
           for (const [, p] of gs.playerStates) {
-            if (p.isEagle || !p.alive) continue;
-            
-            // Check if this is a real player (not a bot)
-            const isRealPlayer = !isBotConnId(p.connId);
-            
-            if (isRealPlayer) {
-              totalRealChicks++;
-              if (ev.chickClicks[p.connId] && ev.chickClicks[p.connId] > 0) {
-                correctCount++;
-                // +1 already applied in event-answer handler
-              } else {
-                // Wrong or didn't answer: -2 sub-grades
-                p.health = addSubGrades(p.health, -2);
-              }
+            if (p.isEagle || !p.alive || isBotConnId(p.connId)) continue;
+
+            totalEligibleChicks++;
+            if (ev.chickClicks[p.connId] && ev.chickClicks[p.connId] > 0) {
+              correctCount++;
+              // +1 already applied in event-answer handler
             } else {
-              // Bot: automatically apply penalty (they never answer correctly)
+              // Wrong or didn't answer: -2 sub-grades
               p.health = addSubGrades(p.health, -2);
             }
           }
-          
-          // Cosmetic result: majority correct among REAL chicks = "chick", else "eagle"
-          // If no real chicks, default to "eagle"
-          ev.result = totalRealChicks > 0 && correctCount > totalRealChicks / 2 ? "chick" : "eagle";
-          
-          // F-grade elimination after mock exam (only for real players, bots handled by bot AI)
+
+          ev.result = totalEligibleChicks > 0 && correctCount > totalEligibleChicks / 2 ? "chick" : "eagle";
+
           for (const [, p] of gs.playerStates) {
             if (!p.isEagle && p.alive && isDead(p.health) && !isBotConnId(p.connId)) {
               p.alive = false;
@@ -1951,9 +1941,14 @@ export function useGameLogic({
 
     let activeEvent: GameEvent | null = null;
     if (gs.activeEvent) {
+      const countdownRemainingMs =
+        gs.activeEvent.phase === "countdown"
+          ? Math.max(0, 3000 - (now - gs.activeEvent.startedAt))
+          : 0;
       activeEvent = {
         ...gs.activeEvent,
         remainingMs: Math.max(0, gs.activeEvent.endAt - now),
+        countdownRemainingMs,
       };
     }
     const stageTransitionRemainingMs =
@@ -2110,7 +2105,13 @@ export function useGameLogic({
     const now = Date.now();
     const player = gs.playerStates.get(connId) as PlayerGameState | undefined;
     if (!player || !player.alive) return;
-    const eventInputTypes = new Set(["event-hitbox-click", "crossy-hop", "crossy-eagle-action", "event-answer"]);
+    const eventInputTypes = new Set([
+      "event-hitbox-click",
+      "event-hitbox-batch",
+      "crossy-hop",
+      "crossy-eagle-action",
+      "event-answer",
+    ]);
     const isEventInput =
       typeof (msg as any)?.type === "string" &&
       eventInputTypes.has((msg as any).type);

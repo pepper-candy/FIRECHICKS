@@ -475,7 +475,14 @@ export default function Client() {
   const hasReachedEndgameRef = useRef(false);
   const hitboxTapCountRef = useRef(0);
   const hitboxBatchIntervalRef = useRef<NodeJS.Timeout | null>(null);
-  const clientInputLocked = Boolean(gameState?.frozenAll || gameState?.videoPlaying || gameState?.replayCountdown);
+  const allowMiniGameInput =
+    gamePhase === "playing" &&
+    !!gameState?.activeEvent &&
+    (gameState.activeEvent.type === "hitbox" || gameState.activeEvent.type === "crossy-road") &&
+    gameState.activeEvent.phase === "active";
+  const clientInputLocked = Boolean(
+    (!allowMiniGameInput && gameState?.frozenAll) || gameState?.videoPlaying || gameState?.replayCountdown,
+  );
 
   useEffect(() => {
     setInputLocked(clientInputLocked);
@@ -1506,7 +1513,12 @@ export default function Client() {
         : Math.max(0, Math.ceil((activeEvent.endAt - clockNow) / 1000));
 
     if (activeEvent.phase === "countdown") {
-      const cdSec = Math.max(1, 3 - Math.floor((clockNow - activeEvent.startedAt) / 1000));
+      const cdSec = Math.max(
+        1,
+        Math.ceil(
+          ((activeEvent.countdownRemainingMs ?? Math.max(0, 3000 - (clockNow - activeEvent.startedAt))) || 1) / 1000,
+        ),
+      );
       return (
         <div className="flex flex-col items-center justify-center h-dvh overflow-hidden gap-4">
           <h2 className="text-lg font-pixel text-accent">
