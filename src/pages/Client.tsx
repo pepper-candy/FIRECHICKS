@@ -1074,6 +1074,7 @@ export default function Client() {
       hitboxBatchIntervalRef.current = setInterval(() => {
         console.log("[Hitbox] batch interval active, taps:", hitboxTapCountRef.current);
         if (hitboxTapCountRef.current > 0) {
+          console.log("[Hitbox] sending batch, taps:", hitboxTapCountRef.current);
           sendToHost({ type: "event-hitbox-batch", taps: hitboxTapCountRef.current });
           hitboxTapCountRef.current = 0;
         }
@@ -1509,11 +1510,18 @@ export default function Client() {
             <h2 className="text-lg font-pixel text-accent">👊 HITBOX BATTLE</h2>
           </div>
           <button
-            onClick={() => {
+            onClick={(e) => {
+              e.stopPropagation();
               hitboxTapCountRef.current++;
+              console.log("[Hitbox] tap registered, total:", hitboxTapCountRef.current);
+            }}
+            onTouchStart={(e) => {
+              e.stopPropagation();
+              hitboxTapCountRef.current++;
+              console.log("[Hitbox] tap registered (touch), total:", hitboxTapCountRef.current);
             }}
             className="w-48 h-48 rounded-full border-4 border-accent bg-accent/20 active:scale-90 transition-all flex items-center justify-center"
-            style={{ boxShadow: "0 0 30px hsl(var(--accent) / 0.5)" }}
+            style={{ touchAction: "manipulation", boxShadow: "0 0 30px hsl(var(--accent) / 0.5)" }}
           >
             <span className="text-3xl font-pixel text-accent">HIT!</span>
           </button>

@@ -25,6 +25,10 @@ export default function CrossyRoadClient({ event, isEagle, connId, nowTs, onHop,
   const myState: CrossyPlayerState | undefined = event.crossyPlayerStates?.[connId];
   const lanes = event.crossyLanes ?? [];
   const speedBoost = event.eagleSpeedBoost ?? 1;
+  const handleHop = (dir: "up" | "down") => {
+    console.log("[CrossyRoad] hop:", dir);
+    onHop(dir);
+  };
 
   // Eagle controls
   if (isEagle) {
@@ -179,10 +183,7 @@ export default function CrossyRoadClient({ event, isEagle, connId, nowTs, onHop,
         <button
           onClick={(e) => {
             e.stopPropagation();
-            onHop("down");
-          }}
-          onTouchStart={(e) => {
-            e.stopPropagation();
+            handleHop("down");
           }}
           className="w-16 h-16 rounded-full border-2 border-accent bg-accent/20 active:scale-90 transition-all flex items-center justify-center select-none"
           style={{ touchAction: "manipulation" }}
@@ -197,10 +198,7 @@ export default function CrossyRoadClient({ event, isEagle, connId, nowTs, onHop,
         <button
           onClick={(e) => {
             e.stopPropagation();
-            onHop("up");
-          }}
-          onTouchStart={(e) => {
-            e.stopPropagation();
+            handleHop("up");
           }}
           className="w-20 h-20 rounded-full border-2 border-primary bg-primary/20 active:scale-90 transition-all flex items-center justify-center select-none"
           style={{ touchAction: "manipulation" }}
