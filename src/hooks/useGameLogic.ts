@@ -2525,6 +2525,11 @@ export function useGameLogic({
           gs.activeEvent.chickClicks[connId] = (gs.activeEvent.chickClicks[connId] ?? 0) + taps;
         }
         addBreakdown(player, 'hitbox', 'Hitbox tap', 0.1 * taps, taps);
+        const sus = susPlayersRef.current.get(connId);
+        if (sus) {
+          sus.lastActivityAt = now;
+          sus.lastPosition = player.position;
+        }
         break;
       }
 
@@ -2576,6 +2581,11 @@ export function useGameLogic({
         } else {
           csHop.laneIndex = Math.max(csHop.laneIndex - 1, 0);
         }
+        const sus = susPlayersRef.current.get(connId);
+        if (sus) {
+          sus.lastActivityAt = now;
+          sus.lastPosition = player.position;
+        }
         // crossy hop scoring is handled at event end via crossings count
         break;
       }
@@ -2594,6 +2604,11 @@ export function useGameLogic({
               width: 5 + Math.random() * 5,
             });
           }
+        }
+        const sus = susPlayersRef.current.get(connId);
+        if (sus) {
+          sus.lastActivityAt = now;
+          sus.lastPosition = player.position;
         }
         addBreakdown(player, 'crossy-road', 'Crossy Road', 2);
         break;
