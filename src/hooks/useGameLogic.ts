@@ -82,7 +82,7 @@ const CAGE_COOLDOWN = 30000;
 const CAGE_LOCK_DURATION = 10000;
 const CAGE_POST_INVINCIBLE = 3000;
 const REPLAY_COUNTDOWN_DURATION = 3000;
-const GAME_END_TRANSITION_DURATION = 11000;
+const GAME_END_TRANSITION_DURATION = 15000;
 const POSITION_HISTORY_MAX = 300; // ~5s at 60fps
 // Sus detection system (4 levels)
 const SUS_PLAYER_WARN_DELAY = 3000; // 3s before showing "Are you still there?"
