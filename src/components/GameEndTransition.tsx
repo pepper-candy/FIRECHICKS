@@ -5,9 +5,9 @@ interface GameEndTransitionProps {
   onComplete?: () => void;
 }
 
-const GRADING_START_MS = 3000;
-const READY_START_MS = 7000;
-const COMPLETE_MS = 11000;
+const GRADING_START_MS = 5000;    // Line 3 at 5 seconds
+const READY_START_MS = 10000;     // Final line at 10 seconds
+const COMPLETE_MS = 15000;        // End at 15 seconds
 
 export const GameEndTransition = ({ onComplete }: GameEndTransitionProps) => {
   const [elapsedMs, setElapsedMs] = useState(0);
@@ -34,7 +34,7 @@ export const GameEndTransition = ({ onComplete }: GameEndTransitionProps) => {
 
   // Line visibility
   const showLine1 = elapsedMs >= 0 && elapsedMs < READY_START_MS;
-  const showLine2 = elapsedMs >= 1500 && elapsedMs < READY_START_MS;
+  const showLine2 = elapsedMs >= 500 && elapsedMs < READY_START_MS;  // Line 2 at 0.5 seconds
   const showLine3 = elapsedMs >= GRADING_START_MS && elapsedMs < READY_START_MS;
   const showReady = phase === "ready";
 
@@ -51,7 +51,7 @@ export const GameEndTransition = ({ onComplete }: GameEndTransitionProps) => {
             "radial-gradient(circle at 50% 45%, rgba(255, 68, 51, 0.12) 0%, rgba(0, 0, 0, 0.96) 58%, rgba(0, 0, 0, 1) 100%)",
         }}
       />
-      <div className="relative z-10 flex flex-col items-center justify-center gap-6 px-6 text-center">
+      <div className="relative z-10 flex flex-col items-center justify-center gap-8 px-6 text-center">
         {/* Line 1 - PHONES DOWN (100% size) */}
         <div
           className={`transition-all duration-500 ${
@@ -73,7 +73,7 @@ export const GameEndTransition = ({ onComplete }: GameEndTransitionProps) => {
             className="transition-all duration-500 opacity-100 translate-y-0 animate-fadeInUp"
             style={{ animation: "fadeInUp 0.6s ease-out forwards" }}
           >
-            <div className="text-2xl md:text-4xl font-pixel text-red-500/90 whitespace-nowrap mb-2"
+            <div className="text-2xl md:text-4xl font-pixel text-red-500/90 whitespace-nowrap mb-4"
               style={{ textShadow: "0 0 20px rgba(220, 38, 38, 0.4)" }}>
               The exam has ended.
             </div>
