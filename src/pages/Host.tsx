@@ -1043,15 +1043,6 @@ export default function Host() {
           <Download className="w-3.5 h-3.5" />
         </button>
 
-        {/* NEW: Game Logger download button */}
-        <button
-          onClick={() => gameLogger.downloadLogs()}
-          className="absolute top-2 left-[9rem] z-10 py-1 rounded border border-border bg-card/90 hover:bg-card text-muted-foreground px-[8px]"
-          title="Download action log (for debugging)"
-        >
-          📋
-        </button>
-
         {settingsPanelOpen && <div className="absolute left-2 top-12 z-10 px-2 py-2 rounded bg-card/85 border border-border w-44">
           <div className="flex items-center justify-between text-[10px] font-mono text-muted-foreground mb-1">
             <span>Zoom</span>
@@ -1147,6 +1138,17 @@ export default function Host() {
               </span>
             </div>
           )}
+
+          {/* Download Action Log */}
+          <div className="mt-2 flex items-center justify-between">
+            <button
+              onClick={() => gameLogger.downloadLogs()}
+              className="flex items-center gap-1 text-[10px] font-mono text-muted-foreground hover:text-foreground transition-colors"
+              title="Download action log (for debugging)"
+            >
+              📋 Logs
+            </button>
+          </div>
         </div>}
 
         {/* Eagle awake countdown */}
