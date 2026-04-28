@@ -38,9 +38,6 @@ export const GameEndTransition = ({ onComplete }: GameEndTransitionProps) => {
   const showLine3 = elapsedMs >= GRADING_START_MS && elapsedMs < READY_START_MS;
   const showReady = phase === "ready";
 
-  // No size change over time – each line keeps its fixed size
-  // Only visibility changes
-
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center overflow-hidden bg-black">
       {/* Fire particle background */}
@@ -54,14 +51,15 @@ export const GameEndTransition = ({ onComplete }: GameEndTransitionProps) => {
             "radial-gradient(circle at 50% 45%, rgba(255, 68, 51, 0.12) 0%, rgba(0, 0, 0, 0.96) 58%, rgba(0, 0, 0, 1) 100%)",
         }}
       />
-      <div className="relative z-10 flex flex-col items-center justify-center gap-3 px-6 text-center">
+      <div className="relative z-10 flex flex-col items-center justify-center gap-6 px-6 text-center">
         {/* Line 1 - PHONES DOWN (100% size) */}
         <div
           className={`transition-all duration-500 ${
             showLine1
-              ? "opacity-100 translate-y-0"
+              ? "opacity-100 translate-y-0 animate-fadeInUp"
               : "opacity-0 translate-y-4"
           } ${!showLine1 && "hidden"}`}
+          style={{ animation: showLine1 ? "fadeInUp 0.6s ease-out forwards" : "none" }}
         >
           <div className="text-3xl md:text-5xl font-pixel text-red-600 whitespace-nowrap"
             style={{ textShadow: "0 0 24px rgba(220, 38, 38, 0.5)" }}>
@@ -71,8 +69,11 @@ export const GameEndTransition = ({ onComplete }: GameEndTransitionProps) => {
 
         {/* Line 2 - The exam has ended (80% size) */}
         {showLine2 && (
-          <div className="transition-all duration-500 opacity-100 translate-y-0">
-            <div className="text-2xl md:text-4xl font-pixel text-red-500/90 whitespace-nowrap"
+          <div
+            className="transition-all duration-500 opacity-100 translate-y-0 animate-fadeInUp"
+            style={{ animation: "fadeInUp 0.6s ease-out forwards" }}
+          >
+            <div className="text-2xl md:text-4xl font-pixel text-red-500/90 whitespace-nowrap mb-2"
               style={{ textShadow: "0 0 20px rgba(220, 38, 38, 0.4)" }}>
               The exam has ended.
             </div>
@@ -81,7 +82,10 @@ export const GameEndTransition = ({ onComplete }: GameEndTransitionProps) => {
 
         {/* Line 3 - grading with dots (70% size, no spinner) */}
         {showLine3 && (
-          <div className="transition-all duration-500 opacity-100 translate-y-0">
+          <div
+            className="transition-all duration-500 opacity-100 translate-y-0 animate-fadeInUp"
+            style={{ animation: "fadeInUp 0.6s ease-out forwards" }}
+          >
             <div className="flex items-center gap-1 text-xl md:text-3xl font-pixel text-red-400/80 whitespace-nowrap"
               style={{ textShadow: "0 0 16px rgba(220, 38, 38, 0.3)" }}>
               <span>{`Somewhere, someone is grading${gradingDots}`}</span>
@@ -91,12 +95,12 @@ export const GameEndTransition = ({ onComplete }: GameEndTransitionProps) => {
 
         {/* Final line - YOUR TRANSCRIPT IS READY (100% size, same as line 1) */}
         {showReady && (
-          <div className="transition-all duration-500 opacity-100 translate-y-0">
-            <div className="text-2xl md:text-4xl font-pixel text-red-600 animate-pulse whitespace-nowrap"
-              style={{
-                textShadow: "0 0 24px rgba(220, 38, 38, 0.45)",
-                animation: "fadeInUp 0.6s ease-out, pulse 2s ease-in-out infinite",
-              }}>
+          <div
+            className="transition-all duration-500 opacity-100 translate-y-0 animate-fadeInUp"
+            style={{ animation: "fadeInUp 0.6s ease-out forwards, pulse 2s ease-in-out infinite" }}
+          >
+            <div className="text-2xl md:text-4xl font-pixel text-red-600 whitespace-nowrap"
+              style={{ textShadow: "0 0 24px rgba(220, 38, 38, 0.45)" }}>
               YOUR TRANSCRIPT IS READY
             </div>
           </div>
