@@ -1046,7 +1046,7 @@ export default function Host() {
         {/* NEW: Game Logger download button */}
         <button
           onClick={() => gameLogger.downloadLogs()}
-          className="absolute top-2 left-[9rem] z-10 py-1 rounded border border-accent bg-card/90 hover:bg-card text-accent px-[8px]"
+          className="absolute top-2 left-[9rem] z-10 py-1 rounded border border-border bg-card/90 hover:bg-card text-muted-foreground px-[8px]"
           title="Download action log (for debugging)"
         >
           📋
