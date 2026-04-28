@@ -1,5 +1,4 @@
 import { useEffect, useMemo, useState } from "react";
-import { Loader2 } from "lucide-react";
 import FireParticleField from "@/components/FireParticleField";
 
 interface GameEndTransitionProps {
@@ -39,10 +38,13 @@ export const GameEndTransition = ({ onComplete }: GameEndTransitionProps) => {
   const showLine3 = elapsedMs >= GRADING_START_MS && elapsedMs < READY_START_MS;
   const showReady = phase === "ready";
 
-  // Line 1 shrink/up styles when line 2 appears
+  // Line 1 shrink when line 2 appears
   const line1Shrunk = elapsedMs >= 1500 && !showReady;
-  // Line 2 shrink/up styles when line 3 appears
+  // Line 2 shrink when line 3 appears
   const line2Shrunk = elapsedMs >= GRADING_START_MS && !showReady;
+
+  // Container shift to keep newest line centered
+  const containerOffset = showReady ? "-8rem" : showLine3 ? "-6rem" : showLine2 ? "-3rem" : "0";
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center overflow-hidden bg-black">
@@ -57,19 +59,26 @@ export const GameEndTransition = ({ onComplete }: GameEndTransitionProps) => {
             "radial-gradient(circle at 50% 45%, rgba(255, 68, 51, 0.12) 0%, rgba(0, 0, 0, 0.96) 58%, rgba(0, 0, 0, 1) 100%)",
         }}
       />
-      <div className="relative z-10 flex flex-col items-center justify-center gap-3 px-6 text-center">
-       {/* Line 1 - PHONES DOWN */}
+      
+      {/* Container shifts upward as lines stack */}
+      <div 
+        className="relative z-10 flex flex-col items-center justify-center gap-4 px-6 text-center transition-transform duration-500"
+        style={{ transform: `translateY(${containerOffset})` }}
+      >
+        {/* Line 1 - PHONES DOWN */}
         <div
           className={`transition-all duration-500 ${
             showLine1
               ? line1Shrunk
-                ? "text-sm font-mono text-red-400/70 -translate-y-4"
-                : "text-3xl md:text-5xl font-pixel text-red-600 translate-y-0"
-              : "opacity-0 translate-y-4"
+                ? "scale-90 text-red-400/70"
+                : "scale-100 text-red-600 glow-red"
+              : "opacity-0 scale-95"
           } ${!showLine1 && "hidden"}`}
-          style={{ textShadow: line1Shrunk ? "none" : "0 0 24px rgba(220, 38, 38, 0.5)" }}
+          style={{ textShadow: line1Shrunk ? "none" : "0 0 20px rgba(220, 38, 38, 0.6)" }}
         >
-          PHONES DOWN
+          <div className="text-2xl md:text-4xl font-pixel whitespace-nowrap">
+            PHONES DOWN
+          </div>
         </div>
 
         {/* Line 2 - The exam has ended */}
@@ -77,51 +86,40 @@ export const GameEndTransition = ({ onComplete }: GameEndTransitionProps) => {
           <div
             className={`transition-all duration-500 ${
               line2Shrunk
-                ? "text-xs font-mono text-red-400/60 -translate-y-2"
-                : "text-base md:text-xl font-pixel text-red-500/90"
-            } ${!showLine2 && "opacity-0 translate-y-4"}`}
+                ? "scale-90 text-red-400/70"
+                : "scale-100 text-red-600 glow-red"
+            }`}
+            style={{ textShadow: line2Shrunk ? "none" : "0 0 20px rgba(220, 38, 38, 0.6)" }}
           >
-            The exam has ended.
+            <div className="text-2xl md:text-4xl font-pixel whitespace-nowrap">
+              The exam has ended.
+            </div>
           </div>
         )}
 
         {/* Line 3 - grading with ONLY dots (no spinner) */}
         {showLine3 && (
           <div
-            className={`flex items-center gap-1 text-xs md:text-sm font-mono text-red-400/70 transition-all duration-500 ${
-              !showLine3 && "opacity-0 translate-y-4"
+            className={`flex items-center gap-1 transition-all duration-500 ${
+              showReady
+                ? "scale-90 text-red-400/70"
+                : "scale-100 text-red-600 glow-red"
             }`}
+            style={{ textShadow: showReady ? "none" : "0 0 20px rgba(220, 38, 38, 0.6)" }}
           >
-            <span>{`Somewhere, someone is grading${gradingDots}`}</span>
+            <div className="text-2xl md:text-4xl font-pixel whitespace-nowrap">
+              {`Somewhere, someone is grading${gradingDots}`}
+            </div>
           </div>
         )}
 
         {/* Final line - YOUR TRANSCRIPT IS READY */}
         {showReady && (
-          <div
-            className="text-2xl md:text-4xl font-pixel text-red-600 animate-pulse transition-all duration-500"
-            style={{
-              textShadow: "0 0 24px rgba(220, 38, 38, 0.45)",
-              animation: "fadeInUp 0.6s ease-out, pulse 2s ease-in-out infinite",
-            }}
-          >
+          <div className="text-2xl md:text-4xl font-pixel text-red-600 glow-red animate-pulse transition-all duration-500">
             YOUR TRANSCRIPT IS READY
           </div>
         )}
       </div>
-
-      <style>{`
-        @keyframes fadeInUp {
-          from {
-            opacity: 0;
-            transform: translateY(20px);
-          }
-          to {
-            opacity: 1;
-            transform: translateY(0);
-          }
-        }
-      `}</style>
     </div>
   );
 };
