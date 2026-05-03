@@ -110,6 +110,10 @@ const MOCK_ANSWER_KEY: Record<number, string> = {
   4: "HALL",
 };
 
+function normalizeMockExamAnswer(answer: string): string {
+  return answer.toUpperCase().replace(/[^A-Z0-9]/g, "");
+}
+
 // ─── Interfaces ───────────────────────────────────────────────────────────────
 interface BuildingTimer {
   buildingId: number;
@@ -1479,6 +1483,7 @@ export function useGameLogic({
                 endAt: now + 3000 + eventDuration,
                 questionNum: eventType === "mock-exam" ? questionNum : undefined,
                 mockExamSubmitted: eventType === "mock-exam" ? {} : undefined,
+                mockExamAnswersByPlayer: eventType === "mock-exam" ? {} : undefined,
                 mockExamCorrectByPlayer: eventType === "mock-exam" ? {} : undefined,
                 mockExamCorrectCount: eventType === "mock-exam" ? 0 : undefined,
                 chickClicks: {},
@@ -1583,15 +1588,18 @@ export function useGameLogic({
         } else if (ev.type === "mock-exam") {
           // Individual scoring: each alive chick is graded on their own answer.
           let correctCount = 0;
+          const questionNum = ev.questionNum ?? 1;
+          const expectedAnswer = normalizeMockExamAnswer(MOCK_ANSWER_KEY[questionNum] ?? "");
+          ev.mockExamAnswersByPlayer = ev.mockExamAnswersByPlayer ?? {};
           ev.mockExamCorrectByPlayer = ev.mockExamCorrectByPlayer ?? {};
 
           for (const [, p] of gs.playerStates) {
             if (p.isEagle || !p.alive) continue;
 
-            const isCorrect =
-              ev.mockExamCorrectByPlayer[p.connId] === true ||
-              (ev.chickClicks[p.connId] ?? 0) > 0;
+            const submittedAnswer = normalizeMockExamAnswer(ev.mockExamAnswersByPlayer[p.connId] ?? "");
+            const isCorrect = submittedAnswer.length > 0 && submittedAnswer === expectedAnswer;
             ev.mockExamCorrectByPlayer[p.connId] = isCorrect;
+            ev.chickClicks[p.connId] = isCorrect ? 1 : 0;
             if (isCorrect) {
               correctCount++;
               p.health = addSubGrades(p.health, 1);
@@ -2546,12 +2554,15 @@ export function useGameLogic({
         if (!gs.activeEvent || gs.activeEvent.type !== "mock-exam" || gs.activeEvent.phase !== "active") return;
         if (player.isEagle || isBotConnId(connId)) return;
         gs.activeEvent.mockExamSubmitted = gs.activeEvent.mockExamSubmitted ?? {};
+        gs.activeEvent.mockExamAnswersByPlayer = gs.activeEvent.mockExamAnswersByPlayer ?? {};
         gs.activeEvent.mockExamCorrectByPlayer = gs.activeEvent.mockExamCorrectByPlayer ?? {};
         if (gs.activeEvent.mockExamSubmitted[connId]) return;
         gs.activeEvent.mockExamSubmitted[connId] = true;
         const questionNum = gs.activeEvent.questionNum ?? 1;
-        const correct = MOCK_ANSWER_KEY[questionNum];
-        const isCorrect = msg.answer.toUpperCase().trim() === correct;
+        const correct = normalizeMockExamAnswer(MOCK_ANSWER_KEY[questionNum] ?? "");
+        const submittedAnswer = normalizeMockExamAnswer(msg.answer);
+        const isCorrect = submittedAnswer.length > 0 && submittedAnswer === correct;
+        gs.activeEvent.mockExamAnswersByPlayer[connId] = submittedAnswer;
         gs.activeEvent.mockExamCorrectByPlayer[connId] = isCorrect;
         gs.activeEvent.chickClicks[connId] = isCorrect ? 1 : 0;
         if (isCorrect) {

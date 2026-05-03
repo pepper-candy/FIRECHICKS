@@ -110,6 +110,7 @@ export interface GameEvent {
   // Mock exam
   questionNum?: number;
   mockExamSubmitted?: Record<string, true>;
+  mockExamAnswersByPlayer?: Record<string, string>;
   mockExamCorrectByPlayer?: Record<string, boolean>;
   mockExamCorrectCount?: number;
   // Hitbox challenge
