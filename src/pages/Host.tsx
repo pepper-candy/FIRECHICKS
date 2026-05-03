@@ -32,7 +32,7 @@ import { useImmersive } from "@/context/ImmersiveContext";
 import { ColorCodeBalls } from "@/components/ColorCodeBalls";
 import { GameEndTransition } from "@/components/GameEndTransition";
 import { gameLogger } from "@/lib/gameLogger";
-import { STAGE_INFO, STAGE_READY_COUNTDOWN_MS, getStageTransitionVideo } from "@/lib/stageInfo";
+import { STAGE_READY_COUNTDOWN_MS, getStageTransitionVideo } from "@/lib/stageInfo";
 
 // ─── Event Overlay (shows during mystery box events) ─────────────────────────
 function EventOverlay({
@@ -994,42 +994,17 @@ export default function Host() {
           const manualGrabBack = !stageTransActive && grabBackUntil > Date.now();
           const showOverlay = isPaused || stageTransActive || manualGrabBack;
           if (!showOverlay) return null;
-          const stageInfo = STAGE_INFO[snapshot.stage];
 
           const grabBackSec = isGrabBackPhase
             ? Math.ceil(stageTransRemainMs / 1000)
             : manualGrabBack
               ? Math.ceil((grabBackUntil - Date.now()) / 1000)
               : 0;
-          const instructionSec = isInstructionPhase
-            ? Math.ceil(Math.max(0, stageTransRemainMs - STAGE_READY_COUNTDOWN_MS) / 1000)
-            : 0;
 
           return (
             <div className="absolute inset-0 z-20 flex items-center justify-center bg-background/60 backdrop-blur-sm pointer-events-none">
               <div className="flex flex-col items-center gap-3">
-                {isInstructionPhase ? (
-                  <div className="max-w-xl rounded-2xl border border-accent/30 bg-card/90 px-8 py-7 shadow-2xl">
-                    <div className="flex flex-col items-center gap-4 text-center">
-                      <span className="text-5xl">{stageInfo.icon}</span>
-                      <div className="space-y-1">
-                        <p className="text-xs font-mono tracking-[0.4em] text-accent/80">
-                          STAGE {snapshot.stage + 1}
-                        </p>
-                        <h2 className="text-3xl font-pixel text-primary text-glow-green">{stageInfo.title}</h2>
-                      </div>
-                      <p className="max-w-md text-sm font-mono leading-relaxed text-muted-foreground">
-                        {stageInfo.instruction}
-                      </p>
-                      <div className="flex flex-col items-center gap-1 pt-2">
-                        <span className="text-xs font-mono uppercase tracking-[0.25em] text-muted-foreground/80">
-                          Starting In
-                        </span>
-                        <span className="text-5xl font-pixel text-primary animate-pulse">{instructionSec}</span>
-                      </div>
-                    </div>
-                  </div>
-                ) : isGrabBackPhase || manualGrabBack ? (
+                {isInstructionPhase ? null : isGrabBackPhase || manualGrabBack ? (
                   <>
                     <span className="text-4xl">🎮</span>
                     <span
@@ -1262,7 +1237,7 @@ export default function Host() {
           onComplete={() => {
             if (activeStageTransitionKey) setDismissedStageTransitionKey(activeStageTransitionKey);
           }}
-          placement="top"
+          placement="center"
           loop
           showBackdrop={false}
         />
