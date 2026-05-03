@@ -404,21 +404,25 @@ export default function Host() {
     return () => clearInterval(id);
   }, [phase]);
 
-  const activeStageTransitionKey = useMemo(() => {
-    if (!snapshot) return null;
-    const remainingMs = snapshot.stageTransitionUntil - Date.now();
-    if (snapshot.stageTransitionUntil <= 0 || remainingMs <= STAGE_READY_COUNTDOWN_MS) return null;
-    return `${snapshot.stage}-${snapshot.stageTransitionUntil}`;
-  }, [snapshot?.stage, snapshot?.stageTransitionUntil]);
+  const stageTransitionKey =
+    snapshot && snapshot.stageTransitionUntil > 0
+      ? `${snapshot.stage}-${snapshot.stageTransitionUntil}`
+      : null;
+  const activeStageTransitionKey =
+    snapshot && snapshot.stageTransitionUntil > 0
+      ? snapshot.stageTransitionUntil - Date.now() > STAGE_READY_COUNTDOWN_MS
+        ? stageTransitionKey
+        : null
+      : null;
 
   useEffect(() => {
     setDismissedStageTransitionKey(null);
-  }, [activeStageTransitionKey]);
+  }, [stageTransitionKey]);
 
-  const hostStageTransitionVideo = useMemo(() => {
-    if (!snapshot || !activeStageTransitionKey || dismissedStageTransitionKey === activeStageTransitionKey) return null;
-    return getStageTransitionVideo(snapshot.stage);
-  }, [activeStageTransitionKey, dismissedStageTransitionKey, snapshot]);
+  const hostStageTransitionVideo =
+    !snapshot || !activeStageTransitionKey || dismissedStageTransitionKey === activeStageTransitionKey
+      ? null
+      : getStageTransitionVideo(snapshot.stage);
 
   const handleGameModeToggle = useCallback(() => {
     const newMode: GameMode = gameMode === "1v3" ? "2v6" : "1v3";
@@ -1238,7 +1242,6 @@ export default function Host() {
             if (activeStageTransitionKey) setDismissedStageTransitionKey(activeStageTransitionKey);
           }}
           placement="center"
-          loop
           showBackdrop={false}
         />
 
