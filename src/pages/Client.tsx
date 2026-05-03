@@ -1714,7 +1714,7 @@ export default function Client() {
   // ─── EXAM PHASE ──────────────────────────────────────────────────────────────
   if (gamePhase === "exam") {
     if ((stableGameState?.examTransitionEndsAt ?? 0) > clockNow) {
-      return <GameEndTransition />;
+      return <GameEndTransition variant="client" />;
     }
 
     // Eagle sees distract message
