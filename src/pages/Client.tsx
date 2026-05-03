@@ -1650,7 +1650,10 @@ export default function Client() {
       const isHitbox = activeEvent.type === "hitbox";
       const isCrossy = activeEvent.type === "crossy-road";
       // For mock exam, show individual result
-      const myMockCorrect = !isHitbox && !isCrossy && activeEvent.chickClicks && myState ? (activeEvent.chickClicks[myState.connId] ?? 0) > 0 : false;
+      const myMockCorrect =
+        !isHitbox && !isCrossy && myState
+          ? activeEvent.mockExamCorrectByPlayer?.[myState.connId] === true
+          : false;
       // For crossy road, show individual crossing count
       const myCrossings = isCrossy && myState ? (activeEvent.crossyPlayerStates?.[myState.connId]?.crossings ?? 0) : 0;
 
@@ -1693,15 +1696,21 @@ export default function Client() {
             <>
               {isEagle ? (
                 <p className="text-lg font-pixel text-muted-foreground">Results announced</p>
-               ) : myMockCorrect ? (
+              ) : myMockCorrect ? (
                 <div className="flex flex-col items-center gap-2">
                   <span className="text-6xl">✅</span>
-                  <p className="text-sm font-pixel text-muted-foreground"><span style={{ color: "hsl(145 80% 50%)" }}>+1 grade</span></p>
+                  <p className="text-lg font-pixel" style={{ color: "hsl(145 80% 50%)" }}>CORRECT</p>
+                  <p className="text-sm font-pixel text-muted-foreground">
+                    <span style={{ color: "hsl(145 80% 50%)" }}>+1 grade</span>
+                  </p>
                 </div>
               ) : (
                 <div className="flex flex-col items-center gap-2">
                   <span className="text-6xl">❌</span>
-                  <p className="text-sm font-pixel text-muted-foreground"><span style={{ color: "hsl(0 80% 55%)" }}>-2 grades</span></p>
+                  <p className="text-lg font-pixel" style={{ color: "hsl(0 80% 55%)" }}>INCORRECT</p>
+                  <p className="text-sm font-pixel text-muted-foreground">
+                    <span style={{ color: "hsl(0 80% 55%)" }}>-2 grades</span>
+                  </p>
                 </div>
               )}
             </>

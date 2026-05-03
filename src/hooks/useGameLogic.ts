@@ -1479,6 +1479,9 @@ export function useGameLogic({
                 endAt: now + 3000 + eventDuration,
                 questionNum: eventType === "mock-exam" ? questionNum : undefined,
                 mockExamSubmitted: eventType === "mock-exam" ? {} : undefined,
+                mockExamCorrectByPlayer: eventType === "mock-exam" ? {} : undefined,
+                mockExamFinishAfterAllSubmitAt: undefined,
+                mockExamCorrectCount: eventType === "mock-exam" ? 0 : undefined,
                 chickClicks: {},
                 eagleClicks: {},
                 result: "pending",
@@ -1511,11 +1514,18 @@ export function useGameLogic({
       }
 
       if (ev.phase === "active" && ev.type === "mock-exam") {
-        const aliveChickIds = Array.from<PlayerGameState>(gs.playerStates.values())
+        const aliveNonBotChickIds = Array.from<PlayerGameState>(gs.playerStates.values())
           .filter((p) => !p.isEagle && p.alive && !isBotConnId(p.connId))
           .map((p) => p.connId);
-        const allSubmitted = aliveChickIds.every((id) => !!ev.mockExamSubmitted?.[id]);
-        if (allSubmitted) ev.endAt = now;
+        const allSubmitted =
+          aliveNonBotChickIds.length > 0 &&
+          aliveNonBotChickIds.every((id) => !!ev.mockExamSubmitted?.[id]);
+        if (allSubmitted) {
+          if (!ev.mockExamFinishAfterAllSubmitAt) {
+            ev.mockExamFinishAfterAllSubmitAt = now + 5000;
+          }
+          ev.endAt = Math.min(ev.endAt, ev.mockExamFinishAfterAllSubmitAt);
+        }
       }
 
       // Crossy Road: simulate lanes each frame during active phase
@@ -1587,30 +1597,35 @@ export function useGameLogic({
             }
           }
         } else if (ev.type === "mock-exam") {
-          // Individual scoring: only non-bot chicks participate
+          // Individual scoring: each alive chick is graded on their own answer.
           let correctCount = 0;
-          let totalEligibleChicks = 0;
+          ev.mockExamCorrectByPlayer = ev.mockExamCorrectByPlayer ?? {};
 
           for (const [, p] of gs.playerStates) {
-            if (p.isEagle || !p.alive || isBotConnId(p.connId)) continue;
+            if (p.isEagle || !p.alive) continue;
 
-            totalEligibleChicks++;
-            if (ev.chickClicks[p.connId] && ev.chickClicks[p.connId] > 0) {
+            const isCorrect = ev.mockExamCorrectByPlayer[p.connId] === true;
+            ev.mockExamCorrectByPlayer[p.connId] = isCorrect;
+            if (isCorrect) {
               correctCount++;
-              // +1 already applied in event-answer handler
+              p.health = addSubGrades(p.health, 1);
+              addBreakdown(p, 'mock-exam', 'Mock Exam correct', 3);
             } else {
-              // Wrong or didn't answer: -2 sub-grades
+              // Wrong, missing, and bot answers all count as incorrect.
               p.health = addSubGrades(p.health, -2);
             }
           }
 
-          ev.result = totalEligibleChicks > 0 && correctCount > totalEligibleChicks / 2 ? "chick" : "eagle";
+          ev.mockExamCorrectCount = correctCount;
+          ev.result = correctCount > 0 ? "chick" : "eagle";
 
           for (const [, p] of gs.playerStates) {
-            if (!p.isEagle && p.alive && isDead(p.health) && !isBotConnId(p.connId)) {
+            if (!p.isEagle && p.alive && isDead(p.health)) {
               p.alive = false;
               p.health = 0;
-              currentBroadcast({ type: "you-died", connId: p.connId });
+              if (!isBotConnId(p.connId)) {
+                currentBroadcast({ type: "you-died", connId: p.connId });
+              }
             }
           }
         } else if (ev.type === "crossy-road" && ev.crossyPlayerStates) {
@@ -2543,19 +2558,16 @@ export function useGameLogic({
       // ── Event mock exam answer ──
       case "event-answer": {
         if (!gs.activeEvent || gs.activeEvent.type !== "mock-exam" || gs.activeEvent.phase !== "active") return;
-        if (player.isEagle) return;
+        if (player.isEagle || isBotConnId(connId)) return;
         gs.activeEvent.mockExamSubmitted = gs.activeEvent.mockExamSubmitted ?? {};
+        gs.activeEvent.mockExamCorrectByPlayer = gs.activeEvent.mockExamCorrectByPlayer ?? {};
+        if (gs.activeEvent.mockExamSubmitted[connId]) return;
         gs.activeEvent.mockExamSubmitted[connId] = true;
         const questionNum = gs.activeEvent.questionNum ?? 1;
         const correct = MOCK_ANSWER_KEY[questionNum];
-        if (msg.answer.toUpperCase().trim() === correct) {
-          // First correct answer = +1 sub-grade for this player
-          if (!gs.activeEvent.chickClicks[connId]) {
-            gs.activeEvent.chickClicks[connId] = 1;
-            player.health = addSubGrades(player.health, 1);
-            addBreakdown(player, 'mock-exam', 'Mock Exam correct', 3);
-          }
-        }
+        const isCorrect = msg.answer.toUpperCase().trim() === correct;
+        gs.activeEvent.mockExamCorrectByPlayer[connId] = isCorrect;
+        gs.activeEvent.chickClicks[connId] = isCorrect ? 1 : 0;
         break;
       }
 

@@ -55,6 +55,8 @@ function EventOverlay({
     .filter((p: any) => p.isEagle && p.alive)
     .reduce((sum: number, p: any) => sum + (event.eagleClicks[p.connId] ?? 0), 0);
   const timeLeft = Math.max(0, Math.ceil((event.endAt - now) / 1000));
+  const mockExamCorrectCount =
+    event.mockExamCorrectCount ?? Object.values(event.mockExamCorrectByPlayer ?? {}).filter(Boolean).length;
 
   // Mock exam active: show layer 1 inline (tags hidden via hideOverlays)
   if (event.phase === "active" && event.type === "mock-exam" && event.questionNum) {
@@ -129,15 +131,33 @@ function EventOverlay({
         {event.phase === "result" && (
           <>
             <h2 className="text-xl font-pixel text-accent">RESULT</h2>
-            <p
-              className="text-2xl font-pixel"
-              style={{ color: event.result === "chick" ? "hsl(145 80% 50%)" : "hsl(0 80% 55%)" }}
-            >
-              {event.result === "chick" ? "🐤 Chicks Win!" : "🦅 Eagle Wins!"}
-            </p>
-            <p className="text-xs font-mono text-muted-foreground">
-              {event.result === "chick" ? "+2 grades for everyone!" : "-2 grades for chicks"}
-            </p>
+            {event.type === "mock-exam" ? (
+              <>
+                <p
+                  className="text-3xl font-pixel"
+                  style={{ color: mockExamCorrectCount > 0 ? "hsl(145 80% 50%)" : "hsl(0 80% 55%)" }}
+                >
+                  {mockExamCorrectCount > 0 ? "✅ CORRECT" : "❌ INCORRECT"}
+                </p>
+                {mockExamCorrectCount > 0 && (
+                  <p className="text-sm font-mono text-muted-foreground">
+                    {mockExamCorrectCount} player{mockExamCorrectCount !== 1 ? "s" : ""} answered correctly
+                  </p>
+                )}
+              </>
+            ) : (
+              <>
+                <p
+                  className="text-2xl font-pixel"
+                  style={{ color: event.result === "chick" ? "hsl(145 80% 50%)" : "hsl(0 80% 55%)" }}
+                >
+                  {event.result === "chick" ? "🐤 Chicks Win!" : "🦅 Eagle Wins!"}
+                </p>
+                <p className="text-xs font-mono text-muted-foreground">
+                  {event.result === "chick" ? "+2 grades for everyone!" : "-2 grades for chicks"}
+                </p>
+              </>
+            )}
           </>
         )}
       </div>
