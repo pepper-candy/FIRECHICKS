@@ -11,6 +11,7 @@ import { getMapVariant } from "@/lib/mapVariants";
 import type { NatureObstacle } from "@/lib/mapVariants";
 
 const FLY_SPEED_MULTIPLIER = 3;
+const WORLD_SCALE = 0.5; // Shrinks visual map without affecting game logic
 
 // ─── Static Day Lighting ─────────────────────────────────────────────────────
 function DayLighting() {
@@ -206,7 +207,26 @@ function Bush({ position, scale = 1 }: { position: { x: number; z: number }; sca
   );
 }
 
-function NatureObstacleRenderer({ obstacle }: { obstacle: NatureObstacle }) {
+function NatureObstacleRenderer({ obstacle, index, devMode }: { obstacle: NatureObstacle; index?: number; devMode?: boolean }) {
+  // In devMode, replace all nature with simple colored boxes
+  if (devMode) {
+    const s = obstacle.scale ?? 1;
+    return (
+      <group position={[obstacle.position.x, 0, obstacle.position.z]}>
+        <Html position={[0, s * 2 + 1, 0]} center zIndexRange={[100, 0]}>
+          <div style={{ color: getDebugColor('nature'), fontSize: 9, fontFamily: 'monospace', background: 'rgba(0,0,0,0.7)', padding: '1px 4px', borderRadius: 2, whiteSpace: 'nowrap' }}>
+            {obstacle.type.toUpperCase()}{index !== undefined ? ` #${index}` : ''}
+          </div>
+        </Html>
+        <mesh position={[0, s * 0.8, 0]}>
+          <boxGeometry args={[s * 0.6, s * 1.6, s * 0.6]} />
+          <meshStandardMaterial color={getDebugColor('nature')} emissive={getDebugColor('nature')} emissiveIntensity={0.3} transparent opacity={0.5} />
+        </mesh>
+      </group>
+    );
+  }
+
+  // Normal rendering
   switch (obstacle.type) {
     case "tree":
       return <Tree position={obstacle.position} scale={obstacle.scale} />;
@@ -240,6 +260,7 @@ interface Props {
   immersive?: boolean;
   themeMode?: "dark" | "semi" | "light";
   hideOverlays?: boolean;
+  devMode?: boolean;  // ← ADD THIS LINE
 }
 
 // Helper: derive themed colors from a hue (0-360)
@@ -336,6 +357,15 @@ function MapParticles() {
   );
 }
 
+// ─── Debug Color Helper ────────────────────────────────────────────────────────
+function getDebugColor(type: 'building' | 'obstacle' | 'nature'): string {
+  switch (type) {
+    case 'building': return '#4488ff'; // Blue
+    case 'obstacle': return '#ff4444';  // Red
+    case 'nature': return '#44ff44';    // Green
+  }
+}
+
 // ─── Building ──────────────────────────────────────────────────────────────────
 function Building({
   position,
@@ -348,6 +378,7 @@ function Building({
   immersive,
   lightMode,
   hideOverlays,
+  devMode,
 }: {
   position: { x: number; z: number };
   size: { w: number; h: number; d: number };
@@ -359,6 +390,7 @@ function Building({
   immersive?: boolean;
   lightMode?: boolean;
   hideOverlays?: boolean;
+  devMode?: boolean;  // ← ADD THIS LINE
 }) {
   const pulseRef = useRef(0);
   useFrame((_, delta) => {
@@ -368,25 +400,36 @@ function Building({
 
   return (
     <group position={[position.x, 0, position.z]}>
+      {devMode && (
+        <Html position={[0, size.h + 3, 0]} center zIndexRange={[100, 0]}>
+          <div style={{ color: getDebugColor('building'), fontSize: 10, fontFamily: 'monospace', background: 'rgba(0,0,0,0.7)', padding: '1px 4px', borderRadius: 2, whiteSpace: 'nowrap' }}>
+            BUILDING
+          </div>
+        </Html>
+      )}
       <mesh position={[0, size.h / 2, 0]}>
         <boxGeometry args={[size.w, size.h, size.d]} />
         <meshStandardMaterial
-          color={gold ? "#ffd700" : (baseColor ?? "#2a2a4a")}
-          emissive={gold ? "#ffd700" : (baseEmissive ?? "#1a1a3a")}
-          emissiveIntensity={gold ? 0.6 : immersive ? 0.35 : 0.2}
+          color={devMode ? getDebugColor('building') : (gold ? "#ffd700" : (baseColor ?? "#2a2a4a"))}
+          emissive={devMode ? getDebugColor('building') : (gold ? "#ffd700" : (baseEmissive ?? "#1a1a3a"))}
+          emissiveIntensity={devMode ? 0.4 : (gold ? 0.6 : immersive ? 0.35 : 0.2)}
+          transparent={devMode}
+          opacity={devMode ? 0.7 : 1}
         />
-        {(immersive || lightMode) && (
+        {(immersive || lightMode) && !devMode && (
           <Edges scale={1.005} threshold={12} color={gold ? "#ffe566" : lightMode ? "#222222" : "#7070b8"} />
         )}
       </mesh>
       <mesh position={[0, size.h + 0.2, 0]}>
         <boxGeometry args={[size.w + 0.5, 0.4, size.d + 0.5]} />
         <meshStandardMaterial
-          color={gold ? "#ffaa00" : (baseColor ?? "#3a3a5a")}
-          emissive={gold ? "#ffaa00" : (baseEmissive ?? "#2a2a4a")}
-          emissiveIntensity={gold ? 0.5 : immersive ? 0.18 : 0.1}
+          color={devMode ? getDebugColor('building') : (gold ? "#ffaa00" : (baseColor ?? "#3a3a5a"))}
+          emissive={devMode ? getDebugColor('building') : (gold ? "#ffaa00" : (baseEmissive ?? "#2a2a4a"))}
+          emissiveIntensity={devMode ? 0.3 : (gold ? 0.5 : immersive ? 0.18 : 0.1)}
+          transparent={devMode}
+          opacity={devMode ? 0.5 : 1}
         />
-        {(immersive || lightMode) && (
+        {(immersive || lightMode) && !devMode && (
           <Edges scale={1.01} threshold={12} color={gold ? "#ffcc44" : lightMode ? "#333333" : "#5555a0"} />
         )}
       </mesh>
@@ -405,7 +448,7 @@ function Building({
         </mesh>
       )}
       {zoneActive && zoneHealth !== undefined && !hideOverlays && (
-        <Html position={[0, size.h + 2, 0]} center zIndexRange={[100, 0]}>
+        <Html position={[0, size.h + 1.5, 0]} center zIndexRange={[100, 0]}>
           <div
             style={{
               background: "rgba(0,0,0,0.7)",
@@ -423,6 +466,12 @@ function Building({
           </div>
         </Html>
       )}
+      {devMode && (
+        <mesh position={[0, 0.1, 0]}>
+          <boxGeometry args={[size.w + 0.1, 0.05, size.d + 0.1]} />
+          <meshBasicMaterial color={getDebugColor('building')} transparent opacity={0.2} />
+        </mesh>
+      )}
     </group>
   );
 }
@@ -435,6 +484,7 @@ function Obstacle({
   baseColor,
   baseEmissive,
   lightMode,
+  devMode,
 }: {
   position: { x: number; z: number };
   size: { w: number; h: number; d: number };
@@ -442,17 +492,29 @@ function Obstacle({
   baseColor?: string;
   baseEmissive?: string;
   lightMode?: boolean;
+  devMode?: boolean;  // ← ADD THIS LINE
 }) {
   return (
-    <mesh position={[position.x, size.h / 2, position.z]} rotation={[0, rotation ?? 0, 0]}>
-      <boxGeometry args={[size.w, size.h, size.d]} />
-      <meshStandardMaterial
-        color={baseColor ?? "#1e3a5f"}
-        emissive={baseEmissive ?? "#0a1a3a"}
-        emissiveIntensity={lightMode ? 0.05 : 0.3}
-      />
-      {lightMode && <Edges scale={1.005} threshold={12} color="#222222" />}
-    </mesh>
+    <group position={[position.x, 0, position.z]}>
+      {devMode && (
+        <Html position={[0, size.h + 1.5, 0]} center zIndexRange={[100, 0]}>
+          <div style={{ color: getDebugColor('obstacle'), fontSize: 9, fontFamily: 'monospace', background: 'rgba(0,0,0,0.7)', padding: '1px 4px', borderRadius: 2, whiteSpace: 'nowrap' }}>
+            OBS
+          </div>
+        </Html>
+      )}
+      <mesh position={[0, size.h / 2, 0]} rotation={[0, rotation ?? 0, 0]}>
+        <boxGeometry args={[size.w, size.h, size.d]} />
+        <meshStandardMaterial
+          color={devMode ? getDebugColor('obstacle') : (baseColor ?? "#1e3a5f")}
+          emissive={devMode ? getDebugColor('obstacle') : (baseEmissive ?? "#0a1a3a")}
+          emissiveIntensity={devMode ? 0.3 : (lightMode ? 0.05 : 0.3)}
+          transparent={devMode}
+          opacity={devMode ? 0.6 : 1}
+        />
+        {lightMode && !devMode && <Edges scale={1.005} threshold={12} color="#222222" />}
+      </mesh>
+    </group>
   );
 }
 
@@ -858,6 +920,7 @@ export default function GameplayMap({
   immersive = false,
   themeMode = "dark",
   hideOverlays = false,
+  devMode = false,  // ← ADD THIS LINE
 }: Props) {
   const playerList = Object.values(players);
   const mapVariant = useMemo(() => getMapVariant(mapId), [mapId]);
@@ -920,10 +983,16 @@ export default function GameplayMap({
         {immersive && !isLight && !isSemi && <SceneFog color="#050510" density={0.008} />}
         {immersive && !isLight && !isSemi && <MapParticles />}
 
-        {/* Floor */}
+        {/* ─── SCALED MAP CONTAINER ─── */}
+        <group scale={[WORLD_SCALE, WORLD_SCALE, WORLD_SCALE]}></group>
+
+        {/* Floor — slightly darkened for contrast */}
         <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.01, 0]} receiveShadow>
           <planeGeometry args={[MAP_SIZE, MAP_SIZE]} />
-          <meshStandardMaterial color={floorColor} />
+          <meshStandardMaterial 
+            color={devMode ? '#111111' : floorColor} 
+            roughness={0.9}
+          />
         </mesh>
 
         {/* Grid */}
@@ -993,7 +1062,7 @@ export default function GameplayMap({
 
         {/* Nature Obstacles */}
         {mapVariant.natureObstacles.map((no, i) => (
-          <NatureObstacleRenderer key={`nature-${i}`} obstacle={no} />
+          <NatureObstacleRenderer key={`nature-${i}`} obstacle={no} index={i} />
         ))}
 
         {/* Prop spawns */}
@@ -1093,6 +1162,11 @@ export default function GameplayMap({
             </div>
           </Html>
         )}
+        {/* Debug Grid Helper */}
+        {devMode && (
+          <gridHelper args={[MAP_SIZE, MAP_SIZE / 2, '#666666', '#444444']} position={[0, 0.02, 0]} />
+        )}
+        {/* ─── END SCALED MAP CONTAINER ─── */}
       </Canvas>
     </div>
   );

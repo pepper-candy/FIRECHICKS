@@ -789,6 +789,7 @@ export default function Host() {
           immersive={isImmersive}
           themeMode={themeMode}
           hideOverlays={shouldHideOverlays}
+          devMode={devMode}
         />
 
         {/* Focus camera panel toggle button */}

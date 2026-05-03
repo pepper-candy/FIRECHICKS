@@ -73,7 +73,7 @@ export const GameEndTransition = ({ onComplete }: GameEndTransitionProps) => {
             className="transition-all duration-500 opacity-100 translate-y-0 animate-fadeInUp"
             style={{ animation: "fadeInUp 0.6s ease-out forwards" }}
           >
-            <div className="text-2xl md:text-4xl font-pixel text-red-500/90 whitespace-nowrap mb-4"
+            <div className="text-2xl md:text-4xl font-pixel text-red-500/90 whitespace-nowrap mb-"
               style={{ textShadow: "0 0 20px rgba(220, 38, 38, 0.4)" }}>
               The exam has ended.
             </div>
