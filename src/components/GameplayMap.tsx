@@ -16,7 +16,7 @@ const CHARACTER_VISUAL_SCALE = 1.5 / WORLD_SCALE;
 const DEBUG_MODE = true;
 const HOST_CAMERA_BASE_ZOOM = 2;
 const HOST_CAMERA_POSITION: readonly [number, number, number] = [0, 48.75, 35.7];
-const HOST_CAMERA_LOOK_AT: readonly [number, number, number] = [0, -10, 0];
+const HOST_CAMERA_LOOK_AT: readonly [number, number, number] = [0, 0, 0];
 
 // ─── Static Day Lighting ─────────────────────────────────────────────────────
 function DayLighting() {
