@@ -14,6 +14,9 @@ const FLY_SPEED_MULTIPLIER = 3;
 const WORLD_SCALE = 0.5; // Shrinks visual map without affecting game logic
 const CHARACTER_VISUAL_SCALE = 1.5 / WORLD_SCALE;
 const DEBUG_MODE = true;
+const HOST_CAMERA_BASE_ZOOM = 2;
+const HOST_CAMERA_POSITION: readonly [number, number, number] = [0, 48.75, 35.7];
+const HOST_CAMERA_LOOK_AT: readonly [number, number, number] = [0, -10, 0];
 
 // ─── Static Day Lighting ─────────────────────────────────────────────────────
 function DayLighting() {
@@ -82,19 +85,14 @@ function SemiLightLighting() {
 function MapCamera({ zoomLevel = 1 }: { zoomLevel?: number }) {
   const { camera } = useThree();
   useEffect(() => {
-    const clamped = Math.max(0.65, Math.min(1.5, zoomLevel));
+    const clamped = Math.max(0.7, Math.min(1.5, zoomLevel));
+    const perspectiveCamera = camera as THREE.PerspectiveCamera;
 
-    // As zoom increases, camera moves farther (dolly back)
-    const posY = 40 + (clamped - 0.65) * 25;
-    const posZ = 28 + (clamped - 0.65) * 22;
-
-    // Vertical pan — keep the working -30 multiplier
-    const lookY = (clamped - 1) * -25 - 10;
-
-    camera.position.set(0, posY, posZ);
-    (camera as any).fov = 58 / Math.max(0.75, clamped);
-    (camera as any).updateProjectionMatrix?.();
-    camera.lookAt(0, lookY, 0);
+    perspectiveCamera.position.set(...HOST_CAMERA_POSITION);
+    perspectiveCamera.fov = 58;
+    perspectiveCamera.zoom = HOST_CAMERA_BASE_ZOOM * clamped;
+    perspectiveCamera.updateProjectionMatrix();
+    perspectiveCamera.lookAt(...HOST_CAMERA_LOOK_AT);
   }, [camera, zoomLevel]);
   return null;
 }
@@ -1065,7 +1063,7 @@ export default function GameplayMap({
           style={{ background: "radial-gradient(ellipse at center, transparent 55%, rgba(0,0,0,0.85) 100%)" }}
         />
       )}
-      <Canvas camera={{ position: [0, 56, 42], fov: 58 }} shadows>
+      <Canvas camera={{ position: HOST_CAMERA_POSITION, fov: 58, zoom: HOST_CAMERA_BASE_ZOOM }} shadows>
         <MapCamera zoomLevel={zoomLevel} />
         {isLight ? (
           <LightModeLighting />
