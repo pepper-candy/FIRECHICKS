@@ -1099,7 +1099,7 @@ export default function Client() {
           sendToHost({ type: "event-hitbox-batch", taps: hitboxTapCountRef.current });
           hitboxTapCountRef.current = 0;
         }
-      }, 500);
+      }, 50);
     } else {
       console.log("[Hitbox] hitbox not active, clearing");
       if (hitboxBatchIntervalRef.current) {
