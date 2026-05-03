@@ -1,12 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import type { GameStage } from '@/lib/gameTypes';
-
-const STAGE_INFO: Record<number, { title: string; instruction: string; icon: string }> = {
-  0: { title: 'Social Circle',  instruction: 'Meet ALL other Chicks! 🐣',                           icon: '🤝' },
-  1: { title: 'Exam Tips',      instruction: 'Get TIPS from glowing buildings, then SHARE!',         icon: '📍' },
-  2: { title: 'Share Tips',     instruction: 'Share your tips with everyone!',                       icon: '🔗' },
-  3: { title: 'Final Exam',     instruction: 'Run to any building and finish the EXAM!',             icon: '📝' },
-};
+import { STAGE_INFO } from '@/lib/stageInfo';
 
 const DISPLAY_MS = 15_000;
 

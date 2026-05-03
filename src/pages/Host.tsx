@@ -32,6 +32,7 @@ import { useImmersive } from "@/context/ImmersiveContext";
 import { ColorCodeBalls } from "@/components/ColorCodeBalls";
 import { GameEndTransition } from "@/components/GameEndTransition";
 import { gameLogger } from "@/lib/gameLogger";
+import { STAGE_INFO, STAGE_READY_COUNTDOWN_MS, getStageTransitionVideo } from "@/lib/stageInfo";
 
 // ─── Event Overlay (shows during mystery box events) ─────────────────────────
 function EventOverlay({
@@ -193,6 +194,7 @@ export default function Host() {
   const effectiveMode: ConnectionMode = isImmersive ? "webrtc" : mode;
   // Stage transition toast notification
   const [stageToast, setStageToast] = useState<{ stage: number; key: number } | null>(null);
+  const [dismissedStageTransitionKey, setDismissedStageTransitionKey] = useState<string | null>(null);
   const dismissStageToast = useCallback(() => setStageToast(null), []);
   const prevStageRef = useRef<number | null>(null);
   useEffect(() => {
@@ -401,6 +403,22 @@ export default function Host() {
     const id = setInterval(() => setRevealNow(Date.now()), 100);
     return () => clearInterval(id);
   }, [phase]);
+
+  const activeStageTransitionKey = useMemo(() => {
+    if (!snapshot) return null;
+    const remainingMs = snapshot.stageTransitionUntil - Date.now();
+    if (snapshot.stageTransitionUntil <= 0 || remainingMs <= STAGE_READY_COUNTDOWN_MS) return null;
+    return `${snapshot.stage}-${snapshot.stageTransitionUntil}`;
+  }, [snapshot?.stage, snapshot?.stageTransitionUntil]);
+
+  useEffect(() => {
+    setDismissedStageTransitionKey(null);
+  }, [activeStageTransitionKey]);
+
+  const hostStageTransitionVideo = useMemo(() => {
+    if (!snapshot || !activeStageTransitionKey || dismissedStageTransitionKey === activeStageTransitionKey) return null;
+    return getStageTransitionVideo(snapshot.stage);
+  }, [activeStageTransitionKey, dismissedStageTransitionKey, snapshot]);
 
   const handleGameModeToggle = useCallback(() => {
     const newMode: GameMode = gameMode === "1v3" ? "2v6" : "1v3";
@@ -971,21 +989,47 @@ export default function Host() {
         {(() => {
           const stageTransActive = snapshot.stageTransitionUntil > 0 && Date.now() < snapshot.stageTransitionUntil;
           const stageTransRemainMs = stageTransActive ? snapshot.stageTransitionUntil - Date.now() : 0;
-          const isGrabBackPhase = stageTransActive && stageTransRemainMs <= 3000;
+          const isGrabBackPhase = stageTransActive && stageTransRemainMs <= STAGE_READY_COUNTDOWN_MS;
+          const isInstructionPhase = stageTransActive && !isGrabBackPhase;
           const manualGrabBack = !stageTransActive && grabBackUntil > Date.now();
           const showOverlay = isPaused || stageTransActive || manualGrabBack;
           if (!showOverlay) return null;
+          const stageInfo = STAGE_INFO[snapshot.stage];
 
           const grabBackSec = isGrabBackPhase
             ? Math.ceil(stageTransRemainMs / 1000)
             : manualGrabBack
               ? Math.ceil((grabBackUntil - Date.now()) / 1000)
               : 0;
+          const instructionSec = isInstructionPhase
+            ? Math.ceil(Math.max(0, stageTransRemainMs - STAGE_READY_COUNTDOWN_MS) / 1000)
+            : 0;
 
           return (
             <div className="absolute inset-0 z-20 flex items-center justify-center bg-background/60 backdrop-blur-sm pointer-events-none">
               <div className="flex flex-col items-center gap-3">
-                {isGrabBackPhase || manualGrabBack ? (
+                {isInstructionPhase ? (
+                  <div className="max-w-xl rounded-2xl border border-accent/30 bg-card/90 px-8 py-7 shadow-2xl">
+                    <div className="flex flex-col items-center gap-4 text-center">
+                      <span className="text-5xl">{stageInfo.icon}</span>
+                      <div className="space-y-1">
+                        <p className="text-xs font-mono tracking-[0.4em] text-accent/80">
+                          STAGE {snapshot.stage + 1}
+                        </p>
+                        <h2 className="text-3xl font-pixel text-primary text-glow-green">{stageInfo.title}</h2>
+                      </div>
+                      <p className="max-w-md text-sm font-mono leading-relaxed text-muted-foreground">
+                        {stageInfo.instruction}
+                      </p>
+                      <div className="flex flex-col items-center gap-1 pt-2">
+                        <span className="text-xs font-mono uppercase tracking-[0.25em] text-muted-foreground/80">
+                          Starting In
+                        </span>
+                        <span className="text-5xl font-pixel text-primary animate-pulse">{instructionSec}</span>
+                      </div>
+                    </div>
+                  </div>
+                ) : isGrabBackPhase || manualGrabBack ? (
                   <>
                     <span className="text-4xl">🎮</span>
                     <span
@@ -1211,6 +1255,17 @@ export default function Host() {
             immersive={isImmersive}
           />
         )}
+
+        {/* Stage transition video overlay (host only) */}
+        <VideoOverlay
+          video={hostStageTransitionVideo}
+          onComplete={() => {
+            if (activeStageTransitionKey) setDismissedStageTransitionKey(activeStageTransitionKey);
+          }}
+          placement="top"
+          loop
+          showBackdrop={false}
+        />
 
         {/* VideoOverlay LAST so it renders on top of everything */}
         <VideoOverlay video={videoPlaying} onComplete={onVideoComplete} />

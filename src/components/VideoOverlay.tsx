@@ -1,13 +1,31 @@
 import { useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { assetUrl } from '@/lib/assets';
+import type { OverlayVideo } from '@/lib/stageInfo';
 
 interface Props {
-  video: 'hurt' | 'dead' | null;
+  video: OverlayVideo | null;
   onComplete: () => void;
+  placement?: 'center' | 'top';
+  loop?: boolean;
+  showBackdrop?: boolean;
 }
 
-export default function VideoOverlay({ video, onComplete }: Props) {
+const VIDEO_SRC: Record<OverlayVideo, string> = {
+  hurt: assetUrl('/Animations/Hurt.mp4'),
+  dead: assetUrl('/Animations/Dead.mp4'),
+  'stage0-transition': assetUrl('/Animations/1_Meet.mp4'),
+  'stage1-transition': assetUrl('/Animations/2_Glow_Building.mp4'),
+  'stage3-transition': assetUrl('/Animations/4_Final.mp4'),
+};
+
+export default function VideoOverlay({
+  video,
+  onComplete,
+  placement = 'center',
+  loop = false,
+  showBackdrop = true,
+}: Props) {
   const videoRef = useRef<HTMLVideoElement>(null);
 
   useEffect(() => {
@@ -20,17 +38,30 @@ export default function VideoOverlay({ video, onComplete }: Props) {
 
   if (!video) return null;
 
-  const src = video === 'dead'
-    ? assetUrl('/Animations/Dead.mp4')
-    : assetUrl('/Animations/Hurt.mp4');
+  const src = VIDEO_SRC[video];
+  const containerClassName =
+    placement === 'top'
+      ? 'fixed inset-x-0 top-0 flex items-start justify-center pt-4'
+      : 'fixed inset-0 flex items-center justify-center';
+  const wrapperClassName =
+    placement === 'top'
+      ? 'relative flex flex-col items-center'
+      : 'relative flex flex-col items-center';
+  const videoClassName =
+    placement === 'top'
+      ? 'w-[min(92vw,960px)] max-h-[42vh] rounded-lg shadow-2xl'
+      : 'max-w-[80vw] max-h-[60vh] rounded-lg shadow-2xl';
 
   return createPortal(
-    <div className="fixed inset-0 flex items-center justify-center bg-background/90" style={{ zIndex: 2147483647 }}>
-      <div className="relative flex flex-col items-center">
+    <div
+      className={`${containerClassName} ${showBackdrop ? 'bg-background/90' : 'pointer-events-none bg-transparent'}`}
+      style={{ zIndex: 2147483647 }}
+    >
+      <div className={wrapperClassName}>
         <video
           ref={videoRef}
           src={src}
-          className="max-w-[80vw] max-h-[60vh] rounded-lg shadow-2xl"
+          className={videoClassName}
           onEnded={onComplete}
           onError={(e) => {
             console.error('Video load failed:', e);
@@ -38,11 +69,12 @@ export default function VideoOverlay({ video, onComplete }: Props) {
           }}
           playsInline
           muted={false}
+          loop={loop}
         />
         {/* Skip button aligned to bottom-right of video */}
         <button
           onClick={onComplete}
-          className="absolute bottom-2 right-2 px-3 py-1.5 rounded bg-card/80 border border-border text-xs font-mono text-muted-foreground hover:text-foreground hover:bg-card transition-all active:scale-95"
+          className="absolute bottom-2 right-2 pointer-events-auto px-3 py-1.5 rounded bg-card/80 border border-border text-xs font-mono text-muted-foreground hover:text-foreground hover:bg-card transition-all active:scale-95"
           style={{ backdropFilter: 'blur(4px)' }}
         >
           SKIP ▶
@@ -56,8 +88,7 @@ export default function VideoOverlay({ video, onComplete }: Props) {
 /** Preload videos (call once on host) */
 export function preloadVideos() {
   const vids = [
-    assetUrl('/Animations/Hurt.mp4'),
-    assetUrl('/Animations/Dead.mp4'),
+    ...Object.values(VIDEO_SRC),
     assetUrl('/Animations/Entrance.mp4'),
   ];
   vids.forEach((src) => {

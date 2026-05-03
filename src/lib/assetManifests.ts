@@ -36,16 +36,19 @@ for (const color of ATTACK_COLORS) {
 // ── Character viewer pack = same animation GLBs (no Walking) ─────────────────
 export const CHARACTER_ANIMATION_GLB_URLS: string[] = ANIMATION_GLB_URLS;
 
-// ── 3 video files ─────────────────────────────────────────────────────────────
+// ── 6 video files ─────────────────────────────────────────────────────────────
 export const VIDEO_URLS: string[] = [
   assetUrl('/Animations/Hurt.mp4'),
   assetUrl('/Animations/Dead.mp4'),
   assetUrl('/Animations/Entrance.mp4'),
+  assetUrl('/Animations/1_Meet.mp4'),
+  assetUrl('/Animations/2_Glow_Building.mp4'),
+  assetUrl('/Animations/4_Final.mp4'),
 ];
 
 // ── Tiers ─────────────────────────────────────────────────────────────────────
 /** Mobile/tablet join path: 8 model GLBs + 16 PNGs = 24 assets */
 export const MINIMAL_URLS: string[] = [...MODEL_GLB_URLS, ...PW_PNG_URLS];
 
-/** Full / desktop / mobile host: 26 animation GLBs + 16 PNGs + 3 MP4s = 45 assets */
+/** Full / desktop / mobile host: 26 animation GLBs + 16 PNGs + 6 MP4s = 48 assets */
 export const FULL_URLS: string[] = [...ANIMATION_GLB_URLS, ...PW_PNG_URLS, ...VIDEO_URLS];

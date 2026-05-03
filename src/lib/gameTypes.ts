@@ -1,4 +1,5 @@
 import type { ChickColor } from '@/components/CharacterViewer';
+import type { OverlayVideo } from '@/lib/stageInfo';
 
 export type GameMode = '1v3' | '2v6';
 export type GamePhase = 'lobby' | 'reveal' | 'countdown' | 'playing' | 'exam' | 'gameover';
@@ -219,7 +220,7 @@ export interface GameStateSnapshot {
   players: Record<string, PlayerGameStateSerializable>;
   frozenAll: boolean;
   frozenAllUntil: number;
-  videoPlaying: 'hurt' | 'dead' | null;
+  videoPlaying: OverlayVideo | null;
   propSpawns: PropSpawn[];
   buildings: BuildingState[];
   winner: 'eagle' | 'chicks' | 'draw' | null;

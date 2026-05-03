@@ -31,6 +31,7 @@ import { ColorCodeBalls, ColorCodePicker } from "@/components/ColorCodeBalls";
 import { isColorCode, COLOR_CODE_LETTERS } from "@/lib/colorCode";
 import { AreYouStillTherePrompt } from "@/components/AreYouStillTherePrompt";
 import { GameEndTransition } from "@/components/GameEndTransition";
+import { STAGE_INFO, STAGE_READY_COUNTDOWN_MS } from "@/lib/stageInfo";
 
 import { ExamSubmissionBox } from "@/components/ExamSubmissionBox";
 import { gameLogger } from "@/lib/gameLogger";
@@ -1938,18 +1939,20 @@ export default function Client() {
           style={{ boxShadow: `inset 0 0 80px 20px ${propFlash}` }}
         />
       )}
-      {/* Stage transition overlay — 8s total: 5s instruction + 3s ready-up */}
+      {/* Stage transition overlay — 15s total: 12s instruction + 3s ready-up */}
       {(gameState?.stageTransitionRemainingMs ?? 0) > 0 && (() => {
         const remainMs = gameState.stageTransitionRemainingMs ?? 0;
-        // Client only sees the first 5s (instruction phase), not the last 3s (host-only grab-back)
-        if (remainMs <= 3000) return null;
-        const sec = Math.ceil((remainMs - 3000) / 1000); // countdown from 5
+        // Client only sees the instruction phase, not the last 3s host ready-up.
+        if (remainMs <= STAGE_READY_COUNTDOWN_MS) return null;
+        const sec = Math.ceil((remainMs - STAGE_READY_COUNTDOWN_MS) / 1000);
+        const stageInfo = STAGE_INFO[gameState.stage ?? 0];
         return (
           <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-background/95 backdrop-blur-sm">
-            <div className="text-4xl mb-4">{gameState.stage === 0 ? '🤝' : gameState.stage === 1 ? '📍' : gameState.stage === 2 ? '🔗' : '📝'}</div>
+            <div className="text-4xl mb-4">{stageInfo.icon}</div>
             <h1 className="text-xl font-pixel text-accent tracking-widest mb-2">STAGE {(gameState.stage ?? 0) + 1}</h1>
+            <p className="text-lg font-pixel text-primary text-center px-4">{stageInfo.title}</p>
             <p className="text-sm font-mono text-muted-foreground text-center max-w-xs px-4">
-              {gameState.stage === 0 ? 'Meet ALL other Chicks!' : gameState.stage <= 2 ? 'Get tips & share them!' : 'Run to a building for the exam!'}
+              {stageInfo.instruction}
             </p>
             <div className="text-3xl font-pixel text-primary animate-pulse mt-4">{sec}</div>
           </div>
