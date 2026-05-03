@@ -55,8 +55,11 @@ function EventOverlay({
     .filter((p: any) => p.isEagle && p.alive)
     .reduce((sum: number, p: any) => sum + (event.eagleClicks[p.connId] ?? 0), 0);
   const timeLeft = Math.max(0, Math.ceil((event.endAt - now) / 1000));
-  const mockExamCorrectCount =
-    event.mockExamCorrectCount ?? Object.values(event.mockExamCorrectByPlayer ?? {}).filter(Boolean).length;
+  const mockExamCorrectCount = Math.max(
+    event.mockExamCorrectCount ?? 0,
+    Object.values(event.mockExamCorrectByPlayer ?? {}).filter(Boolean).length,
+    aliveChicks.filter((p: any) => (event.chickClicks[p.connId] ?? 0) > 0).length,
+  );
 
   // Mock exam active: show layer 1 inline (tags hidden via hideOverlays)
   if (event.phase === "active" && event.type === "mock-exam" && event.questionNum) {

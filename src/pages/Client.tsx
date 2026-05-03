@@ -1652,7 +1652,8 @@ export default function Client() {
       // For mock exam, show individual result
       const myMockCorrect =
         !isHitbox && !isCrossy && myState
-          ? activeEvent.mockExamCorrectByPlayer?.[myState.connId] === true
+          ? activeEvent.mockExamCorrectByPlayer?.[myState.connId] === true ||
+            (activeEvent.chickClicks?.[myState.connId] ?? 0) > 0
           : false;
       // For crossy road, show individual crossing count
       const myCrossings = isCrossy && myState ? (activeEvent.crossyPlayerStates?.[myState.connId]?.crossings ?? 0) : 0;

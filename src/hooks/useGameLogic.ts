@@ -1480,7 +1480,6 @@ export function useGameLogic({
                 questionNum: eventType === "mock-exam" ? questionNum : undefined,
                 mockExamSubmitted: eventType === "mock-exam" ? {} : undefined,
                 mockExamCorrectByPlayer: eventType === "mock-exam" ? {} : undefined,
-                mockExamFinishAfterAllSubmitAt: undefined,
                 mockExamCorrectCount: eventType === "mock-exam" ? 0 : undefined,
                 chickClicks: {},
                 eagleClicks: {},
@@ -1511,21 +1510,6 @@ export function useGameLogic({
       if (ev.phase === "countdown" && elapsed >= 3000) {
         ev.phase = "active";
         ev.endAt = now + (ev.type === "hitbox" ? EVENT_HITBOX_DURATION : ev.type === "crossy-road" ? EVENT_CROSSY_DURATION : EVENT_MOCK_DURATION);
-      }
-
-      if (ev.phase === "active" && ev.type === "mock-exam") {
-        const aliveNonBotChickIds = Array.from<PlayerGameState>(gs.playerStates.values())
-          .filter((p) => !p.isEagle && p.alive && !isBotConnId(p.connId))
-          .map((p) => p.connId);
-        const allSubmitted =
-          aliveNonBotChickIds.length > 0 &&
-          aliveNonBotChickIds.every((id) => !!ev.mockExamSubmitted?.[id]);
-        if (allSubmitted) {
-          if (!ev.mockExamFinishAfterAllSubmitAt) {
-            ev.mockExamFinishAfterAllSubmitAt = now + 5000;
-          }
-          ev.endAt = Math.min(ev.endAt, ev.mockExamFinishAfterAllSubmitAt);
-        }
       }
 
       // Crossy Road: simulate lanes each frame during active phase
@@ -1604,7 +1588,9 @@ export function useGameLogic({
           for (const [, p] of gs.playerStates) {
             if (p.isEagle || !p.alive) continue;
 
-            const isCorrect = ev.mockExamCorrectByPlayer[p.connId] === true;
+            const isCorrect =
+              ev.mockExamCorrectByPlayer[p.connId] === true ||
+              (ev.chickClicks[p.connId] ?? 0) > 0;
             ev.mockExamCorrectByPlayer[p.connId] = isCorrect;
             if (isCorrect) {
               correctCount++;
@@ -2568,6 +2554,13 @@ export function useGameLogic({
         const isCorrect = msg.answer.toUpperCase().trim() === correct;
         gs.activeEvent.mockExamCorrectByPlayer[connId] = isCorrect;
         gs.activeEvent.chickClicks[connId] = isCorrect ? 1 : 0;
+        if (isCorrect) {
+          gs.activeEvent.mockExamCorrectCount = Math.max(
+            gs.activeEvent.mockExamCorrectCount ?? 0,
+            Object.values(gs.activeEvent.mockExamCorrectByPlayer).filter(Boolean).length,
+          );
+          gs.activeEvent.result = "chick";
+        }
         break;
       }
 
