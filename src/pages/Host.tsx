@@ -189,6 +189,7 @@ export default function Host() {
   const [revealNow, setRevealNow] = useState(Date.now());
   const [focusPanelOpen, setFocusPanelOpen] = useState(false);
   const { isImmersive } = useImmersive();
+  const showDebugControls = import.meta.env.DEV || devMode;
   const effectiveMode: ConnectionMode = isImmersive ? "webrtc" : mode;
   // Stage transition toast notification
   const [stageToast, setStageToast] = useState<{ stage: number; key: number } | null>(null);
@@ -1036,13 +1037,15 @@ export default function Host() {
         >
           <Settings className="w-3.5 h-3.5" />
         </button>
-        <button
-          onClick={exportDebugLog}
-          className="absolute top-2 left-[6.5rem] z-10 py-1 rounded border border-border bg-card/90 hover:bg-card text-muted-foreground px-[8px] mx-[13px]"
-          title="Download host debug log"
-        >
-          <Download className="w-3.5 h-3.5" />
-        </button>
+        {showDebugControls && (
+          <button
+            onClick={exportDebugLog}
+            className="absolute top-2 left-[6.5rem] z-10 py-1 rounded border border-border bg-card/90 hover:bg-card text-muted-foreground px-[8px] mx-[13px]"
+            title="Download host debug log"
+          >
+            <Download className="w-3.5 h-3.5" />
+          </button>
+        )}
 
         {settingsPanelOpen && <div className="absolute left-2 top-12 z-10 px-2 py-2 rounded bg-card/85 border border-border w-44">
           <div className="flex items-center justify-between text-[10px] font-mono text-muted-foreground mb-1">
@@ -1140,16 +1143,17 @@ export default function Host() {
             </div>
           )}
 
-          {/* Download Action Log */}
-          <div className="mt-2 flex items-center justify-between">
-            <button
-              onClick={() => gameLogger.downloadLogs()}
-              className="flex items-center gap-1 text-[10px] font-mono text-muted-foreground hover:text-foreground transition-colors"
-              title="Download action log (for debugging)"
-            >
-              📋 Logs
-            </button>
-          </div>
+          {showDebugControls && (
+            <div className="mt-2 flex items-center justify-between">
+              <button
+                onClick={() => gameLogger.downloadLogs()}
+                className="flex items-center gap-1 text-[10px] font-mono text-muted-foreground hover:text-foreground transition-colors"
+                title="Download action log (for debugging)"
+              >
+                📋 Logs
+              </button>
+            </div>
+          )}
         </div>}
 
         {/* Eagle awake countdown */}

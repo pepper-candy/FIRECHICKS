@@ -1,6 +1,6 @@
 import { Suspense, useRef, useEffect, useMemo } from "react";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
-import { Grid, Html, Edges } from "@react-three/drei";
+import { Grid, Html, Edges, Text } from "@react-three/drei";
 import * as THREE from "three";
 import CharacterViewer from "@/components/CharacterViewer";
 import { MAP_SIZE, MAP_HALF, ZONE_RADIUS, TIP_SHARE_RADIUS } from "@/lib/gameplayMapData";
@@ -12,6 +12,8 @@ import type { NatureObstacle } from "@/lib/mapVariants";
 
 const FLY_SPEED_MULTIPLIER = 3;
 const WORLD_SCALE = 0.5; // Shrinks visual map without affecting game logic
+const CHARACTER_VISUAL_SCALE = 1.5 / WORLD_SCALE;
+const DEBUG_MODE = true;
 
 // ─── Static Day Lighting ─────────────────────────────────────────────────────
 function DayLighting() {
@@ -207,26 +209,35 @@ function Bush({ position, scale = 1 }: { position: { x: number; z: number }; sca
   );
 }
 
-function NatureObstacleRenderer({ obstacle, index, devMode }: { obstacle: NatureObstacle; index?: number; devMode?: boolean }) {
-  // In devMode, replace all nature with simple colored boxes
+function NatureObstacleRenderer({
+  obstacle,
+  index,
+  devMode,
+}: {
+  obstacle: NatureObstacle;
+  index?: number;
+  devMode?: boolean;
+}) {
   if (devMode) {
-    const s = obstacle.scale ?? 1;
+    const bounds = getNatureDebugDimensions(obstacle);
+    const label = `N${index ?? 0} (${obstacle.position.x}, ${obstacle.position.z})`;
     return (
       <group position={[obstacle.position.x, 0, obstacle.position.z]}>
-        <Html position={[0, s * 2 + 1, 0]} center zIndexRange={[100, 0]}>
-          <div style={{ color: getDebugColor('nature'), fontSize: 9, fontFamily: 'monospace', background: 'rgba(0,0,0,0.7)', padding: '1px 4px', borderRadius: 2, whiteSpace: 'nowrap' }}>
-            {obstacle.type.toUpperCase()}{index !== undefined ? ` #${index}` : ''}
-          </div>
-        </Html>
-        <mesh position={[0, s * 0.8, 0]}>
-          <boxGeometry args={[s * 0.6, s * 1.6, s * 0.6]} />
-          <meshStandardMaterial color={getDebugColor('nature')} emissive={getDebugColor('nature')} emissiveIntensity={0.3} transparent opacity={0.5} />
+        <DebugLabel position={[0, bounds.h + 1, 0]} color={getDebugColor("nature")} label={label} />
+        <mesh position={[0, bounds.h / 2, 0]} rotation={[0, obstacle.rotation ?? 0, 0]}>
+          <boxGeometry args={[bounds.w, bounds.h, bounds.d]} />
+          <meshStandardMaterial
+            color={getDebugColor("nature")}
+            emissive={getDebugColor("nature")}
+            emissiveIntensity={0.2}
+            transparent
+            opacity={0.65}
+          />
         </mesh>
       </group>
     );
   }
 
-  // Normal rendering
   switch (obstacle.type) {
     case "tree":
       return <Tree position={obstacle.position} scale={obstacle.scale} />;
@@ -266,6 +277,35 @@ interface Props {
 // Helper: derive themed colors from a hue (0-360)
 function themedColor(hue: number, saturation: number, lightness: number): string {
   return `hsl(${hue}, ${saturation}%, ${lightness}%)`;
+}
+
+function darkenColor(color: string, factor = 0.82): string {
+  const value = new THREE.Color(color).multiplyScalar(factor);
+  return `#${value.getHexString()}`;
+}
+
+function DebugLabel({
+  position,
+  color,
+  label,
+}: {
+  position: [number, number, number];
+  color: string;
+  label: string;
+}) {
+  return (
+    <Text
+      position={position}
+      fontSize={0.7}
+      color={color}
+      anchorX="center"
+      anchorY="middle"
+      outlineWidth={0.06}
+      outlineColor="#000000"
+    >
+      {label}
+    </Text>
+  );
 }
 
 // ─── Immersive Atmosphere ─────────────────────────────────────────────────────
@@ -366,6 +406,22 @@ function getDebugColor(type: 'building' | 'obstacle' | 'nature'): string {
   }
 }
 
+function getNatureDebugDimensions(obstacle: NatureObstacle) {
+  const scale = obstacle.scale ?? 1;
+  switch (obstacle.type) {
+    case "tree":
+      return { w: 1.6 * scale, h: 4.8 * scale, d: 1.6 * scale };
+    case "pond":
+      return { w: 3.2 * scale, h: 0.2, d: 3.2 * scale };
+    case "rock":
+      return { w: 1.6 * scale, h: 1.0 * scale, d: 1.4 * scale };
+    case "bush":
+      return { w: 1.2 * scale, h: 0.9 * scale, d: 1.2 * scale };
+    default:
+      return { w: scale, h: scale, d: scale };
+  }
+}
+
 // ─── Building ──────────────────────────────────────────────────────────────────
 function Building({
   position,
@@ -379,6 +435,7 @@ function Building({
   lightMode,
   hideOverlays,
   devMode,
+  label,
 }: {
   position: { x: number; z: number };
   size: { w: number; h: number; d: number };
@@ -390,7 +447,8 @@ function Building({
   immersive?: boolean;
   lightMode?: boolean;
   hideOverlays?: boolean;
-  devMode?: boolean;  // ← ADD THIS LINE
+  devMode?: boolean;
+  label?: string;
 }) {
   const pulseRef = useRef(0);
   useFrame((_, delta) => {
@@ -400,13 +458,7 @@ function Building({
 
   return (
     <group position={[position.x, 0, position.z]}>
-      {devMode && (
-        <Html position={[0, size.h + 3, 0]} center zIndexRange={[100, 0]}>
-          <div style={{ color: getDebugColor('building'), fontSize: 10, fontFamily: 'monospace', background: 'rgba(0,0,0,0.7)', padding: '1px 4px', borderRadius: 2, whiteSpace: 'nowrap' }}>
-            BUILDING
-          </div>
-        </Html>
-      )}
+      {devMode && label && <DebugLabel position={[0, size.h + 1.2, 0]} color={getDebugColor("building")} label={label} />}
       <mesh position={[0, size.h / 2, 0]}>
         <boxGeometry args={[size.w, size.h, size.d]} />
         <meshStandardMaterial
@@ -485,6 +537,7 @@ function Obstacle({
   baseEmissive,
   lightMode,
   devMode,
+  label,
 }: {
   position: { x: number; z: number };
   size: { w: number; h: number; d: number };
@@ -492,17 +545,12 @@ function Obstacle({
   baseColor?: string;
   baseEmissive?: string;
   lightMode?: boolean;
-  devMode?: boolean;  // ← ADD THIS LINE
+  devMode?: boolean;
+  label?: string;
 }) {
   return (
     <group position={[position.x, 0, position.z]}>
-      {devMode && (
-        <Html position={[0, size.h + 1.5, 0]} center zIndexRange={[100, 0]}>
-          <div style={{ color: getDebugColor('obstacle'), fontSize: 9, fontFamily: 'monospace', background: 'rgba(0,0,0,0.7)', padding: '1px 4px', borderRadius: 2, whiteSpace: 'nowrap' }}>
-            OBS
-          </div>
-        </Html>
-      )}
+      {devMode && label && <DebugLabel position={[0, size.h + 0.9, 0]} color={getDebugColor("obstacle")} label={label} />}
       <mesh position={[0, size.h / 2, 0]} rotation={[0, rotation ?? 0, 0]}>
         <boxGeometry args={[size.w, size.h, size.d]} />
         <meshStandardMaterial
@@ -515,6 +563,50 @@ function Obstacle({
         {lightMode && !devMode && <Edges scale={1.005} threshold={12} color="#222222" />}
       </mesh>
     </group>
+  );
+}
+
+function InstancedObstacleLayer({
+  obstacles,
+  color,
+  emissive,
+  lightMode,
+}: {
+  obstacles: Array<{
+    position: { x: number; z: number };
+    size: { w: number; h: number; d: number };
+    rotation?: number;
+  }>;
+  color: string;
+  emissive: string;
+  lightMode?: boolean;
+}) {
+  const meshRef = useRef<THREE.InstancedMesh>(null!);
+  const dummy = useMemo(() => new THREE.Object3D(), []);
+
+  useEffect(() => {
+    if (!meshRef.current) return;
+    obstacles.forEach((obstacle, index) => {
+      dummy.position.set(obstacle.position.x, obstacle.size.h / 2, obstacle.position.z);
+      dummy.rotation.set(0, obstacle.rotation ?? 0, 0);
+      dummy.scale.set(obstacle.size.w, obstacle.size.h, obstacle.size.d);
+      dummy.updateMatrix();
+      meshRef.current.setMatrixAt(index, dummy.matrix);
+    });
+    meshRef.current.instanceMatrix.needsUpdate = true;
+  }, [dummy, obstacles]);
+
+  if (obstacles.length === 0) return null;
+
+  return (
+    <instancedMesh ref={meshRef} args={[undefined, undefined, obstacles.length]} castShadow receiveShadow>
+      <boxGeometry args={[1, 1, 1]} />
+      <meshStandardMaterial
+        color={color}
+        emissive={emissive}
+        emissiveIntensity={lightMode ? 0.05 : 0.3}
+      />
+    </instancedMesh>
   );
 }
 
@@ -833,7 +925,7 @@ function GameCharacter({
     <group position={[player.position.x, 0, player.position.z]}>
       {isInvincible && <InvincibleRipple3D />}
       {isCaged && <CageMesh countdown={cageRemaining} />}
-      <group scale={1.5}>
+      <group scale={CHARACTER_VISUAL_SCALE}>
         <Suspense fallback={null}>
           <CharacterViewer color={color.chickColor} animState={anim} facingAngle={player.facingAngle} />
         </Suspense>
@@ -870,8 +962,10 @@ function GameCharacter({
                 const plane = planeRef.current();
                 const hit = raycaster.ray.intersectPlane(plane, pt);
                 if (!hit) return null;
-                const valid = Math.abs(pt.x) <= MAP_HALF && Math.abs(pt.z) <= MAP_HALF;
-                return { x: pt.x, z: pt.z, valid };
+                const logicalX = pt.x / WORLD_SCALE;
+                const logicalZ = pt.z / WORLD_SCALE;
+                const valid = Math.abs(logicalX) <= MAP_HALF && Math.abs(logicalZ) <= MAP_HALF;
+                return { x: logicalX, z: logicalZ, valid };
               };
               const move = (ev: PointerEvent) => {
                 const hit = computeHit(ev);
@@ -920,10 +1014,11 @@ export default function GameplayMap({
   immersive = false,
   themeMode = "dark",
   hideOverlays = false,
-  devMode = false,  // ← ADD THIS LINE
+  devMode = false,
 }: Props) {
   const playerList = Object.values(players);
   const mapVariant = useMemo(() => getMapVariant(mapId), [mapId]);
+  const debugMode = DEBUG_MODE || devMode;
   const isLight = themeMode === "light";
   const isSemi = themeMode === "semi";
   const hasEdges = isLight || isSemi; // both light modes get edges
@@ -957,6 +1052,7 @@ export default function GameplayMap({
   const buildingEmissive = isLight || isSemi ? "#cccccc" : hasTheme ? themedColor(themeHue, 35, 14) : "#1a1a3a";
   const obstacleColor = isLight || isSemi ? "#d8d8d8" : hasTheme ? themedColor(themeHue, 40, 25) : "#1e3a5f";
   const obstacleEmissive = isLight || isSemi ? "#bbbbbb" : hasTheme ? themedColor(themeHue, 45, 12) : "#0a1a3a";
+  const floorVisualColor = useMemo(() => darkenColor(floorColor, debugMode ? 0.55 : 0.82), [debugMode, floorColor]);
 
   return (
     <div
@@ -983,190 +1079,185 @@ export default function GameplayMap({
         {immersive && !isLight && !isSemi && <SceneFog color="#050510" density={0.008} />}
         {immersive && !isLight && !isSemi && <MapParticles />}
 
-        {/* ─── SCALED MAP CONTAINER ─── */}
-        <group scale={[WORLD_SCALE, WORLD_SCALE, WORLD_SCALE]}></group>
-
-        {/* Floor — slightly darkened for contrast */}
-        <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.01, 0]} receiveShadow>
-          <planeGeometry args={[MAP_SIZE, MAP_SIZE]} />
-          <meshStandardMaterial 
-            color={devMode ? '#111111' : floorColor} 
-            roughness={0.9}
-          />
-        </mesh>
-
-        {/* Grid */}
-        <Grid
-          args={[MAP_SIZE, MAP_SIZE]}
-          position={[0, 0, 0]}
-          cellSize={2}
-          cellThickness={0.3}
-          cellColor={gridCell}
-          sectionSize={8}
-          sectionThickness={0.6}
-          sectionColor={gridSection}
-          fadeDistance={80}
-        />
-
-        {/* Map boundary walls */}
-        {[
-          [0, 0.5, -MAP_SIZE / 2, MAP_SIZE, 1, 0.3] as const,
-          [0, 0.5, MAP_SIZE / 2, MAP_SIZE, 1, 0.3] as const,
-          [-MAP_SIZE / 2, 0.5, 0, 0.3, 1, MAP_SIZE] as const,
-          [MAP_SIZE / 2, 0.5, 0, 0.3, 1, MAP_SIZE] as const,
-        ].map(([x, y, z, w, h, d], i) => (
-          <mesh key={`wall-${i}`} position={[x, y, z]}>
-            <boxGeometry args={[w, h, d]} />
-            <meshStandardMaterial
-              color={wallColor}
-              emissive={wallEmissive}
-              emissiveIntensity={0.4}
-              transparent
-              opacity={0.7}
-            />
+        <group scale={[WORLD_SCALE, WORLD_SCALE, WORLD_SCALE]}>
+          <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.01, 0]} receiveShadow>
+            <planeGeometry args={[MAP_SIZE, MAP_SIZE]} />
+            <meshStandardMaterial color={floorVisualColor} roughness={0.9} />
           </mesh>
-        ))}
 
-        {/* Buildings — use map variant data */}
-        {mapVariant.buildings.map((b) => {
-          const bState = buildings?.find((bs) => bs.id === b.id);
-          return (
-            <Building
-              key={b.id}
-              position={b.position}
-              size={b.size}
-              tipSiteActive={!!bState?.hasTip && !bState?.tipObtained}
-              zoneActive={bState?.zoneActive}
-              zoneHealth={bState?.zoneHealth}
-              baseColor={buildingColor}
-              baseEmissive={buildingEmissive}
-              immersive={immersive}
-              lightMode={hasEdges}
-              hideOverlays={hideOverlays}
-            />
-          );
-        })}
-
-        {/* Box Obstacles */}
-        {mapVariant.obstacles.map((o, i) => (
-          <Obstacle
-            key={i}
-            position={o.position}
-            size={o.size}
-            rotation={o.rotation}
-            baseColor={obstacleColor}
-            baseEmissive={obstacleEmissive}
-            lightMode={hasEdges}
+          <Grid
+            args={[MAP_SIZE, MAP_SIZE]}
+            position={[0, 0, 0]}
+            cellSize={2}
+            cellThickness={0.3}
+            cellColor={gridCell}
+            sectionSize={8}
+            sectionThickness={0.6}
+            sectionColor={gridSection}
+            fadeDistance={80}
           />
-        ))}
 
-        {/* Nature Obstacles */}
-        {mapVariant.natureObstacles.map((no, i) => (
-          <NatureObstacleRenderer key={`nature-${i}`} obstacle={no} index={i} />
-        ))}
-
-        {/* Prop spawns */}
-        {!hideOverlays &&
-          propSpawns?.filter((p) => p.active).map((spawn) => <PropMarker key={spawn.id} spawn={spawn} />)}
-
-        {/* Mystery boxes */}
-        {!hideOverlays && mysteryBoxes?.map((box) => <MysteryBoxMarker key={box.id} box={box} immersive={immersive} />)}
-
-        {/* Characters */}
-        {!hideOverlays &&
-          playerList.map((p) => (
-            <GameCharacter
-              key={p.connId}
-              player={p}
-              enableHostDrag={enableHostDrag}
-              onHostDragBegin={onHostDragBegin}
-              onHostDragUpdate={onHostDragUpdate}
-              onHostDragEnd={onHostDragEnd}
-            />
+          {[
+            [0, 0.5, -MAP_SIZE / 2, MAP_SIZE, 1, 0.3] as const,
+            [0, 0.5, MAP_SIZE / 2, MAP_SIZE, 1, 0.3] as const,
+            [-MAP_SIZE / 2, 0.5, 0, 0.3, 1, MAP_SIZE] as const,
+            [MAP_SIZE / 2, 0.5, 0, 0.3, 1, MAP_SIZE] as const,
+          ].map(([x, y, z, w, h, d], i) => (
+            <mesh key={`wall-${i}`} position={[x, y, z]}>
+              <boxGeometry args={[w, h, d]} />
+              <meshStandardMaterial
+                color={wallColor}
+                emissive={wallEmissive}
+                emissiveIntensity={0.4}
+                transparent
+                opacity={0.7}
+              />
+            </mesh>
           ))}
 
-        {/* Teleport target dots */}
-        {!hideOverlays &&
-          playerList
-            .filter((p) => p.teleportPending && p.alive)
-            .map((p) => {
-              const color = PLAYER_COLORS[p.colorIndex];
-              return color ? <TeleportDot key={`tp-${p.connId}`} position={p.teleportTarget} hsl={color.hsl} /> : null;
-            })}
-
-        {/* Tip share radius circles */}
-        {!hideOverlays &&
-          activeTipShareConnIds?.map((connId) => {
-            const p = players[connId];
-            return p ? <TipShareRadiusCircle key={`tsr-${connId}`} position={p.position} /> : null;
+          {mapVariant.buildings.map((b) => {
+            const bState = buildings?.find((bs) => bs.id === b.id);
+            return (
+              <Building
+                key={b.id}
+                position={b.position}
+                size={b.size}
+                tipSiteActive={!!bState?.hasTip && !bState?.tipObtained}
+                zoneActive={bState?.zoneActive}
+                zoneHealth={bState?.zoneHealth}
+                baseColor={buildingColor}
+                baseEmissive={buildingEmissive}
+                immersive={immersive}
+                lightMode={hasEdges}
+                hideOverlays={hideOverlays}
+                devMode={debugMode}
+                label={`B${b.id} (${b.position.x}, ${b.position.z})`}
+              />
+            );
           })}
 
-        {/* Eagle awake countdown */}
-        {!hideOverlays && eagleAwake === false && (
-          <mesh position={[0, 0.5, 0]}>
-            <cylinderGeometry args={[1.5, 1.5, 0.1, 24]} />
-            <meshStandardMaterial
-              color="#ff4444"
-              emissive="#ff0000"
-              emissiveIntensity={0.8}
-              transparent
-              opacity={0.4}
+          {debugMode ? (
+            mapVariant.obstacles.map((o, i) => (
+              <Obstacle
+                key={i}
+                position={o.position}
+                size={o.size}
+                rotation={o.rotation}
+                baseColor={obstacleColor}
+                baseEmissive={obstacleEmissive}
+                lightMode={hasEdges}
+                devMode
+                label={`O${i} (${o.position.x}, ${o.position.z})`}
+              />
+            ))
+          ) : (
+            <InstancedObstacleLayer
+              obstacles={mapVariant.obstacles}
+              color={obstacleColor}
+              emissive={obstacleEmissive}
+              lightMode={hasEdges}
             />
-          </mesh>
-        )}
+          )}
 
-        {/* Exam stage indicator + host skip */}
-        {!hideOverlays && examState && !examState.answered && (
-          <Html position={[0, 8, 0]} center zIndexRange={[100, 0]}>
-            <div
-              style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 8, pointerEvents: "none" }}
-            >
+          {mapVariant.natureObstacles.map((no, i) => (
+            <NatureObstacleRenderer key={`nature-${i}`} obstacle={no} index={i} devMode={debugMode} />
+          ))}
+
+          {!hideOverlays &&
+            propSpawns?.filter((p) => p.active).map((spawn) => <PropMarker key={spawn.id} spawn={spawn} />)}
+
+          {!hideOverlays && mysteryBoxes?.map((box) => <MysteryBoxMarker key={box.id} box={box} immersive={immersive} />)}
+
+          {!hideOverlays &&
+            playerList.map((p) => (
+              <GameCharacter
+                key={p.connId}
+                player={p}
+                enableHostDrag={enableHostDrag}
+                onHostDragBegin={onHostDragBegin}
+                onHostDragUpdate={onHostDragUpdate}
+                onHostDragEnd={onHostDragEnd}
+              />
+            ))}
+
+          {!hideOverlays &&
+            playerList
+              .filter((p) => p.teleportPending && p.alive)
+              .map((p) => {
+                const color = PLAYER_COLORS[p.colorIndex];
+                return color ? <TeleportDot key={`tp-${p.connId}`} position={p.teleportTarget} hsl={color.hsl} /> : null;
+              })}
+
+          {!hideOverlays &&
+            activeTipShareConnIds?.map((connId) => {
+              const p = players[connId];
+              return p ? <TipShareRadiusCircle key={`tsr-${connId}`} position={p.position} /> : null;
+            })}
+
+          {!hideOverlays && eagleAwake === false && (
+            <mesh position={[0, 0.5, 0]}>
+              <cylinderGeometry args={[1.5, 1.5, 0.1, 24]} />
+              <meshStandardMaterial
+                color="#ff4444"
+                emissive="#ff0000"
+                emissiveIntensity={0.8}
+                transparent
+                opacity={0.4}
+              />
+            </mesh>
+          )}
+
+          {!hideOverlays && examState && !examState.answered && (
+            <Html position={[0, 8, 0]} center zIndexRange={[100, 0]}>
               <div
-                style={{
-                  background: "rgba(0,0,0,0.8)",
-                  border: "2px solid #ffd700",
-                  borderRadius: 6,
-                  padding: "4px 10px",
-                  color: "#ffd700",
-                  fontSize: 13,
-                  fontFamily: "monospace",
-                  fontWeight: "bold",
-                  whiteSpace: "nowrap",
-                }}
+                style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 8, pointerEvents: "none" }}
               >
-                📝 FINAL EXAM — {Math.ceil(examState.timeRemaining)}s
-              </div>
-              {onHostSkipExam && (
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onHostSkipExam();
-                  }}
+                <div
                   style={{
-                    pointerEvents: "auto",
-                    cursor: "pointer",
-                    fontSize: 11,
-                    fontFamily: "monospace",
-                    padding: "6px 12px",
+                    background: "rgba(0,0,0,0.8)",
+                    border: "2px solid #ffd700",
                     borderRadius: 6,
-                    border: "1px solid hsl(45 100% 45%)",
-                    background: "rgba(0,0,0,0.85)",
+                    padding: "4px 10px",
                     color: "#ffd700",
+                    fontSize: 13,
+                    fontFamily: "monospace",
                     fontWeight: "bold",
+                    whiteSpace: "nowrap",
                   }}
                 >
-                  Skip EXAM
-                </button>
-              )}
-            </div>
-          </Html>
-        )}
-        {/* Debug Grid Helper */}
-        {devMode && (
-          <gridHelper args={[MAP_SIZE, MAP_SIZE / 2, '#666666', '#444444']} position={[0, 0.02, 0]} />
-        )}
-        {/* ─── END SCALED MAP CONTAINER ─── */}
+                  📝 FINAL EXAM — {Math.ceil(examState.timeRemaining)}s
+                </div>
+                {onHostSkipExam && (
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onHostSkipExam();
+                    }}
+                    style={{
+                      pointerEvents: "auto",
+                      cursor: "pointer",
+                      fontSize: 11,
+                      fontFamily: "monospace",
+                      padding: "6px 12px",
+                      borderRadius: 6,
+                      border: "1px solid hsl(45 100% 45%)",
+                      background: "rgba(0,0,0,0.85)",
+                      color: "#ffd700",
+                      fontWeight: "bold",
+                    }}
+                  >
+                    Skip EXAM
+                  </button>
+                )}
+              </div>
+            </Html>
+          )}
+
+          {debugMode && (
+            <gridHelper args={[MAP_SIZE, MAP_SIZE / 2, "#666666", "#444444"]} position={[0, 0.02, 0]} />
+          )}
+        </group>
       </Canvas>
     </div>
   );
