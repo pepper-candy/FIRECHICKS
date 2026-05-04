@@ -283,7 +283,7 @@ export type ClientMessage =
   | { type: 'tip-request'; tipIndex: 0 | 1 }
   | { type: 'event-hitbox-click' }
   | { type: 'event-hitbox-batch'; taps: number }  // ← ADD THIS
-  | { type: 'event-answer'; answer: string }
+  | { type: 'event-answer'; answer: string; isCorrect: boolean }
   | { type: 'crossy-hop'; direction: 'up' | 'down' }
   | { type: 'crossy-crossing'; crossings: number }  // ← ADD THIS
   | { type: 'crossy-eagle-action'; action: 'speed-up' | 'add-obstacle' }

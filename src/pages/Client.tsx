@@ -32,6 +32,7 @@ import { isColorCode, COLOR_CODE_LETTERS } from "@/lib/colorCode";
 import { AreYouStillTherePrompt } from "@/components/AreYouStillTherePrompt";
 import { GameEndTransition } from "@/components/GameEndTransition";
 import { STAGE_INFO, STAGE_READY_COUNTDOWN_MS } from "@/lib/stageInfo";
+import { isMockExamAnswerCorrect } from "@/lib/mockExam";
 
 import { ExamSubmissionBox } from "@/components/ExamSubmissionBox";
 import { gameLogger } from "@/lib/gameLogger";
@@ -1615,7 +1616,11 @@ export default function Client() {
                   className="flex-1 uppercase font-mono"
                   onKeyDown={(e) => {
                     if (e.key === "Enter" && eventAnswer.trim()) {
-                      sendToHost({ type: "event-answer", answer: eventAnswer.trim() });
+                      sendToHost({
+                        type: "event-answer",
+                        answer: eventAnswer.trim(),
+                        isCorrect: isMockExamAnswerCorrect(activeEvent.questionNum ?? 0, eventAnswer.trim()),
+                      });
                       setHasSubmittedMockExam(true);
                       setEventAnswer("");
                     }
@@ -1624,7 +1629,11 @@ export default function Client() {
                 <Button
                   onClick={() => {
                     if (eventAnswer.trim()) {
-                      sendToHost({ type: "event-answer", answer: eventAnswer.trim() });
+                      sendToHost({
+                        type: "event-answer",
+                        answer: eventAnswer.trim(),
+                        isCorrect: isMockExamAnswerCorrect(activeEvent.questionNum ?? 0, eventAnswer.trim()),
+                      });
                       setHasSubmittedMockExam(true);
                       setEventAnswer("");
                     }

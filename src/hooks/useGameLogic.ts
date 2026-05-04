@@ -43,6 +43,7 @@ import type { PlayerState, ConnectionMode } from "@/hooks/useGameRoom";
 import type { ChickColor } from "@/components/CharacterViewer";
 import { updateBot, isBot } from "@/lib/botAI";
 import { gameLogger } from "@/lib/gameLogger";
+import { normalizeMockExamAnswer } from "@/lib/mockExam";
 import type { OverlayVideo } from "@/lib/stageInfo";
 import { STAGE_TRANSITION_TOTAL_MS } from "@/lib/stageInfo";
 
@@ -103,16 +104,6 @@ const FINAL_ANSWER_KEY: Record<number, string> = {
   3: "FIRE",
   4: "RED",
 };
-const MOCK_ANSWER_KEY: Record<number, string> = {
-  1: "UST",
-  2: "11M",
-  3: "BIRD",
-  4: "HALL",
-};
-
-function normalizeMockExamAnswer(answer: string): string {
-  return answer.toUpperCase().replace(/[^A-Z0-9]/g, "");
-}
 
 // ─── Interfaces ───────────────────────────────────────────────────────────────
 interface BuildingTimer {
@@ -1606,18 +1597,16 @@ export function useGameLogic({
             }
           }
         } else if (ev.type === "mock-exam") {
-          // Individual scoring: each alive chick is graded on their own answer.
+          // Individual scoring: each alive chick is graded from their submitted correctness.
           let correctCount = 0;
-          const questionNum = ev.questionNum ?? 1;
-          const expectedAnswer = normalizeMockExamAnswer(MOCK_ANSWER_KEY[questionNum] ?? "");
-          ev.mockExamAnswersByPlayer = ev.mockExamAnswersByPlayer ?? {};
+          ev.mockExamSubmitted = ev.mockExamSubmitted ?? {};
           ev.mockExamCorrectByPlayer = ev.mockExamCorrectByPlayer ?? {};
 
           for (const [, p] of gs.playerStates) {
             if (p.isEagle || !p.alive) continue;
 
-            const submittedAnswer = normalizeMockExamAnswer(ev.mockExamAnswersByPlayer[p.connId] ?? "");
-            const isCorrect = submittedAnswer.length > 0 && submittedAnswer === expectedAnswer;
+            const isSubmitted = ev.mockExamSubmitted[p.connId] === true;
+            const isCorrect = isSubmitted && ev.mockExamCorrectByPlayer[p.connId] === true;
             ev.mockExamCorrectByPlayer[p.connId] = isCorrect;
             ev.chickClicks[p.connId] = isCorrect ? 1 : 0;
             if (isCorrect) {
@@ -2570,10 +2559,8 @@ export function useGameLogic({
         gs.activeEvent.mockExamCorrectByPlayer = gs.activeEvent.mockExamCorrectByPlayer ?? {};
         if (gs.activeEvent.mockExamSubmitted[connId]) return;
         gs.activeEvent.mockExamSubmitted[connId] = true;
-        const questionNum = gs.activeEvent.questionNum ?? 1;
-        const correct = normalizeMockExamAnswer(MOCK_ANSWER_KEY[questionNum] ?? "");
         const submittedAnswer = normalizeMockExamAnswer(msg.answer);
-        const isCorrect = submittedAnswer.length > 0 && submittedAnswer === correct;
+        const isCorrect = submittedAnswer.length > 0 && msg.isCorrect === true;
         gs.activeEvent.mockExamAnswersByPlayer[connId] = submittedAnswer;
         gs.activeEvent.mockExamCorrectByPlayer[connId] = isCorrect;
         gs.activeEvent.chickClicks[connId] = isCorrect ? 1 : 0;
