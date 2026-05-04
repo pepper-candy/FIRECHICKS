@@ -705,7 +705,7 @@ function PropMarker({ spawn }: { spawn: PropSpawn }) {
   const innerRef = useRef<THREE.Mesh>(null!);
   const color = PROP_COLORS[spawn.type] ?? "#ffffff";
   const icon = spawn.type === "speed" ? "⚡" : "💚";
-  const BALL_R = 1.5;
+  const BALL_R = 1.2;
 
   useFrame((_, delta) => {
     const t = Date.now() * 0.002;
