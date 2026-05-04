@@ -13,7 +13,7 @@ import type { NatureObstacle } from "@/lib/mapVariants";
 const FLY_SPEED_MULTIPLIER = 3;
 const WORLD_SCALE = 0.5; // Shrinks visual map without affecting game logic
 const CHARACTER_VISUAL_SCALE = 1.5 / WORLD_SCALE;
-const DEBUG_MODE = true;
+const DEBUG_MODE = false;
 const HOST_CAMERA_BASE_ZOOM = 2;
 const HOST_CAMERA_POSITION: readonly [number, number, number] = [0, 48.75, 35.7];
 const HOST_CAMERA_LOOK_AT: readonly [number, number, number] = [0, -3, 0];
@@ -526,6 +526,117 @@ function Building({
   );
 }
 
+// Bookshelf building for Map1 grassland mode
+function BookshelfBuilding({
+  position,
+  size,
+  tipSiteActive,
+  zoneActive,
+  zoneHealth,
+  immersive,
+  lightMode,
+  hideOverlays,
+}: {
+  position: { x: number; z: number };
+  size: { w: number; h: number; d: number };
+  tipSiteActive?: boolean;
+  zoneActive?: boolean;
+  zoneHealth?: number;
+  immersive?: boolean;
+  lightMode?: boolean;
+  hideOverlays?: boolean;
+}) {
+  const woodColor = "#8b5a2b";
+  const bookColors = ["#c44", "#4c4", "#44c", "#cc4", "#c4c"];
+  const shelfHeight = 0.25;
+  const shelfCount = 4;
+  const startY = 0.4;
+  const shelfInterval = (size.h - 0.8) / (shelfCount + 1);
+
+  return (
+    <group position={[position.x, 0, position.z]}>
+      {/* Main wooden frame */}
+      <mesh position={[0, size.h / 2, 0]}>
+        <boxGeometry args={[size.w, size.h, size.d]} />
+        <meshStandardMaterial color={woodColor} roughness={0.4} />
+      </mesh>
+
+      {/* Shelves */}
+      {Array.from({ length: shelfCount }).map((_, i) => {
+        const y = startY + (i + 1) * shelfInterval;
+        return (
+          <mesh key={`shelf-${i}`} position={[0, y, 0]}>
+            <boxGeometry args={[size.w - 0.2, shelfHeight, size.d + 0.1]} />
+            <meshStandardMaterial color="#a06e3a" roughness={0.7} />
+          </mesh>
+        );
+      })}
+
+      {/* Books on shelves */}
+      {Array.from({ length: shelfCount }).map((_, shelfIdx) => {
+        const y = startY + (shelfIdx + 1) * shelfInterval + 0.1;
+        const booksPerShelf = 4 + Math.floor(Math.random() * 3);
+        const bookWidth = (size.w - 0.6) / booksPerShelf;
+        return Array.from({ length: booksPerShelf }).map((_, bookIdx) => {
+          const x = -size.w / 2 + 0.4 + bookIdx * bookWidth + bookWidth / 2;
+          const color = bookColors[bookIdx % bookColors.length];
+          const bookHeight = 0.8 + Math.random() * 0.3;
+          return (
+            <mesh
+              key={`book-${shelfIdx}-${bookIdx}`}
+              position={[x, y - 0.15, size.d / 2 - 0.2]}
+              scale={[bookWidth, bookHeight, 0.4]}
+            >
+              <boxGeometry args={[1, 1, 1]} />
+              <meshStandardMaterial color={color} roughness={0.3} />
+            </mesh>
+          );
+        });
+      })}
+
+      {/* Top decoration */}
+      <mesh position={[0, size.h - 0.1, 0]}>
+        <boxGeometry args={[size.w + 0.2, 0.2, size.d + 0.2]} />
+        <meshStandardMaterial color="#a06e3a" />
+      </mesh>
+
+      {/* Zone effects (same as original Building) */}
+      {zoneActive && (
+        <mesh position={[0, 1.5, 0]}>
+          <sphereGeometry args={[ZONE_RADIUS, 24, 24]} />
+          <meshStandardMaterial
+            color="#ffd700"
+            emissive="#ffd700"
+            emissiveIntensity={0.3}
+            transparent
+            opacity={0.15}
+            side={THREE.DoubleSide}
+          />
+        </mesh>
+      )}
+      {zoneActive && zoneHealth !== undefined && !hideOverlays && (
+        <Html position={[0, size.h + 1.5, 0]} center zIndexRange={[100, 0]}>
+          <div
+            style={{
+              background: "rgba(0,0,0,0.7)",
+              border: "1px solid #ffd700",
+              borderRadius: 4,
+              padding: "2px 6px",
+              color: "#ffd700",
+              fontSize: 11,
+              fontFamily: "monospace",
+              whiteSpace: "nowrap",
+              pointerEvents: "none",
+            }}
+          >
+            🛡 {zoneHealth}/50
+          </div>
+        </Html>
+      )}
+    </group>
+  );
+}
+
 // ─── Obstacle ──────────────────────────────────────────────────────────────────
 function Obstacle({
   position,
@@ -1017,6 +1128,7 @@ export default function GameplayMap({
   const playerList = Object.values(players);
   const mapVariant = useMemo(() => getMapVariant(mapId), [mapId]);
   const debugMode = DEBUG_MODE || devMode;
+  const grasslandMode = mapId === 1 && !debugMode;
   const isLight = themeMode === "light";
   const isSemi = themeMode === "semi";
   const hasEdges = isLight || isSemi; // both light modes get edges
@@ -1078,83 +1190,168 @@ export default function GameplayMap({
         {immersive && !isLight && !isSemi && <MapParticles />}
 
         <group scale={[WORLD_SCALE, WORLD_SCALE, WORLD_SCALE]}>
+          {/* Ground */}
           <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.01, 0]} receiveShadow>
             <planeGeometry args={[MAP_SIZE, MAP_SIZE]} />
-            <meshStandardMaterial color={floorVisualColor} roughness={0.9} />
+            <meshStandardMaterial 
+              color={grasslandMode ? "#4a784a" : floorVisualColor} 
+              roughness={0.9}
+            />
           </mesh>
 
-          <Grid
-            args={[MAP_SIZE, MAP_SIZE]}
-            position={[0, 0, 0]}
-            cellSize={2}
-            cellThickness={0.3}
-            cellColor={gridCell}
-            sectionSize={8}
-            sectionThickness={0.6}
-            sectionColor={gridSection}
-            fadeDistance={80}
-          />
+          {/* Grid – only show when NOT grassland */}
+          {!grasslandMode && (
+            <Grid
+              args={[MAP_SIZE, MAP_SIZE]}
+              position={[0, 0, 0]}
+              cellSize={2}
+              cellThickness={0.3}
+              cellColor={gridCell}
+              sectionSize={8}
+              sectionThickness={0.6}
+              sectionColor={gridSection}
+              fadeDistance={80}
+            />
+          )}
+          {/* Subtle grid for grassland (barely visible) */}
+          {grasslandMode && (
+            <Grid
+              args={[MAP_SIZE, MAP_SIZE]}
+              position={[0, 0.01, 0]}
+              cellSize={4}
+              cellThickness={0.08}
+              cellColor="#2a5a2a"
+              sectionSize={16}
+              sectionThickness={0.15}
+              sectionColor="#1a4a1a"
+              fadeDistance={60}
+              fadeStrength={0.5}
+            />
+          )}
 
-          {[
-            [0, 0.5, -MAP_SIZE / 2, MAP_SIZE, 1, 0.3] as const,
-            [0, 0.5, MAP_SIZE / 2, MAP_SIZE, 1, 0.3] as const,
-            [-MAP_SIZE / 2, 0.5, 0, 0.3, 1, MAP_SIZE] as const,
-            [MAP_SIZE / 2, 0.5, 0, 0.3, 1, MAP_SIZE] as const,
-          ].map(([x, y, z, w, h, d], i) => (
-            <mesh key={`wall-${i}`} position={[x, y, z]}>
-              <boxGeometry args={[w, h, d]} />
-              <meshStandardMaterial
-                color={wallColor}
-                emissive={wallEmissive}
-                emissiveIntensity={0.4}
-                transparent
-                opacity={0.7}
-              />
-            </mesh>
-          ))}
+          {grasslandMode ? (
+            // Brick walls for Map1 non-debug
+            <>
+              <mesh position={[0, 1.2, -MAP_SIZE/2 - 0.2]} receiveShadow castShadow>
+                <boxGeometry args={[MAP_SIZE + 1, 2.4, 0.6]} />
+                <meshStandardMaterial color="#aa5533" roughness={0.6} />
+              </mesh>
+              <mesh position={[0, 1.2, MAP_SIZE/2 + 0.2]} receiveShadow castShadow>
+                <boxGeometry args={[MAP_SIZE + 1, 2.4, 0.6]} />
+                <meshStandardMaterial color="#aa5533" roughness={0.6} />
+              </mesh>
+              <mesh position={[-MAP_SIZE/2 - 0.2, 1.2, 0]} receiveShadow castShadow>
+                <boxGeometry args={[0.6, 2.4, MAP_SIZE + 1]} />
+                <meshStandardMaterial color="#aa5533" roughness={0.6} />
+              </mesh>
+              <mesh position={[MAP_SIZE/2 + 0.2, 1.2, 0]} receiveShadow castShadow>
+                <boxGeometry args={[0.6, 2.4, MAP_SIZE + 1]} />
+                <meshStandardMaterial color="#aa5533" roughness={0.6} />
+              </mesh>
+            </>
+          ) : (
+            // Original thin neon walls
+            [
+              [0, 0.5, -MAP_SIZE / 2, MAP_SIZE, 1, 0.3] as const,
+              [0, 0.5, MAP_SIZE / 2, MAP_SIZE, 1, 0.3] as const,
+              [-MAP_SIZE / 2, 0.5, 0, 0.3, 1, MAP_SIZE] as const,
+              [MAP_SIZE / 2, 0.5, 0, 0.3, 1, MAP_SIZE] as const,
+            ].map(([x, y, z, w, h, d], i) => (
+              <mesh key={`wall-${i}`} position={[x, y, z]}>
+                <boxGeometry args={[w, h, d]} />
+                <meshStandardMaterial
+                  color={wallColor}
+                  emissive={wallEmissive}
+                  emissiveIntensity={0.4}
+                  transparent
+                  opacity={0.7}
+                />
+              </mesh>
+            ))
+          )}
+
+          {/* Trees around the map edge for grassland */}
+          {grasslandMode && (
+            <>
+              {Array.from({ length: 14 }).map((_, i) => {
+                const x = -28 + (i * 56 / 13);
+                return <Tree key={`tree-n-${i}`} position={{ x, z: -30 }} scale={1.2} />;
+              })}
+              {Array.from({ length: 14 }).map((_, i) => {
+                const x = -28 + (i * 56 / 13);
+                return <Tree key={`tree-s-${i}`} position={{ x, z: 30 }} scale={1.2} />;
+              })}
+              {Array.from({ length: 12 }).map((_, i) => {
+                const z = -26 + (i * 52 / 11);
+                return <Tree key={`tree-w-${i}`} position={{ x: -30, z }} scale={1.2} />;
+              })}
+              {Array.from({ length: 12 }).map((_, i) => {
+                const z = -26 + (i * 52 / 11);
+                return <Tree key={`tree-e-${i}`} position={{ x: 30, z }} scale={1.2} />;
+              })}
+            </>
+          )}
 
           {mapVariant.buildings.map((b) => {
             const bState = buildings?.find((bs) => bs.id === b.id);
-            return (
-              <Building
-                key={b.id}
-                position={b.position}
-                size={b.size}
-                tipSiteActive={!!bState?.hasTip && !bState?.tipObtained}
-                zoneActive={bState?.zoneActive}
-                zoneHealth={bState?.zoneHealth}
-                baseColor={buildingColor}
-                baseEmissive={buildingEmissive}
-                immersive={immersive}
-                lightMode={hasEdges}
-                hideOverlays={hideOverlays}
-                devMode={debugMode}
-                label={`B${b.id} (${b.position.x}, ${b.position.z})`}
-              />
-            );
+            if (grasslandMode) {
+              return (
+                <BookshelfBuilding
+                  key={b.id}
+                  position={b.position}
+                  size={b.size}
+                  tipSiteActive={!!bState?.hasTip && !bState?.tipObtained}
+                  zoneActive={bState?.zoneActive}
+                  zoneHealth={bState?.zoneHealth}
+                  immersive={immersive}
+                  lightMode={hasEdges}
+                  hideOverlays={hideOverlays}
+                />
+              );
+            } else {
+              return (
+                <Building
+                  key={b.id}
+                  position={b.position}
+                  size={b.size}
+                  tipSiteActive={!!bState?.hasTip && !bState?.tipObtained}
+                  zoneActive={bState?.zoneActive}
+                  zoneHealth={bState?.zoneHealth}
+                  baseColor={buildingColor}
+                  baseEmissive={buildingEmissive}
+                  immersive={immersive}
+                  lightMode={hasEdges}
+                  hideOverlays={hideOverlays}
+                  devMode={debugMode}
+                  label={`B${b.id} (${b.position.x}, ${b.position.z})`}
+                />
+              );
+            }
           })}
 
-          {debugMode ? (
-            mapVariant.obstacles.map((o, i) => (
-              <Obstacle
-                key={i}
-                position={o.position}
-                size={o.size}
-                rotation={o.rotation}
-                baseColor={obstacleColor}
-                baseEmissive={obstacleEmissive}
+          {!grasslandMode && (
+            debugMode ? (
+              mapVariant.obstacles.map((o, i) => (
+                <Obstacle
+                  key={i}
+                  position={o.position}
+                  size={o.size}
+                  rotation={o.rotation}
+                  baseColor={obstacleColor}
+                  baseEmissive={obstacleEmissive}
+                  lightMode={hasEdges}
+                  devMode
+                  label={`O${i} (${o.position.x}, ${o.position.z})`}
+                />
+              ))
+            ) : (
+              <InstancedObstacleLayer
+                obstacles={mapVariant.obstacles}
+                color={obstacleColor}
+                emissive={obstacleEmissive}
                 lightMode={hasEdges}
-                devMode
-                label={`O${i} (${o.position.x}, ${o.position.z})`}
               />
-            ))
-          ) : (
-            <InstancedObstacleLayer
-              obstacles={mapVariant.obstacles}
-              color={obstacleColor}
-              emissive={obstacleEmissive}
-              lightMode={hasEdges}
-            />
+            )
           )}
 
           {mapVariant.natureObstacles.map((no, i) => (
