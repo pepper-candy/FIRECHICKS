@@ -200,6 +200,7 @@ interface GameStateRef {
   stageTransitionPauseApplied: boolean;
   replayCountdown: ReplayCountdownState | null;
   activeTipShares: Map<string, TipShare>;
+  gameResultsFinalized: boolean;
 }
 
 // Circular buffer for position recording
@@ -264,6 +265,24 @@ function addBreakdown(p: PlayerGameState, key: string, label: string, points: nu
     p.scoreBreakdown[key] = { label, points, count: countDelta };
   }
   p.actionScore += points;
+}
+
+function finalizeGameResults(gs: GameStateRef) {
+  if (gs.gameResultsFinalized) return;
+
+  // Lock transcript scoring before the exam-to-gameover loading screen ends so
+  // the last exam snapshot already matches the eventual game-over transcript.
+  const nonPausedTime = Math.max(0, gs.gameTime - gs.totalPauseMs / 1000);
+  for (const [, p] of gs.playerStates) {
+    if (!p.isEagle) {
+      const survivalBonus = Math.floor(nonPausedTime / 10);
+      if (survivalBonus > 0) {
+        addBreakdown(p, 'survival', 'Survival time', survivalBonus, Math.floor(nonPausedTime));
+      }
+    }
+  }
+
+  gs.gameResultsFinalized = true;
 }
 
 function setVotingDeadline(gs: GameStateRef, voteUntil: number) {
@@ -645,6 +664,7 @@ export function useGameLogic({
       totalPauseMs: 0,
       stageTransitionPauseApplied: false,
       replayCountdown: null,
+      gameResultsFinalized: false,
     };
 
     if (devModeRef.current) {
@@ -1893,16 +1913,7 @@ export function useGameLogic({
   }
 
   function endGame(gs: GameStateRef, winner: "eagle" | "chicks" | "draw", bcast: (msg: any) => void) {
-    // Award survival time bonus to chicks: +1 per 10s of non-paused game time
-    const nonPausedTime = gs.gameTime - gs.totalPauseMs / 1000;
-    for (const [, p] of gs.playerStates) {
-      if (!p.isEagle) {
-        const survivalBonus = Math.floor(nonPausedTime / 10);
-        if (survivalBonus > 0) {
-          addBreakdown(p, 'survival', 'Survival time', survivalBonus, Math.floor(nonPausedTime));
-        }
-      }
-    }
+    finalizeGameResults(gs);
     gs.winner = winner;
     gs.pendingExamWinner = null;
     gs.examTransitionEndsAt = 0;
@@ -1929,6 +1940,7 @@ export function useGameLogic({
   }
 
   function startExamGameOverTransition(gs: GameStateRef, mode: "1v3" | "2v6") {
+    finalizeGameResults(gs);
     gs.pendingExamWinner = getExamWinner(gs, mode);
     gs.examTransitionEndsAt = Date.now() + GAME_END_TRANSITION_DURATION;
     gs.frozenAll = true;

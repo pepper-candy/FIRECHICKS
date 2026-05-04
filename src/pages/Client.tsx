@@ -550,6 +550,16 @@ export default function Client() {
     }
   }, [gamePhase, gameState]);
 
+  useEffect(() => {
+    if (gamePhase !== "exam") {
+      setShowExamEndTransition(false);
+      return;
+    }
+    if ((gameState?.examTransitionEndsAt ?? 0) > 0) {
+      setShowExamEndTransition(true);
+    }
+  }, [gamePhase, gameState?.examTransitionEndsAt]);
+
   const stableGameState = gamePhase === "gameover" ? (gameOverState ?? gameState) : gameState;
 
   // Tips state — QR now displays in scanner box, not tip box
@@ -573,6 +583,7 @@ export default function Client() {
   const examVideoRef = useRef<HTMLVideoElement>(null);
   const [examWhiteBg, setExamWhiteBg] = useState(false);
   const examStreamRef = useRef<MediaStream | null>(null);
+  const [showExamEndTransition, setShowExamEndTransition] = useState(false);
 
   const { isFullscreen, showImmersiveControl, enter: enterFullscreen } = useFullscreen();
   useEffect(() => {
@@ -1721,7 +1732,7 @@ export default function Client() {
 
   // ─── EXAM PHASE ──────────────────────────────────────────────────────────────
   if (gamePhase === "exam") {
-    if ((stableGameState?.examTransitionEndsAt ?? 0) > clockNow) {
+    if (showExamEndTransition || (stableGameState?.examTransitionEndsAt ?? 0) > clockNow) {
       return <GameEndTransition variant="client" />;
     }
 
