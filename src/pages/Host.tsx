@@ -241,6 +241,9 @@ export default function Host() {
   const [revealedCodes, setRevealedCodes] = useState<Set<string>>(new Set());
   const [botsAdded, setBotsAdded] = useState(false);
   const [gameOverSnapshot, setGameOverSnapshot] = useState<GameStateSnapshot | null>(null);
+  const [autoStartRemainingSec, setAutoStartRemainingSec] = useState(60);
+  const prevHumanPlayerCountRef = useRef(0);
+  const autoStartTriggeredRef = useRef(false);
   const debugLogRef = useRef<string[]>([]);
   const lastSnapshotLogAtRef = useRef(0);
 
@@ -464,6 +467,68 @@ export default function Host() {
   const playerCount = players.size;
   const maxPlayers = gameMode === "1v3" ? MAX_PLAYERS_1V3 : MAX_PLAYERS_2V6;
   const isFull = playerCount === maxPlayers;
+  const humanPlayerCount = useMemo(
+    () => Array.from(players.keys()).filter((connId) => !connId.startsWith("bot-")).length,
+    [players],
+  );
+
+  const handleFillBots = useCallback(() => {
+    fillBots?.();
+    setBotsAdded(true);
+  }, [fillBots]);
+
+  const handleStartGame = useCallback(() => {
+    setStartClickAt(Date.now());
+    startGame();
+  }, [startGame]);
+
+  useEffect(() => {
+    if (phase !== "lobby") {
+      prevHumanPlayerCountRef.current = 0;
+      autoStartTriggeredRef.current = false;
+      return;
+    }
+
+    const previousHumanPlayerCount = prevHumanPlayerCountRef.current;
+    if (humanPlayerCount === 0) {
+      setAutoStartRemainingSec(60);
+      setBotsAdded(false);
+      autoStartTriggeredRef.current = false;
+      removeBots?.();
+      prevHumanPlayerCountRef.current = 0;
+      return;
+    }
+
+    if (previousHumanPlayerCount === 0) {
+      setAutoStartRemainingSec(60);
+      autoStartTriggeredRef.current = false;
+    }
+
+    prevHumanPlayerCountRef.current = humanPlayerCount;
+  }, [phase, humanPlayerCount, removeBots]);
+
+  useEffect(() => {
+    if (phase !== "lobby") return;
+    if (humanPlayerCount === 0) return;
+    if (autoStartRemainingSec <= 0) return;
+
+    const timeoutId = window.setTimeout(() => {
+      setAutoStartRemainingSec((prev) => Math.max(0, prev - 1));
+    }, 1000);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [phase, humanPlayerCount, autoStartRemainingSec]);
+
+  useEffect(() => {
+    if (phase !== "lobby") return;
+    if (humanPlayerCount === 0) return;
+    if (autoStartRemainingSec > 0) return;
+    if (autoStartTriggeredRef.current) return;
+
+    autoStartTriggeredRef.current = true;
+    handleFillBots();
+    handleStartGame();
+  }, [phase, humanPlayerCount, autoStartRemainingSec, handleFillBots, handleStartGame]);
 
   // ─── Damage glitch (immersive) ────────────────────────────────────────────────
   const [hostGlitching, setHostGlitching] = useState(false);
@@ -492,10 +557,7 @@ export default function Host() {
         {(isFull || botsAdded) && (
           <div className="absolute top-4 left-1/2 -translate-x-1/2 z-20 flex gap-3">
             <button
-              onClick={() => {
-                setStartClickAt(Date.now());
-                startGame();
-              }}
+              onClick={handleStartGame}
               className="relative px-10 py-3 font-pixel text-base tracking-[0.3em] uppercase
                 text-primary border-2 border-primary bg-primary/10
                 hover:bg-primary/25 transition-all duration-200
@@ -513,10 +575,7 @@ export default function Host() {
         {!isFull && (
           <div className="absolute top-4 left-1/2 -translate-x-1/2 z-20">
             <button
-              onClick={() => {
-                fillBots?.();
-                setBotsAdded(true);
-              }}
+              onClick={handleFillBots}
               className="px-6 py-2.5 font-pixel text-sm tracking-widest uppercase
                 text-accent border-2 border-accent bg-accent/10
                 hover:bg-accent/25 transition-all duration-200
@@ -673,12 +732,13 @@ export default function Host() {
                 <span className="text-accent font-bold">{roomCode}</span>
               )}
             </p>
-          ) : !isFull ? (
-            <p className="text-xs text-muted-foreground font-mono">
-              Waiting for {maxPlayers - playerCount} more player{maxPlayers - playerCount !== 1 ? "s" : ""}...
-            </p>
           ) : (
-            <p className="text-xs text-primary font-mono animate-pulse">All players ready! Press START GAME ↑</p>
+            <p className="text-xs text-muted-foreground font-mono">
+              Starting in <span className="font-bold text-red-500">{autoStartRemainingSec}</span> sec.{" "}
+              {isFull
+                ? "All players ready!"
+                : `Waiting for ${maxPlayers - playerCount} more player${maxPlayers - playerCount !== 1 ? "s" : ""}...`}
+            </p>
           )}
         </div>
 
