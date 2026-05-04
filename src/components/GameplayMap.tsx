@@ -705,7 +705,7 @@ function PropMarker({ spawn }: { spawn: PropSpawn }) {
   const innerRef = useRef<THREE.Mesh>(null!);
   const color = PROP_COLORS[spawn.type] ?? "#ffffff";
   const icon = spawn.type === "speed" ? "⚡" : "💚";
-  const BALL_R = 0.8;
+  const BALL_R = 1.5;
 
   useFrame((_, delta) => {
     const t = Date.now() * 0.002;
@@ -742,10 +742,10 @@ function PropMarker({ spawn }: { spawn: PropSpawn }) {
           side={THREE.DoubleSide}
         />
       </mesh>
-      <Html position={[0, BALL_R * 2.6, 0]} center occlude={false} zIndexRange={[100, 0]}>
+      <Html position={[0, BALL_R * 3, 0]} center occlude={false} zIndexRange={[100, 0]}>
         <div
           style={{
-            background: "rgba(0,0,0,0.75)",
+            background: "rgba(40, 24, 24, 0.75)",
             border: `1px solid ${color}`,
             borderRadius: 3,
             padding: "1px 5px",
@@ -804,7 +804,7 @@ function MysteryBoxMarker({ box, immersive }: { box: MysteryBox; immersive?: boo
     <group position={[box.position.x, 0, box.position.z]}>
       {immersive && isActive && <MysteryBoxAura />}
       <mesh ref={meshRef} position={[0, 0.7, 0]}>
-        <boxGeometry args={[0.8, 0.8, 0.8]} />
+        <boxGeometry args={[2.2, 2.2, 2.2]} />
         <meshStandardMaterial
           color={isActive ? "#ff8c00" : "#555"}
           emissive={isActive ? "#ff4400" : "#222"}
@@ -812,7 +812,7 @@ function MysteryBoxMarker({ box, immersive }: { box: MysteryBox; immersive?: boo
         />
         {immersive && isActive && <Edges scale={1.05} threshold={10} color="#ffaa44" />}
       </mesh>
-      <Html position={[0, 1.8, 0]} center zIndexRange={[100, 0]}>
+      <Html position={[0, 3, 0]} center zIndexRange={[100, 0]}>
         <div
           style={{
             color: isActive ? "#ff8c00" : "#888",
@@ -1017,7 +1017,7 @@ function GameCharacter({
           <CharacterViewer color={color.chickColor} animState={anim} facingAngle={player.facingAngle} />
         </Suspense>
       </group>
-      <Html position={[0, 2.8, 0]} center zIndexRange={[100, 0]}>
+      <Html position={[0, 4.5, 0]} center zIndexRange={[100, 0]}>
         <div
           style={{
             background: "rgba(0,0,0,0.6)",
