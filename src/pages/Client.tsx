@@ -833,9 +833,8 @@ export default function Client() {
   const prevTipsRef = useRef<[boolean, boolean]>([false, false]);
   useEffect(() => {
     if (!gameState) return;
-    const myState = Object.values(gameState.players).find(
-      (p) => p.colorIndex === (myAssignment?.colorIndex ?? colorIndex),
-    );
+    const currentConnId = connIdRef.current || clientId;
+    const myState = currentConnId ? gameState.players[currentConnId] : null;
     if (!myState) return;
     for (let i = 0; i < 2; i++) {
       if (!prevTipsRef.current[i] && myState.tips[i]) {
@@ -881,9 +880,8 @@ export default function Client() {
   }, [gamePhase, examLayer]);
 
   const playerColor = colorIndex >= 0 ? PLAYER_COLORS[colorIndex] : null;
-  const myState = stableGameState
-    ? Object.values(stableGameState.players).find((p) => p.colorIndex === (myAssignment?.colorIndex ?? colorIndex))
-    : null;
+  const currentConnId = connIdRef.current || clientId;
+  const myState = currentConnId && stableGameState ? stableGameState.players[currentConnId] : null;
   const isEagle = myAssignment?.isEagle ?? myState?.isEagle ?? (gameMode === '2v6' && EAGLE_COLOR_INDICES.includes(colorIndex));
   const currentColorIndex = myAssignment?.colorIndex ?? colorIndex;
   const displayColor = PLAYER_COLORS[currentColorIndex] ?? playerColor;
