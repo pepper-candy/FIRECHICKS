@@ -13,7 +13,7 @@ interface Props {
 
 const VIDEO_SRC: Record<OverlayVideo, string> = {
   hurt: assetUrl('/Animations/Hurt.mp4'),
-  dead: assetUrl('/Animations/Dead.mp4'),
+  dead: assetUrl('/Animations/Dead_NEW.mp4'),
   'stage0-transition': assetUrl('/Animations/1_Meet.mp4'),
   'stage1-transition': assetUrl('/Animations/2_Glow_Building.mp4'),
   'stage3-transition': assetUrl('/Animations/4_Final.mp4'),
@@ -89,7 +89,7 @@ export default function VideoOverlay({
 export function preloadVideos() {
   const vids = [
     ...Object.values(VIDEO_SRC),
-    assetUrl('/Animations/Entrance.mp4'),
+    assetUrl('/Animations/Entrance_NEW.mp4'),
   ];
   vids.forEach((src) => {
     const link = document.createElement('link');

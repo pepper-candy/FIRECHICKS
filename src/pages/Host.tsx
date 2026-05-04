@@ -832,7 +832,7 @@ export default function Host() {
       return (
         <div className="relative flex flex-col items-center justify-center h-screen overflow-hidden bg-black">
           <video
-            src={assetUrl("/Animations/Entrance.mp4")}
+            src={assetUrl("/Animations/Entrance_NEW.mp4")}
             className="absolute inset-0 w-full h-full object-cover"
             autoPlay
             playsInline
@@ -858,7 +858,7 @@ export default function Host() {
     return (
       <div className="relative flex flex-col items-center justify-center h-screen gap-4 p-4 overflow-hidden">
         <video
-          src={assetUrl("/Animations/Entrance.mp4")}
+          src={assetUrl("/Animations/Entrance_NEW.mp4")}
           className="absolute inset-0 w-full h-full object-cover"
           autoPlay
           playsInline

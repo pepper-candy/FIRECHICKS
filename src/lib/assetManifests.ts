@@ -39,8 +39,8 @@ export const CHARACTER_ANIMATION_GLB_URLS: string[] = ANIMATION_GLB_URLS;
 // ── 6 video files ─────────────────────────────────────────────────────────────
 export const VIDEO_URLS: string[] = [
   assetUrl('/Animations/Hurt.mp4'),
-  assetUrl('/Animations/Dead.mp4'),
-  assetUrl('/Animations/Entrance.mp4'),
+  assetUrl('/Animations/Dead_NEW.mp4'),
+  assetUrl('/Animations/Entrance_NEW.mp4'),
   assetUrl('/Animations/1_Meet.mp4'),
   assetUrl('/Animations/2_Glow_Building.mp4'),
   assetUrl('/Animations/4_Final.mp4'),

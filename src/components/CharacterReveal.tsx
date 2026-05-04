@@ -61,7 +61,7 @@ export default function CharacterReveal({ colorIndex, isEagle }: Props) {
 
   if (!color) return null;
 
-  const modelPath = assetUrl(`/FireChick/FireChick_Models/FireChick_${color.name}.glb`);
+  const modelPath = assetUrl(`/FireChick/FireChick_Models/FireChick_${color.name}_NEW.glb`);
 
   return (
     <div className="flex flex-col items-center justify-start h-dvh overflow-hidden w-full">
@@ -150,11 +150,11 @@ export default function CharacterReveal({ colorIndex, isEagle }: Props) {
   );
 }
 
-useGLTF.preload(assetUrl("/FireChick/FireChick_Models/FireChick_Black.glb"));
-useGLTF.preload(assetUrl("/FireChick/FireChick_Models/FireChick_Gold.glb"));
-useGLTF.preload(assetUrl("/FireChick/FireChick_Models/FireChick_Red.glb"));
-useGLTF.preload(assetUrl("/FireChick/FireChick_Models/FireChick_Yellow.glb"));
-useGLTF.preload(assetUrl("/FireChick/FireChick_Models/FireChick_Blue.glb"));
-useGLTF.preload(assetUrl("/FireChick/FireChick_Models/FireChick_Green.glb"));
-useGLTF.preload(assetUrl("/FireChick/FireChick_Models/FireChick_Cyan.glb"));
-useGLTF.preload(assetUrl("/FireChick/FireChick_Models/FireChick_Pink.glb"));
+useGLTF.preload(assetUrl("/FireChick/FireChick_Models/FireChick_Black_NEW.glb"));
+useGLTF.preload(assetUrl("/FireChick/FireChick_Models/FireChick_Gold_NEW.glb"));
+useGLTF.preload(assetUrl("/FireChick/FireChick_Models/FireChick_Red_NEW.glb"));
+useGLTF.preload(assetUrl("/FireChick/FireChick_Models/FireChick_Yellow_NEW.glb"));
+useGLTF.preload(assetUrl("/FireChick/FireChick_Models/FireChick_Blue_NEW.glb"));
+useGLTF.preload(assetUrl("/FireChick/FireChick_Models/FireChick_Green_NEW.glb"));
+useGLTF.preload(assetUrl("/FireChick/FireChick_Models/FireChick_Cyan_NEW.glb"));
+useGLTF.preload(assetUrl("/FireChick/FireChick_Models/FireChick_Pink_NEW.glb"));
