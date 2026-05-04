@@ -14,7 +14,7 @@ import { TextureLoader } from 'three';
 
 const FLY_SPEED_MULTIPLIER = 3;
 const WORLD_SCALE = 0.5; // Shrinks visual map without affecting game logic
-const CHARACTER_VISUAL_SCALE = 1.5 / WORLD_SCALE;
+const CHARACTER_VISUAL_SCALE = (1.5 / WORLD_SCALE) * 2;
 const DEBUG_MODE = false;
 const HOST_CAMERA_BASE_ZOOM = 2;
 const HOST_CAMERA_POSITION: readonly [number, number, number] = [0, 48.75, 35.7];
@@ -1249,28 +1249,6 @@ export default function GameplayMap({
                 />
               </mesh>
             ))
-          )}
-
-          {/* Trees around the map edge for grassland */}
-          {grasslandMode && (
-            <>
-              {Array.from({ length: 14 }).map((_, i) => {
-                const x = -28 + (i * 56 / 13);
-                return <Tree key={`tree-n-${i}`} position={{ x, z: -30 }} scale={1.2} />;
-              })}
-              {Array.from({ length: 14 }).map((_, i) => {
-                const x = -28 + (i * 56 / 13);
-                return <Tree key={`tree-s-${i}`} position={{ x, z: 30 }} scale={1.2} />;
-              })}
-              {Array.from({ length: 12 }).map((_, i) => {
-                const z = -26 + (i * 52 / 11);
-                return <Tree key={`tree-w-${i}`} position={{ x: -30, z }} scale={1.2} />;
-              })}
-              {Array.from({ length: 12 }).map((_, i) => {
-                const z = -26 + (i * 52 / 11);
-                return <Tree key={`tree-e-${i}`} position={{ x: 30, z }} scale={1.2} />;
-              })}
-            </>
           )}
 
           {mapVariant.buildings.map((b) => {
