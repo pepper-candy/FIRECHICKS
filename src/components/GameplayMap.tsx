@@ -9,6 +9,8 @@ import type { PlayerGameStateSerializable, BuildingState, PropSpawn, MysteryBox,
 import type { MapId } from "@/lib/mapVariants";
 import { getMapVariant } from "@/lib/mapVariants";
 import type { NatureObstacle } from "@/lib/mapVariants";
+import { useLoader } from '@react-three/fiber';
+import { TextureLoader } from 'three';
 
 const FLY_SPEED_MULTIPLIER = 3;
 const WORLD_SCALE = 0.5; // Shrinks visual map without affecting game logic
@@ -1105,6 +1107,8 @@ export default function GameplayMap({
   const mapVariant = useMemo(() => getMapVariant(mapId), [mapId]);
   const debugMode = DEBUG_MODE || devMode;
   const grasslandMode = mapId === 1 && !debugMode;
+  // Load grass texture only for grassland mode
+  const grassTexture = useLoader(TextureLoader, grasslandMode ? '/grass.png' : '');
   const isLight = themeMode === "light";
   const isSemi = themeMode === "semi";
   const hasEdges = isLight || isSemi; // both light modes get edges
@@ -1169,11 +1173,12 @@ export default function GameplayMap({
           {/* Ground */}
           <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.01, 0]} receiveShadow>
             <planeGeometry args={[MAP_SIZE, MAP_SIZE]} />
-            <meshStandardMaterial 
-              color={grasslandMode ? "#4a784a" : floorVisualColor} 
-              roughness={0.9}
-            />
-          </mesh>
+            {grasslandMode && grassTexture ? (
+            <meshStandardMaterial map={grassTexture} roughness={0.7} metalness={0.05} />
+          ) : (
+            <meshStandardMaterial color={grasslandMode ? "#8bc34a" : floorVisualColor} roughness={0.9} />
+          )}
+        </mesh>
 
           {/* Grid – only show when NOT grassland */}
           {!grasslandMode && (
