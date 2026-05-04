@@ -19,7 +19,7 @@ function CharacterCamera() {
   const { camera } = useThree();
   useEffect(() => {
     camera.position.set(0, 2.2, 3.8);
-    camera.lookAt(0, 0.6, 0);
+    camera.lookAt(0, 0.3, 0);
     (camera as any).fov = 32;
     (camera as any).updateProjectionMatrix?.();
   }, [camera]);
