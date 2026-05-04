@@ -242,6 +242,7 @@ export default function Host() {
   const [botsAdded, setBotsAdded] = useState(false);
   const [gameOverSnapshot, setGameOverSnapshot] = useState<GameStateSnapshot | null>(null);
   const [autoStartRemainingSec, setAutoStartRemainingSec] = useState(60);
+  const [autoStartQueued, setAutoStartQueued] = useState(false);
   const prevHumanPlayerCountRef = useRef(0);
   const autoStartTriggeredRef = useRef(false);
   const debugLogRef = useRef<string[]>([]);
@@ -492,6 +493,7 @@ export default function Host() {
     const previousHumanPlayerCount = prevHumanPlayerCountRef.current;
     if (humanPlayerCount === 0) {
       setAutoStartRemainingSec(60);
+      setAutoStartQueued(false);
       setBotsAdded(false);
       autoStartTriggeredRef.current = false;
       removeBots?.();
@@ -501,6 +503,7 @@ export default function Host() {
 
     if (previousHumanPlayerCount === 0) {
       setAutoStartRemainingSec(60);
+      setAutoStartQueued(false);
       autoStartTriggeredRef.current = false;
     }
 
@@ -523,12 +526,23 @@ export default function Host() {
     if (phase !== "lobby") return;
     if (humanPlayerCount === 0) return;
     if (autoStartRemainingSec > 0) return;
+    if (autoStartQueued) return;
+
+    if (!isFull) {
+      handleFillBots();
+    }
+    setAutoStartQueued(true);
+  }, [phase, humanPlayerCount, autoStartRemainingSec, autoStartQueued, isFull, handleFillBots]);
+
+  useEffect(() => {
+    if (phase !== "lobby") return;
+    if (!autoStartQueued) return;
+    if (!isFull) return;
     if (autoStartTriggeredRef.current) return;
 
     autoStartTriggeredRef.current = true;
-    handleFillBots();
     handleStartGame();
-  }, [phase, humanPlayerCount, autoStartRemainingSec, handleFillBots, handleStartGame]);
+  }, [phase, autoStartQueued, isFull, handleStartGame]);
 
   // ─── Damage glitch (immersive) ────────────────────────────────────────────────
   const [hostGlitching, setHostGlitching] = useState(false);
