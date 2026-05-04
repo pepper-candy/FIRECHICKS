@@ -804,7 +804,7 @@ function MysteryBoxMarker({ box, immersive }: { box: MysteryBox; immersive?: boo
     <group position={[box.position.x, 0, box.position.z]}>
       {immersive && isActive && <MysteryBoxAura />}
       <mesh ref={meshRef} position={[0, 0.7, 0]}>
-        <boxGeometry args={[2.2, 2.2, 2.2]} />
+        <boxGeometry args={[1.7, 1.7, 1.7]} />
         <meshStandardMaterial
           color={isActive ? "#ff8c00" : "#555"}
           emissive={isActive ? "#ff4400" : "#222"}
