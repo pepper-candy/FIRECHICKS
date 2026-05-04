@@ -145,6 +145,48 @@ function avoidObstacles(
   return targetJoy;
 }
 
+function avoidObstaclesAdvanced(
+  from: { x: number; z: number },
+  targetJoy: { x: number; y: number },
+  stepSize: number = 1.2,   // smaller step for finer detection
+): { x: number; y: number } {
+  const len = Math.hypot(targetJoy.x, targetJoy.y);
+  if (len < 0.05) return targetJoy;
+  
+  const baseAngle = Math.atan2(targetJoy.x, targetJoy.y);
+  const angles = [0, Math.PI / 6, -Math.PI / 6, Math.PI / 3, -Math.PI / 3, Math.PI / 2, -Math.PI / 2, 2*Math.PI/3, -2*Math.PI/3];
+  
+  let bestJoy = targetJoy;
+  let bestDist = -Infinity;
+  
+  for (const offset of angles) {
+    const a = baseAngle + offset;
+    const wx = Math.sin(a);
+    const wz = Math.cos(a);
+    // measure clearance from current position along this direction
+    let d = 0;
+    const checkStep = 0.6;
+    const maxCheck = 5;
+    for (let t = checkStep; t <= maxCheck; t += checkStep) {
+      const x = from.x + wx * t;
+      const z = from.z + wz * t;
+      if (checkCollision(x, z, 0.6)) break;
+      d = t;
+    }
+    if (d > bestDist) {
+      bestDist = d;
+      bestJoy = { x: wx * len, y: wz * len };
+    }
+  }
+  
+  // If still no free space, move very slowly (reduce speed)
+  if (bestDist < 1.0) {
+    const factor = Math.max(0.2, bestDist / 1.5);
+    return { x: bestJoy.x * factor, y: bestJoy.y * factor };
+  }
+  return bestJoy;
+}
+
 const CHICK_BODY_RADIUS = 0.6;
 const CHICK_RAY_STEP = 0.7;
 const CHICK_RAY_MAX = 5.5;
@@ -235,7 +277,7 @@ function chickSteer(
     }
   }
   const probed = rayScanChickSteer(from, blended, moveMag);
-  return avoidObstacles(from, probed);
+  return avoidObstaclesAdvanced (from, probed);
 }
 
 /** Chick is inside a shielded exam-tip bubble (eagle can't score hits there). */
@@ -282,7 +324,7 @@ function clearanceAlongRayEagle(
   dirZ: number,
   maxDist: number,
 ): number {
-  let d = 0.85;
+  let d = 0.45;
   while (d <= maxDist) {
     const x = fromX + dirX * d;
     const z = fromZ + dirZ * d;
@@ -336,10 +378,14 @@ function eagleSteerToZone(
   approach: { x: number; z: number },
   zoneDist: number,
 ): { x: number; y: number } {
-  const mag = Math.min(1, Math.max(0.65, zoneDist / 18));
+  const maxClearance = Math.max(0, clearanceAlongRayEagle(from.x, from.z, approach.x - from.x, approach.z - from.z, zoneDist));
+  let mag = Math.min(1, Math.max(0.65, zoneDist / 18));
+  if (maxClearance < 2.5) {
+    mag *= 0.5;
+  }
   const raw = joystickToTarget(from, approach, mag);
   const probed = eagleRaySteer(from, raw, mag);
-  return avoidObstacles(from, probed);
+  return avoidObstaclesAdvanced (from, probed);
 }
 
 /** Stay inside shield disk — leaving resets zone health on the server. */
@@ -583,7 +629,7 @@ function updateEagleBot(
     const targetBox = activeBoxes[0];
     const boxDist = dist(bot.position, targetBox.position);
     const boxJoy = joystickToTarget(bot.position, targetBox.position, Math.min(1, Math.max(0.55, boxDist / 20)));
-    s.targetJoystick = avoidObstacles(bot.position, boxJoy);
+    s.targetJoystick = avoidObstaclesAdvanced (bot.position, boxJoy);
     return { joystick: smoothJoystick(s), messages };
   }
 
@@ -611,7 +657,7 @@ function updateEagleBot(
     const px = Math.cos(patrolAngle) * 8;
     const pz = Math.sin(patrolAngle) * 8;
     const joy = joystickToTarget(bot.position, { x: px, z: pz }, EAGLE_SPEED_FACTOR);
-    s.targetJoystick = avoidObstacles(bot.position, joy);
+    s.targetJoystick = avoidObstaclesAdvanced (bot.position, joy);
     return { joystick: smoothJoystick(s), messages };
   }
 
@@ -659,7 +705,7 @@ function updateEagleBot(
 
   // Move toward nearest valid chick directly.
   const chaseJoy = joystickToTarget(bot.position, target.position, EAGLE_SPEED_FACTOR);
-  s.targetJoystick = avoidObstacles(bot.position, chaseJoy);
+  s.targetJoystick = avoidObstaclesAdvanced (bot.position, chaseJoy);
 
   // Hitbox clicking (main-game building shield — not the random hitbox event)
   if (stage >= 1) {
