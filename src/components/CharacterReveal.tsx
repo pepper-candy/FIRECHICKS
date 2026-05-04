@@ -12,7 +12,7 @@ interface Props {
 function RotatingStaticCharacter({ modelPath, angle }: { modelPath: string; angle: number }) {
   const gltf = useGLTF(modelPath);
   const scene = useMemo(() => gltf.scene.clone(true), [gltf.scene]);
-  return <primitive object={scene} scale={[0.03, 0.03, 0.03]} rotation={[0, angle, 0]} />;
+  return <primitive object={scene} scale={[0.02, 0.02, 0.02]} rotation={[0, angle, 0]} />;
 }
 
 function CharacterCamera() {
