@@ -526,8 +526,8 @@ function Building({
   );
 }
 
-// Bookshelf building for Map1 grassland mode
-function BookshelfBuilding({
+// Glass building for Map1 grassland mode (solid, not blinking)
+function GlassBuilding({
   position,
   size,
   tipSiteActive,
@@ -546,61 +546,37 @@ function BookshelfBuilding({
   lightMode?: boolean;
   hideOverlays?: boolean;
 }) {
-  const woodColor = "#8b5a2b";
-  const bookColors = ["#c44", "#4c4", "#44c", "#cc4", "#c4c"];
-  const shelfHeight = 0.25;
-  const shelfCount = 4;
-  const startY = 0.4;
-  const shelfInterval = (size.h - 0.8) / (shelfCount + 1);
+  const glassColor = "#88ccff"; // sky blue
+  const emissiveColor = "#2266aa";
+  const gold = !!tipSiteActive;
 
   return (
     <group position={[position.x, 0, position.z]}>
-      {/* Main wooden frame */}
+      {/* Main glass body */}
       <mesh position={[0, size.h / 2, 0]}>
         <boxGeometry args={[size.w, size.h, size.d]} />
-        <meshStandardMaterial color={woodColor} roughness={0.4} />
+        <meshStandardMaterial
+          color={gold ? "#ffd700" : glassColor}
+          emissive={gold ? "#ffd700" : emissiveColor}
+          emissiveIntensity={gold ? 0.6 : 0.2}
+          transparent={!gold}
+          opacity={gold ? 1 : 0.7}
+          metalness={0.3}
+          roughness={0.2}
+        />
+      </mesh>
+      {/* Glass panel lines (edges) */}
+      <mesh position={[0, size.h / 2, 0]}>
+        <boxGeometry args={[size.w + 0.05, size.h + 0.05, size.d + 0.05]} />
+        <meshBasicMaterial color="#ffffff" wireframe={true} transparent opacity={0.15} />
+      </mesh>
+      {/* Top trim */}
+      <mesh position={[0, size.h + 0.1, 0]}>
+        <boxGeometry args={[size.w + 0.2, 0.1, size.d + 0.2]} />
+        <meshStandardMaterial color="#aaaaaa" metalness={0.7} roughness={0.3} />
       </mesh>
 
-      {/* Shelves */}
-      {Array.from({ length: shelfCount }).map((_, i) => {
-        const y = startY + (i + 1) * shelfInterval;
-        return (
-          <mesh key={`shelf-${i}`} position={[0, y, 0]}>
-            <boxGeometry args={[size.w - 0.2, shelfHeight, size.d + 0.1]} />
-            <meshStandardMaterial color="#a06e3a" roughness={0.7} />
-          </mesh>
-        );
-      })}
-
-      {/* Books on shelves */}
-      {Array.from({ length: shelfCount }).map((_, shelfIdx) => {
-        const y = startY + (shelfIdx + 1) * shelfInterval + 0.1;
-        const booksPerShelf = 4 + Math.floor(Math.random() * 3);
-        const bookWidth = (size.w - 0.6) / booksPerShelf;
-        return Array.from({ length: booksPerShelf }).map((_, bookIdx) => {
-          const x = -size.w / 2 + 0.4 + bookIdx * bookWidth + bookWidth / 2;
-          const color = bookColors[bookIdx % bookColors.length];
-          const bookHeight = 0.8 + Math.random() * 0.3;
-          return (
-            <mesh
-              key={`book-${shelfIdx}-${bookIdx}`}
-              position={[x, y - 0.15, size.d / 2 - 0.2]}
-              scale={[bookWidth, bookHeight, 0.4]}
-            >
-              <boxGeometry args={[1, 1, 1]} />
-              <meshStandardMaterial color={color} roughness={0.3} />
-            </mesh>
-          );
-        });
-      })}
-
-      {/* Top decoration */}
-      <mesh position={[0, size.h - 0.1, 0]}>
-        <boxGeometry args={[size.w + 0.2, 0.2, size.d + 0.2]} />
-        <meshStandardMaterial color="#a06e3a" />
-      </mesh>
-
-      {/* Zone effects (same as original Building) */}
+      {/* Zone effects (same as original) */}
       {zoneActive && (
         <mesh position={[0, 1.5, 0]}>
           <sphereGeometry args={[ZONE_RADIUS, 24, 24]} />
@@ -1296,7 +1272,7 @@ export default function GameplayMap({
             const bState = buildings?.find((bs) => bs.id === b.id);
             if (grasslandMode) {
               return (
-                <BookshelfBuilding
+                <GlassBuilding
                   key={b.id}
                   position={b.position}
                   size={b.size}
@@ -1329,7 +1305,7 @@ export default function GameplayMap({
             }
           })}
 
-          {!grasslandMode && (
+          {true && (
             debugMode ? (
               mapVariant.obstacles.map((o, i) => (
                 <Obstacle
