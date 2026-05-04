@@ -14,7 +14,7 @@ import { TextureLoader } from 'three';
 
 const FLY_SPEED_MULTIPLIER = 3;
 const WORLD_SCALE = 0.5; // Shrinks visual map without affecting game logic
-const CHARACTER_VISUAL_SCALE = (1.5 / WORLD_SCALE) * 2;
+const CHARACTER_VISUAL_SCALE = (1.5 / WORLD_SCALE) * 1.5;
 const DEBUG_MODE = false;
 const HOST_CAMERA_BASE_ZOOM = 2;
 const HOST_CAMERA_POSITION: readonly [number, number, number] = [0, 48.75, 35.7];
@@ -705,7 +705,7 @@ function PropMarker({ spawn }: { spawn: PropSpawn }) {
   const innerRef = useRef<THREE.Mesh>(null!);
   const color = PROP_COLORS[spawn.type] ?? "#ffffff";
   const icon = spawn.type === "speed" ? "⚡" : "💚";
-  const BALL_R = 0.4;
+  const BALL_R = 0.8;
 
   useFrame((_, delta) => {
     const t = Date.now() * 0.002;
