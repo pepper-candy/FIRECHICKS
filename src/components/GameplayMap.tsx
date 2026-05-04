@@ -1107,8 +1107,8 @@ export default function GameplayMap({
   const mapVariant = useMemo(() => getMapVariant(mapId), [mapId]);
   const debugMode = DEBUG_MODE || devMode;
   const grasslandMode = mapId === 1 && !debugMode;
-  // Load grass texture only for grassland mode
-  const grassTexture = useLoader(TextureLoader, grasslandMode ? '/grass.png' : '');
+  // Always load the texture; debug mode disables its usage but should not trigger an empty URL fetch.
+  const grassTexture = useLoader(TextureLoader, "/grass.png");
   const isLight = themeMode === "light";
   const isSemi = themeMode === "semi";
   const hasEdges = isLight || isSemi; // both light modes get edges
