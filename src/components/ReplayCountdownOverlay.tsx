@@ -152,7 +152,7 @@ function ReplayCharacters({ replayData }: { replayData: ReplayData }) {
         const anim = animStatesRef.current[id] ?? getAnimForPlayer(p, isAttacker, 0, attackTime, attackTime - 1500);
         return (
           <group key={id} position={[p.x, 0, p.z]}>
-            <group scale={4.5}>   {/* This matches CHARACTER_VISUAL_SCALE from GameplayMap */}
+            <group scale={2.5}>   {/* This matches CHARACTER_VISUAL_SCALE from GameplayMap */}
               <CharacterViewer
                 color={p.chickColor as ChickColor}
                 animState={anim}
