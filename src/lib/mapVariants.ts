@@ -36,8 +36,8 @@ export interface MapVariant {
 // ═══════════════════════════════════════════════════════════════════════════════
 const MAP1: MapVariant = {
   id: 1,
-  name: 'Cyber Arena',
-  description: 'The original neon grid battlefield',
+  name: 'Verdant Enclave',
+  description: 'Hidden grassland, glass shelters, open skies',
   floorColor: '#080814',
   gridCellColor: '#1a1a44',
   gridSectionColor: '#2a2a66',
