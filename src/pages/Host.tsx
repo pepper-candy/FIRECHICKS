@@ -614,12 +614,12 @@ export default function Host() {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [phase, isFull, handleGameModeToggle]);
 
-  <GameMusic phase={phase} stage={snapshot?.stage ?? 0} />
 
   // ─── LOBBY ────────────────────────────────────────────────────────────────────
   if (phase === "lobby") {
     return (
       <div className={`flex flex-col h-screen p-3 gap-3 relative ${isImmersive ? "bg-black" : ""}`}>
+        <GameMusic phase={phase} stage={snapshot?.stage ?? 0} />
         {isImmersive && <div className="immersive-vignette" />}
         {/* {isImmersive && <div className="immersive-scanline-overlay" style={{ opacity: 0.25 }} />} */}
         {/* Cyber START button — top center absolute */}
