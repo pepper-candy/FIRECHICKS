@@ -1,13 +1,29 @@
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { assetUrl } from "@/lib/assets";
 
 export default function CreditsPage() {
   const navigate = useNavigate();
+  const [src, setSrc] = useState<string | null>(null);
+
+  useEffect(() => {
+    const orientation = screen.orientation as ScreenOrientation & { lock?: (orientation: string) => Promise<void>; unlock?: () => void };
+    if (orientation?.lock) {
+      orientation.lock('landscape').catch(() => {});
+    }
+    return () => {
+      if (orientation?.unlock) {
+        orientation.unlock();
+      }
+    };
+  }, []);
+
+  if (!src) return null;
 
   return (
     <div className="fixed inset-0 bg-black flex items-center justify-center">
       <video
-        src={assetUrl('/Animations/Credit.mp4')}
+        src={src}
         className="w-full h-full object-contain"
         autoPlay
         playsInline
