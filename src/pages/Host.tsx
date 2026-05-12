@@ -205,7 +205,7 @@ function LobbyVideoPanel({ src, side, label }: { src: string; side: 'left' | 'ri
   return (
     <div className={`absolute top-2 z-10 ${isLeft ? 'left-2' : 'right-2'}`}>
       <div className={`flex flex-col ${isLeft ? 'items-start' : 'items-end'}`}>
-        <div className="overflow-hidden rounded-lg border-2 border-white/20 pointer-events-none" style={{ width: '40vw', maxWidth: '250px', aspectRatio: '16/9' }}>
+        <div className="overflow-hidden rounded-lg border-2 border-white/20 pointer-events-none" style={{ width: '40vw', maxWidth: '400px', aspectRatio: '16/9' }}>
           <video src={src} className="w-full h-full object-cover opacity-70" autoPlay loop muted playsInline />
         </div>
         {label && (
