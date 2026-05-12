@@ -222,7 +222,8 @@ export function AssetLoadingProvider({ children }: { children: ReactNode }) {
       if (!mountedRef.current) return;
 
       const glbs = uncached.filter((u) => u.endsWith('.glb'));
-      const videos = uncached.filter((u) => u.endsWith('.mp4') || u.endsWith('.mp3') || u.endsWith('.m4a'));
+      const videos = uncached.filter((u) => u.endsWith('.mp4'));
+      const audio = uncached.filter((u) => u.endsWith('.mp3') || u.endsWith('.m4a'));
       const others = uncached.filter((u) => !u.endsWith('.glb') && !u.endsWith('.mp4'));
 
       await mapPool(glbs, FETCH_CONCURRENCY, async (url) => {
@@ -237,9 +238,15 @@ export function AssetLoadingProvider({ children }: { children: ReactNode }) {
           await fetchAndCache(url);
           bump();
         }),
-        ...videos.map(async (url) => {
+        ...audio.map(async (url) => {
           if (!mountedRef.current) return;
           await preloadMedia(url);
+          bump();
+        }),
+        // Videos: just cache via fetch, don't preload into DOM elements
+        ...videos.map(async (url) => {
+          if (!mountedRef.current) return;
+          await fetchAndCache(url);
           bump();
         }),
       ]);
