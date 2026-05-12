@@ -771,7 +771,7 @@ export default function Host() {
           <LobbyArena players={players} />
           
           {/* Video + instruction overlaid on arena */}
-          <div className="absolute top-2 left-2 w-[85%] max-w-[600px] z-10 pointer-events-none flex flex-col items-center gap-1">
+          <div className="absolute top-2 left-2 w-[85%] max-w-[400px] z-10 pointer-events-none flex flex-col items-center gap-1">
             <div className="w-full overflow-hidden rounded-lg" style={{ aspectRatio: '16/9' }}>
               <video
                 src={assetUrl('/Animations/Game_Lobby_Intro.mp4')}
