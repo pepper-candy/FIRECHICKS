@@ -1,14 +1,30 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { assetUrl } from "@/lib/assets";
+import { getFromCache } from "@/lib/assetCache";
 
 export default function CreditsPage() {
   const navigate = useNavigate();
+  const [src, setSrc] = useState<string | null>(null);
+
+  useEffect(() => {
+    const url = assetUrl('/Animations/Credit.mp4');
+    getFromCache(url).then(async (cached) => {
+      if (cached) {
+        const blob = await cached.blob();
+        setSrc(URL.createObjectURL(blob));
+      } else {
+        setSrc(url);
+      }
+    });
+  }, []);
+
+  if (!src) return null;
 
   return (
     <div className="fixed inset-0 bg-black flex items-center justify-center">
       <video
-        src={assetUrl('/Animations/Credit.mp4')}
+        src={src}
         className="w-full h-full object-contain"
         autoPlay
         playsInline
