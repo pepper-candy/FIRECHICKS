@@ -45,7 +45,7 @@ import { updateBot, isBot } from "@/lib/botAI";
 import { gameLogger } from "@/lib/gameLogger";
 import { normalizeMockExamAnswer } from "@/lib/mockExam";
 import type { OverlayVideo } from "@/lib/stageInfo";
-import { STAGE_TRANSITION_TOTAL_MS } from "@/lib/stageInfo";
+import { STAGE_TRANSITION_TOTAL_MS, EAGLE_WARNING_MS } from "@/lib/stageInfo";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 const SPEED = 10;
@@ -1168,7 +1168,7 @@ export function useGameLogic({
       if (chicks.length > 0 && chicks.every((c) => c.socialCircleMet.size >= requiredMeets)) {
         gs.stage = 1;
         gs.stageLabel = "Get Exam Tips from glowing buildings!";
-        // gs.stageTransitionUntil = devModeRef.current ? 0 : now + STAGE_TRANSITION_TOTAL_MS;
+        gs.stageTransitionUntil = devModeRef.current ? 0 : now + STAGE_TRANSITION_TOTAL_MS + EAGLE_WARNING_MS;
         for (const b of gs.buildings) {
           if (b.hasTip) {
             b.glowing = true;
