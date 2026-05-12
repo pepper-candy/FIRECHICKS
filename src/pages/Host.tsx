@@ -765,28 +765,27 @@ export default function Host() {
             )}
           </div>
         </div>
-
-        {/* Lobby looping background video */}
-        <div className="relative w-full overflow-hidden rounded-lg" style={{ aspectRatio: '16/9', maxHeight: '30vh' }}>
-          <video
-            src={assetUrl('/Animations/Game_Lobby_Intro.mp4')}
-            className="absolute inset-0 w-full h-full object-cover rounded-lg opacity-70"
-            autoPlay
-            loop
-            muted
-            playsInline
-          />
-          {/* Overlay text at bottom of video */}
-          <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/60 to-transparent p-3">
-            <p className="text-xs font-mono text-white/80 text-center">
-              Press the button to switch game mode
-            </p>
-          </div>
-        </div>
-
+        
         {/* 3D Lobby */}
         <div className="flex-1 min-h-0 relative">
           <LobbyArena players={players} />
+          
+          {/* Video + instruction overlaid on arena */}
+          <div className="absolute top-2 left-1/2 -translate-x-1/2 w-[85%] max-w-[600px] z-10 pointer-events-none flex flex-col items-center gap-1">
+            <div className="w-full overflow-hidden rounded-lg" style={{ aspectRatio: '16/9' }}>
+              <video
+                src={assetUrl('/Animations/Game_Lobby_Intro.mp4')}
+                className="w-full h-full object-cover rounded-lg opacity-70"
+                autoPlay
+                loop
+                muted
+                playsInline
+              />
+            </div>
+            <p className="text-[10px] font-mono text-white/60 text-center">
+              Press the button to switch game mode
+            </p>
+          </div>
         </div>
 
         {/* Instructions */}
