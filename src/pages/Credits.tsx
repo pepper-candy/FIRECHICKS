@@ -4,6 +4,12 @@ import { assetUrl } from "@/lib/assets";
 export default function CreditsPage() {
   const navigate = useNavigate();
 
+  const handleExit = () => {
+    const orientation = screen.orientation as any;
+    if (orientation?.unlock) orientation.unlock();
+    navigate("/");
+  };
+
   return (
     <div className="fixed inset-0 bg-black flex items-center justify-center">
       <video
@@ -12,10 +18,10 @@ export default function CreditsPage() {
         autoPlay
         playsInline
         controls={false}
-        onEnded={() => navigate("/")}
+        onEnded={handleExit}
       />
       <button
-        onClick={() => navigate("/")}
+        onClick={handleExit}
         className="absolute top-4 right-4 px-3 py-1.5 rounded bg-white/10 border border-white/20 text-white/70 text-xs font-mono hover:bg-white/20 transition-all"
       >
         ✕ SKIP
