@@ -111,37 +111,37 @@ const Index = () => {
   const [charViewerPending, setCharViewerPending] = useState(false);
   const [mounted, setMounted] = useState(false);
   const handleHostClickRef = useRef<() => void>(() => {});
-  const [creditReady, setCreditReady] = useState(false);
+  const [creditReady, setCreditReady] = useState(true);
   const { entryReady } = useAssetLoading();
 
   useEffect(() => {
     setMounted(true);
   }, []);
 
-  useEffect(() => {
-    // Only bother checking if the website's assets are done loading
-    if (!entryReady) return;
+  // useEffect(() => {
+  //   // Only bother checking if the website's assets are done loading
+  //   if (!entryReady) return;
   
-    // Try the new standard Cache API approach
-    if ('caches' in window) {
-      caches.open('firechick-assets').then((cache) => {
-        return cache.match(assetUrl('/Animations/Credit.mp4'));
-      }).then((match) => {
-        if (match) {
-          setCreditReady(true);
-        }
-      }).catch(() => {});
-    }
+  //   // Try the new standard Cache API approach
+  //   if ('caches' in window) {
+  //     caches.open('firechick-assets').then((cache) => {
+  //       return cache.match(assetUrl('/Animations/Credit.mp4'));
+  //     }).then((match) => {
+  //       if (match) {
+  //         setCreditReady(true);
+  //       }
+  //     }).catch(() => {});
+  //   }
     
-    // Fallback: if the file is served by the service worker, it's definitely ready
-    const testUrl = assetUrl('/Animations/Credit.mp4');
-    fetch(testUrl, { method: 'HEAD' }).then((res) => {
-      if (res.ok) {
-        setCreditReady(true);
-      }
-    }).catch(() => {});
+  //   // Fallback: if the file is served by the service worker, it's definitely ready
+  //   const testUrl = assetUrl('/Animations/Credit.mp4');
+  //   fetch(testUrl, { method: 'HEAD' }).then((res) => {
+  //     if (res.ok) {
+  //       setCreditReady(true);
+  //     }
+  //   }).catch(() => {});
   
-  }, [entryReady]);
+  // }, [entryReady]);
 
   // Auto-preload character GLBs in background on mobile when immersive mode is on,
   // but only after the minimal/entry assets finish loading first.
@@ -321,6 +321,7 @@ const Index = () => {
               onClick={() => navigate("/credits")}
               variant="outline"
               className="h-14 text-sm font-pixel border-accent text-accent hover:bg-accent/10"
+              style={{ "--delay": "3.0s" } as React.CSSProperties}
             >
               🎬 CREDITS
             </Button>
