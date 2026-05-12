@@ -239,7 +239,7 @@ const Index = () => {
         {/* Vignette */}
         {/* <div className="immersive-vignette" /> */}
 
-        {/* Fullscreen control */}
+        {/* Fullscreen control
         {!isKiosk && showImmersiveControl && !isFullscreen && (
           <button
             onClick={enter}
@@ -248,7 +248,7 @@ const Index = () => {
           >
             ⛶ Fullscreen
           </button>
-        )}
+        )} */}
 
         {/* Toggle off immersive */}
         <button
