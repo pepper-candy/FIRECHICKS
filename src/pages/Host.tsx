@@ -220,6 +220,7 @@ export default function Host() {
   const [dismissedStageTransitionKey, setDismissedStageTransitionKey] = useState<string | null>(null);
   const dismissStageToast = useCallback(() => setStageToast(null), []);
   const prevStageRef = useRef<number | null>(null);
+  const [eagleWarningDone, setEagleWarningDone] = useState(false);
   useEffect(() => {
     if (!isImmersive) return;
     if (mode !== "webrtc") setMode("webrtc");
@@ -444,6 +445,7 @@ export default function Host() {
 
   useEffect(() => {
     setDismissedStageTransitionKey(null);
+    setEagleWarningDone(false);
   }, [stageTransitionKey]);
 
   const hostStageTransitionVideo =
@@ -1335,15 +1337,35 @@ export default function Host() {
         )}
 
         {/* Stage transition video overlay (host only) */}
+        {/* Stage transition video overlay (host only) */}
         <VideoOverlay
           video={hostStageTransitionVideo}
           onComplete={() => {
-            if (activeStageTransitionKey) setDismissedStageTransitionKey(activeStageTransitionKey);
+            if (hostStageTransitionVideo === 'eagle-warning') {
+              if (activeStageTransitionKey) setDismissedStageTransitionKey(activeStageTransitionKey);
+              setEagleWarningDone(true);
+            } else {
+              if (activeStageTransitionKey) setDismissedStageTransitionKey(activeStageTransitionKey);
+            }
           }}
           placement="center"
           showBackdrop={false}
           showSkipButton={devMode}
         />
+
+        {/* Follow-up: Stage 2 transition after eagle warning */}
+        {eagleWarningDone && (
+          <VideoOverlay
+            video="stage1-transition"
+            onComplete={() => {
+              setEagleWarningDone(false);
+              if (activeStageTransitionKey) setDismissedStageTransitionKey(activeStageTransitionKey);
+            }}
+            placement="center"
+            showBackdrop={false}
+            showSkipButton={devMode}
+          />
+        )}
 
         {/* VideoOverlay LAST so it renders on top of everything */}
         <VideoOverlay video={videoPlaying} onComplete={onVideoComplete} showSkipButton={devMode} />

@@ -23,14 +23,15 @@ export type OverlayVideo =
   | "dead"
   | "stage0-transition"
   | "stage1-transition"
-  | "stage3-transition";
+  | "stage3-transition"
+  | "eagle-warning";
 
 export function getStageTransitionVideo(stage: GameStage): OverlayVideo | null {
   switch (stage) {
     case 0:
       return "stage0-transition";
     case 1:
-      return "stage1-transition";
+      return "eagle-warning";
     case 3:
       return "stage3-transition";
     default:

@@ -134,7 +134,7 @@ export default function EagleControls({
 }: Props) {
   // Fly is also blocked during attack cooldown
   const effectiveFlyRemainingMs = Math.max(flyRemainingMs, attackRemainingMs);
-  const stage1Disabled = stage < 2;
+  const stage1Disabled = stage < 1;
 
   return (
     <div className="flex flex-col h-full gap-2">
