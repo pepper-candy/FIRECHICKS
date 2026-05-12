@@ -237,7 +237,7 @@ const Index = () => {
         {/* Scanline overlay */}
         {/* <div className="immersive-scanline-overlay" /> */}
         {/* Vignette */}
-        <div className="immersive-vignette" />
+        {/* <div className="immersive-vignette" /> */}
 
         {/* Fullscreen control */}
         {!isKiosk && showImmersiveControl && !isFullscreen && (
