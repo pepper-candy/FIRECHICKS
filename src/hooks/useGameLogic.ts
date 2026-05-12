@@ -1526,6 +1526,7 @@ export function useGameLogic({
       if (ev.phase === "countdown" && elapsed >= 3000) {
         ev.phase = "active";
         ev.endAt = now + (ev.type === "hitbox" ? EVENT_HITBOX_DURATION : ev.type === "crossy-road" ? EVENT_CROSSY_DURATION : EVENT_MOCK_DURATION);
+        resetSusActivityTimers(gs, now, susPlayersRef.current);
       }
 
       // Crossy Road: simulate lanes each frame during active phase
@@ -1622,6 +1623,19 @@ export function useGameLogic({
           ev.mockExamCorrectCount = correctCount;
           ev.result = correctCount > 0 ? "chick" : "eagle";
 
+          // Broadcast correct answer to all clients
+          const mockAnswerKey: Record<number, string> = {
+            1: "A+",
+            2: "4.3", 
+            3: "FIRE",
+            4: "RED",
+          };
+          currentBroadcast({
+            type: "mock-exam-answer",
+            questionNum: ev.questionNum,
+            correctAnswer: mockAnswerKey[ev.questionNum ?? 1] ?? "???",
+          });
+
           for (const [, p] of gs.playerStates) {
             if (!p.isEagle && p.alive && isDead(p.health)) {
               p.alive = false;
@@ -1664,18 +1678,21 @@ export function useGameLogic({
         }
 
         // Post-event: freeze all eagles for 5 seconds (buffer for chicks)
+        // Unfreeze all after result display
+        const resultDisplayMs = ev.type === "mock-exam" ? 10000 : 5000;
+
         for (const [, p] of gs.playerStates) {
           if (p.isEagle) {
             p.frozen = true;
-            p.frozenUntil = now + 5000;
+            p.frozenUntil = now + resultDisplayMs + 5000;
           }
         }
 
         // Unfreeze all after short result display (3s)
-        gs.frozenAllUntil = now + 3000;
+        gs.frozenAllUntil = now + resultDisplayMs;
         resetSusActivityTimers(gs, now, susPlayersRef.current);
 
-        // Clear event after 3 more seconds
+        // Clear event after result display
         setTimeout(() => {
           const gsCleanup = gameStateRef.current as GameStateRef | null;
           if (gsCleanup) {
@@ -1685,7 +1702,7 @@ export function useGameLogic({
             gsCleanup.stageLabel = getStageLabel(gsCleanup.stage as number);
             resetSusActivityTimers(gsCleanup, Date.now(), susPlayersRef.current);
           }
-        }, 3000);
+        }, resultDisplayMs);
       }
     }
 

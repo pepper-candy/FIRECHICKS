@@ -436,6 +436,9 @@ export default function Client() {
   const [gameOverState, setGameOverState] = useState<GameStateSnapshot | null>(null);
   const [hasSubmittedMockExam, setHasSubmittedMockExam] = useState(false);
   const [mockExamZoom, setMockExamZoom] = useState(0.8);
+  const [mockExamCorrectAnswer, setMockExamCorrectAnswer] = useState<string | null>(null);
+  const [mockExamAppealed, setMockExamAppealed] = useState(false);
+  const [mockExamAppealResult, setMockExamAppealResult] = useState<string | null>(null);
   const connIdRef = useRef<string>("");
   const [showSusWarning, setShowSusWarning] = useState(false);
   const [showExamVoting, setShowExamVoting] = useState(false);
@@ -764,7 +767,9 @@ export default function Client() {
             });
           }, 5000);
         }
-    } else if (msg.type === "exam-wrong") {
+      } else if (msg.type === "mock-exam-answer") {
+          setMockExamCorrectAnswer(msg.correctAnswer);
+      } else if (msg.type === "exam-wrong") {
         const left = msg.attemptsLeft as number;
         if (left > 0) {
           toast.error(`❌ Wrong answer! ${left} attempt${left > 1 ? 's' : ''} remaining`);
@@ -1130,6 +1135,9 @@ export default function Client() {
   useEffect(() => {
     if (activeEvent?.type !== "mock-exam" || activeEvent.phase === "result") {
       setHasSubmittedMockExam(false);
+      setMockExamCorrectAnswer(null);
+      setMockExamAppealed(false);
+      setMockExamAppealResult(null);
     }
   }, [activeEvent]);
 
@@ -1593,6 +1601,20 @@ export default function Client() {
           ) : hasSubmittedMockExam ? (
             <div className="flex-1 flex items-center justify-center">
               <p className="text-lg font-pixel text-primary">✓ Submitted</p>
+              {mockExamCorrectAnswer && (
+                <>
+                  <p className="text-xs font-mono text-muted-foreground">
+                    Correct answer: <span className="text-accent font-bold">{mockExamCorrectAnswer}</span>
+                  </p>
+                  <p className="text-[10px] font-mono text-muted-foreground/60 text-center max-w-[260px]">
+                    You may appeal, but the system reserves the final judgment.
+                  </p>
+                  <p className="text-[10px] font-mono text-muted-foreground/60 text-center max-w-[260px]">
+                    <br />
+                    You are probably wrong.
+                  </p>
+                </>
+              )}
             </div>
           ) : (
             <>
@@ -1738,6 +1760,24 @@ export default function Client() {
                   <p className="text-sm font-pixel text-muted-foreground">
                     <span style={{ color: "hsl(0 80% 55%)" }}>-2 grades</span>
                   </p>
+                  {!mockExamAppealed ? (
+                    <button
+                      onClick={() => {
+                        setMockExamAppealed(true);
+                        // Always fails after a short delay
+                        setTimeout(() => {
+                          setMockExamAppealResult("APPEAL DENIED — The system's judgment is final.");
+                        }, 800);
+                      }}
+                      className="mt-2 px-4 py-2 rounded border border-amber-500/50 bg-amber-500/10 text-amber-400 text-xs font-mono hover:bg-amber-500/20 transition-all"
+                    >
+                      📝 APPEAL
+                    </button>
+                  ) : mockExamAppealResult ? (
+                    <p className="text-[11px] font-mono text-destructive/80 text-center mt-1">{mockExamAppealResult}</p>
+                  ) : (
+                    <p className="text-[10px] font-mono text-muted-foreground animate-pulse mt-1">Reviewing appeal...</p>
+                  )}
                 </div>
               )}
             </>
