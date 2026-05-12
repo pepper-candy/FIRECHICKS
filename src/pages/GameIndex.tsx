@@ -1,3 +1,4 @@
+import { assetUrl } from '@/lib/assets';
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -111,9 +112,24 @@ const Index = () => {
   const [charViewerPending, setCharViewerPending] = useState(false);
   const [mounted, setMounted] = useState(false);
   const handleHostClickRef = useRef<() => void>(() => {});
+  const [creditReady, setCreditReady] = useState(false);
 
   useEffect(() => {
     setMounted(true);
+  }, []);
+
+  useEffect(() => {
+    const checkCredit = async () => {
+      if (!('caches' in window)) return;
+      try {
+        const cache = await caches.open('firechick-assets');
+        const match = await cache.match(assetUrl('/Animations/Credit.mp4'));
+        if (match) setCreditReady(true);
+      } catch {}
+    };
+    checkCredit();
+    const id = setInterval(checkCredit, 5000);
+    return () => clearInterval(id);
   }, []);
 
   // Auto-preload character GLBs in background on mobile when immersive mode is on,
@@ -288,6 +304,17 @@ const Index = () => {
               </div>
             )}
           </div>
+          {/* Credits button — only shows when video is cached */}
+          {creditReady && (
+            <Button
+              onClick={() => navigate("/credits")}
+              variant="outline"
+              className="h-14 text-sm font-pixel border-accent text-accent hover:bg-accent/10 immersive-fade-in"
+              style={{ "--delay": "3.0s" } as React.CSSProperties}
+            >
+              🎬 CREDITS
+            </Button>
+          )}
 
         </div>
 

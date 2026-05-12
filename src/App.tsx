@@ -12,6 +12,7 @@ import NotFound from "./pages/NotFound";
 import Character from "./pages/Character";
 import ExamTips from "./pages/ExamTips";
 import PWExam from "./pages/PWExam";
+import CreditsPage from "./pages/Credits";
 // Preview pages
 import PreviewClientReveal from "./pages/preview/ClientReveal";
 import PreviewHostReveal from "./pages/preview/HostReveal";
@@ -54,6 +55,7 @@ const App = () => (
           <Route path="/character" element={<Character />} />
           <Route path="/exam-tips" element={<ExamTips />} />
           <Route path="/pw" element={<PWExam />} />
+          <Route path="/credits" element={<CreditsPage />} />
           {/* Preview routes for individual phases */}
           <Route path="/client-reveal" element={<PreviewClientReveal />} />
           <Route path="/host-reveal" element={<PreviewHostReveal />} />
