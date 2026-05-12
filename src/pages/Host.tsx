@@ -946,7 +946,12 @@ export default function Host() {
   // ─── PLAYING / EXAM ──────────────────────────────────────────────────────────
   if ((phase === "playing" || phase === "exam") && snapshot) {
     if (phase === "exam" && (snapshot.examTransitionEndsAt ?? 0) > Date.now()) {
-      return <GameEndTransition variant="host" />;
+      return (
+        <>
+          <GameMusic phase={phase} stage={snapshot?.stage ?? 0} />
+          <GameEndTransition variant="host" />
+        </>
+      );
     }
     const alivePlayers = Object.values(snapshot.players).filter((p) => p.alive);
     const isEventOverlay =
