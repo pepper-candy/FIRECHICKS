@@ -47,6 +47,11 @@ function preloadMedia(url: string): Promise<void> {
       video.muted = true;
       video.playsInline = true;
       video.addEventListener('loadeddata', finish, { once: true });
+      video.addEventListener('progress', () => {
+        if (video.buffered.length > 0 && video.buffered.end(0) >= video.duration) {
+          finish();
+        }
+      }, { once: false });
       video.addEventListener('canplaythrough', finish, { once: true });
       video.addEventListener('error', finish, { once: true });
       video.src = url;
