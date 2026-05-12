@@ -199,47 +199,19 @@ function PlayerFocusCamera({ target }: { target: { x: number; z: number } }) {
   return null;
 }
 
-function LobbyVideoPanel({ src, side, label }: { src: string; side: 'left' | 'right'; label: string }) {
-  const [hidden, setHidden] = useState(false);
+function LobbyVideoPanel({ src, side, label }: { src: string; side: 'left' | 'right'; label?: string }) {
   const isLeft = side === 'left';
 
   return (
-    <div
-      className={`absolute top-2 z-10 transition-transform duration-500 ease-in-out ${
-        isLeft ? 'left-2' : 'right-2'
-      }`}
-      style={{
-        transform: hidden
-          ? `translateX(${isLeft ? '-105%' : '105%'})`
-          : 'translateX(0)',
-      }}
-    >
-      <div className="flex items-start gap-0">
-        {/* Video panel — left side */}
-        {isLeft && (
-          <div className="w-[40vw] max-w-[400px] overflow-hidden rounded-lg pointer-events-none" style={{ aspectRatio: '16/9' }}>
-            <video src={src} className="w-full h-full object-cover rounded-lg opacity-70" autoPlay loop muted playsInline />
-            <p className="text-sm font-mono text-foreground/70 text-left mt-1">{label}</p>
-          </div>
-        )}
-
-        {/* Toggle arrow button */}
-        <button
-          onClick={() => setHidden(!hidden)}
-          className="flex items-center justify-center w-6 h-16 bg-black/40 border border-white/20 rounded-md hover:bg-black/60 transition-all flex-shrink-0 pointer-events-auto"
-          title={hidden ? 'Show panel' : 'Hide panel'}
-        >
-          <span className="text-white/70 text-lg leading-none">
-            {hidden ? (isLeft ? '▶' : '◀') : (isLeft ? '◀' : '▶')}
-          </span>
-        </button>
-
-        {/* Video panel — right side */}
-        {!isLeft && (
-          <div className="w-[40vw] max-w-[400px] overflow-hidden rounded-lg pointer-events-none" style={{ aspectRatio: '16/9' }}>
-            <video src={src} className="w-full h-full object-cover rounded-lg opacity-70" autoPlay loop muted playsInline />
-            <p className="text-sm font-mono text-foreground/70 text-right mt-1">{label}</p>
-          </div>
+    <div className={`absolute top-2 z-10 ${isLeft ? 'left-2' : 'right-2'}`}>
+      <div className={`flex flex-col ${isLeft ? 'items-start' : 'items-end'}`}>
+        <div className="overflow-hidden rounded-lg border-2 border-white/20 pointer-events-none" style={{ width: '40vw', maxWidth: '250px', aspectRatio: '16/9' }}>
+          <video src={src} className="w-full h-full object-cover opacity-70" autoPlay loop muted playsInline />
+        </div>
+        {label && (
+          <p className={`text-sm font-mono text-foreground/70 mt-1 ${isLeft ? 'text-left' : 'text-right'}`}>
+            {label}
+          </p>
         )}
       </div>
     </div>
@@ -826,7 +798,6 @@ export default function Host() {
           <LobbyVideoPanel
             src={assetUrl('/Animations/Game_Lobby_Char_plus_Props_Intro.mp4')}
             side="right"
-            label="Characters & Props"
           />
         </div>
 
