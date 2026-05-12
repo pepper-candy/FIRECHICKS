@@ -2016,7 +2016,7 @@ function GameMusic({ phase, stage }: { phase: string; stage: number }) {
   };
 
   // Helper: crossfade from current to new src
-  const crossfade = (newSrc: string, duration = 2000, onDone?: () => void) => {
+  const crossfade = (newSrc: string, duration = 3000, onDone?: () => void) => {
     if (currentTrackRef.current === newSrc) return;
     currentTrackRef.current = newSrc;
 
@@ -2086,9 +2086,9 @@ function GameMusic({ phase, stage }: { phase: string; stage: number }) {
       newEl.loop = false;
       newEl.volume = 0;
       newEl.play().catch(() => {});
-      fade(newEl, 1, 1000);
+      fade(newEl, 1, 3000);
 
-      if (oldEl && !oldEl.paused) fade(oldEl, 0, 1000);
+      if (oldEl && !oldEl.paused) fade(oldEl, 0, 3000);
 
       activeRef.current = activeRef.current === 'a' ? 'b' : 'a';
 
@@ -2100,8 +2100,8 @@ function GameMusic({ phase, stage }: { phase: string; stage: number }) {
         oompaEl.loop = true;
         oompaEl.volume = 0;
         oompaEl.play().catch(() => {});
-        fade(oompaEl, 1, 2000);
-        fade(wingsEl, 0, 2000);
+        fade(oompaEl, 1, 3000);
+        fade(wingsEl, 0, 3000);
         setTimeout(() => { wingsEl.pause(); wingsEl.currentTime = 0; }, 2200);
         activeRef.current = activeRef.current === 'a' ? 'b' : 'a';
       }, 5000);
@@ -2116,8 +2116,8 @@ function GameMusic({ phase, stage }: { phase: string; stage: number }) {
       newEl.loop = false;
       newEl.volume = 0;
       newEl.play().catch(() => {});
-      fade(newEl, 1, 2000);
-      if (oldEl && !oldEl.paused) fade(oldEl, 0, 2000);
+      fade(newEl, 1, 3000);
+      if (oldEl && !oldEl.paused) fade(oldEl, 0, 3000);
       setTimeout(() => { oldEl.pause(); oldEl.currentTime = 0; }, 2200);
       activeRef.current = activeRef.current === 'a' ? 'b' : 'a';
     }
@@ -2133,8 +2133,8 @@ function GameMusic({ phase, stage }: { phase: string; stage: number }) {
         newEl.loop = false;
         newEl.volume = 0;
         newEl.play().catch(() => {});
-        fade(newEl, 1, 2000);
-        if (oldEl && !oldEl.paused) fade(oldEl, 0, 2000);
+        fade(newEl, 1, 3000);
+        if (oldEl && !oldEl.paused) fade(oldEl, 0, 3000);
         setTimeout(() => { oldEl.pause(); oldEl.currentTime = 0; }, 2200);
         activeRef.current = activeRef.current === 'a' ? 'b' : 'a';
         
