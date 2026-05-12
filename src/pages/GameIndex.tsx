@@ -396,7 +396,7 @@ const Index = () => {
       {/* Kiosk toggle — dev only */}
       <button
         onClick={toggleKiosk}
-        className={`absolute top-4 left-36 flex items-center gap-2 px-3 py-1.5 rounded border text-xs font-mono transition-colors ${
+        className={`absolute top-12 left-4 flex items-center gap-2 px-3 py-1.5 rounded border text-xs font-mono transition-colors ${
           isKiosk
             ? 'border-primary/40 text-primary bg-primary/10'
             : 'border-muted-foreground/20 text-muted-foreground/40 hover:border-muted-foreground/40'
