@@ -586,6 +586,18 @@ export default function Host() {
     if (snapshot.phase === "lobby") prevDamageSumRef.current = 0;
   }, [isImmersive, snapshot]);
 
+  // Spacebar = Toggle game mode in lobby
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.code === 'Space' && phase === 'lobby' && !isFull) {
+        e.preventDefault();
+        handleGameModeToggle();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [phase, isFull, handleGameModeToggle]);
+
   // ─── LOBBY ────────────────────────────────────────────────────────────────────
   if (phase === "lobby") {
     return (
