@@ -614,8 +614,7 @@ export default function Host() {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [phase, isFull, handleGameModeToggle]);
 
-  {snapshot && <GameMusic phase={phase} stage={snapshot.stage} />}
-  {!snapshot && phase === 'lobby' && <GameMusic phase="lobby" stage={0} />}
+  <GameMusic phase={phase} stage={snapshot?.stage ?? 0} />
 
   // ─── LOBBY ────────────────────────────────────────────────────────────────────
   if (phase === "lobby") {
