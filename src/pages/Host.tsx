@@ -439,13 +439,10 @@ export default function Host() {
       if (e.code === 'Space' && (phase === 'playing' || phase === 'exam')) {
         e.preventDefault();
         if (isPaused) {
+          // Resuming: start 3s grab-back, then unpause
           setGrabBackUntil(Date.now() + 3000);
-          setTimeout(() => {
-            togglePause();
-            setIsPaused(false);
-            setGrabBackUntil(0);
-          }, 3000);
         } else {
+          // Pausing: immediate
           togglePause();
           setIsPaused(true);
         }
@@ -1428,18 +1425,28 @@ export default function Host() {
 function GameOverCeremony({ snapshot, gameMode }: { snapshot: GameStateSnapshot; gameMode: string }) {
   const { isImmersive } = useImmersive();
   const [ceremonyPhase, setCeremonyPhase] = useState<"mvp" | "team" | "transcript">("mvp");
+  const [showPlayAgain, setShowPlayAgain] = useState(false);
+
+  useEffect(() => {
+    if (ceremonyPhase === 'transcript') {
+      const id = setTimeout(() => setShowPlayAgain(true), 5000);
+      return () => clearTimeout(id);
+    } else {
+      setShowPlayAgain(false);
+    }
+  }, [ceremonyPhase]);
 
   // Spacebar = PLAY AGAIN
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.code === 'Space') {
+      if (e.code === 'Space' && ceremonyPhase === 'transcript' && showPlayAgain) {
         e.preventDefault();
         window.location.href = "/";
       }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, []);
+  }, [ceremonyPhase, showPlayAgain]);
 
   const winner = snapshot.winner;
   const getMatchResult = (p: PlayerGameStateSerializable): "draw" | "win" | "lose" => {
@@ -1876,15 +1883,19 @@ function GameOverCeremony({ snapshot, gameMode }: { snapshot: GameStateSnapshot;
         </div>
 
         <div className="py-3 text-center border-t border-border flex-shrink-0">
-          <button
-            type="button"
-            onClick={() => {
-              window.location.href = "/";
-            }}
-            className="px-8 py-3 rounded-lg border-2 border-primary bg-primary/10 text-primary font-pixel text-sm tracking-widest hover:bg-primary/20 transition-all"
-          >
-            ▶ PLAY AGAIN
-          </button>
+          {showPlayAgain ? (
+            <button
+              type="button"
+              onClick={() => {
+                window.location.href = "/";
+              }}
+              className="px-8 py-3 rounded-lg border-2 border-primary bg-primary/10 text-primary font-pixel text-sm tracking-widest hover:bg-primary/20 transition-all"
+            >
+              ▶ PLAY AGAIN
+            </button>
+          ) : (
+            <p className="text-xs font-mono text-muted-foreground animate-pulse">Loading results...</p>
+          )}
         </div>
       </div>
     </div>
