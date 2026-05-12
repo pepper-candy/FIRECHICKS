@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { useFullscreen } from "@/hooks/useFullscreen";
@@ -110,6 +110,7 @@ const Index = () => {
   const [hostPending, setHostPending] = useState(false);
   const [charViewerPending, setCharViewerPending] = useState(false);
   const [mounted, setMounted] = useState(false);
+  const handleHostClickRef = useRef<() => void>(() => {});
 
   useEffect(() => {
     setMounted(true);
@@ -174,6 +175,23 @@ const Index = () => {
     if (characterAnimationsReady || characterAnimationsLoading) return;
     startCharacterAnimationPreload();
   };
+
+  // Keep ref in sync with handleHostClick
+  useEffect(() => {
+    handleHostClickRef.current = handleHostClick;
+  }, [handleHostClick]);
+
+  // Spacebar = HOST GAME
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.code === 'Space') {
+        e.preventDefault();
+        handleHostClickRef.current();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
 
   // ── Immersive variant ────────────────────────────────────
 
