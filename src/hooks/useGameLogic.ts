@@ -2167,6 +2167,7 @@ export function useGameLogic({
         if (gs.frozenAll) return;
         if (now < player.attackCooldownUntil) return;
         if (player.frozen) return;
+        if (gs.stage < 2) return;
 
         player.attackCooldownUntil = now + ATTACK_COOLDOWN;
         player.isAttacking = true;
@@ -2335,6 +2336,7 @@ export function useGameLogic({
             if (!player.isEagle) return;
             propItem.count++; // unlimited — undo decrement
             if (now < player.cageCooldownUntil) return;
+            if (gs.stage < 2) return;
             // Pick random alive chick
             {
               const aliveChicksCage = Array.from<PlayerGameState>(gs.playerStates.values()).filter(
