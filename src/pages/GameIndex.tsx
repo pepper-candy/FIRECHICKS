@@ -428,6 +428,17 @@ const Index = () => {
         >
           🐔 CROSSY ROAD
         </Button>
+
+        {creditReady && (
+          <Button
+            onClick={() => navigate("/credits")}
+            variant="outline"
+            className="h-14 text-sm font-pixel border-accent text-accent hover:bg-accent/10 immersive-fade-in"
+            style={{ "--delay": "3.0s" } as React.CSSProperties}
+          >
+            🎬 CREDITS
+          </Button>
+        )}
       </div>
 
       <div className="text-xs text-muted-foreground font-mono text-center space-y-1 mt-8">
