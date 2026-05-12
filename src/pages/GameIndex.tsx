@@ -315,17 +315,15 @@ const Index = () => {
               </div>
             )}
           </div>
-          {/* Credits button — only shows when video is cached */}
-          {creditReady && (
-            <Button
-              onClick={() => navigate("/credits")}
-              variant="outline"
-              className="h-14 text-sm font-pixel border-accent text-accent hover:bg-accent/10"
-              style={{ "--delay": "3.0s" } as React.CSSProperties}
-            >
-              🎬 CREDITS
-            </Button>
-          )}
+          {/* Credits button */}
+          <Button
+            onClick={() => navigate("/credits")}
+            variant="outline"
+            className="h-14 text-sm font-pixel border-[#7d6a9d] text-[#7d6a9d] bg-transparent hover:bg-[#7d6a9d]/10 immersive-fade-in"
+            style={{ "--delay": "3.0s", animationFillMode: "both" } as React.CSSProperties}
+          >
+            🎬 CREDITS
+          </Button>
 
         </div>
 
@@ -444,8 +442,8 @@ const Index = () => {
           <Button
             onClick={() => navigate("/credits")}
             variant="outline"
-            className="h-14 text-sm font-pixel border-accent text-accent hover:bg-accent/10"
-          >
+            className="h-14 text-sm font-pixel border-[#7d6a9d] text-[#7d6a9d] bg-transparent hover:bg-[#7d6a9d]/10"
+            >
             🎬 CREDITS
           </Button>
         )}
