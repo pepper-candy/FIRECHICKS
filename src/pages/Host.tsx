@@ -1428,10 +1428,15 @@ function CreditButton() {
 
   // Countdown timer
   useEffect(() => {
-    if (countdown <= 0) return;
+    if (countdown <= 0 || watching) return;
     const id = setInterval(() => setCountdown((c) => Math.max(0, c - 1)), 1000);
     return () => clearInterval(id);
-  }, [countdown]);
+  }, [countdown, watching]);
+
+  // Auto-play when countdown hits 0
+  useEffect(() => {
+    if (countdown <= 0 && !watching) setWatching(true);
+  }, [countdown, watching]);
 
   // Enable skip after 10s of video
   useEffect(() => {
@@ -1440,21 +1445,21 @@ function CreditButton() {
     return () => clearTimeout(id);
   }, [watching]);
 
-  // Spacebar: start video if countdown hits 0, or skip if watching and can skip
+  // Spacebar: start video or skip if allowed
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.code === 'Space') {
         e.preventDefault();
-        if (!watching && countdown <= 0) {
+        if (!watching) {
           setWatching(true);
-        } else if (watching && canSkip) {
+        } else if (canSkip) {
           window.location.href = "/";
         }
       }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [watching, countdown, canSkip]);
+  }, [watching, canSkip]);
 
   if (watching) {
     return (
@@ -1472,14 +1477,10 @@ function CreditButton() {
 
   return (
     <button
-      onClick={() => { if (countdown <= 0) setWatching(true); }}
-      className={`px-8 py-3 rounded-lg border-2 font-pixel text-sm tracking-widest transition-all ${
-        countdown <= 0
-          ? 'border-primary bg-primary/10 text-primary hover:bg-primary/20'
-          : 'border-muted-foreground/30 bg-card/50 text-muted-foreground cursor-default'
-      }`}
+      onClick={() => setWatching(true)}
+      className="px-8 py-3 rounded-lg border-2 font-pixel text-sm tracking-widest transition-all border-primary bg-primary/10 text-primary hover:bg-primary/20 hover:shadow-[0_0_20px_hsl(var(--primary)/0.4)]"
     >
-      Watch Credits ({sec})
+      Click to Watch Credits ({sec})
     </button>
   );
 }
