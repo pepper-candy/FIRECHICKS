@@ -614,6 +614,9 @@ export default function Host() {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [phase, isFull, handleGameModeToggle]);
 
+  {snapshot && <GameMusic phase={phase} stage={snapshot.stage} />}
+  {!snapshot && phase === 'lobby' && <GameMusic phase="lobby" stage={0} />}
+
   // ─── LOBBY ────────────────────────────────────────────────────────────────────
   if (phase === "lobby") {
     return (
@@ -1974,6 +1977,172 @@ function GameOverCeremony({ snapshot, gameMode }: { snapshot: GameStateSnapshot;
       </div>
     </div>
   );
+}
+
+
+// ─── Game Music ───────────────────────────────────────────────────────────────
+function GameMusic({ phase, stage }: { phase: string; stage: number }) {
+  const [a, setA] = useState<HTMLAudioElement | null>(null);
+  const [b, setB] = useState<HTMLAudioElement | null>(null);
+  const activeRef = useRef<'a' | 'b'>('a');
+  const currentTrackRef = useRef<string>('');
+  const fadeTimerRef = useRef<number | null>(null);
+
+  // Helper: fade audio element to volume over duration
+  const fade = (audio: HTMLAudioElement, to: number, ms: number) => {
+    const start = audio.volume;
+    const startTime = Date.now();
+    const step = () => {
+      const elapsed = Date.now() - startTime;
+      const progress = Math.min(1, elapsed / ms);
+      audio.volume = start + (to - start) * progress;
+      if (progress < 1) requestAnimationFrame(step);
+    };
+    requestAnimationFrame(step);
+  };
+
+  // Helper: crossfade from current to new src
+  const crossfade = (newSrc: string, duration = 2000, onDone?: () => void) => {
+    if (currentTrackRef.current === newSrc) return;
+    currentTrackRef.current = newSrc;
+
+    const oldEl = activeRef.current === 'a' ? a : b;
+    const newEl = activeRef.current === 'a' ? b : a;
+
+    if (newEl) {
+      newEl.src = newSrc;
+      newEl.volume = 0;
+      newEl.play().catch(() => {});
+      fade(newEl, 1, duration);
+    }
+
+    if (oldEl && oldEl.src && !oldEl.paused) {
+      fade(oldEl, 0, duration);
+      if (fadeTimerRef.current) clearTimeout(fadeTimerRef.current);
+      fadeTimerRef.current = window.setTimeout(() => {
+        oldEl.pause();
+        oldEl.currentTime = 0;
+      }, duration + 100);
+    }
+
+    activeRef.current = activeRef.current === 'a' ? 'b' : 'a';
+
+    if (onDone) {
+      if (fadeTimerRef.current) clearTimeout(fadeTimerRef.current);
+      fadeTimerRef.current = window.setTimeout(onDone, duration + 200);
+    }
+  };
+
+  useEffect(() => {
+    const aEl = new Audio();
+    const bEl = new Audio();
+    setA(aEl);
+    setB(bEl);
+    return () => {
+      aEl.pause();
+      bEl.pause();
+      aEl.src = '';
+      bEl.src = '';
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!a || !b) return;
+
+    // Lobby or Stage 0
+    if ((phase === 'lobby' || (phase === 'playing' && stage === 0)) && currentTrackRef.current !== 'shallows') {
+      crossfade(assetUrl('/Music/Arrival_in_the_Shallows_slow.m4a'));
+      // Loop it
+      a.loop = true;
+      b.loop = true;
+    }
+
+    // Stage 1 start → Under_the_Wings 5s → crossfade to Oompa
+    if (phase === 'playing' && stage === 1 && currentTrackRef.current !== 'oompa') {
+      currentTrackRef.current = 'oompa';
+      const newEl = activeRef.current === 'a' ? b : a;
+      const oldEl = activeRef.current === 'a' ? a : b;
+
+      // Play Under_the_Wings on new element
+      newEl.src = assetUrl('/Music/Under_the_Wings.m4a');
+      newEl.loop = false;
+      newEl.volume = 0;
+      newEl.play().catch(() => {});
+      fade(newEl, 1, 1000);
+
+      if (oldEl && !oldEl.paused) fade(oldEl, 0, 1000);
+
+      activeRef.current = activeRef.current === 'a' ? 'b' : 'a';
+
+      // After 5s, crossfade to Oompa
+      setTimeout(() => {
+        const wingsEl = newEl; // the one playing Under_the_Wings
+        const oompaEl = activeRef.current === 'a' ? b : a; // the other
+        oompaEl.src = assetUrl('/Music/Oompa_Until_You_Croak.mp3');
+        oompaEl.loop = true;
+        oompaEl.volume = 0;
+        oompaEl.play().catch(() => {});
+        fade(oompaEl, 1, 2000);
+        fade(wingsEl, 0, 2000);
+        setTimeout(() => { wingsEl.pause(); wingsEl.currentTime = 0; }, 2200);
+        activeRef.current = activeRef.current === 'a' ? 'b' : 'a';
+      }, 5000);
+    }
+
+    // Stage 3 → Under_the_Wings once, crossfade with Oompa
+    if (phase === 'playing' && stage === 3 && currentTrackRef.current !== 'wings-final') {
+      currentTrackRef.current = 'wings-final';
+      const newEl = activeRef.current === 'a' ? b : a;
+      const oldEl = activeRef.current === 'a' ? a : b;
+      newEl.src = assetUrl('/Music/Under_the_Wings.m4a');
+      newEl.loop = false;
+      newEl.volume = 0;
+      newEl.play().catch(() => {});
+      fade(newEl, 1, 2000);
+      if (oldEl && !oldEl.paused) fade(oldEl, 0, 2000);
+      setTimeout(() => { oldEl.pause(); oldEl.currentTime = 0; }, 2200);
+      activeRef.current = activeRef.current === 'a' ? 'b' : 'a';
+    }
+
+    // Transcript music — 10s into the exam→gameover transition
+    if (phase === 'exam' && currentTrackRef.current !== 'goodguys') {
+      currentTrackRef.current = 'goodguys';
+      
+      const transcriptTimer = setTimeout(() => {
+        const newEl = activeRef.current === 'a' ? b : a;
+        const oldEl = activeRef.current === 'a' ? a : b;
+        newEl.src = assetUrl('/Music/The_Good_Guys.mp3');
+        newEl.loop = false;
+        newEl.volume = 0;
+        newEl.play().catch(() => {});
+        fade(newEl, 1, 2000);
+        if (oldEl && !oldEl.paused) fade(oldEl, 0, 2000);
+        setTimeout(() => { oldEl.pause(); oldEl.currentTime = 0; }, 2200);
+        activeRef.current = activeRef.current === 'a' ? 'b' : 'a';
+        
+        // Stop after 41s with fade
+        setTimeout(() => {
+          fade(activeRef.current === 'a' ? a : b, 0, 3000);
+          setTimeout(() => {
+            (activeRef.current === 'a' ? a : b).pause();
+            (activeRef.current === 'a' ? a : b).currentTime = 0;
+          }, 3200);
+        }, 41000);
+      }, 10000);
+
+      if (fadeTimerRef.current) clearTimeout(fadeTimerRef.current);
+      fadeTimerRef.current = transcriptTimer as unknown as number;
+}
+  }, [phase, stage, a, b]);
+
+  // Cleanup timers
+  useEffect(() => {
+    return () => {
+      if (fadeTimerRef.current) clearTimeout(fadeTimerRef.current);
+    };
+  }, []);
+
+  return null;
 }
 
 const COUNTDOWN_DURATION_DISPLAY = 7;
