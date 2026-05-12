@@ -463,8 +463,8 @@ export default function Client() {
     }
   })();
 
-  // Fullscreen splash — false = not yet dismissed by user
-  const [fsSplashDone, setFsSplashDone] = useState(false);
+  // // Fullscreen splash — false = not yet dismissed by user
+  // const [fsSplashDone, setFsSplashDone] = useState(false);
   // ── Damage flash + prop pulse state ──
   const [damageFlash, setDamageFlash] = useState(false);
   const [propFlash, setPropFlash] = useState<string | null>(null);
@@ -1156,42 +1156,42 @@ export default function Client() {
         )
       : false;
 
-  // ─── FULLSCREEN SPLASH — shown before join if FS is supported and not yet entered ──
-  if (showImmersiveControl && !isFullscreen && !fsSplashDone) {
-    return (
-      <div
-        className="flex flex-col items-center justify-center h-dvh overflow-hidden gap-8 bg-background"
-        style={{ touchAction: 'manipulation' }}
-      >
-        {/* App title */}
-        <div className="flex flex-col items-center gap-2">
-          <h1 className="text-xl font-pixel text-destructive tracking-widest" style={{ textShadow: '0 0 10px hsl(0 80% 55% / 0.6)' }}>FIRECHICK</h1>
-          <p className="text-xs font-mono text-muted-foreground">Eagle vs Chick</p>
-        </div>
+  // // ─── FULLSCREEN SPLASH — shown before join if FS is supported and not yet entered ──
+  // if (showImmersiveControl && !isFullscreen && !fsSplashDone) {
+  //   return (
+  //     <div
+  //       className="flex flex-col items-center justify-center h-dvh overflow-hidden gap-8 bg-background"
+  //       style={{ touchAction: 'manipulation' }}
+  //     >
+  //       {/* App title */}
+  //       <div className="flex flex-col items-center gap-2">
+  //         <h1 className="text-xl font-pixel text-destructive tracking-widest" style={{ textShadow: '0 0 10px hsl(0 80% 55% / 0.6)' }}>FIRECHICK</h1>
+  //         <p className="text-xs font-mono text-muted-foreground">Eagle vs Chick</p>
+  //       </div>
 
-        {/* Big fullscreen tap target */}
-        <button
-          onClick={async () => { await enterFullscreen(); setFsSplashDone(true); }}
-          className="relative flex flex-col items-center gap-4 px-10 py-8 rounded-2xl
-            border-2 border-destructive bg-destructive/10 text-destructive
-            shadow-[0_0_40px_hsl(var(--destructive)/0.4),inset_0_0_30px_hsl(var(--destructive)/0.05)]
-            hover:bg-destructive/20 active:scale-95 transition-all duration-150
-            before:absolute before:inset-0 before:rounded-2xl before:border before:border-destructive/30 before:animate-pulse"
-        >
-          <span className="text-5xl" style={{ lineHeight: 1 }}>⛶</span>
-          <span className="text-base font-pixel tracking-widest">TAP TO FULLSCREEN</span>
-        </button>
+  //       {/* Big fullscreen tap target */}
+  //       <button
+  //         onClick={async () => { await enterFullscreen(); setFsSplashDone(true); }}
+  //         className="relative flex flex-col items-center gap-4 px-10 py-8 rounded-2xl
+  //           border-2 border-destructive bg-destructive/10 text-destructive
+  //           shadow-[0_0_40px_hsl(var(--destructive)/0.4),inset_0_0_30px_hsl(var(--destructive)/0.05)]
+  //           hover:bg-destructive/20 active:scale-95 transition-all duration-150
+  //           before:absolute before:inset-0 before:rounded-2xl before:border before:border-destructive/30 before:animate-pulse"
+  //       >
+  //         <span className="text-5xl" style={{ lineHeight: 1 }}>⛶</span>
+  //         <span className="text-base font-pixel tracking-widest">TAP TO FULLSCREEN</span>
+  //       </button>
 
-        {/* Skip link */}
-        <button
-          onClick={() => setFsSplashDone(true)}
-          className="text-[11px] font-mono text-muted-foreground underline underline-offset-2 hover:text-foreground transition-colors"
-        >
-          Skip — continue without fullscreen
-        </button>
-      </div>
-    );
-  }
+  //       {/* Skip link */}
+  //       <button
+  //         onClick={() => setFsSplashDone(true)}
+  //         className="text-[11px] font-mono text-muted-foreground underline underline-offset-2 hover:text-foreground transition-colors"
+  //       >
+  //         Skip — continue without fullscreen
+  //       </button>
+  //     </div>
+  //   );
+  // }
 
   const canRenderEndgameWhileDisconnected =
     gamePhase === "gameover" && Boolean(stableGameState || showFTranscript || hasReachedEndgameRef.current);

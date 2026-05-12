@@ -293,7 +293,10 @@ const Index = () => {
         ) : (
           <div className="flex flex-col gap-4 w-full max-w-xs z-10">
             <Button
-              onClick={handleHostClick}
+              onClick={async () => {
+                await enter();
+                handleHostClick();
+              }}
               disabled={hostPending}
               className="h-14 text-sm font-pixel bg-red-600 hover:bg-red-500 text-white border-red-500/50 glow-red immersive-fade-in immersive-border-breathe-red"
               style={{ "--delay": "2.4s" } as React.CSSProperties}
@@ -308,7 +311,10 @@ const Index = () => {
             </Button>
 
             <Button
-              onClick={() => navigate("/client")}
+              onClick={async () => {
+                await enter();
+                navigate("/client");
+              }}
               variant="outline"
               className="h-14 text-sm font-pixel border-secondary text-secondary hover:bg-secondary/10 glow-purple immersive-fade-in"
               style={{ "--delay": "2.6s", animationFillMode: "both" } as React.CSSProperties}
@@ -321,7 +327,10 @@ const Index = () => {
               style={{ "--delay": "2.8s" } as React.CSSProperties}
             >
               <button
-                onClick={handleCharViewerClick}
+                onClick={async () => {
+                  await enter();
+                  handleCharViewerClick();
+                }}
                 className="flex-1 text-sm font-pixel text-accent bg-transparent hover:bg-accent/10 transition-colors px-4"
               >
                 🐤 CHARACTER 🐤
