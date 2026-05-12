@@ -240,7 +240,7 @@ const Index = () => {
         <div className="immersive-vignette" />
 
         {/* Fullscreen control */}
-        {showImmersiveControl && !isFullscreen && (
+        {!isKiosk && showImmersiveControl && !isFullscreen && (
           <button
             onClick={enter}
             className="absolute top-4 right-4 px-3 py-1 rounded border border-primary/40 text-primary text-xs font-mono hover:bg-primary/10 z-50 immersive-fade-in"
