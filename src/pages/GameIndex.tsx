@@ -276,7 +276,10 @@ const Index = () => {
               Press the button below to begin
             </p>
             <Button
-              onClick={handleHostClick}
+              onClick={async () => {
+                await enter();
+                handleHostClick();
+              }}
               disabled={hostPending}
               className="h-16 w-full text-lg font-pixel bg-red-600 hover:bg-red-500 text-white border-red-500/50 glow-red immersive-fade-in"
               style={{ "--delay": "2.4s" } as React.CSSProperties}
