@@ -4,12 +4,16 @@ interface ImmersiveContextType {
   isImmersive: boolean;
   toggleImmersive: () => void;
   setImmersive: (value: boolean) => void;
+  isKiosk: boolean;
+  toggleKiosk: () => void;
 }
 
 const ImmersiveContext = createContext<ImmersiveContextType>({
   isImmersive: false,
   toggleImmersive: () => {},
   setImmersive: () => {},
+  isKiosk: false,          // ← add
+  toggleKiosk: () => {},   // ← add
 });
 
 export function ImmersiveProvider({ children }: { children: ReactNode }) {
@@ -17,6 +21,14 @@ export function ImmersiveProvider({ children }: { children: ReactNode }) {
     try {
       const stored = localStorage.getItem('immersive-mode');
       return stored === null ? true : stored === 'true';
+    } catch {
+      return false;
+    }
+  });
+
+  const [isKiosk, setIsKiosk] = useState(() => {       // ← add
+    try {
+      return localStorage.getItem('kiosk-mode') === 'true';
     } catch {
       return false;
     }
@@ -31,8 +43,14 @@ export function ImmersiveProvider({ children }: { children: ReactNode }) {
 
   const toggleImmersive = () => setImmersive(!isImmersive);
 
+  const toggleKiosk = () => {                          // ← add
+    const next = !isKiosk;
+    setIsKiosk(next);
+    try { localStorage.setItem('kiosk-mode', next ? 'true' : 'false'); } catch {}
+  };
+
   return (
-    <ImmersiveContext.Provider value={{ isImmersive, toggleImmersive, setImmersive }}>
+    <ImmersiveContext.Provider value={{ isImmersive, toggleImmersive, setImmersive, isKiosk, toggleKiosk }}>
       {children}
     </ImmersiveContext.Provider>
   );

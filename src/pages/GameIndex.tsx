@@ -96,7 +96,7 @@ function ImmersiveTitle() {
 const Index = () => {
   const navigate = useNavigate();
   const { isFullscreen, showImmersiveControl, enter } = useFullscreen();
-  const { isImmersive, toggleImmersive } = useImmersive();
+  const { isImmersive, toggleImmersive, isKiosk, toggleKiosk } = useImmersive();
   const {
     isMobile,
     fullReady,
@@ -269,63 +269,85 @@ const Index = () => {
         </div>
 
         {/* Buttons — staggered fade-in */}
-        <div className="flex flex-col gap-4 w-full max-w-xs z-10">
-          <Button
-            onClick={handleHostClick}
-            disabled={hostPending}
-            className="h-14 text-sm font-pixel bg-red-600 hover:bg-red-500 text-white border-red-500/50 glow-red immersive-fade-in immersive-border-breathe-red"
-            style={{ "--delay": "2.4s" } as React.CSSProperties}
-          >
-            {hostPending ? (
-              <span className="flex items-center gap-2">
-                <Loader2 className="w-4 h-4 animate-spin" /> Loading assets…
-              </span>
-            ) : (
-              "HOST GAME"
-            )}
-          </Button>
-
-          <Button
-            onClick={() => navigate("/client")}
-            variant="outline"
-            className="h-14 text-sm font-pixel border-secondary text-secondary hover:bg-secondary/10 glow-purple immersive-fade-in"
-            style={{ "--delay": "2.6s", animationFillMode: "both" } as React.CSSProperties}
-          >
-            JOIN GAME
-          </Button>
-
-          <div
-            className="flex h-14 rounded-md overflow-hidden border border-accent immersive-fade-in"
-            style={{ "--delay": "2.8s" } as React.CSSProperties}
-          >
-            <button
-              onClick={handleCharViewerClick}
-              className="flex-1 text-sm font-pixel text-accent bg-transparent hover:bg-accent/10 transition-colors px-4"
+        {isKiosk ? (
+          <div className="flex flex-col gap-4 w-full max-w-xs z-10 items-center">
+            <p className="text-sm font-mono text-muted-foreground text-center immersive-fade-in"
+              style={{ "--delay": "2.0s" } as React.CSSProperties}>
+              Press the button below to begin
+            </p>
+            <Button
+              onClick={handleHostClick}
+              disabled={hostPending}
+              className="h-16 w-full text-lg font-pixel bg-red-600 hover:bg-red-500 text-white border-red-500/50 glow-red immersive-fade-in"
+              style={{ "--delay": "2.4s" } as React.CSSProperties}
             >
-              🐤 CHARACTER 🐤
-            </button>
-            {isMobile && (
-              <div className="w-14 border-l border-accent flex items-center justify-center bg-transparent hover:bg-accent/5 transition-colors">
-                <CharAnimCircle
-                  progress={characterAnimationsProgress}
-                  loading={characterAnimationsLoading}
-                  ready={characterAnimationsReady}
-                  onClick={handleCharAnimCircleClick}
-                />
-              </div>
-            )}
+              {hostPending ? (
+                <span className="flex items-center gap-2">
+                  <Loader2 className="w-4 h-4 animate-spin" /> Loading assets…
+                </span>
+              ) : (
+                "▶ START GAME"
+              )}
+            </Button>
           </div>
-          {/* Credits button */}
-          <Button
-            onClick={() => navigate("/credits")}
-            variant="outline"
-            className="h-14 text-sm font-pixel border-[#7d6a9d] text-[#7d6a9d] bg-transparent hover:bg-[#7d6a9d]/10 immersive-fade-in"
-            style={{ "--delay": "3.0s", animationFillMode: "both" } as React.CSSProperties}
-          >
-            🎬 CREDITS
-          </Button>
+        ) : (
+          <div className="flex flex-col gap-4 w-full max-w-xs z-10">
+            <Button
+              onClick={handleHostClick}
+              disabled={hostPending}
+              className="h-14 text-sm font-pixel bg-red-600 hover:bg-red-500 text-white border-red-500/50 glow-red immersive-fade-in immersive-border-breathe-red"
+              style={{ "--delay": "2.4s" } as React.CSSProperties}
+            >
+              {hostPending ? (
+                <span className="flex items-center gap-2">
+                  <Loader2 className="w-4 h-4 animate-spin" /> Loading assets…
+                </span>
+              ) : (
+                "HOST GAME"
+              )}
+            </Button>
 
-        </div>
+            <Button
+              onClick={() => navigate("/client")}
+              variant="outline"
+              className="h-14 text-sm font-pixel border-secondary text-secondary hover:bg-secondary/10 glow-purple immersive-fade-in"
+              style={{ "--delay": "2.6s", animationFillMode: "both" } as React.CSSProperties}
+            >
+              JOIN GAME
+            </Button>
+
+            <div
+              className="flex h-14 rounded-md overflow-hidden border border-accent immersive-fade-in"
+              style={{ "--delay": "2.8s" } as React.CSSProperties}
+            >
+              <button
+                onClick={handleCharViewerClick}
+                className="flex-1 text-sm font-pixel text-accent bg-transparent hover:bg-accent/10 transition-colors px-4"
+              >
+                🐤 CHARACTER 🐤
+              </button>
+              {isMobile && (
+                <div className="w-14 border-l border-accent flex items-center justify-center bg-transparent hover:bg-accent/5 transition-colors">
+                  <CharAnimCircle
+                    progress={characterAnimationsProgress}
+                    loading={characterAnimationsLoading}
+                    ready={characterAnimationsReady}
+                    onClick={handleCharAnimCircleClick}
+                  />
+                </div>
+              )}
+            </div>
+            {/* Credits button */}
+            <Button
+              onClick={() => navigate("/credits")}
+              variant="outline"
+              className="h-14 text-sm font-pixel border-[#7d6a9d] text-[#7d6a9d] bg-transparent hover:bg-[#7d6a9d]/10 immersive-fade-in"
+              style={{ "--delay": "3.0s", animationFillMode: "both" } as React.CSSProperties}
+            >
+              🎬 CREDITS
+            </Button>
+          </div>
+        )}
 
         {/* Watermark */}
         <div
@@ -369,6 +391,18 @@ const Index = () => {
       >
         <Sparkles className="w-3 h-3" />
         GO IMMERSIVE
+      </button>
+
+      {/* Kiosk toggle — dev only */}
+      <button
+        onClick={toggleKiosk}
+        className={`absolute top-4 left-36 flex items-center gap-2 px-3 py-1.5 rounded border text-xs font-mono transition-colors ${
+          isKiosk
+            ? 'border-primary/40 text-primary bg-primary/10'
+            : 'border-muted-foreground/20 text-muted-foreground/40 hover:border-muted-foreground/40'
+        }`}
+      >
+        {isKiosk ? '🖥 KIOSK ON' : 'KIOSK'}
       </button>
 
       <div className="text-center space-y-4">
