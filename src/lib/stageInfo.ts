@@ -26,7 +26,8 @@ export type OverlayVideo =
   | "stage0-transition"
   | "stage1-transition"
   | "stage3-transition"
-  | "eagle-warning";
+  | "eagle-warning"
+  | "credits";
 
 export function getStageTransitionVideo(stage: GameStage): OverlayVideo | null {
   switch (stage) {

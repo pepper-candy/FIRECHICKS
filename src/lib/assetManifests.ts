@@ -45,6 +45,7 @@ export const VIDEO_URLS: string[] = [
   assetUrl('/Animations/2_Glow_Building.mp4'),
   assetUrl('/Animations/4_Final.mp4'),
   assetUrl('/Animations/Warning_Eagle.mp4'),
+  assetUrl('/Animations/Credit.mp4'),
 ];
 
 // ── Tiers ─────────────────────────────────────────────────────────────────────

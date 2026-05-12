@@ -1421,6 +1421,69 @@ export default function Host() {
   return <div className="flex items-center justify-center h-screen text-muted-foreground font-mono">Loading...</div>;
 }
 
+function CreditButton() {
+  const [countdown, setCountdown] = useState(60);
+  const [watching, setWatching] = useState(false);
+  const [canSkip, setCanSkip] = useState(false);
+
+  // Countdown timer
+  useEffect(() => {
+    if (countdown <= 0) return;
+    const id = setInterval(() => setCountdown((c) => Math.max(0, c - 1)), 1000);
+    return () => clearInterval(id);
+  }, [countdown]);
+
+  // Enable skip after 10s of video
+  useEffect(() => {
+    if (!watching) return;
+    const id = setTimeout(() => setCanSkip(true), 10000);
+    return () => clearTimeout(id);
+  }, [watching]);
+
+  // Spacebar: start video if countdown hits 0, or skip if watching and can skip
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.code === 'Space') {
+        e.preventDefault();
+        if (!watching && countdown <= 0) {
+          setWatching(true);
+        } else if (watching && canSkip) {
+          window.location.href = "/";
+        }
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [watching, countdown, canSkip]);
+
+  if (watching) {
+    return (
+      <VideoOverlay
+        video="credits"
+        onComplete={() => { window.location.href = "/"; }}
+        placement="center"
+        showBackdrop={true}
+        showSkipButton={false}
+      />
+    );
+  }
+
+  const sec = countdown.toString().padStart(2, '0');
+
+  return (
+    <button
+      onClick={() => { if (countdown <= 0) setWatching(true); }}
+      className={`px-8 py-3 rounded-lg border-2 font-pixel text-sm tracking-widest transition-all ${
+        countdown <= 0
+          ? 'border-primary bg-primary/10 text-primary hover:bg-primary/20'
+          : 'border-muted-foreground/30 bg-card/50 text-muted-foreground cursor-default'
+      }`}
+    >
+      Watch Credits ({sec})
+    </button>
+  );
+}
+
 // ─── Game Over Ceremony Component ──────────────────────────────────────────────
 function GameOverCeremony({ snapshot, gameMode }: { snapshot: GameStateSnapshot; gameMode: string }) {
   const { isImmersive } = useImmersive();
@@ -1435,18 +1498,6 @@ function GameOverCeremony({ snapshot, gameMode }: { snapshot: GameStateSnapshot;
       setShowPlayAgain(false);
     }
   }, [ceremonyPhase]);
-
-  // Spacebar = PLAY AGAIN
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.code === 'Space' && ceremonyPhase === 'transcript' && showPlayAgain) {
-        e.preventDefault();
-        window.location.href = "/";
-      }
-    };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [ceremonyPhase, showPlayAgain]);
 
   const winner = snapshot.winner;
   const getMatchResult = (p: PlayerGameStateSerializable): "draw" | "win" | "lose" => {
@@ -1884,15 +1935,7 @@ function GameOverCeremony({ snapshot, gameMode }: { snapshot: GameStateSnapshot;
 
         <div className="py-3 text-center border-t border-border flex-shrink-0">
           {showPlayAgain ? (
-            <button
-              type="button"
-              onClick={() => {
-                window.location.href = "/";
-              }}
-              className="px-8 py-3 rounded-lg border-2 border-primary bg-primary/10 text-primary font-pixel text-sm tracking-widest hover:bg-primary/20 transition-all"
-            >
-              ▶ CLICK TO PLAY AGAIN
-            </button>
+            <CreditButton />
           ) : (
             <p className="text-xs font-mono text-muted-foreground animate-pulse">Loading results...</p>
           )}

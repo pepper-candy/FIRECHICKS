@@ -19,6 +19,7 @@ const VIDEO_SRC: Record<OverlayVideo, string> = {
   'stage1-transition': assetUrl('/Animations/2_Glow_Building.mp4'),
   'stage3-transition': assetUrl('/Animations/4_Final.mp4'),
   'eagle-warning': assetUrl('/Animations/Warning_Eagle.mp4'),
+  'credits': assetUrl('/Animations/Credit.mp4'),
 };
 
 export default function VideoOverlay({
