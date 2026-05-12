@@ -208,7 +208,7 @@ const Index = () => {
         {/* Toggle off immersive */}
         <button
           onClick={toggleImmersive}
-          className="absolute top-4 left-4 flex items-center gap-2 px-3 py-1.5 rounded border border-primary/60 text-primary text-xs font-mono hover:bg-primary/10 z-50 immersive-border-breathe immersive-fade-in"
+          className="absolute top-4 left-4 flex items-center gap-2 px-3 py-1.5 rounded border border-primary/60 text-primary text-xs font-mono hover:bg-primary/10 z-50 immersive-border-breathe immersive-fade-in opacity-0"
           style={{ "--delay": "0.1s" } as React.CSSProperties}
         >
           <Sparkles className="w-3 h-3 flex-shrink-0" />
