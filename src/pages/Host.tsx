@@ -1891,7 +1891,7 @@ function GameOverCeremony({ snapshot, gameMode }: { snapshot: GameStateSnapshot;
               }}
               className="px-8 py-3 rounded-lg border-2 border-primary bg-primary/10 text-primary font-pixel text-sm tracking-widest hover:bg-primary/20 transition-all"
             >
-              ▶ PLAY AGAIN
+              ▶ CLICK TO PLAY AGAIN
             </button>
           ) : (
             <p className="text-xs font-mono text-muted-foreground animate-pulse">Loading results...</p>
