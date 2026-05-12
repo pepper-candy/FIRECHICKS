@@ -793,7 +793,7 @@ export default function Host() {
           <LobbyVideoPanel
             src={assetUrl('/Animations/Game_Lobby_Intro.mp4')}
             side="left"
-            label="Press the button to switch game mode"
+            label=" ▶ Press the button to switch game mode"
           />
           <LobbyVideoPanel
             src={assetUrl('/Animations/Game_Lobby_Char_plus_Props_Intro.mp4')}
