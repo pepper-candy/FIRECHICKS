@@ -89,6 +89,7 @@ async function fetchAndCache(url: string): Promise<void> {
             if (done) break;
           }
         }
+        console.log('fully cached:', url); // ← temporary
       } else {
         await r.blob();
       }
