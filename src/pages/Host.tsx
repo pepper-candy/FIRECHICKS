@@ -2046,6 +2046,10 @@ function GameMusic({ phase, stage }: { phase: string; stage: number }) {
   }, []);
 
   useEffect(() => {
+    console.log('[GameMusic] phase:', phase, 'stage:', stage, 'a:', !!a, 'b:', !!b);
+  }, [phase, stage, a, b]);
+
+  useEffect(() => {
     if (!a || !b) return;
 
     // Lobby or Stage 0
