@@ -432,6 +432,28 @@ export default function Host() {
     return () => clearInterval(id);
   }, [phase]);
 
+  // Spacebar = Pause/Resume during gameplay
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.code === 'Space' && (phase === 'playing' || phase === 'exam')) {
+        e.preventDefault();
+        if (isPaused) {
+          setGrabBackUntil(Date.now() + 3000);
+          setTimeout(() => {
+            togglePause();
+            setIsPaused(false);
+            setGrabBackUntil(0);
+          }, 3000);
+        } else {
+          togglePause();
+          setIsPaused(true);
+        }
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [phase, isPaused, togglePause]);
+
   const stageTransitionKey =
     snapshot && snapshot.stageTransitionUntil > 0
       ? `${snapshot.stage}-${snapshot.stageTransitionUntil}`
@@ -1393,6 +1415,18 @@ export default function Host() {
 function GameOverCeremony({ snapshot, gameMode }: { snapshot: GameStateSnapshot; gameMode: string }) {
   const { isImmersive } = useImmersive();
   const [ceremonyPhase, setCeremonyPhase] = useState<"mvp" | "team" | "transcript">("mvp");
+
+  // Spacebar = PLAY AGAIN
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.code === 'Space') {
+        e.preventDefault();
+        window.location.href = "/";
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
 
   const winner = snapshot.winner;
   const getMatchResult = (p: PlayerGameStateSerializable): "draw" | "win" | "lose" => {
