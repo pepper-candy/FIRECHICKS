@@ -5,6 +5,13 @@ import { assetUrl } from "@/lib/assets";
 export default function CreditsPage() {
   const navigate = useNavigate();
 
+  const handleVideoClick = () => {
+    const orientation = screen.orientation as ScreenOrientation & { lock?: (orientation: string) => Promise<void>; unlock?: () => void };
+    if (orientation?.lock) {
+      orientation.lock('landscape').catch(() => {});
+    }
+  };
+  
   useEffect(() => {
     const orientation = screen.orientation as ScreenOrientation & { lock?: (orientation: string) => Promise<void>; unlock?: () => void };
     if (orientation?.lock) {
@@ -26,6 +33,7 @@ export default function CreditsPage() {
         playsInline
         controls={false}
         onEnded={() => navigate("/")}
+        onClick={handleVideoClick}
       />
       <button
         onClick={() => navigate("/")}
