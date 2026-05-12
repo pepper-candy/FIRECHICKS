@@ -1466,7 +1466,7 @@ function CreditButton() {
       <VideoOverlay
         video="credits"
         onComplete={() => { window.location.href = "/"; }}
-        placement="center"
+        fullscreen={true}
         showBackdrop={true}
         showSkipButton={false}
       />

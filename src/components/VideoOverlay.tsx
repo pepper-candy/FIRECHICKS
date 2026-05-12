@@ -10,6 +10,7 @@ interface Props {
   loop?: boolean;
   showBackdrop?: boolean;
   showSkipButton?: boolean;
+  fullscreen?: boolean;
 }
 
 const VIDEO_SRC: Record<OverlayVideo, string> = {
@@ -29,6 +30,7 @@ export default function VideoOverlay({
   loop = false,
   showBackdrop = true,
   showSkipButton = true,
+  fullscreen = false,
 }: Props) {
   const videoRef = useRef<HTMLVideoElement>(null);
 
@@ -43,16 +45,18 @@ export default function VideoOverlay({
   if (!video) return null;
 
   const src = VIDEO_SRC[video];
-  const containerClassName =
-    placement === 'top'
+  const containerClassName = fullscreen
+    ? 'fixed inset-0 flex items-center justify-center bg-black'
+    : placement === 'top'
       ? 'fixed inset-x-0 top-0 flex items-start justify-center pt-4'
       : 'fixed inset-0 flex items-center justify-center';
   const wrapperClassName =
     placement === 'top'
       ? 'relative flex flex-col items-center'
       : 'relative flex flex-col items-center';
-  const videoClassName =
-    placement === 'top'
+  const videoClassName = fullscreen
+    ? 'w-full h-full object-contain'
+    : placement === 'top'
       ? 'w-[min(92vw,960px)] max-h-[42vh] rounded-lg shadow-2xl'
       : 'max-w-[80vw] max-h-[60vh] rounded-lg shadow-2xl';
 
