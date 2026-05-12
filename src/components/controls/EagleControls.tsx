@@ -113,6 +113,7 @@ interface Props {
   cageRemainingMs?: number;
   isInZone: boolean;
   thumbstickColor?: string;
+  stage: number;
 }
 
 export default function EagleControls({
@@ -129,12 +130,26 @@ export default function EagleControls({
   cageRemainingMs = 0,
   isInZone,
   thumbstickColor,
+  stage = 0,
 }: Props) {
   // Fly is also blocked during attack cooldown
   const effectiveFlyRemainingMs = Math.max(flyRemainingMs, attackRemainingMs);
+  const stage1Disabled = stage < 2;
 
   return (
     <div className="flex flex-col h-full gap-2">
+      {/* Stage 1 disabled prompt */}
+      {stage1Disabled && (
+        <div className="text-center px-3 py-2 rounded border border-amber-500/40 bg-amber-500/10">
+          <p className="text-xs font-mono text-amber-400">
+            🔒 Hunt begins at <span className="font-bold">Stage 2</span>
+          </p>
+          <p className="text-[10px] font-mono text-amber-400/60 mt-0.5">
+            Explore the map and get familiar!
+          </p>
+        </div>
+      )}
+
       {/* Hitbox */}
       <div className="w-full">
         <HitboxBtn onHit={onHitboxClick} inZone={isInZone} />
@@ -148,9 +163,9 @@ export default function EagleControls({
       {/* Attack + Fly + Cage */}
       <div className="flex items-center justify-center gap-4">
         <AttackButton
-          onAttack={onAttack}
+          onAttack={stage1Disabled ? () => {} : onAttack}
           remainingMs={attackRemainingMs}
-          disabled={attackDisabled}
+          disabled={attackDisabled || stage1Disabled}
         />
 
         <CooldownRingButton
@@ -158,16 +173,16 @@ export default function EagleControls({
           icon={<Wind className="w-6 h-6" />}
           remainingMs={effectiveFlyRemainingMs}
           totalCooldownMs={10000}
-          color="hsl(220 80% 55%)"
+          color={stage1Disabled ? "hsl(200 10% 40%)" : "hsl(220 80% 55%)"}
           cooldownColor="hsl(220 80% 65%)"
         />
 
         <CooldownRingButton
-          onPress={() => { if (onCageUse) onCageUse(); }}
+          onPress={() => { if (onCageUse && !stage1Disabled) onCageUse(); }}
           icon={<Lock className="w-6 h-6" />}
           remainingMs={cageRemainingMs}
           totalCooldownMs={30000}
-          color="hsl(0 70% 50%)"
+          color={stage1Disabled ? "hsl(0 5% 35%)" : "hsl(0 70% 50%)"}
           cooldownColor="hsl(0 70% 60%)"
         />
       </div>

@@ -1468,8 +1468,8 @@ export default function Client() {
         )}
         <p className="text-xs font-mono text-muted-foreground text-center max-w-xs px-4">
           {isEagle
-            ? "🦅 You are the Eagle — you will awaken 5 seconds after the chicks"
-            : "🐤 You get a 5-second head start!"}
+            ? "🦅 You are Eagle — Hunt begins at Stage 2."
+            : "🐤 You are Firechicks — Stage 1 is your only safe time."}
         </p>
       </div>
     );
@@ -2064,6 +2064,7 @@ export default function Client() {
               cageRemainingMs={myState.cageRemainingMs ?? 0}
               isInZone={!!isInZone}
               thumbstickColor={displayColor ? `hsl(${displayColor.hsl})` : undefined}
+              stage={gameState?.stage ?? 0}
             />
           ) : (
             <>
