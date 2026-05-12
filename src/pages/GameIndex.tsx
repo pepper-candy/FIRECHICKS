@@ -271,7 +271,7 @@ const Index = () => {
         {/* Buttons — staggered fade-in */}
         {isKiosk ? (
           <div className="flex flex-col gap-4 w-full max-w-xs z-10 items-center">
-            <p className="text-sm font-mono text-muted-foreground text-center immersive-fade-in"
+            <p className="text-sm font-mono text-foreground/70 text-center immersive-fade-in"
               style={{ "--delay": "2.0s" } as React.CSSProperties}>
               Press the button below to begin
             </p>
