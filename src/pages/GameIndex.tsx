@@ -208,7 +208,7 @@ const Index = () => {
         {/* Fire trace field */}
         <FireParticleField />
         {/* Scanline overlay */}
-        <div className="immersive-scanline-overlay" />
+        {/* <div className="immersive-scanline-overlay" /> */}
         {/* Vignette */}
         <div className="immersive-vignette" />
 
