@@ -21,7 +21,7 @@ import { isMobileTabletOrIpad } from '@/lib/device';
 const PER_ASSET_TIMEOUT_MS = 45_000;
 const FETCH_CONCURRENCY = 6;
 
-function preloadVideo(url: string): Promise<void> {
+function preloadMedia(url: string): Promise<void> {
   return new Promise((resolve) => {
     let settled = false;
     const done = () => {
@@ -34,15 +34,24 @@ function preloadVideo(url: string): Promise<void> {
       clearTimeout(t);
       done();
     };
-    const video = document.createElement('video');
-    video.preload = 'auto';
-    video.muted = true;
-    video.playsInline = true;
-    video.addEventListener('loadeddata', finish, { once: true });
-    video.addEventListener('canplaythrough', finish, { once: true });
-    video.addEventListener('error', finish, { once: true });
-    video.src = url;
-    video.load();
+    if (url.endsWith('.mp3') || url.endsWith('.m4a')) {
+      const audio = document.createElement('audio');
+      audio.preload = 'auto';
+      audio.addEventListener('canplaythrough', finish, { once: true });
+      audio.addEventListener('error', finish, { once: true });
+      audio.src = url;
+      audio.load();
+    } else {
+      const video = document.createElement('video');
+      video.preload = 'auto';
+      video.muted = true;
+      video.playsInline = true;
+      video.addEventListener('loadeddata', finish, { once: true });
+      video.addEventListener('canplaythrough', finish, { once: true });
+      video.addEventListener('error', finish, { once: true });
+      video.src = url;
+      video.load();
+    }
   });
 }
 
@@ -208,7 +217,7 @@ export function AssetLoadingProvider({ children }: { children: ReactNode }) {
       if (!mountedRef.current) return;
 
       const glbs = uncached.filter((u) => u.endsWith('.glb'));
-      const videos = uncached.filter((u) => u.endsWith('.mp4'));
+      const videos = uncached.filter((u) => u.endsWith('.mp4') || u.endsWith('.mp3') || u.endsWith('.m4a'));
       const others = uncached.filter((u) => !u.endsWith('.glb') && !u.endsWith('.mp4'));
 
       await mapPool(glbs, FETCH_CONCURRENCY, async (url) => {
@@ -225,7 +234,7 @@ export function AssetLoadingProvider({ children }: { children: ReactNode }) {
         }),
         ...videos.map(async (url) => {
           if (!mountedRef.current) return;
-          await preloadVideo(url);
+          await preloadMedia(url);
           bump();
         }),
       ]);
