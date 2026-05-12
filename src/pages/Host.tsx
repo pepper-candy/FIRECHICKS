@@ -840,6 +840,7 @@ export default function Host() {
     if (isImmersive) {
       return (
         <div className="relative flex flex-col items-center justify-center h-screen overflow-hidden bg-black">
+          <GameMusic phase={phase} stage={snapshot?.stage ?? 0} />
           <div className="immersive-vignette" />
           {/* <div className="immersive-scanline-overlay" style={{ opacity: 0.4 }} /> */}
           {/* Edge pulse strips */}
@@ -871,6 +872,7 @@ export default function Host() {
 
     return (
       <div className="flex flex-col items-center justify-center h-screen gap-6 p-4 bg-background">
+        <GameMusic phase={phase} stage={snapshot?.stage ?? 0} />
         <h1 className="text-2xl font-pixel text-primary text-glow-green tracking-widest animate-pulse">GET READY</h1>
         <div className="flex flex-col items-center gap-3">
           <p className="text-sm font-mono text-muted-foreground">Roles are being revealed on each phone...</p>
@@ -899,6 +901,7 @@ export default function Host() {
     if (isImmersive) {
       return (
         <div className="relative flex flex-col items-center justify-center h-screen overflow-hidden bg-black">
+          <GameMusic phase={phase} stage={snapshot?.stage ?? 0} />
           <video
             src={assetUrl("/Animations/Entrance_NEW.mp4")}
             className="absolute inset-0 w-full h-full object-cover"
@@ -925,6 +928,7 @@ export default function Host() {
 
     return (
       <div className="relative flex flex-col items-center justify-center h-screen gap-4 p-4 overflow-hidden">
+        <GameMusic phase={phase} stage={snapshot?.stage ?? 0} />
         <video
           src={assetUrl("/Animations/Entrance_NEW.mp4")}
           className="absolute inset-0 w-full h-full object-cover"
@@ -958,6 +962,7 @@ export default function Host() {
 
     return (
       <div className="relative h-screen">
+        <GameMusic phase={phase} stage={snapshot?.stage ?? 0} />
         <GameplayMap
           players={snapshot.players}
           buildings={snapshot.buildings}
@@ -1447,7 +1452,12 @@ export default function Host() {
 
   // ─── GAME OVER / TRANSCRIPT ──────────────────────────────────────────────────
   if (phase === "gameover" && gameOverSnapshot) {
-    return <GameOverCeremony snapshot={gameOverSnapshot} gameMode={gameMode} />;
+    return (
+      <>
+        <GameMusic phase={phase} stage={snapshot?.stage ?? 0} />
+        <GameOverCeremony snapshot={gameOverSnapshot} gameMode={gameMode} />
+      </>
+    );
   }
 
   return <div className="flex items-center justify-center h-screen text-muted-foreground font-mono">Loading...</div>;
