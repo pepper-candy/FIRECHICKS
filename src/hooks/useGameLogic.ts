@@ -1168,7 +1168,7 @@ export function useGameLogic({
       if (chicks.length > 0 && chicks.every((c) => c.socialCircleMet.size >= requiredMeets)) {
         gs.stage = 1;
         gs.stageLabel = "Get Exam Tips from glowing buildings!";
-        gs.stageTransitionUntil = devModeRef.current ? 0 : now + STAGE_TRANSITION_TOTAL_MS;
+        // gs.stageTransitionUntil = devModeRef.current ? 0 : now + STAGE_TRANSITION_TOTAL_MS;
         for (const b of gs.buildings) {
           if (b.hasTip) {
             b.glowing = true;
@@ -2900,6 +2900,14 @@ export function useGameLogic({
     return botsPausedRef.current;
   }, []);
 
+  const triggerStageTransition = useCallback(() => {
+    const gs = gameStateRef.current;
+    if (!gs) return;
+    const now = Date.now();
+    gs.stageTransitionUntil = devModeRef.current ? 0 : now + STAGE_TRANSITION_TOTAL_MS;
+    gs.stageTransitionPauseApplied = false;
+  }, []);
+
   // ─── Public API ───────────────────────────────────────────────────────────────
   return {
     phase,
@@ -2917,5 +2925,6 @@ export function useGameLogic({
     togglePause,
     toggleBotsPause,
     susPlayersRef,
+    triggerStageTransition,
   };
 }

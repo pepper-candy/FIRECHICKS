@@ -1467,9 +1467,17 @@ export default function Client() {
           <div className="text-7xl font-pixel text-accent animate-pulse">{Math.ceil(gameState.countdownTime)}</div>
         )}
         <p className="text-xs font-mono text-muted-foreground text-center max-w-xs px-4">
-          {isEagle
-            ? "🦅 You are Eagle — Hunt begins at Stage 2."
-            : "🐤 You are Firechicks — Stage 1 is your only safe time."}
+          {isEagle ? (
+          <>
+            <span className="block mb-1">🦅 You are Eagle</span>
+            <span>Hunt begins at Stage 2.</span>
+          </>
+        ) : (
+          <>
+            <span className="block mb-1">🐤 You are Firechicks</span>
+            <span>Stage 1 is your only safe time.</span>
+          </>
+        )}
         </p>
       </div>
     );
