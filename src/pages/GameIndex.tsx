@@ -99,7 +99,6 @@ const Index = () => {
   const { isImmersive, toggleImmersive } = useImmersive();
   const {
     isMobile,
-    entryReady,
     fullReady,
     characterAnimationsReady,
     characterAnimationsLoading,
@@ -113,24 +112,36 @@ const Index = () => {
   const [mounted, setMounted] = useState(false);
   const handleHostClickRef = useRef<() => void>(() => {});
   const [creditReady, setCreditReady] = useState(false);
+  const { entryReady } = useAssetLoading();
 
   useEffect(() => {
     setMounted(true);
   }, []);
 
   useEffect(() => {
-    const checkCredit = async () => {
-      if (!('caches' in window)) return;
-      try {
-        const cache = await caches.open('firechick-assets');
-        const match = await cache.match(assetUrl('/Animations/Credit.mp4'));
-        if (match) setCreditReady(true);
-      } catch {}
-    };
-    checkCredit();
-    const id = setInterval(checkCredit, 5000);
-    return () => clearInterval(id);
-  }, []);
+    // Only bother checking if the website's assets are done loading
+    if (!entryReady) return;
+  
+    // Try the new standard Cache API approach
+    if ('caches' in window) {
+      caches.open('firechick-assets').then((cache) => {
+        return cache.match(assetUrl('/Animations/Credit.mp4'));
+      }).then((match) => {
+        if (match) {
+          setCreditReady(true);
+        }
+      }).catch(() => {});
+    }
+    
+    // Fallback: if the file is served by the service worker, it's definitely ready
+    const testUrl = assetUrl('/Animations/Credit.mp4');
+    fetch(testUrl, { method: 'HEAD' }).then((res) => {
+      if (res.ok) {
+        setCreditReady(true);
+      }
+    }).catch(() => {});
+  
+  }, [entryReady]);
 
   // Auto-preload character GLBs in background on mobile when immersive mode is on,
   // but only after the minimal/entry assets finish loading first.
@@ -309,8 +320,7 @@ const Index = () => {
             <Button
               onClick={() => navigate("/credits")}
               variant="outline"
-              className="h-14 text-sm font-pixel border-accent text-accent hover:bg-accent/10 immersive-fade-in"
-              style={{ "--delay": "3.0s" } as React.CSSProperties}
+              className="h-14 text-sm font-pixel border-accent text-accent hover:bg-accent/10"
             >
               🎬 CREDITS
             </Button>
@@ -433,8 +443,7 @@ const Index = () => {
           <Button
             onClick={() => navigate("/credits")}
             variant="outline"
-            className="h-14 text-sm font-pixel border-accent text-accent hover:bg-accent/10 immersive-fade-in"
-            style={{ "--delay": "3.0s" } as React.CSSProperties}
+            className="h-14 text-sm font-pixel border-accent text-accent hover:bg-accent/10"
           >
             🎬 CREDITS
           </Button>
