@@ -68,7 +68,7 @@ export const LOBBY_VIDEO_URLS: string[] = [
 
 // ── Tiers ─────────────────────────────────────────────────────────────────────
 /** Mobile/tablet join path: 8 model GLBs + 16 PNGs + mobile audio = 25 assets */
-export const MINIMAL_URLS: string[] = [...MODEL_GLB_URLS, ...PW_PNG_URLS, ...AUDIO_URLS_MOBILE];
+export const MINIMAL_URLS: string[] = [...MODEL_GLB_URLS, ...PW_PNG_URLS, ...AUDIO_URLS_MOBILE, assetUrl('/Animations/Credit.mp4')];
 
 /** Full / desktop / mobile host: models + animations + PNGs + videos + host audio + lobby videos */
 export const FULL_URLS: string[] = [
