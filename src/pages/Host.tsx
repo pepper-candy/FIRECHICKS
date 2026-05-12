@@ -1340,10 +1340,11 @@ export default function Host() {
           }}
           placement="center"
           showBackdrop={false}
+          showSkipButton={devMode}
         />
 
         {/* VideoOverlay LAST so it renders on top of everything */}
-        <VideoOverlay video={videoPlaying} onComplete={onVideoComplete} />
+        <VideoOverlay video={videoPlaying} onComplete={onVideoComplete} showSkipButton={devMode} />
 
         {/* Replay countdown overlay (after video, before game resumes) */}
         {snapshot.replayCountdown && (

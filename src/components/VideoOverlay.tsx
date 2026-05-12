@@ -9,6 +9,7 @@ interface Props {
   placement?: 'center' | 'top';
   loop?: boolean;
   showBackdrop?: boolean;
+  showSkipButton?: boolean;
 }
 
 const VIDEO_SRC: Record<OverlayVideo, string> = {
@@ -25,6 +26,7 @@ export default function VideoOverlay({
   placement = 'center',
   loop = false,
   showBackdrop = true,
+  showSkipButton = true,
 }: Props) {
   const videoRef = useRef<HTMLVideoElement>(null);
 
@@ -72,6 +74,7 @@ export default function VideoOverlay({
           loop={loop}
         />
         {/* Skip button aligned to bottom-right of video */}
+        {showSkipButton && (
         <button
           onClick={onComplete}
           className="absolute bottom-2 right-2 pointer-events-auto px-3 py-1.5 rounded bg-card/80 border border-border text-xs font-mono text-muted-foreground hover:text-foreground hover:bg-card transition-all active:scale-95"
@@ -79,6 +82,7 @@ export default function VideoOverlay({
         >
           SKIP ▶
         </button>
+        )}
       </div>
     </div>,
     document.body
