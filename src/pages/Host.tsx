@@ -199,6 +199,53 @@ function PlayerFocusCamera({ target }: { target: { x: number; z: number } }) {
   return null;
 }
 
+function LobbyVideoPanel({ src, side, label }: { src: string; side: 'left' | 'right'; label: string }) {
+  const [hidden, setHidden] = useState(false);
+  const isLeft = side === 'left';
+
+  return (
+    <div
+      className={`absolute top-2 z-10 transition-transform duration-500 ease-in-out ${
+        isLeft ? 'left-2' : 'right-2'
+      }`}
+      style={{
+        transform: hidden
+          ? `translateX(${isLeft ? '-105%' : '105%'})`
+          : 'translateX(0)',
+      }}
+    >
+      <div className="flex items-start gap-0">
+        {/* Video panel — left side */}
+        {isLeft && (
+          <div className="w-[40vw] max-w-[400px] overflow-hidden rounded-lg pointer-events-none" style={{ aspectRatio: '16/9' }}>
+            <video src={src} className="w-full h-full object-cover rounded-lg opacity-70" autoPlay loop muted playsInline />
+            <p className="text-sm font-mono text-foreground/70 text-left mt-1">{label}</p>
+          </div>
+        )}
+
+        {/* Toggle arrow button */}
+        <button
+          onClick={() => setHidden(!hidden)}
+          className="flex items-center justify-center w-6 h-16 bg-black/40 border border-white/20 rounded-md hover:bg-black/60 transition-all flex-shrink-0 pointer-events-auto"
+          title={hidden ? 'Show panel' : 'Hide panel'}
+        >
+          <span className="text-white/70 text-lg leading-none">
+            {hidden ? (isLeft ? '▶' : '◀') : (isLeft ? '◀' : '▶')}
+          </span>
+        </button>
+
+        {/* Video panel — right side */}
+        {!isLeft && (
+          <div className="w-[40vw] max-w-[400px] overflow-hidden rounded-lg pointer-events-none" style={{ aspectRatio: '16/9' }}>
+            <video src={src} className="w-full h-full object-cover rounded-lg opacity-70" autoPlay loop muted playsInline />
+            <p className="text-sm font-mono text-foreground/70 text-right mt-1">{label}</p>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 // ─── Host Component ──────────────────────────────────────────────────────────
 export default function Host() {
   const [mode, setMode] = useState<ConnectionMode>("webrtc");
@@ -770,22 +817,17 @@ export default function Host() {
         <div className="flex-1 min-h-0 relative">
           <LobbyArena players={players} />
           
-          {/* Video + instruction overlaid on arena */}
-          <div className="absolute top-2 left-2 w-[85%] max-w-[400px] z-10 pointer-events-none flex flex-col items-center gap-1">
-            <div className="w-full overflow-hidden rounded-lg" style={{ aspectRatio: '16/9' }}>
-              <video
-                src={assetUrl('/Animations/Game_Lobby_Intro.mp4')}
-                className="w-full h-full object-cover rounded-lg opacity-70"
-                autoPlay
-                loop
-                muted
-                playsInline
-              />
-            </div>
-            <p className="text-[10px] font-mono text-white/60 text-center">
-              Press the button to switch game mode
-            </p>
-          </div>
+          {/* ── Sliding lobby videos ── */}
+          <LobbyVideoPanel
+            src={assetUrl('/Animations/Game_Lobby_Intro.mp4')}
+            side="left"
+            label="Press the button to switch game mode"
+          />
+          <LobbyVideoPanel
+            src={assetUrl('/Animations/Game_Lobby_Char_plus_Props_Intro.mp4')}
+            side="right"
+            label="Characters & Props"
+          />
         </div>
 
         {/* Instructions */}
