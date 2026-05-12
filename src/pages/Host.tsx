@@ -656,6 +656,7 @@ export default function Host() {
           <div className="flex items-center gap-2 font-mono text-xs flex-wrap">
 
             {/* Map selector */}
+            {devMode && (
             <Select value={String(mapId)} onValueChange={(v) => setMapId(Number(v) as MapId)}>
               <SelectTrigger className="h-7 min-w-[130px] w-auto text-xs font-mono bg-card border-border">
                 <SelectValue />
@@ -668,6 +669,7 @@ export default function Host() {
                 ))}
               </SelectContent>
             </Select>
+            )}
 
             {/* Connection mode (hidden in immersive) */}
             {!isImmersive && (
