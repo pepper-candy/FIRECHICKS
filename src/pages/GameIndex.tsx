@@ -339,7 +339,12 @@ const Index = () => {
             </div>
             {/* Credits button */}
             <Button
-              onClick={() => navigate("/credits")}
+              onClick={async () => {
+                await enter();
+                const orientation = screen.orientation as any;
+                if (orientation?.lock) orientation.lock('landscape').catch(() => {});
+                navigate("/credits");
+              }}
               variant="outline"
               className="h-14 text-sm font-pixel border-[#7d6a9d] text-[#7d6a9d] bg-transparent hover:bg-[#7d6a9d]/10 immersive-fade-in"
               style={{ "--delay": "3.0s", animationFillMode: "both" } as React.CSSProperties}
