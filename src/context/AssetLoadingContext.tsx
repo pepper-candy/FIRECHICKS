@@ -61,7 +61,6 @@ function preloadMedia(url: string): Promise<void> {
 }
 
 async function fetchAndCache(url: string): Promise<void> {
-  // Fast path: already in Cache API → just warm GLB in drei if needed
   const cached = await getFromCache(url);
   if (cached) {
     if (url.endsWith('.glb')) useGLTF.preload(url);
@@ -78,8 +77,21 @@ async function fetchAndCache(url: string): Promise<void> {
     });
     clearTimeout(timer);
     if (r.ok) {
+      const isMedia = url.endsWith('.mp4') || url.endsWith('.mp3') || url.endsWith('.m4a');
+      // Clone for cache, then consume the original body fully
       await putInCache(url, r.clone());
-      await r.blob(); // consume body so the clone is stored
+      // For media files, read the entire body to ensure it's fully downloaded
+      if (isMedia) {
+        const reader = r.body?.getReader();
+        if (reader) {
+          while (true) {
+            const { done } = await reader.read();
+            if (done) break;
+          }
+        }
+      } else {
+        await r.blob();
+      }
       if (url.endsWith('.glb')) useGLTF.preload(url);
     }
   } catch (e) {
