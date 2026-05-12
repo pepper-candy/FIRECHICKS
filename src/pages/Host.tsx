@@ -619,7 +619,7 @@ export default function Host() {
   if (phase === "lobby") {
     return (
       <div className={`flex flex-col h-screen p-3 gap-3 relative ${isImmersive ? "bg-black" : ""}`}>
-        <GameMusic phase={phase} stage={snapshot?.stage ?? 0} />
+        <GameMusic phase={phase} stage={snapshot?.stage ?? 0} broadcast={broadcast} />
         {isImmersive && <div className="immersive-vignette" />}
         {/* {isImmersive && <div className="immersive-scanline-overlay" style={{ opacity: 0.25 }} />} */}
         {/* Cyber START button — top center absolute */}
@@ -840,7 +840,7 @@ export default function Host() {
     if (isImmersive) {
       return (
         <div className="relative flex flex-col items-center justify-center h-screen overflow-hidden bg-black">
-          <GameMusic phase={phase} stage={snapshot?.stage ?? 0} />
+          <GameMusic phase={phase} stage={snapshot?.stage ?? 0} broadcast={broadcast} />
           <div className="immersive-vignette" />
           {/* <div className="immersive-scanline-overlay" style={{ opacity: 0.4 }} /> */}
           {/* Edge pulse strips */}
@@ -872,7 +872,7 @@ export default function Host() {
 
     return (
       <div className="flex flex-col items-center justify-center h-screen gap-6 p-4 bg-background">
-        <GameMusic phase={phase} stage={snapshot?.stage ?? 0} />
+        <GameMusic phase={phase} stage={snapshot?.stage ?? 0} broadcast={broadcast} />
         <h1 className="text-2xl font-pixel text-primary text-glow-green tracking-widest animate-pulse">GET READY</h1>
         <div className="flex flex-col items-center gap-3">
           <p className="text-sm font-mono text-muted-foreground">Roles are being revealed on each phone...</p>
@@ -901,7 +901,7 @@ export default function Host() {
     if (isImmersive) {
       return (
         <div className="relative flex flex-col items-center justify-center h-screen overflow-hidden bg-black">
-          <GameMusic phase={phase} stage={snapshot?.stage ?? 0} />
+          <GameMusic phase={phase} stage={snapshot?.stage ?? 0} broadcast={broadcast} />
           <video
             src={assetUrl("/Animations/Entrance_NEW.mp4")}
             className="absolute inset-0 w-full h-full object-cover"
@@ -928,7 +928,7 @@ export default function Host() {
 
     return (
       <div className="relative flex flex-col items-center justify-center h-screen gap-4 p-4 overflow-hidden">
-        <GameMusic phase={phase} stage={snapshot?.stage ?? 0} />
+        <GameMusic phase={phase} stage={snapshot?.stage ?? 0} broadcast={broadcast} />
         <video
           src={assetUrl("/Animations/Entrance_NEW.mp4")}
           className="absolute inset-0 w-full h-full object-cover"
@@ -948,7 +948,7 @@ export default function Host() {
     if (phase === "exam" && (snapshot.examTransitionEndsAt ?? 0) > Date.now()) {
       return (
         <>
-          <GameMusic phase={phase} stage={snapshot?.stage ?? 0} />
+          <GameMusic phase={phase} stage={snapshot?.stage ?? 0} broadcast={broadcast} />
           <GameEndTransition variant="host" />
         </>
       );
@@ -967,7 +967,7 @@ export default function Host() {
 
     return (
       <div className="relative h-screen">
-        <GameMusic phase={phase} stage={snapshot?.stage ?? 0} />
+        <GameMusic phase={phase} stage={snapshot?.stage ?? 0} broadcast={broadcast} />
         <GameplayMap
           players={snapshot.players}
           buildings={snapshot.buildings}
@@ -1459,7 +1459,7 @@ export default function Host() {
   if (phase === "gameover" && gameOverSnapshot) {
     return (
       <>
-        <GameMusic phase={phase} stage={snapshot?.stage ?? 0} />
+        <GameMusic phase={phase} stage={snapshot?.stage ?? 0} broadcast={broadcast} />
         <GameOverCeremony snapshot={gameOverSnapshot} gameMode={gameMode} />
       </>
     );
@@ -1995,7 +1995,7 @@ function GameOverCeremony({ snapshot, gameMode }: { snapshot: GameStateSnapshot;
 
 
 // ─── Game Music ───────────────────────────────────────────────────────────────
-function GameMusic({ phase, stage }: { phase: string; stage: number }) {
+function GameMusic({ phase, stage, broadcast }: { phase: string; stage: number; broadcast: (msg: any) => void }) {
   const aRef = useRef<HTMLAudioElement | null>(null);
   const bRef = useRef<HTMLAudioElement | null>(null);
   const activeRef = useRef<'a' | 'b'>('a');
@@ -2122,27 +2122,30 @@ function GameMusic({ phase, stage }: { phase: string; stage: number }) {
       currentTrackRef.current = 'goodguys';
       
       const transcriptTimer = setTimeout(() => {
-        const newEl = getActive();
-        const oldEl = getInactive();
-        newEl.src = assetUrl('/Music/The_Good_Guys.mp3');
-        newEl.loop = false;
-        newEl.volume = 0;
-        newEl.play().catch(() => {});
-        fade(newEl, 1, 3000);
-        if (oldEl && !oldEl.paused) fade(oldEl, 0, 3000);
-        setTimeout(() => { oldEl.pause(); oldEl.currentTime = 0; }, 3200);
-        activeRef.current = activeRef.current === 'a' ? 'b' : 'a';
+        broadcast({ type: "play-music", track: "goodguys" });
         
-        // Stop after 41s with fade
         setTimeout(() => {
-          const current = getActive();
-          if (current && !current.paused) {
-            fade(current, 0, 5000);
-            setTimeout(() => {
-              if (current) { current.pause(); current.currentTime = 0; }
-            }, 5200);
-          }
-        }, 41000);
+          const newEl = getActive();
+          const oldEl = getInactive();
+          newEl.src = assetUrl('/Music/The_Good_Guys.mp3');
+          newEl.loop = false;
+          newEl.volume = 0;
+          newEl.play().catch(() => {});
+          fade(newEl, 1, 3000);
+          if (oldEl && !oldEl.paused) fade(oldEl, 0, 3000);
+          setTimeout(() => { oldEl.pause(); oldEl.currentTime = 0; }, 3200);
+          activeRef.current = activeRef.current === 'a' ? 'b' : 'a';
+          
+          setTimeout(() => {
+            const current = getActive();
+            if (current && !current.paused) {
+              fade(current, 0, 5000);
+              setTimeout(() => {
+                if (current) { current.pause(); current.currentTime = 0; }
+              }, 5200);
+            }
+          }, 41000);
+        }, 100);
       }, 10000);
 
       if (fadeTimerRef.current) clearTimeout(fadeTimerRef.current);

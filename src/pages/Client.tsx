@@ -833,6 +833,23 @@ export default function Client() {
        if (allowResubmit && submitterConnId === connIdRef.current) {
          setExamAnswer("");
        }
+    } else if (msg.type === "play-music") {
+      if (msg.track === "goodguys") {
+        const audio = new Audio(assetUrl('/Music/The_Good_Guys.mp3'));
+        audio.volume = 1;
+        audio.play().catch(() => {});
+        setTimeout(() => {
+          // Fade out after 41s
+          const fadeOut = setInterval(() => {
+            audio.volume = Math.max(0, audio.volume - 0.05);
+            if (audio.volume <= 0) {
+              clearInterval(fadeOut);
+              audio.pause();
+              audio.currentTime = 0;
+            }
+          }, 200);
+        }, 41000);
+      }
     }
     });
   }, [onHostMessage, colorIndex, clientId, gameState, sendToHost]);
