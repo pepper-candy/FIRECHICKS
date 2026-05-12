@@ -591,7 +591,7 @@ export default function Host() {
     return (
       <div className={`flex flex-col h-screen p-3 gap-3 relative ${isImmersive ? "bg-black" : ""}`}>
         {isImmersive && <div className="immersive-vignette" />}
-        {isImmersive && <div className="immersive-scanline-overlay" style={{ opacity: 0.25 }} />}
+        {/* {isImmersive && <div className="immersive-scanline-overlay" style={{ opacity: 0.25 }} />} */}
         {/* Cyber START button — top center absolute */}
         {(isFull || botsAdded) && (
           <div className="absolute top-4 left-1/2 -translate-x-1/2 z-20 flex gap-3">
@@ -800,7 +800,7 @@ export default function Host() {
       return (
         <div className="relative flex flex-col items-center justify-center h-screen overflow-hidden bg-black">
           <div className="immersive-vignette" />
-          <div className="immersive-scanline-overlay" style={{ opacity: 0.4 }} />
+          {/* <div className="immersive-scanline-overlay" style={{ opacity: 0.4 }} /> */}
           {/* Edge pulse strips */}
               <div className="absolute inset-y-0 left-0 w-1 bg-orange-500/70 animate-pulse"
                   style={{ animationDuration: '1s' }} />
@@ -867,7 +867,7 @@ export default function Host() {
           />
           <div className="absolute inset-0 bg-black/30" />
           <div className="immersive-vignette z-10" />
-          <div className="immersive-scanline-overlay z-10" style={{ opacity: 0.35 }} />
+          {/* <div className="immersive-scanline-overlay z-10" style={{ opacity: 0.35 }} /> */}
           <div className="z-20 flex flex-col items-center gap-3">
             <h1 className="text-2xl font-pixel text-primary tracking-[0.3em]">GAME STARTING</h1>
             <div
