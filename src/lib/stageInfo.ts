@@ -13,10 +13,12 @@ export const STAGE_INFO: Record<GameStage, StageInfo> = {
   3: { title: "Final Exam", instruction: "Run to any building and finish the EXAM!", icon: "📝" },
 };
 
+export const EAGLE_WARNING_MS = 5_000;
 export const STAGE_TRANSITION_INSTRUCTION_MS = 12_000;
 export const STAGE_READY_COUNTDOWN_MS = 3_000;
 export const STAGE_TRANSITION_TOTAL_MS =
   STAGE_TRANSITION_INSTRUCTION_MS + STAGE_READY_COUNTDOWN_MS;
+
 
 export type OverlayVideo =
   | "hurt"
