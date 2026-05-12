@@ -50,10 +50,9 @@ function EventOverlay({
     return () => clearInterval(id);
   }, []);
   const aliveChicks = Object.values(players).filter((p: any) => !p.isEagle && p.alive);
+  const aliveEagles = Object.values(players).filter((p: any) => p.isEagle && p.alive);
   const chickTotal = aliveChicks.reduce((sum: number, p: any) => sum + (event.chickClicks[p.connId] ?? 0), 0);
-  const eagleTotal = Object.values(players)
-    .filter((p: any) => p.isEagle && p.alive)
-    .reduce((sum: number, p: any) => sum + (event.eagleClicks[p.connId] ?? 0), 0);
+  const eagleTotal = aliveEagles.reduce((sum: number, p: any) => sum + (event.eagleClicks[p.connId] ?? 0), 0);
   const timeLeft = Math.max(0, Math.ceil((event.endAt - now) / 1000));
   const mockExamCorrectCount = Math.max(
     event.mockExamCorrectCount ?? 0,
@@ -120,7 +119,9 @@ function EventOverlay({
               <div className="text-2xl text-muted-foreground">vs</div>
               <div className="text-center">
                 <div className="text-4xl font-pixel text-destructive">{eagleTotal}</div>
-                <div className="text-xs font-mono text-muted-foreground">🦅 Eagle{gameMode === "2v6" ? "s" : ""}</div>
+                <div className="text-xs font-mono text-muted-foreground">
+                  🦅 Eagle{gameMode === "2v6" ? "s" : ""} (avg: {aliveEagles.length > 0 ? (eagleTotal / aliveEagles.length).toFixed(1) : 0})
+                </div>
               </div>
             </div>
             <p className="text-xs font-mono text-muted-foreground">TAP HITBOX AS FAST AS POSSIBLE!</p>
