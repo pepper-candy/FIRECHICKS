@@ -6,7 +6,7 @@ const ATTACK_COLORS = ['Black', 'Gold'] as const;
 
 // ── 8 model GLBs (FireChick_Models) ──────────────────────────────────────────
 export const MODEL_GLB_URLS: string[] = COLORS.map(
-  (c) => assetUrl(`/FireChick/FireChick_Models/FireChick_${c}.glb`),
+  (c) => assetUrl(`/FireChick/FireChick_Models/FireChick_${c}_NEW.glb`),
 );
 
 // ── 16 PW PNGs ───────────────────────────────────────────────────────────────
