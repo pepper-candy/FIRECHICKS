@@ -1610,21 +1610,20 @@ export default function Client() {
               </p>
             </div>
           ) : hasSubmittedMockExam ? (
-            <div className="flex-1 flex items-center justify-center">
+            <div className="flex-1 flex flex-col items-center justify-center gap-2">
               <p className="text-lg font-pixel text-primary">✓ Submitted</p>
               {mockExamCorrectAnswer && (
-                <>
+                <div className="flex flex-col items-center gap-1">
                   <p className="text-xs font-mono text-muted-foreground">
                     Correct answer: <span className="text-accent font-bold">{mockExamCorrectAnswer}</span>
                   </p>
                   <p className="text-[10px] font-mono text-muted-foreground/60 text-center max-w-[260px]">
                     You may appeal, but the system reserves the final judgment.
                   </p>
-                  <p className="text-[10px] font-mono text-muted-foreground/60 text-center max-w-[260px]">
-                    <br />
+                  <p className="text-[10px] font-mono text-muted-foreground/60 text-center">
                     You are probably wrong.
                   </p>
-                </>
+                </div>
               )}
             </div>
           ) : (
