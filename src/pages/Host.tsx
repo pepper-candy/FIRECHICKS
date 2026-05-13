@@ -2041,7 +2041,7 @@ function GameMusic({ phase, stage, broadcast }: { phase: string; stage: number; 
 
   // Initialize audio
   useEffect(() => {
-    arrivalRef.current = new Audio(assetUrl('/Music/Arrival_in_the_Shallows_slow.m4a'));
+    arrivalRef.current = new Audio(assetUrl('/Music/Arrival_in_the_Shallows.m4a'));
     wingsRef.current = new Audio(assetUrl('/Music/Under_the_Wings.m4a'));
     oompaRef.current = new Audio(assetUrl('/Music/Oompa_Until_You_Croak.mp3'));
     goodGuysRef.current = new Audio(assetUrl('/Music/The_Good_Guys.mp3'));
