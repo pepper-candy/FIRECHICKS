@@ -62,7 +62,7 @@ export const AUDIO_URLS_MOBILE: string[] = [
 
 // ── Lobby intro videos (host only) ───────────────────────────────────────────
 export const LOBBY_VIDEO_URLS: string[] = [
-  assetUrl('/Animations/Game_Lobby_Intro.mp4'),
+  assetUrl('/Animations/Game_Lobby_Intro_New.mp4'),
   assetUrl('/Animations/Game_Lobby_Char_plus_Props_Intro.mp4'),
 ];
 

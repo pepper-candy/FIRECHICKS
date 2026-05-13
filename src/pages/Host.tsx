@@ -795,7 +795,7 @@ export default function Host() {
           
           {/* ── Sliding lobby videos ── */}
           <LobbyVideoPanel
-            src={assetUrl('/Animations/Game_Lobby_Intro.mp4')}
+            src={assetUrl('/Animations/Game_Lobby_Intro_New.mp4')}
             side="left"
             label=" ▶ Press the button to switch game mode"
           />
@@ -1482,7 +1482,7 @@ function CreditButton() {
       globalGoodGuysAudio.currentTime = 0;
     }
   };
-  
+
   // Countdown timer
   useEffect(() => {
     if (countdown <= 0 || watching) return;
