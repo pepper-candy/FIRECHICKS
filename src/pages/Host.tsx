@@ -33,6 +33,8 @@ import { ColorCodeBalls } from "@/components/ColorCodeBalls";
 import { GameEndTransition } from "@/components/GameEndTransition";
 import { gameLogger } from "@/lib/gameLogger";
 import { STAGE_READY_COUNTDOWN_MS, getStageTransitionVideo } from "@/lib/stageInfo";
+let globalGoodGuysAudio: HTMLAudioElement | null = null;
+let globalGoodGuysStarted = false;
 
 // ─── Event Overlay (shows during mystery box events) ─────────────────────────
 function EventOverlay({
@@ -2165,45 +2167,35 @@ function GameMusic({ phase, stage, broadcast }: { phase: string; stage: number; 
   }, [cancelTransitions]);
 
   // Good Guys - plays full song, no 41s cut, can only start once
+  // Then in GameMusic, modify startGoodGuys:
   const startGoodGuys = useCallback(() => {
-    if (goodGuysStartedRef.current) return;
-    if (currentTrackRef.current === 'goodguys') return;
+    if (globalGoodGuysStarted) return;
     
-    goodGuysStartedRef.current = true;
+    globalGoodGuysStarted = true;
     
-    // Don't stop Good Guys if it's already playing
-    if (currentTrackRef.current === 'goodguys') return;
-    
+    // Stop other tracks but NOT using stopAll (which might affect Good Guys)
     cancelTransitions();
     stopAndReset(arrivalRef.current);
     stopAndReset(wingsRef.current);
     stopAndReset(oompaRef.current);
     
-    const good = goodGuysRef.current;
-    if (!good) return;
+    // Use or create global audio
+    if (!globalGoodGuysAudio) {
+      globalGoodGuysAudio = new Audio(assetUrl('/Music/The_Good_Guys.mp3'));
+      globalGoodGuysAudio.loop = false;
+    }
     
+    const good = globalGoodGuysAudio;
     good.currentTime = 0;
     good.volume = 1;
     good.play().catch(console.warn);
     currentTrackRef.current = 'goodguys';
     
-    // Broadcast to clients with sync timestamp
+    // Broadcast to clients
     const startTime = performance.now() + 500;
-    broadcast({ 
-      type: "play-music", 
-      track: "goodguys",
-      startAt: startTime
-    });
+    broadcast({ type: "play-music", track: "goodguys", startAt: startTime });
     
-    // Schedule for sync with clients
-    transitionTimerRef.current = window.setTimeout(() => {
-      // Already playing from above, this is just for sync
-      if (good.paused) {
-        good.play().catch(console.warn);
-      }
-      transitionTimerRef.current = null;
-    }, 500);
-    // No 41-second cut - plays full song
+    // Don't set any timer that could stop it later
   }, [cancelTransitions, stopAndReset, broadcast]);
 
   // Reset stage flags when leaving playing phase

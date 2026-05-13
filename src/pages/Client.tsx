@@ -451,6 +451,8 @@ export default function Client() {
     submitterConnId: string;
     displayAnswer: string;
   } | null>(null);
+  const goodGuysAudioRef = useRef<HTMLAudioElement | null>(null);
+  const goodGuysPlayedRef = useRef(false);
 
   // Event state
   const [eventAnswer, setEventAnswer] = useState("");
@@ -488,6 +490,14 @@ export default function Client() {
   const clientInputLocked = Boolean(
     (!allowMiniGameInput && gameState?.frozenAll) || gameState?.videoPlaying || gameState?.replayCountdown,
   );
+
+  // Preload when exam phase starts (so it's ready)
+  useEffect(() => {
+    if (gamePhase === 'exam' && !goodGuysAudioRef.current) {
+      goodGuysAudioRef.current = new Audio(assetUrl('/Music/The_Good_Guys.mp3'));
+      goodGuysAudioRef.current.load(); // preload
+    }
+  }, [gamePhase]);
 
   useEffect(() => {
     setInputLocked(clientInputLocked);
@@ -833,11 +843,15 @@ export default function Client() {
        if (allowResubmit && submitterConnId === connIdRef.current) {
          setExamAnswer("");
        }
+      // Then modify the play-music handler:
       } else if (msg.type === "play-music") {
-        if (msg.track === "goodguys") {
-          const audio = new Audio(assetUrl('/Music/The_Good_Guys.mp3'));
+        if (msg.track === "goodguys" && !goodGuysPlayedRef.current) {
+          goodGuysPlayedRef.current = true;
+          
+          const audio = goodGuysAudioRef.current || new Audio(assetUrl('/Music/The_Good_Guys.mp3'));
+          goodGuysAudioRef.current = audio;
           audio.volume = 1;
-          audio.loop = false; // Play full song once
+          audio.loop = false;
           
           if (msg.startAt) {
             const delay = Math.max(0, msg.startAt - performance.now());
@@ -847,7 +861,6 @@ export default function Client() {
           } else {
             audio.play().catch(() => {});
           }
-          // No fade out - let it play naturally
         }
       }
     });
