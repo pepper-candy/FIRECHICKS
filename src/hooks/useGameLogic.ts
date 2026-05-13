@@ -1507,7 +1507,7 @@ export function useGameLogic({
 
               // ← ADD THE BROADCAST HERE
               if (eventType === "mock-exam") {
-                const mockAnswerKey: Record<number, string> = { 1: "A+", 2: "4.3", 3: "FIRE", 4: "RED" };
+                const mockAnswerKey: Record<number, string> = { 1: "UST", 2: "11M", 3: "BIRD", 4: "HALL" };
                 currentBroadcast({
                   type: "mock-exam-answer",
                   correctAnswer: mockAnswerKey[questionNum] ?? "???",
@@ -1521,15 +1521,6 @@ export function useGameLogic({
               resetSusActivityTimers(gs, now, susPlayersRef.current);
               
               currentBroadcast({ type: "phase-change", phase: gs.phase });
-
-              if (eventType === "mock-exam") {
-                const mockAnswerKey: Record<number, string> = { 1: "A+", 2: "4.3", 3: "FIRE", 4: "RED" };
-                currentBroadcast({
-                  type: "mock-exam-answer",
-                  correctAnswer: mockAnswerKey[questionNum] ?? "???",
-                  questionNum,
-                });
-              }
             }
             break;
           }
