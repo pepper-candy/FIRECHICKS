@@ -39,6 +39,14 @@ export const GameEndTransition = ({ onComplete, variant = "host" }: GameEndTrans
   const showLine3 = elapsedMs >= GRADING_START_MS && elapsedMs < READY_START_MS;
   const showReady = phase === "ready";
 
+  // Inside GameEndTransition component, when showReady becomes true
+  useEffect(() => {
+    if (showReady && variant === "host") {
+      // Dispatch event to start Good Guys music
+      window.dispatchEvent(new CustomEvent('transcript-ready'));
+    }
+  }, [showReady, variant]);
+
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center overflow-hidden bg-black">
       {/* Fire particle background */}

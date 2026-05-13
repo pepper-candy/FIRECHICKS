@@ -833,35 +833,23 @@ export default function Client() {
        if (allowResubmit && submitterConnId === connIdRef.current) {
          setExamAnswer("");
        }
-    } else if (msg.type === "play-music") {
-      if (msg.track === "goodguys") {
-        const audio = new Audio(assetUrl('/Music/The_Good_Guys.mp3'));
-        audio.volume = 1;
-        
-        if (msg.startAt) {
-          // Schedule playback at the same time as host
-          const delay = Math.max(0, msg.startAt - performance.now());
-          setTimeout(() => {
+      } else if (msg.type === "play-music") {
+        if (msg.track === "goodguys") {
+          const audio = new Audio(assetUrl('/Music/The_Good_Guys.mp3'));
+          audio.volume = 1;
+          audio.loop = false; // Play full song once
+          
+          if (msg.startAt) {
+            const delay = Math.max(0, msg.startAt - performance.now());
+            setTimeout(() => {
+              audio.play().catch(() => {});
+            }, delay);
+          } else {
             audio.play().catch(() => {});
-          }, delay);
-        } else {
-          // Fallback: play immediately
-          audio.play().catch(() => {});
+          }
+          // No fade out - let it play naturally
         }
-        
-        // Fade out after 41 seconds (same as host)
-        setTimeout(() => {
-          const fadeOut = setInterval(() => {
-            audio.volume = Math.max(0, audio.volume - 0.05);
-            if (audio.volume <= 0) {
-              clearInterval(fadeOut);
-              audio.pause();
-              audio.currentTime = 0;
-            }
-          }, 200);
-        }, 41000);
       }
-    }
     });
   }, [onHostMessage, colorIndex, clientId, gameState, sendToHost]);
 
