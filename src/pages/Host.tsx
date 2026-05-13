@@ -234,7 +234,7 @@ export default function Host() {
   const [colorPickerOpen, setColorPickerOpen] = useState(false);
   const [revealNow, setRevealNow] = useState(Date.now());
   const [focusPanelOpen, setFocusPanelOpen] = useState(false);
-  const { isImmersive } = useImmersive();
+  const { isImmersive, isKiosk } = useImmersive();
   const showDebugControls = import.meta.env.DEV || devMode;
   const effectiveMode: ConnectionMode = isImmersive ? "webrtc" : mode;
   // Stage transition toast notification
@@ -643,7 +643,7 @@ export default function Host() {
         )}
 
         {/* Fill bots button — only when not full */}
-        {!isFull && (
+        {!isFull && !isKiosk && (
           <div className="absolute top-4 left-1/2 -translate-x-1/2 z-20">
             <button
               onClick={handleFillBots}
