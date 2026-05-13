@@ -920,10 +920,6 @@ export function useGameLogic({
     // ── Time ──
     if (!gs.frozenAll) {
       gs.gameTime += delta;
-    }
-
-    if (!gs.frozenAll) {
-      gs.gameTime += delta;
       // Update survival time for all alive players
       for (const [, p] of gs.playerStates) {
         if (p.alive) p.survivalTime = gs.gameTime;
