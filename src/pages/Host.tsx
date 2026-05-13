@@ -1527,7 +1527,7 @@ function CreditButton() {
       onClick={() => setWatching(true)}
       className="px-8 py-3 rounded-lg border-2 font-pixel text-sm tracking-widest transition-all border-primary bg-primary/10 text-primary hover:bg-primary/20 hover:shadow-[0_0_20px_hsl(var(--primary)/0.4)]"
     >
-      Click to Watch Credits ({sec})
+      Press to watch credits ({sec})
     </button>
   );
 }
