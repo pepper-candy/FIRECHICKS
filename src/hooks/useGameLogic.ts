@@ -1504,12 +1504,32 @@ export function useGameLogic({
                 crossyPlayerStates,
                 eagleSpeedBoost: eventType === "crossy-road" ? 1.0 : undefined,
               };
+
+              // ← ADD THE BROADCAST HERE
+              if (eventType === "mock-exam") {
+                const mockAnswerKey: Record<number, string> = { 1: "A+", 2: "4.3", 3: "FIRE", 4: "RED" };
+                currentBroadcast({
+                  type: "mock-exam-answer",
+                  correctAnswer: mockAnswerKey[questionNum] ?? "???",
+                  questionNum,
+                });
+              }
+
               gs.eventCountdown = 3;
               gs.stageLabel = eventType === "mock-exam" ? "🎲 Event: Mock Exam!" : eventType === "hitbox" ? "🎲 Event: Hitbox Challenge!" : "🎲 Event: Crossy Road!";
               
               resetSusActivityTimers(gs, now, susPlayersRef.current);
               
               currentBroadcast({ type: "phase-change", phase: gs.phase });
+
+              if (eventType === "mock-exam") {
+                const mockAnswerKey: Record<number, string> = { 1: "A+", 2: "4.3", 3: "FIRE", 4: "RED" };
+                currentBroadcast({
+                  type: "mock-exam-answer",
+                  correctAnswer: mockAnswerKey[questionNum] ?? "???",
+                  questionNum,
+                });
+              }
             }
             break;
           }

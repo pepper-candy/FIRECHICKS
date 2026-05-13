@@ -1144,7 +1144,7 @@ export default function Client() {
   }, [gamePhase, activeEvent?.type, activeEvent?.phase, sendToHost]);
 
   useEffect(() => {
-    if (activeEvent?.type !== "mock-exam" || activeEvent.phase === "result") {
+    if (!activeEvent || activeEvent.type !== "mock-exam") {
       setHasSubmittedMockExam(false);
       setMockExamCorrectAnswer(null);
       setMockExamAppealed(false);
