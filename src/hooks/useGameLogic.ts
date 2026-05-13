@@ -922,6 +922,14 @@ export function useGameLogic({
       gs.gameTime += delta;
     }
 
+    if (!gs.frozenAll) {
+      gs.gameTime += delta;
+      // Update survival time for all alive players
+      for (const [, p] of gs.playerStates) {
+        if (p.alive) p.survivalTime = gs.gameTime;
+      }
+    }
+
     // ── Unfreeze all ──
     if (gs.frozenAll && now > gs.frozenAllUntil) {
       gs.frozenAll = false;
@@ -1357,7 +1365,7 @@ export function useGameLogic({
             const existing = p.props.find((pi) => pi.type === prop.type);
             if (existing) existing.count++;
             else p.props.push({ type: prop.type, count: 1 });
-            p.actionScore += 1;
+            addBreakdown(p, 'collect-prop', 'Collect prop spawn', 1);
           }
         }
       }
