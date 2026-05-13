@@ -451,8 +451,8 @@ export default function Client() {
     submitterConnId: string;
     displayAnswer: string;
   } | null>(null);
-  const goodGuysAudioRef = useRef<HTMLAudioElement | null>(null);
-  const goodGuysPlayedRef = useRef(false);
+  // const goodGuysAudioRef = useRef<HTMLAudioElement | null>(null);
+  // const goodGuysPlayedRef = useRef(false);
 
   // Event state
   const [eventAnswer, setEventAnswer] = useState("");
@@ -491,13 +491,13 @@ export default function Client() {
     (!allowMiniGameInput && gameState?.frozenAll) || gameState?.videoPlaying || gameState?.replayCountdown,
   );
 
-  // Preload when exam phase starts (so it's ready)
-  useEffect(() => {
-    if (gamePhase === 'exam' && !goodGuysAudioRef.current) {
-      goodGuysAudioRef.current = new Audio(assetUrl('/Music/The_Good_Guys.mp3'));
-      goodGuysAudioRef.current.load(); // preload
-    }
-  }, [gamePhase]);
+  // // Preload when exam phase starts (so it's ready)
+  // useEffect(() => {
+  //   if (gamePhase === 'exam' && !goodGuysAudioRef.current) {
+  //     goodGuysAudioRef.current = new Audio(assetUrl('/Music/The_Good_Guys.mp3'));
+  //     goodGuysAudioRef.current.load(); // preload
+  //   }
+  // }, [gamePhase]);
 
   useEffect(() => {
     setInputLocked(clientInputLocked);
@@ -844,25 +844,7 @@ export default function Client() {
          setExamAnswer("");
        }
       // Then modify the play-music handler:
-      } else if (msg.type === "play-music") {
-        if (msg.track === "goodguys" && !goodGuysPlayedRef.current) {
-          goodGuysPlayedRef.current = true;
-          
-          const audio = goodGuysAudioRef.current || new Audio(assetUrl('/Music/The_Good_Guys.mp3'));
-          goodGuysAudioRef.current = audio;
-          audio.volume = 1;
-          audio.loop = false;
-          
-          if (msg.startAt) {
-            const delay = Math.max(0, msg.startAt - performance.now());
-            setTimeout(() => {
-              audio.play().catch(() => {});
-            }, delay);
-          } else {
-            audio.play().catch(() => {});
-          }
-        }
-      }
+    }
     });
   }, [onHostMessage, colorIndex, clientId, gameState, sendToHost]);
 

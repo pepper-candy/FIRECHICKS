@@ -1475,6 +1475,14 @@ function CreditButton() {
   const [watching, setWatching] = useState(false);
   const [canSkip, setCanSkip] = useState(false);
 
+  // Stop Good Guys audio before playing credits
+  const stopGoodGuys = () => {
+    if (globalGoodGuysAudio) {
+      globalGoodGuysAudio.pause();
+      globalGoodGuysAudio.currentTime = 0;
+    }
+  };
+  
   // Countdown timer
   useEffect(() => {
     if (countdown <= 0 || watching) return;
@@ -1500,6 +1508,7 @@ function CreditButton() {
       if (e.code === 'Space') {
         e.preventDefault();
         if (!watching) {
+          stopGoodGuys();
           setWatching(true);
         } else if (canSkip) {
           window.location.href = "/";
@@ -1526,7 +1535,10 @@ function CreditButton() {
 
   return (
     <button
-      onClick={() => setWatching(true)}
+      onClick={() => {
+        stopGoodGuys();
+        setWatching(true);
+      }}
       className="px-8 py-3 rounded-lg border-2 font-pixel text-sm tracking-widest transition-all border-primary bg-primary/10 text-primary hover:bg-primary/20 hover:shadow-[0_0_20px_hsl(var(--primary)/0.4)]"
     >
       Press to watch credits ({sec})
@@ -2191,12 +2203,12 @@ function GameMusic({ phase, stage, broadcast }: { phase: string; stage: number; 
     good.play().catch(console.warn);
     currentTrackRef.current = 'goodguys';
     
-    // Broadcast to clients
-    const startTime = performance.now() + 500;
-    broadcast({ type: "play-music", track: "goodguys", startAt: startTime });
+    // // Broadcast to clients
+    // const startTime = performance.now() + 500;
+    // broadcast({ type: "play-music", track: "goodguys", startAt: startTime });
     
     // Don't set any timer that could stop it later
-  }, [cancelTransitions, stopAndReset, broadcast]);
+  }, [cancelTransitions, stopAndReset]);
 
   // Reset stage flags when leaving playing phase
   useEffect(() => {
