@@ -125,7 +125,7 @@ const Index = () => {
   //   // Try the new standard Cache API approach
   //   if ('caches' in window) {
   //     caches.open('firechick-assets').then((cache) => {
-  //       return cache.match(assetUrl('/Animations/Credit.mp4'));
+  //       return cache.match(assetUrl('/Animations/Credits.mp4'));
   //     }).then((match) => {
   //       if (match) {
   //         setCreditReady(true);
@@ -134,7 +134,7 @@ const Index = () => {
   //   }
     
   //   // Fallback: if the file is served by the service worker, it's definitely ready
-  //   const testUrl = assetUrl('/Animations/Credit.mp4');
+  //   const testUrl = assetUrl('/Animations/Credits.mp4');
   //   fetch(testUrl, { method: 'HEAD' }).then((res) => {
   //     if (res.ok) {
   //       setCreditReady(true);

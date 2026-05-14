@@ -13,7 +13,7 @@ export default function CreditsPage() {
   return (
     <div className="fixed inset-0 bg-black flex items-center justify-center">
       <video
-        src={assetUrl('/Animations/Credit.mp4')}
+        src={assetUrl('/Animations/Credits.mp4')}
         className="w-full h-full object-contain"
         autoPlay
         playsInline

@@ -45,7 +45,7 @@ export const VIDEO_URLS: string[] = [
   assetUrl('/Animations/2_Glow_Building.mp4'),
   assetUrl('/Animations/4_Final.mp4'),
   assetUrl('/Animations/Warning_Eagle.mp4'),
-  assetUrl('/Animations/Credit.mp4'),
+  assetUrl('/Animations/Credits.mp4'),
 ];
 
 // ── Audio files ──────────────────────────────────────────────────────────────
@@ -68,7 +68,7 @@ export const LOBBY_VIDEO_URLS: string[] = [
 
 // ── Tiers ─────────────────────────────────────────────────────────────────────
 /** Mobile/tablet join path: 8 model GLBs + 16 PNGs + mobile audio = 25 assets */
-export const MINIMAL_URLS: string[] = [...MODEL_GLB_URLS, ...PW_PNG_URLS, ...AUDIO_URLS_MOBILE, assetUrl('/Animations/Credit.mp4')];
+export const MINIMAL_URLS: string[] = [...MODEL_GLB_URLS, ...PW_PNG_URLS, ...AUDIO_URLS_MOBILE, assetUrl('/Animations/Credits.mp4')];
 
 /** Full / desktop / mobile host: models + animations + PNGs + videos + host audio + lobby videos */
 export const FULL_URLS: string[] = [
