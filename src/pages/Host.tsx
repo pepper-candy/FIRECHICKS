@@ -803,6 +803,16 @@ export default function Host() {
             src={assetUrl('/Animations/Game_Lobby_Char_plus_Props_Intro.mp4')}
             side="right"
           />
+
+          {/* QR Code — bottom right corner */}
+          <div className="absolute bottom-4 right-4 z-20 bg-white/90 rounded-lg p-2 shadow-lg">
+            <img
+              src="/qr.png"
+              alt="Scan to join"
+              className="w-24 h-24"
+            />
+            <p className="text-[8px] font-mono text-black/60 text-center mt-1">Scan to JOIN</p>
+          </div>
         </div>
 
         {/* Instructions */}
