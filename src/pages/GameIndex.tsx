@@ -295,7 +295,7 @@ const Index = () => {
           </div>
         ) : (
           <div className="flex flex-col gap-4 w-full max-w-xs z-10">
-            <Button
+            {/* <Button
               onClick={async () => {
                 await enter();
                 handleHostClick();
@@ -311,6 +311,14 @@ const Index = () => {
               ) : (
                 "HOST GAME"
               )}
+            </Button> */}
+
+            <Button
+              onClick={() => window.open('https://www.instagram.com/_.pirate_candy._/', '_blank')}
+              className="h-14 text-sm font-pixel bg-red-600 hover:bg-red-500 text-white border-red-500/50 glow-red immersive-fade-in immersive-border-breathe-red"
+              style={{ "--delay": "2.4s" } as React.CSSProperties}
+            >
+              How to Play?
             </Button>
 
             <Button
