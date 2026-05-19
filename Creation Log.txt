@@ -1,0 +1,62 @@
+**>> The Power of Interfaces <<**
+---
+**Visual Cryptography**
+* **PW_Final** → A+, 4.3, FIRE, RED
+* **PW_Mock** → UST, 11M, BIRD, HALL
+---
+**Implication & Correlation**
+- **Proximity rules** → interface controls connection
+- **QR scanning** → knowledge is restricted and transferable
+- **Grades and scores** → value is externally defined
+- **Final exam requiring two devices** → truth requires interface alignment
+
+> "In this game, your value was calculated by your actions. Sound familiar?"
+---
+**Tool List** (Immersive Mode)
+- **Development** → Lovable, Cursor, DeepSeek
+- **Debugging** → Visual Studio, TRAE (DeepSeek API)
+- **Deployment** → GitHub, Vercel, Android Studio
+- **Cross-Device** → Cloudflare, Neon (R2, TURN)
+- **Character Design** → Meshy, Blender (3D, UV Mapping)
+- **Animation Design** → Flow, Doubao, Blender, Jitter, Jianying, Canva (Veo 3.1)
+- **Music Creation** → Audacity, Google AI Mode
+---
+**Game Reference (Inspired by)**
+- **Game Mode** → Identity V, PANIK
+- **Environment Immersion** → DOORS
+- **Game Flow** → Rainbow Friends
+- **Game Simplicity** → The Exit 8
+- **Mini-games** → Borderland, Epic Minigames
+- **Game Transit** → Pac Man
+- **Game Credit Page** → Melatonin
+- **Baseline** → 麻鷹捉雞仔
+---
+Music Creation: (2 songs created)
+1. FireChicks_Joyful
+2. FireChicks_Depress
+
+Inspiration from:
+Gawr Gura LoAding BGM🔱 by Lumí 
+Fast Feel Banana Peel by Alexander Nakarada
+
+Music: Oompa Until You Croak by Alexander Nakarada 
+(https://www.creatorchords.com)
+Licensed under Creative Commons BY Attribution 4.0 License
+https://creativecommons.org/licenses/by/4.0/
+
+Music: The Good Guys by Alexander Nakarada 
+(https://www.creatorchords.com)
+Licensed under Creative Commons BY Attribution 4.0 License
+https://creativecommons.org/licenses/by/4.0/
+---
+Baseline Idea (v1)
+
+Chick → Students, Form Social Circles, Prop + Level Up
+Eagle → GPA Killers, Catch Chicks, Level Up
+Sundial → Hen, Protector, Create Barriers
+Role Assigned in Random (Among Us Hidden)
+Chicks Scan QR code to recognize each other
+Setup Challenges eg. catch the Egg when drop
+
+Inspiration: 麻鷹捉雞仔, Pico Park, Among Us, Mario Kart Item Box
+Implication: Real Life ↔ Virtual
