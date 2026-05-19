@@ -3,7 +3,7 @@
 A chaotic asymmetric multiplayer game that transforms the childhood game 麻鷹捉雞仔 (Eagle Catches Chicks) into a digital experience set in HKUST's academic culture — where the Eagle hunts, the Chicks cooperate, and the system decides who matters.
 
 **Play at:** [firechicks.vercel.app](https://firechicks.vercel.app)  
-**Exhibition Page:** [EMIA 2200 — Fire Chicks](https://emia2200.hkust.edu.hk/student-works-fire-chicks)
+**Exhibition Page:** [EMIA 2200 Fire Chicks](https://emia2200.hkust.edu.hk/student-works-fire-chicks)
 
 ---
 
