@@ -454,24 +454,24 @@ export default function Host() {
     return () => clearInterval(id);
   }, [phase]);
 
-  // Spacebar = Pause/Resume during gameplay
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.code === 'Space' && (phase === 'playing' || phase === 'exam')) {
-        e.preventDefault();
-        if (isPaused) {
-          // Resuming: start 3s grab-back, then unpause
-          setGrabBackUntil(Date.now() + 3000);
-        } else {
-          // Pausing: immediate
-          togglePause();
-          setIsPaused(true);
-        }
-      }
-    };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [phase, isPaused, togglePause]);
+  // // Spacebar = Pause/Resume during gameplay
+  // useEffect(() => {
+  //   const handleKeyDown = (e: KeyboardEvent) => {
+  //     if (e.code === 'Space' && (phase === 'playing' || phase === 'exam')) {
+  //       e.preventDefault();
+  //       if (isPaused) {
+  //         // Resuming: start 3s grab-back, then unpause
+  //         setGrabBackUntil(Date.now() + 3000);
+  //       } else {
+  //         // Pausing: immediate
+  //         togglePause();
+  //         setIsPaused(true);
+  //       }
+  //     }
+  //   };
+  //   window.addEventListener('keydown', handleKeyDown);
+  //   return () => window.removeEventListener('keydown', handleKeyDown);
+  // }, [phase, isPaused, togglePause]);
 
   const stageTransitionKey =
     snapshot && snapshot.stageTransitionUntil > 0
