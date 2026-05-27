@@ -265,9 +265,9 @@ export default function Host() {
   const [botsAdded, setBotsAdded] = useState(false);
   const [gameOverSnapshot, setGameOverSnapshot] = useState<GameStateSnapshot | null>(null);
   const [autoStartRemainingSec, setAutoStartRemainingSec] = useState(60);
-//  const [autoStartQueued, setAutoStartQueued] = useState(false);
+  const [autoStartQueued, setAutoStartQueued] = useState(false);
 //  const [lobbyCreatedAt, setLobbyCreatedAt] = useState(0);
-  const absoluteExpireTriggered = useRef(false);
+//  const absoluteExpireTriggered = useRef(false);
   const prevHumanPlayerCountRef = useRef(0);
   const autoStartTriggeredRef = useRef(false);
   const debugLogRef = useRef<string[]>([]);
