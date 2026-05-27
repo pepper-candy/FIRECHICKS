@@ -266,8 +266,6 @@ export default function Host() {
   const [gameOverSnapshot, setGameOverSnapshot] = useState<GameStateSnapshot | null>(null);
   const [autoStartRemainingSec, setAutoStartRemainingSec] = useState(60);
   const [autoStartQueued, setAutoStartQueued] = useState(false);
-//  const [lobbyCreatedAt, setLobbyCreatedAt] = useState(0);
-//  const absoluteExpireTriggered = useRef(false);
   const prevHumanPlayerCountRef = useRef(0);
   const autoStartTriggeredRef = useRef(false);
   const debugLogRef = useRef<string[]>([]);
@@ -536,7 +534,7 @@ export default function Host() {
     }
 
     const previousHumanPlayerCount = prevHumanPlayerCountRef.current;
-    if (false && humanPlayerCount === 0) { // Disabled: always start countdown regardless of player
+    if (humanPlayerCount === 0) {
       setAutoStartRemainingSec(60);
       setAutoStartQueued(false);
       setBotsAdded(false);
@@ -557,7 +555,7 @@ export default function Host() {
 
   useEffect(() => {
     if (phase !== "lobby") return;
-    if (false && humanPlayerCount === 0) return; // Disabled: always run countdown
+    if (humanPlayerCount === 0) return;
     if (autoStartRemainingSec <= 0) return;
 
     const timeoutId = window.setTimeout(() => {
@@ -569,7 +567,7 @@ export default function Host() {
 
   useEffect(() => {
     if (phase !== "lobby") return;
-    if (false && humanPlayerCount === 0) return; // Disabled: always allow auto-start
+    if (humanPlayerCount === 0) return;
     if (autoStartRemainingSec > 0) return;
     if (autoStartQueued) return;
 
@@ -1507,25 +1505,6 @@ function CreditButton() {
     if (countdown <= 0 && !watching) setWatching(true);
   }, [countdown, watching]);
 
-  /*
-  // Start 10-min timer when lobby is created
-  useEffect(() => {
-    if (roomCode && lobbyCreatedAt === 0 && phase === "lobby") {
-      setLobbyCreatedAt(Date.now());
-      // Start a 10-minute (600s) timer
-      const timer = setTimeout(() => {
-        if (phase === "lobby" && !absoluteExpireTriggered.current) {
-          console.log("[Host] 10-minute timeout – auto-starting");
-          absoluteExpireTriggered.current = true;
-          if (!isFull) handleFillBots();
-          handleStartGame();
-        }
-      }, 600000); // 600 seconds = 10 minutes
-      return () => clearTimeout(timer);
-    }
-  }, [roomCode, phase, lobbyCreatedAt, isFull, handleFillBots, handleStartGame]);
-  */
-  
   // Enable skip after 10s of video
   useEffect(() => {
     if (!watching) return;
