@@ -536,7 +536,7 @@ export default function Host() {
     }
 
     const previousHumanPlayerCount = prevHumanPlayerCountRef.current;
-    if (humanPlayerCount === 0 && players.size === 0) { // disable 60 sec for human but global
+    if (false && humanPlayerCount === 0) { // Disabled: always start countdown regardless of player
       setAutoStartRemainingSec(60);
       setAutoStartQueued(false);
       setBotsAdded(false);
@@ -557,7 +557,7 @@ export default function Host() {
 
   useEffect(() => {
     if (phase !== "lobby") return;
-    if (humanPlayerCount === 0) return;
+    if (false && humanPlayerCount === 0) return; // Disabled: always run countdown
     if (autoStartRemainingSec <= 0) return;
 
     const timeoutId = window.setTimeout(() => {
@@ -569,7 +569,7 @@ export default function Host() {
 
   useEffect(() => {
     if (phase !== "lobby") return;
-    if (humanPlayerCount === 0) return;
+    if (false && humanPlayerCount === 0) return; // Disabled: always allow auto-start
     if (autoStartRemainingSec > 0) return;
     if (autoStartQueued) return;
 
