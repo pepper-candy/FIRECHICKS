@@ -266,6 +266,8 @@ export default function Host() {
   const [gameOverSnapshot, setGameOverSnapshot] = useState<GameStateSnapshot | null>(null);
   const [autoStartRemainingSec, setAutoStartRemainingSec] = useState(60);
   const [autoStartQueued, setAutoStartQueued] = useState(false);
+  const [lobbyCreatedAt, setLobbyCreatedAt] = useState(0);
+  const absoluteExpireTriggered = useRef(false);
   const prevHumanPlayerCountRef = useRef(0);
   const autoStartTriggeredRef = useRef(false);
   const debugLogRef = useRef<string[]>([]);
@@ -1504,6 +1506,23 @@ function CreditButton() {
   useEffect(() => {
     if (countdown <= 0 && !watching) setWatching(true);
   }, [countdown, watching]);
+
+  // Start 10-min timer when lobby is created
+  useEffect(() => {
+    if (roomCode && lobbyCreatedAt === 0 && phase === "lobby") {
+      setLobbyCreatedAt(Date.now());
+      // Start a 10-minute (600s) timer
+      const timer = setTimeout(() => {
+        if (phase === "lobby" && !absoluteExpireTriggered.current) {
+          console.log("[Host] 10-minute timeout – auto-starting");
+          absoluteExpireTriggered.current = true;
+          if (!isFull) handleFillBots();
+          handleStartGame();
+        }
+      }, 600000); // 600 seconds = 10 minutes
+      return () => clearTimeout(timer);
+    }
+  }, [roomCode, phase, lobbyCreatedAt, isFull, handleFillBots, handleStartGame]);
 
   // Enable skip after 10s of video
   useEffect(() => {
