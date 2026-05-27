@@ -265,8 +265,8 @@ export default function Host() {
   const [botsAdded, setBotsAdded] = useState(false);
   const [gameOverSnapshot, setGameOverSnapshot] = useState<GameStateSnapshot | null>(null);
   const [autoStartRemainingSec, setAutoStartRemainingSec] = useState(60);
-  const [autoStartQueued, setAutoStartQueued] = useState(false);
-  const [lobbyCreatedAt, setLobbyCreatedAt] = useState(0);
+//  const [autoStartQueued, setAutoStartQueued] = useState(false);
+//  const [lobbyCreatedAt, setLobbyCreatedAt] = useState(0);
   const absoluteExpireTriggered = useRef(false);
   const prevHumanPlayerCountRef = useRef(0);
   const autoStartTriggeredRef = useRef(false);
@@ -536,7 +536,7 @@ export default function Host() {
     }
 
     const previousHumanPlayerCount = prevHumanPlayerCountRef.current;
-    if (humanPlayerCount === 0) {
+    if (humanPlayerCount === 0 && players.size === 0) { // disable 60 sec for human but global
       setAutoStartRemainingSec(60);
       setAutoStartQueued(false);
       setBotsAdded(false);
@@ -1507,6 +1507,7 @@ function CreditButton() {
     if (countdown <= 0 && !watching) setWatching(true);
   }, [countdown, watching]);
 
+  /*
   // Start 10-min timer when lobby is created
   useEffect(() => {
     if (roomCode && lobbyCreatedAt === 0 && phase === "lobby") {
@@ -1523,7 +1524,8 @@ function CreditButton() {
       return () => clearTimeout(timer);
     }
   }, [roomCode, phase, lobbyCreatedAt, isFull, handleFillBots, handleStartGame]);
-
+  */
+  
   // Enable skip after 10s of video
   useEffect(() => {
     if (!watching) return;
